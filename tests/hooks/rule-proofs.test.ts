@@ -29,6 +29,7 @@
 
 import { execFileSync } from 'child_process';
 import * as fs from 'fs';
+import * as os from 'os';
 import * as path from 'path';
 
 const RULES_DIR = path.resolve(__dirname, '../../.claude/hooks/rules');
@@ -88,11 +89,20 @@ describe('shell writes reach the path-keyed rules', () => {
         const probe = path.join(__dirname, '../../.claude/hooks/writtenPaths.probe.py');
         expect(fs.existsSync(probe)).toBe(true);
 
-        const out = execFileSync('python3', [probe], {
-            encoding: 'utf8',
-            cwd: path.resolve(__dirname, '../..'),
-            timeout: 60_000,
-        });
+        // Its own TMPDIR, removed after (PL-86): the router's markers otherwise outlive the run in
+        // the shared temp folder. Each `.proof.sh` makes its own the same way.
+        const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'dbv-probe-'));
+        let out: string;
+        try {
+            out = execFileSync('python3', [probe], {
+                encoding: 'utf8',
+                cwd: path.resolve(__dirname, '../..'),
+                timeout: 60_000,
+                env: { ...process.env, TMPDIR: tmp },
+            });
+        } finally {
+            fs.rmSync(tmp, { recursive: true, force: true });
+        }
 
         const wrong = out.split('\n').filter((l) => l.includes('*** WRONG ***'));
         const cases = out.split('\n').filter((l) => /expect=\S+\s+got=/.test(l));

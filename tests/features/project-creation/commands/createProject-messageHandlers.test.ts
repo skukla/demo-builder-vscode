@@ -20,6 +20,9 @@ import { createMockExtensionContext } from '../../../helpers/extensionContextFak
 import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
 
+const mockOnDidSignIn = jest.fn((_listener: () => void) => ({ dispose: jest.fn() }));
+const mockOnDidSignOut = jest.fn((_listener: () => void) => ({ dispose: jest.fn() }));
+
 jest.mock('@/core/utils/oneTimeTip', () => ({ showOneTimeTip: jest.fn() }));
 jest.mock('@/core/base/swapWebviewSurface', () => ({
     swapWebviewSurface: jest.fn().mockResolvedValue(undefined),
@@ -30,7 +33,11 @@ jest.mock('@/core/handlers/dispatchHandler', () => ({
 }));
 jest.mock('@/core/di/serviceLocator', () => ({
     ServiceLocator: {
-        getAuthenticationService: jest.fn(() => ({ isAuthenticated: jest.fn() })),
+        getAuthenticationService: jest.fn(() => ({
+            isAuthenticated: jest.fn(),
+            onDidSignIn: mockOnDidSignIn,
+            onDidSignOut: mockOnDidSignOut,
+        })),
         getCommandExecutor: jest.fn(() => ({ execute: jest.fn() })),
     },
 }));
@@ -237,7 +244,7 @@ describe('the shortcut to project configuration', () => {
     });
 
     it('asks before throwing away changes made in Edit, and goes on a yes', async () => {
-        (vscode.window.showWarningMessage as jest.Mock).mockResolvedValue('Discard and open');
+        (vscode.window.showWarningMessage as jest.Mock).mockResolvedValue('Discard and Open');
         const { comm } = wireUp();
 
         await comm.handlerFor('open-configure')?.({ discardsEdits: true });
@@ -245,7 +252,7 @@ describe('the shortcut to project configuration', () => {
         expect(vscode.window.showWarningMessage).toHaveBeenCalledWith(
             expect.stringContaining('Discard'),
             { modal: true },
-            'Discard and open',
+            'Discard and Open',
         );
         expect(swapWebviewSurface).toHaveBeenCalled();
     });
@@ -287,6 +294,41 @@ describe('the auto-registered handler types', () => {
             expect.objectContaining({ sharedState: expect.any(Object) }),
             'create-project',
             { projectName: 'demo' }
+        );
+    });
+});
+
+describe('a sign-in finished elsewhere (F303)', () => {
+    it('re-checks the Sign In to Adobe step, so it does not stay Not signed in', async () => {
+        const { command } = wireUp();
+        expect(internals(command).disposables.add).toHaveBeenCalledWith(
+            mockOnDidSignIn.mock.results[0].value,
+        );
+        expect(mockDispatchHandler).not.toHaveBeenCalled();
+
+        mockOnDidSignIn.mock.calls[0][0]();
+        // The wizard's context is built asynchronously (its step logger loads first).
+        await new Promise((resolve) => setImmediate(resolve));
+
+        expect(mockDispatchHandler).toHaveBeenCalledWith(
+            projectCreationHandlers,
+            expect.objectContaining({ sharedState: expect.any(Object) }),
+            'check-auth',
+            undefined,
+        );
+    });
+
+    it('re-checks on a sign-out too, so the step does not stay signed in', async () => {
+        wireUp();
+
+        mockOnDidSignOut.mock.calls[0][0]();
+        await new Promise((resolve) => setImmediate(resolve));
+
+        expect(mockDispatchHandler).toHaveBeenCalledWith(
+            projectCreationHandlers,
+            expect.anything(),
+            'check-auth',
+            undefined,
         );
     });
 });

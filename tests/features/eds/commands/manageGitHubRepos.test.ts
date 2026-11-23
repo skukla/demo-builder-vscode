@@ -113,7 +113,7 @@ describe('describeRepoOutcome', () => {
     it('is an error when nothing was deleted', () => {
         expect(describeRepoOutcome({ deleted: [], failed: [{ repo: 'a/c', error: 'x' }], codeLeft: [], kept: [] })).toEqual({
             level: 'error',
-            message: 'Failed to delete all 1 repositories. Check Debug Logs for details.',
+            message: 'Failed to delete all 1 repositories.',
         });
     });
 });

@@ -4,7 +4,7 @@ kind: feature
 area: app-builder
 needs: []
 value: med
-status: built
+status: shipped
 ---
 
 # Commerce test data cleanup tools
@@ -95,7 +95,8 @@ So the shape is TWO generic tools over the whole REST surface, not per-entity to
 - 2026-09-24  test(ai): the REST tool suites use the canonical HandlerContext fake and typed fixtures (`0f988f1a1`)
 - 2026-09-24  fix(ai): the Commerce REST client follows Adobe's Cloud Service server-to-server guide (`d57e0483b`)
 - 2026-09-24  fix(ai): Commerce REST reads wait as long as writes; the sandbox aborted plain GETs at 30s three times (`c4474bc22`)
-- 2026-10-02  Used for real 2026-10-02 (order-to-return loop): run_commerce_rest / write_commerce_rest created and deleted test products, built carts and placed orders for a real buyer, created, moved and closed returns, and refunded. Found and fixed: a DELETE dropped its body (502bec122). Found: returns cannot be deleted over REST on ACCS even with the body (close them instead). Left for the owner: the PaaS admin-token path (ACCS needs none) and whether export-before-delete belongs on the write tool; recommendation: mark this built for ACCS and file the PaaS path as its own item when a PaaS demo needs it
+- 2026-10-02  Used for real 2026-10-02 (order-to-return loop): run_commerce_rest / write_commerce_rest created and deleted test products, built carts and placed orders for a real buyer, created, moved and closed returns, and refunded. Found and fixed: a DELETE dropped its body (502bec122). Found: returns cannot be deleted over REST on ACCS even with the body (close them instead). Left for the owner at that point: the PaaS admin-token path (ACCS needs none; it was deferred by the owner on 2026-10-02 until a PaaS demo needs it, and commerceRestClient.ts refuses PaaS with a message) and whether export-before-delete belongs on the write tool (this is now on the owner's list, PL-111); recommendation: mark this built for ACCS and file the PaaS path as its own item when a PaaS demo needs it
 - 2026-10-02  docs(backlog): AB-29 — the REST tools used end to end; what is left is owner choices (`65e3ca268`)
 - 2026-10-02  Owner 2026-10-02: marked built (ACCS); the PaaS admin-token path is filed when a PaaS demo needs it
 - 2026-10-02  docs(backlog): AB-26m replaced by the Data Map (AB-16k); AB-29 built — owner decisions 2026-10-02 (`8a0578a91`)
+- 2026-11-20  Released in v1.0.0-beta.153

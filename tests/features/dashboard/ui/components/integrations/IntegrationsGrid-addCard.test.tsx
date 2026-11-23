@@ -15,7 +15,7 @@ import { fireEvent, screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import { cardsFor, renderCards, resetGridMocks, twoDeployed } from './IntegrationsGrid.testUtils';
 
-const ADD_NAME = 'Add an integration';
+const ADD_NAME = 'Add an Integration';
 
 describe('IntegrationsGrid — the add card', () => {
     beforeEach(() => resetGridMocks());

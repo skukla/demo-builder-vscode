@@ -55,10 +55,10 @@ function project(systems: string[] = ['demo-erp', 'demo-erp-2']): Project {
             'demo-erp': {
                 kind: 'system',
                 status: 'deployed',
-                name: 'Justrite ERP',
+                name: 'Tailspin ERP',
                 usedBy: 'erp-integration',
                 catalogId: 'demo-erp',
-                listId: 'justrite',
+                listId: 'tailspin',
                 source: { owner: 'skukla', repo: 'demo-erp' },
                 deployedUrls: { 'runtime/demo-erp/products': 'https://a.adobeioruntime.net/api/v1/web/demo-erp/products' },
             },
@@ -77,17 +77,17 @@ function project(systems: string[] = ['demo-erp', 'demo-erp-2']): Project {
 }
 
 const OPTIONS: ErpOwnershipOptions = {
-    websites: [{ code: 'justrite', name: 'Justrite' }],
+    websites: [{ code: 'tailspin', name: 'Tailspin' }],
     products: [
-        { sku: 'J1', websiteCodes: ['justrite'], attributes: { erp_owner: 'justrite' } },
-        { sku: 'J2', websiteCodes: ['justrite'], attributes: { erp_owner: 'justrite' } },
-        { sku: 'N1', websiteCodes: ['justrite'], attributes: {} },
+        { sku: 'J1', websiteCodes: ['tailspin'], attributes: { erp_owner: 'tailspin' } },
+        { sku: 'J2', websiteCodes: ['tailspin'], attributes: { erp_owner: 'tailspin' } },
+        { sku: 'N1', websiteCodes: ['tailspin'], attributes: {} },
     ],
     erps: [
-        { erp: 'justrite', name: 'Justrite ERP', owns: { mode: 'attribute', attribute: 'erp_owner=justrite' } },
+        { erp: 'tailspin', name: 'Tailspin ERP', owns: { mode: 'attribute', attribute: 'erp_owner=tailspin' } },
         { erp: 'kukla', name: 'Kukla ERP', owns: { mode: 'attribute', attribute: 'erp_owner=kukla' } },
     ],
-    takenListIds: ['justrite', 'kukla'],
+    takenListIds: ['tailspin', 'kukla'],
 };
 
 function deps(onProgress = jest.fn()) {
@@ -117,7 +117,7 @@ describe('applyErpOwnership after products moved', () => {
         );
         expect(result).toMatchObject({ status: 'applied' });
         if (result.status !== 'applied') return;
-        expect(result.notes).not.toContain('Kukla ERP owns no products yet: use Assign products on its card to give it some.');
+        expect(result.notes).not.toContain('Kukla ERP owns no products yet: use Assign Products on its card to give it some.');
     });
 
     it('CONTROL: with nothing moved, every ERP is filled and an empty ERP is told what next', async () => {
@@ -125,7 +125,7 @@ describe('applyErpOwnership after products moved', () => {
 
         expect(mockFillEvery).toHaveBeenCalledWith(expect.anything(), 'erp-integration', expect.not.objectContaining({ fillOnly: expect.anything() }));
         if (result.status !== 'applied') throw new Error('not applied');
-        expect(result.notes).toContain('Kukla ERP owns no products yet: use Assign products on its card to give it some.');
+        expect(result.notes).toContain('Kukla ERP owns no products yet: use Assign Products on its card to give it some.');
     });
 });
 
@@ -141,11 +141,11 @@ describe('applyErpOwnership', () => {
             fills: [],
             unowned: 1,
             erps: [
-                { erp: 'demo-erp', listId: 'justrite', name: 'Justrite ERP', owns: OPTIONS.erps[0].owns, ownsNow: 2, discontinued: 0, restored: 0 },
+                { erp: 'demo-erp', listId: 'tailspin', name: 'Tailspin ERP', owns: OPTIONS.erps[0].owns, ownsNow: 2, discontinued: 0, restored: 0 },
                 { erp: 'demo-erp-2', listId: 'kukla', name: 'Kukla ERP', owns: OPTIONS.erps[1].owns, ownsNow: 0, discontinued: 0, restored: 0 },
             ],
             notes: [
-                'Kukla ERP owns no products yet: use Assign products on its card to give it some.',
+                'Kukla ERP owns no products yet: use Assign Products on its card to give it some.',
                 '1 product belongs to no ERP.',
             ],
         });
@@ -167,12 +167,12 @@ describe('applyErpOwnership', () => {
         mockRead.mockResolvedValue({
             ...OPTIONS,
             products: [
-                { sku: 'J1', websiteCodes: ['justrite'], attributes: { erp_owner: 'justrite' } },
-                { sku: 'K1', websiteCodes: ['justrite'], attributes: { erp_owner: 'kukla' } },
-                { sku: 'N1', websiteCodes: ['justrite'], attributes: {} },
+                { sku: 'J1', websiteCodes: ['tailspin'], attributes: { erp_owner: 'tailspin' } },
+                { sku: 'K1', websiteCodes: ['tailspin'], attributes: { erp_owner: 'kukla' } },
+                { sku: 'N1', websiteCodes: ['tailspin'], attributes: {} },
             ],
             erps: [
-                { erp: 'justrite', name: 'Justrite ERP', owns: { mode: 'all' } },
+                { erp: 'tailspin', name: 'Tailspin ERP', owns: { mode: 'all' } },
                 { erp: 'kukla', name: 'Kukla ERP', owns: { mode: 'attribute', attribute: 'erp_owner=kukla' } },
             ],
         });
@@ -184,7 +184,7 @@ describe('applyErpOwnership', () => {
 
         const result = await applyErpOwnership(project(), 'erp-integration', deps(), 'add');
 
-        // The catch-all keeps J1 and N1; K1 is Kukla's, so Justrite ERP discontinues it.
+        // The catch-all keeps J1 and N1; K1 is Kukla's, so Tailspin ERP discontinues it.
         expect(mockSetStatus.mock.calls.map((call) => [call[2], call[3]])).toStrictEqual([['K1', 'discontinued']]);
         expect(result).toMatchObject({
             status: 'applied',
@@ -201,11 +201,11 @@ describe('applyErpOwnership', () => {
         mockRead.mockResolvedValue({
             ...OPTIONS,
             products: [
-                { sku: 'BOTH', websiteCodes: ['justrite'], attributes: { erp_owner: 'justrite', brand: 'kukla' } },
-                { sku: 'J2', websiteCodes: ['justrite'], attributes: { erp_owner: 'justrite' } },
+                { sku: 'BOTH', websiteCodes: ['tailspin'], attributes: { erp_owner: 'tailspin', brand: 'kukla' } },
+                { sku: 'J2', websiteCodes: ['tailspin'], attributes: { erp_owner: 'tailspin' } },
             ],
             erps: [
-                { erp: 'justrite', name: 'Justrite ERP', owns: { mode: 'attribute', attribute: 'erp_owner=justrite' } },
+                { erp: 'tailspin', name: 'Tailspin ERP', owns: { mode: 'attribute', attribute: 'erp_owner=tailspin' } },
                 { erp: 'kukla', name: 'Kukla ERP', owns: { mode: 'attribute', attribute: 'brand=kukla' } },
             ],
         });
@@ -216,7 +216,7 @@ describe('applyErpOwnership', () => {
             status: 'applied',
             unowned: 0,
             erps: [{ erp: 'demo-erp', ownsNow: 2 }, { erp: 'demo-erp-2', ownsNow: 1 }],
-            notes: ['1 product is claimed by both Justrite ERP and Kukla ERP; orders for it are refused until one rule changes.'],
+            notes: ['1 product is claimed by both Tailspin ERP and Kukla ERP; orders for it are refused until one rule changes.'],
         });
     });
 
@@ -241,7 +241,7 @@ describe('applyErpOwnership', () => {
         expect(marked).toStrictEqual([['N1', 'discontinued'], ['GONE', 'discontinued']]);
         expect(mockSetStatus.mock.calls[0][0]).toStrictEqual({ 'runtime/demo-erp/products': 'https://a.adobeioruntime.net/api/v1/web/demo-erp/products' });
         expect(result).toMatchObject({ status: 'applied', erps: [{ erp: 'demo-erp', discontinued: 2, restored: 0 }, { erp: 'demo-erp-2', discontinued: 0, restored: 0 }] });
-        expect(d.onProgress).toHaveBeenCalledWith('Justrite ERP: Marking 1 of 2 products discontinued');
+        expect(d.onProgress).toHaveBeenCalledWith('Tailspin ERP: Marking 1 of 2 products discontinued');
     });
 
     it('a refusal while marking stops that ERP\'s marking, is its note, and the pass stands', async () => {
@@ -260,7 +260,7 @@ describe('applyErpOwnership', () => {
                 {
                     erp: 'demo-erp',
                     discontinued: 0,
-                    note: 'Justrite ERP: 2 products it no longer owns could not be marked discontinued: The ERP answered 400: salesStatus must be sellable or blocked',
+                    note: 'Tailspin ERP: 2 products it no longer owns could not be marked discontinued: The ERP answered 400: salesStatus must be sellable or blocked',
                 },
             ],
         });
@@ -273,7 +273,7 @@ describe('applyErpOwnership', () => {
         const result = await applyErpOwnership(project(['demo-erp']), 'erp-integration', deps(), 'remove');
 
         expect(mockSave).toHaveBeenCalledWith(expect.objectContaining({ urls: { 'runtime/erp/erps': 'https://ns.adobeioruntime.net/api/v1/web/erp/erps' } }), [
-            { erp: 'justrite', owns: { mode: 'all' } },
+            { erp: 'tailspin', owns: { mode: 'all' } },
         ]);
         expect(mockSave.mock.invocationCallOrder[0]).toBeLessThan(mockFillEvery.mock.invocationCallOrder[0]);
         // Owning everything, nothing is marked and nothing is unowned.
@@ -282,7 +282,7 @@ describe('applyErpOwnership', () => {
             status: 'applied',
             unowned: 0,
             erps: [{ erp: 'demo-erp', owns: { mode: 'all' }, ownsNow: 3 }],
-            notes: ['Justrite ERP owns every product again.'],
+            notes: ['Tailspin ERP owns every product again.'],
         });
     });
 
@@ -303,7 +303,7 @@ describe('applyErpOwnership', () => {
         expect(result).toMatchObject({
             status: 'applied',
             erps: [{ erp: 'demo-erp', discontinued: 1, restored: 2 }],
-            notes: ['Justrite ERP owns every product again.', 'Justrite ERP: 2 products are sellable again.'],
+            notes: ['Tailspin ERP owns every product again.', 'Tailspin ERP: 2 products are sellable again.'],
         });
     });
 
@@ -318,12 +318,12 @@ describe('applyErpOwnership', () => {
         const result = await applyErpOwnership(project(['demo-erp']), 'erp-integration', deps(), 'remove');
 
         expect(result).toMatchObject({
-            erps: [{ erp: 'demo-erp', discontinued: 0, restored: 0, note: 'Justrite ERP: 1 product it no longer owns could not be marked discontinued, and 1 product it owns again could not be made sellable: The ERP answered 500' }],
+            erps: [{ erp: 'demo-erp', discontinued: 0, restored: 0, note: 'Tailspin ERP: 1 product it no longer owns could not be marked discontinued, and 1 product it owns again could not be made sellable: The ERP answered 500' }],
         });
     });
 
     it('an ERP owning everything in an empty store is told nothing', async () => {
-        mockRead.mockResolvedValue({ ...OPTIONS, products: [], erps: [{ erp: 'justrite', name: 'Justrite ERP', owns: { mode: 'all' } }] });
+        mockRead.mockResolvedValue({ ...OPTIONS, products: [], erps: [{ erp: 'tailspin', name: 'Tailspin ERP', owns: { mode: 'all' } }] });
 
         const result = await applyErpOwnership(project(['demo-erp']), 'erp-integration', deps(), 'load');
 
@@ -342,7 +342,7 @@ describe('applyErpOwnership', () => {
         mockRead.mockResolvedValue({
             ...OPTIONS,
             erps: [
-                { erp: 'justrite', name: 'Justrite ERP', owns: { mode: 'websites', websites: ['justrite', 'old_site'] } },
+                { erp: 'tailspin', name: 'Tailspin ERP', owns: { mode: 'websites', websites: ['tailspin', 'old_site'] } },
                 { erp: 'kukla', name: 'Kukla ERP', owns: { mode: 'websites', websites: ['gone'] } },
             ],
         });
@@ -352,7 +352,7 @@ describe('applyErpOwnership', () => {
         expect(result).toMatchObject({
             status: 'applied',
             notes: expect.arrayContaining([
-                "Justrite ERP's rule names website old_site, which Commerce no longer has.",
+                "Tailspin ERP's rule names website old_site, which Commerce no longer has.",
                 "Kukla ERP's rule names website gone, which Commerce no longer has, so it owns nothing.",
                 'Kukla ERP owns no products: no Commerce product is sold on gone.',
             ]),
@@ -369,15 +369,15 @@ describe('applyErpOwnership', () => {
     });
 });
 
-// Justrite, 2026-10-22: adding Accuform left Justrite ERP on a rule nobody set
-// (erp_owner=justrite), it owned 0, and the add's pass marked its products discontinued. An add
+// Tailspin, 2026-10-22: adding Accuform left Tailspin ERP on a rule nobody set
+// (erp_owner=tailspin), it owned 0, and the add's pass marked its products discontinued. An add
 // never asks to take an existing ERP's whole catalogue away, so the pass refuses that and says so.
 describe('applyErpOwnership — an add never empties an ERP it did not change', () => {
     const NOBODY_TAGGED: ErpOwnershipOptions = {
         ...OPTIONS,
         products: [
-            { sku: 'J1', websiteCodes: ['justrite'], attributes: {} },
-            { sku: 'J2', websiteCodes: ['justrite'], attributes: {} },
+            { sku: 'J1', websiteCodes: ['tailspin'], attributes: {} },
+            { sku: 'J2', websiteCodes: ['tailspin'], attributes: {} },
         ],
     };
     const HELD = [
@@ -399,7 +399,7 @@ describe('applyErpOwnership — an add never empties an ERP it did not change', 
         if (result.status !== 'applied') throw new Error('not applied');
         expect(result.erps[0]).toMatchObject({ erp: 'demo-erp', ownsNow: 0, discontinued: 0 });
         expect(result.notes).toContain(
-            "Justrite ERP's rule now gives it none of the 2 products it holds, so none were marked discontinued: " +
+            "Tailspin ERP's rule now gives it none of the 2 products it holds, so none were marked discontinued: " +
                 'an add does not take an existing ERP\'s products away. Check its rule in the ERP settings.',
         );
     });

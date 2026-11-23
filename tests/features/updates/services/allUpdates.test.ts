@@ -1,8 +1,8 @@
 /**
  * allUpdates.findAllUpdates — the extension and every project, checked once (PL-80).
  *
- * A check must never write a project file, so every project is read with
- * `persistAfterLoad: false`; the count includes the extension's own update.
+ * A check must never write a project file, so every project is read
+ * (`loadProjectFromPath`), never opened; the count includes the extension's own update.
  */
 
 import { findAllUpdates } from '@/features/updates/services/allUpdates';
@@ -42,7 +42,6 @@ const oneTemplate = (project: ReturnType<typeof createMockProject>): UpdateSelec
     adobeMcp: [],
     blockLibrary: [],
     blockLibraryInstall: [],
-    inspector: [],
     integration: [],
 });
 
@@ -56,8 +55,8 @@ describe('findAllUpdates', () => {
 
         const found = await findAllUpdates(ctx, probe);
 
-        expect(ctx.stateManager.loadProjectFromPath).toHaveBeenCalledWith('/p/alpha', undefined, { persistAfterLoad: false });
-        expect(ctx.stateManager.loadProjectFromPath).toHaveBeenCalledWith('/p/beta', undefined, { persistAfterLoad: false });
+        expect(ctx.stateManager.loadProjectFromPath).toHaveBeenCalledWith('/p/alpha');
+        expect(ctx.stateManager.loadProjectFromPath).toHaveBeenCalledWith('/p/beta');
         expect(mockComputeUpdateSelections).toHaveBeenCalledWith([alpha, beta], ctx, probe);
         expect(found).toMatchObject({ currentProjectPath: '/p/beta', count: 1 });
         expect(found.extension).toBeUndefined();

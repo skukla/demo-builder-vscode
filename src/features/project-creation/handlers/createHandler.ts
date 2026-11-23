@@ -9,11 +9,11 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import { cleanupFailedCreation } from './creationFailureCleanup';
 import { projectNameProblem } from './creationNameCheck';
-import { executeProjectCreation } from './executor';
-import { OVERALL_TIMEOUT_MS } from './shared';
+import { runCreation } from './creationRun';
 import { classifyTransience, extractErrorMessage } from '@/core/errors';
-import { withTimeout } from '@/core/utils/promiseUtils';
+import { plain, plainLine, plainName, type PlainText } from '@/core/utils/plainText';
 import { GitHubAppNotInstalledError } from '@/features/eds/services/types';
+import { creationErrorText } from '@/features/project-creation/services/stepFailure';
 import { ErrorCode } from '@/types/errorCodes';
 import { HandlerContext } from '@/types/handlers';
 import type { CreationFailedPayload, CreationProgressPayload } from '@/types/webviewPayloads';
@@ -41,8 +41,8 @@ function countSelectedComponents(components?: {
  */
 async function sendValidationFailure(
     context: HandlerContext,
-    errorSummary: string,
-    errorDetail: string,
+    errorSummary: PlainText,
+    errorDetail: PlainText,
 ): Promise<{ success: boolean }> {
     const progress: CreationProgressPayload = {
         currentOperation: 'Failed',
@@ -108,11 +108,11 @@ async function reportCreationError(
             progress: 0,
             message: '',
             logs: [],
-            error: `The AEM Code Sync GitHub App must be installed to enable Edge Delivery Services.`,
+            error: plain('The AEM Code Sync GitHub App must be installed to enable Edge Delivery Services.'),
         };
         await context.sendMessage('creationProgress', ghProgress);
         const failed: CreationFailedPayload = {
-            error: `GitHub App Required: The AEM Code Sync app is not installed on ${error.owner}/${error.repo}.`,
+            error: plainLine`GitHub App Required: The AEM Code Sync app is not installed on ${plainName(`${error.owner}/${error.repo}`)}.`,
             isTimeout: false,
             elapsed: elapsedStr,
             errorType: 'GITHUB_APP_NOT_INSTALLED',
@@ -126,10 +126,6 @@ async function reportCreationError(
         return;
     }
 
-    // Read off the RAW error. The central hierarchy this used to go through added a
-    // guessed code and a userMessage that was the same string anyway on the default
-    // path -- `AppError.from` set userMessage to the message it was handed.
-    const errorMessage = extractErrorMessage(error);
     // THE ERROR ITSELF, not its cause. The retired `AppError.from` WRAPPED the original
     // and set `cause` to it, so `appError.cause.message` was the original's message.
     // Reading `error.cause` after the wrapper is gone looks equivalent and is not — it
@@ -138,13 +134,15 @@ async function reportCreationError(
     const cancelledCode = (error as { code?: string } | undefined)?.code === ErrorCode.CANCELLED;
     const isCancelled = cancelledCode || extractErrorMessage(error).includes('cancelled by user');
     const timedOut = classifyTransience(error).kind === 'timeout';
+    // What the SC reads (PL-102), said as the paused screen says it.
+    const shownError = creationErrorText(error);
 
     const terminal: CreationProgressPayload = {
         currentOperation: isCancelled ? 'Cancelled' : 'Failed',
         progress: 0,
         message: '',
         logs: [],
-        error: errorMessage,
+        error: shownError,
     };
     await context.sendMessage('creationProgress', terminal);
 
@@ -153,7 +151,7 @@ async function reportCreationError(
     // a dead send found by the 2026-08-21 channel inventory.
     if (!isCancelled) {
         const failed: CreationFailedPayload = {
-            error: errorMessage,
+            error: shownError,
             isTimeout: timedOut,
             elapsed: elapsedStr,
         };
@@ -201,17 +199,10 @@ export async function handleCreateProject(
                 `Add "${demoBuilderPath}" to your Trusted Folders ` +
                     '(Cmd+Shift+P → "Workspaces: Manage Workspace Trust" → Add Folder). ' +
                     'All future projects will be trusted automatically, no more dialogs!',
-                'Got it!',
+                'Got It!',
             );
         }
     }
-
-    // Create abort controller for cancellation
-    context.logger.debug('[Project Creation] Creating NEW AbortController', {
-        previousExists: !!context.sharedState.projectCreationAbortController,
-        timestamp: new Date().toISOString(),
-    });
-    context.sharedState.projectCreationAbortController = new AbortController();
 
     try {
         // Log summary at debug, full config at trace
@@ -232,15 +223,8 @@ export async function handleCreateProject(
             logs: [],
         });
 
-        // Execute with timeout and cancellation support
-        await withTimeout(executeProjectCreation(context, config), {
-            timeoutMs: OVERALL_TIMEOUT_MS,
-            timeoutMessage:
-                'Project creation timed out after 30 minutes. ' +
-                'This may indicate a network issue or very large components. ' +
-                'Please check your connection and try again.',
-            signal: context.sharedState.projectCreationAbortController.signal,
-        });
+        // The creation run owns the 30-minute limit and the stop, for every door (PL-104 fix 14).
+        await runCreation(context, config);
 
         return { success: true };
     } catch (error) {

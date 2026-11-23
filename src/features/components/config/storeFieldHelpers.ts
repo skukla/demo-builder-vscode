@@ -24,8 +24,6 @@ import {
     ACCS_STORE_CODE,
     ACCS_STORE_VIEW_CODE,
     ACCS_GRAPHQL_ENDPOINT as ACCS_ENDPOINT_KEY,
-    ACCS_OAUTH_CLIENT_ID,
-    ACCS_OAUTH_CLIENT_SECRET,
 } from '@/core/config/envVarKeys';
 
 /** Service group IDs for PaaS and ACCS commerce backends */
@@ -55,23 +53,9 @@ export const CONNECTION_FIELDS = new Set<string>([
     ACCS_ENDPOINT_KEY, PAAS_URL, PAAS_GRAPHQL_ENDPOINT, PAAS_ADMIN_USERNAME, PAAS_ADMIN_PASSWORD,
 ]);
 
-/**
- * Commerce credential fields — their own section.
- *
- * They usually render as a single line saying nothing needs entering, because the
- * shared service supplies the pair. Kept out of `connection` so that line, and the
- * two inputs behind "Use my own instead", have a heading of their own to appear
- * under instead of trailing the endpoint field.
- */
-export const CREDENTIAL_FIELDS = new Set<string>([
-    ACCS_OAUTH_CLIENT_ID,
-    ACCS_OAUTH_CLIENT_SECRET,
-]);
-
 /** Which slice of the commerce config a caller wants. */
 export type ConnectStoreSection =
     | 'connection'
-    | 'credentials'
     | 'business-structure'
     | 'catalog';
 
@@ -105,17 +89,15 @@ interface SliceableGroup {
  * shipped here before (`ADOBE_COMMERCE_ADMIN_URL`).
  */
 function sectionFilter(section: ConnectStoreSection): (key: string) => boolean {
-    if (section === 'credentials') return (key) => CREDENTIAL_FIELDS.has(key);
     if (section === 'business-structure') return (key) => isStoreCodeField(key);
-    // connection: everything the other two do not claim.
-    return (key) => !isStoreCodeField(key) && !CREDENTIAL_FIELDS.has(key);
+    // connection: everything the other does not claim.
+    return (key) => !isStoreCodeField(key);
 }
 
 /**
  * Filter service groups down to one section's fields.
  *
- * - connection: connection groups, minus the store-code cascade AND the credentials
- * - credentials: connection groups, CREDENTIAL_FIELDS only
+ * - connection: connection groups, minus the store-code cascade
  * - business-structure: connection groups, the store-code cascade only
  * - catalog: everything that is NOT a connection group
  *

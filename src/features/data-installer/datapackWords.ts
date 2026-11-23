@@ -1,0 +1,145 @@
+/**
+ * The datapack words, defined once (review, 2026-11-10: "Uninstall Datapack" was written three
+ * times, and the save-first pair three times; Phase 1 of the datapack simplification, owner
+ * 2026-11-10: one set of words). Putting a datapack into Commerce is **Install** (D1), never
+ * "Import"; the request that writes nothing is **Dry Run** (D6: the name SCs know, kept by the owner
+ * 2026-11-10 over "Check First"); a datapack's settings are its **Store Configuration**, as Commerce
+ * Admin's Stores > Configuration names them (owner 2026-11-10), never "Store Settings", "Also Sets"
+ * or "the settings layer". Pure, so the
+ * webviews (the Datapacks screen, Reset Selected) and the extension (the reset's question, a
+ * project delete's) read the same words. `tests/sop/datapack-words.test.ts` keeps the old ones out.
+ *
+ * @module features/data-installer/datapackWords
+ */
+
+import type { ImportJobRecord, JobPurpose } from './types';
+
+/**
+ * The verb of a datapack's moves in Commerce: a Switch installs over another datapack; a Restore
+ * puts the demo's datapack back to a previous state; an Update applies what a newer version changed.
+ */
+export type DatapackVerb = 'Install' | 'Uninstall' | 'Switch' | 'Restore' | 'Update';
+
+/** The button that puts a datapack into Commerce. */
+export const INSTALL = 'Install';
+
+/** The button that takes a datapack's data out of Commerce. */
+export const UNINSTALL = 'Uninstall';
+
+/** The button that takes the SC's own datapack out of the library, for good. */
+export const DELETE = 'Delete';
+
+/**
+ * The button that puts the demo's datapack back to a previous state (J4-2; J9, owner 2026-11-14:
+ * "Restore means go back to a previous state"): its last save or its original.
+ */
+export const RESTORE = 'Restore';
+
+/**
+ * The card's button that applies what a newer version of the demo's datapack changed, keeping the
+ * SC's own edits (step-07 U1, J9). Owner walk, 2026-11-16: "Update" now names the header's save
+ * from Commerce into the datapack, so this direction says what it does.
+ */
+export const INSTALL_NEWER = 'Install Newer Version';
+
+/** The header's save of the store's copy into the demo's own datapack (owner walk, 2026-11-16). */
+export const UPDATE = 'Update';
+
+/** The button that asks whether an install would go through, writing nothing (D6). */
+export const DRY_RUN = 'Dry Run';
+
+/** The one name for a datapack's settings, everywhere on screen (Clarity 1.8). */
+export const STORE_CONFIGURATION = 'Store Configuration';
+
+/** The box or button that uninstalls a project's datapack from Commerce. */
+export const UNINSTALL_DATAPACK = 'Uninstall Datapack';
+
+/** "Install My Luma" on the form; "Installing My Luma" while it runs. */
+export function installTitle(name: string, running = false): string {
+    return `${running ? 'Installing' : INSTALL} ${name}`;
+}
+
+/** A job's titles: while it runs, once it is done, and when it failed. */
+export interface JobWords {
+    running: string;
+    done: string;
+    failed: string;
+}
+
+/**
+ * A job's titles, by what it is for (datapack simplification step 03). The result names the thing
+ * first, "Bodea Installed" (conventions rule 21); a failure is "Couldn't …" (the house rule). A
+ * switch ends on its own verb, "Switched to Bodea" ("Switched" under the mark), as the button the
+ * SC pressed says (owner, 2026-11-20); an undo's result names the save it undid, not the datapack.
+ */
+export function jobWords(purpose: JobPurpose, name: string): JobWords {
+    switch (purpose) {
+        case 'switch':
+            return {
+                running: `Switching to ${name}`,
+                done: `Switched to ${name}`,
+                failed: `Couldn't Switch to ${name}`,
+            };
+        case 'uninstall':
+            return {
+                running: `Uninstalling ${name}`,
+                done: `${name} Uninstalled`,
+                failed: `Couldn't ${UNINSTALL} ${name}`,
+            };
+        case 'restore':
+            return {
+                running: `Restoring ${name}`,
+                done: `${name} Restored`,
+                failed: `Couldn't Restore ${name}`,
+            };
+        case 'update':
+            return {
+                running: `Installing ${name}`,
+                done: `${name} Installed`,
+                failed: `Couldn't ${INSTALL} ${name}`,
+            };
+        case 'undo':
+            return {
+                running: `Restoring ${name}`,
+                done: 'Last Save Undone',
+                failed: "Couldn't Undo Last Save",
+            };
+        default:
+            return {
+                running: installTitle(name, true),
+                done: `${name} Installed`,
+                failed: `Couldn't ${INSTALL} ${name}`,
+            };
+    }
+}
+
+/**
+ * What a job is for: the purpose its record carries, else what an older or transient record implies.
+ * A reset is an uninstall; an import over another datapack is a switch, and over another version of
+ * the same one (`replacesVersion`) or over nothing, an install.
+ */
+export function jobPurpose(
+    record: Partial<Pick<ImportJobRecord, 'purpose' | 'operation' | 'replaces' | 'replacesVersion'>>,
+): JobPurpose {
+    if (record.purpose) return record.purpose;
+    if (record.operation === 'reset') return 'uninstall';
+    return record.replaces && !record.replacesVersion ? 'switch' : 'install';
+}
+
+/** "4 Settings", "1 Setting": how many settings a datapack's Store Configuration holds, read beside that label. */
+export function configurationSettingsCount(count: number): string {
+    return `${count} ${count === 1 ? 'Setting' : 'Settings'}`;
+}
+
+/** The confirm's way on that loses the SC's changes: "Uninstall Without Saving", "Clear Without Saving". */
+export function withoutSavingLabel(verb: DatapackVerb | 'Clear'): string {
+    return `${verb} Without Saving`;
+}
+
+/**
+ * The confirm's way on that saves the SC's changes first: into the demo's own datapack ("Save and
+ * Uninstall"), or as a new datapack when the demo's is not theirs ("Save As New and Uninstall").
+ */
+export function saveFirstLabel(verb: DatapackVerb | 'Clear', savesAs: boolean): string {
+    return savesAs ? `Save As New and ${verb}` : `Save and ${verb}`;
+}

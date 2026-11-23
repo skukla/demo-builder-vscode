@@ -10,10 +10,10 @@ status: shipped
 
 # A split order is sent to its ERPs again on later saves
 
-Found 2026-10-02 reading the comments of order 5000000005 on Justrite (the order-to-return
+Found 2026-10-02 reading the comments of order 5000000005 on Tailspin (the order-to-return
 loop's rehearsal; two ERPs). After both ERPs confirmed and Commerce invoiced the order, the
-order gained, between 06:39:57 and 06:40:03Z, "Sent to Justrite ERP, waiting for
-confirmation" + "Created in Justrite ERP as sales order 0000001003" once more, and the same
+order gained, between 06:39:57 and 06:40:03Z, "Sent to Tailspin ERP, waiting for
+confirmation" + "Created in Tailspin ERP as sales order 0000001003" once more, and the same
 pair three more times for Accuform ERP. Each ERP answered with the number it already had (its
 create is idempotent on the Commerce order id), so no ERP holds a duplicate order; the harm is
 a Complete order whose history says "waiting for confirmation", and ERP calls that should not

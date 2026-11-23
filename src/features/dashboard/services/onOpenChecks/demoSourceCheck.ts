@@ -5,7 +5,8 @@
  * A renamed repository is followed there and saved, so the dashboard and the
  * reset door can never disagree about where the demo is.
  *
- * `warning` carries the sentence the notice shows ("Jen's demo can't be
+ * `unknown` when the read failed for a reason other than "not found": no notice.
+ * `warning` carries the sentence the notice shows ("Robin's demo can't be
  * reached. Reset and updates are unavailable until it is.", or the content
  * site's own line). `ok` for a project with no added demo, so the notice never
  * appears for a shipped brand. Re-runnable: "Change source" re-requests status
@@ -25,7 +26,7 @@ export interface DemoSourceCheckData {
     demoName: string;
     /** The repository does not answer (reset and updates refuse). */
     unreachable: boolean;
-    /** The content site publishes no index (reset offers to keep current content). */
+    /** The content site publishes no index (a reset keeps the current content and says so). */
     contentUnreachable: boolean;
 }
 
@@ -59,6 +60,11 @@ export function createDemoSourceCheck(deps: DemoSourceCheckDeps): OnOpenCheck {
                 unreachable: !check.reachable,
                 contentUnreachable: !check.contentReachable,
             };
+            // A read that failed for any reason but "not found" knows nothing: no notice, and the
+            // next open checks again (owner, 2026-11-05).
+            if (!check.checked) {
+                return { status: 'unknown', message: check.message, data };
+            }
             if (!check.reachable) {
                 return { status: 'warning', message: check.message, data };
             }

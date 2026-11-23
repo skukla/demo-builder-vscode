@@ -30,13 +30,16 @@
  */
 
 import { z } from 'zod';
+import { adoptFound } from './adoptedObjects';
 import { CUSTOMER_GROUP_KIND, CUSTOMER_KIND, customerKey } from './b2bKeys';
 import { customerByEmail, groupByCode } from './b2bReads';
+import { type CustomerToMake, customerImportRows, makeCustomersByImport } from './customerImport';
 import { deleteIfPresent, type KindContext, parseRows, ownedId, readOrNull, segment } from './kindContext';
 import { nameOrId } from './packForm';
 import { createOne } from './pendingCreates';
 import { type ProductLookups, productLookups } from './productLookups';
 import { tryRow } from './refusedRows';
+import { counted } from './rowCount';
 import type { CommerceCustomer, CommerceCustomerAddress, CommerceCustomerGroup, CommerceSend } from '@/types/commerceWire';
 
 export { CUSTOMER_GROUP_KIND, CUSTOMER_KIND, customerKey } from './b2bKeys';
@@ -54,7 +57,7 @@ const customerRows = z.array(
                     firstname: z.string().min(1),
                     lastname: z.string().min(1),
                     group_id: z.union([z.string(), z.number()]).optional(),
-                    addresses: z.array(z.record(z.unknown())).optional(),
+                    addresses: z.array(z.record(z.string(), z.unknown())).optional(),
                 })
                 .passthrough(),
             password: z.string().optional(),
@@ -71,21 +74,22 @@ export const parseCustomerRows = (records: unknown): CustomerRows => parseRows(c
 
 /** Make each group the store lacks; record it by its code. */
 export async function installCustomerGroups(ctx: KindContext, rows: CustomerGroupRows): Promise<void> {
-    for (const { customer_group: group } of rows) {
-        if (ownedId(ctx.session, CUSTOMER_GROUP_KIND, group.code) !== undefined) continue;
-        if (await groupByCode(ctx.get, group.code)) continue;
-        // Step 14 item 3: a row Commerce refuses, or that needs a row skipped, is skipped; the rest go on.
-        const made = await tryRow(ctx, { kind: CUSTOMER_GROUP_KIND, key: group.code }, async () => {
-            const body: { group: CommerceCustomerGroup } = { group: { code: group.code, tax_class_id: group.tax_class_id ?? RETAIL_TAX_CLASS } };
-            return createOne(ctx, { kind: CUSTOMER_GROUP_KIND, key: group.code }, async () => {
-                const id = Number(((await ctx.send('POST', 'customerGroups', body)) as CommerceCustomerGroup | null)?.id);
-                if (!Number.isInteger(id)) throw new Error(`Commerce did not answer the new customer group ${group.code}'s id.`);
-                return { kind: CUSTOMER_GROUP_KIND, id: String(id), key: group.code };
-            });
+    for (const { customer_group: group } of rows) await counted(ctx, CUSTOMER_GROUP_KIND, group.code, () => installCustomerGroup(ctx, group));
+}
+
+async function installCustomerGroup(ctx: KindContext, group: CustomerGroupRows[number]['customer_group']): Promise<void> {
+    if (ownedId(ctx.session, CUSTOMER_GROUP_KIND, group.code) !== undefined) return;
+    if (await groupByCode(ctx.get, group.code)) return;
+    // Step 14 item 3: a row Commerce refuses, or that needs a row skipped, is skipped; the rest go on.
+    const made = await tryRow(ctx, { kind: CUSTOMER_GROUP_KIND, key: group.code }, async () => {
+        const body: { group: CommerceCustomerGroup } = { group: { code: group.code, tax_class_id: group.tax_class_id ?? RETAIL_TAX_CLASS } };
+        return createOne(ctx, { kind: CUSTOMER_GROUP_KIND, key: group.code }, async () => {
+            const id = Number(((await ctx.send('POST', 'customerGroups', body)) as CommerceCustomerGroup | null)?.id);
+            if (!Number.isInteger(id)) throw new Error(`Commerce did not return the new customer group ${group.code}'s id.`);
+            return { kind: CUSTOMER_GROUP_KIND, id: String(id), key: group.code };
         });
-        if (!made) continue;
-        ctx.log(`created customer group ${group.code}`);
-    }
+    });
+    if (made) ctx.log(`created customer group ${group.code}`);
 }
 
 export async function removeCustomerGroup(send: CommerceSend, id: string): Promise<void> {
@@ -128,31 +132,33 @@ async function customerFields(lk: ProductLookups, row: CustomerRow): Promise<Par
     };
 }
 
-/** Make each customer the install target's website lacks; record it by its email. */
+/**
+ * Make each customer the install target's website lacks, through the Import API (`customerImport.ts`:
+ * this store refuses `POST customers`), and record each by its email.
+ */
 export async function installCustomers(ctx: KindContext, rows: CustomerRows): Promise<void> {
     const websiteId = ctx.session.websiteId;
-    if (websiteId === undefined) throw new Error("The install target names no website, so the pack's customers have nowhere to sign in.");
+    if (websiteId === undefined) throw new Error("The install target names no website, so the datapack's customers have nowhere to sign in.");
     const lk = productLookups(ctx);
+    const todo: CustomerToMake[] = [];
     for (const row of rows) {
         const key = customerKey(row.customer.email);
         if (ownedId(ctx.session, CUSTOMER_KIND, key) !== undefined || ctx.recorder.byKey(CUSTOMER_KIND, key)) continue;
-        if (await customerByEmail(ctx.get, row.customer.email, websiteId)) {
+        const found = await customerByEmail(ctx.get, row.customer.email, websiteId);
+        if (found) {
             ctx.log(`left customer ${key} as it is: the website already has it`);
+            // Walk F190: the store's own, on the record so a save follows it; no removal takes it.
+            await adoptFound(ctx.recorder, CUSTOMER_KIND, found.id, key);
+            ctx.count?.settled(CUSTOMER_KIND, key);
             continue;
         }
-        // Step 14 item 3: a row Commerce refuses, or that needs a row skipped, is skipped; the rest go on.
-        const made = await tryRow(ctx, { kind: CUSTOMER_KIND, key }, async () => {
-            const customer = { ...(await customerFields(lk, row)), website_id: websiteId, store_id: ctx.session.storeId } as CommerceCustomer;
-            return createOne(ctx, { kind: CUSTOMER_KIND, key, find: { websiteId } }, async () => {
-                const answer = (await ctx.send('POST', 'customers', { customer, ...(row.password ? { password: row.password } : {}) })) as CommerceCustomer | null;
-                const id = Number(answer?.id);
-                if (!Number.isInteger(id)) throw new Error(`Commerce did not answer the new customer ${key}'s id.`);
-                return { kind: CUSTOMER_KIND, id: String(id), key };
-            });
-        });
-        if (!made) continue;
-        ctx.log(`created customer ${key}`);
+        // Step 14 item 3: a row naming what the store lacks (its group) is skipped; the rest go on.
+        const fields = await tryRow(ctx, { kind: CUSTOMER_KIND, key }, () => customerFields(lk, row));
+        // One made is counted once its import call has answered (`makeCustomersByImport`).
+        if (fields) todo.push(customerImportRows({ ...fields, email: row.customer.email }, ctx, row.password));
+        else ctx.count?.settled(CUSTOMER_KIND, key);
     }
+    await makeCustomersByImport(ctx, todo);
 }
 
 export async function removeCustomer(send: CommerceSend, id: string): Promise<void> {

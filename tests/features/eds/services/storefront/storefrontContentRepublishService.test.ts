@@ -53,6 +53,8 @@ import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { createMockLogger } from '../../../../helpers/loggerFake';
 import { PREVIEW_CODE_APP_NOT_ON_REPO_ERROR } from '../../../../helpers/helixAdminFixtures';
 import { fakeHelix, helixCalls } from './storefrontContentRepublishService.testUtils';
+import type { Project } from '@/types/base';
+import { createMockProject, edsStorefrontInstance } from '../../../../helpers/projectFake';
 
 // Helix arrives through the pipeline's own params; the shared fake states its surface.
 const {
@@ -303,6 +305,84 @@ describe('republishStorefrontContent', () => {
                 [S.warmingProductPages.label, 'Warming product pages: 2 of 2 pages'],
                 [S.checkingSettings.label],
             ]);
+        });
+    });
+
+    // PL-104 fix 10 (F257): the Finish Setup step "Republish the Code" is checked by the
+    // republish itself, so the button and the agent's `republish` both leave it as the site is.
+    describe("the Finish Setup step 'Republish the Code'", () => {
+        const originalFetch = global.fetch;
+        afterEach(() => {
+            global.fetch = originalFetch;
+        });
+
+        /** A storefront project whose code step waits on one file, and repository reads for it. */
+        function withCodeStep() {
+            const project = createMockProject({
+                name: 'p',
+                path: '/p',
+                selectedStack: 'eds-paas',
+                componentInstances: {
+                    'eds-storefront': { ...edsStorefrontInstance(), metadata: { githubRepo: 'me/shop' } },
+                },
+                finishSetup: { 'republish-code': { files: ['scripts/commerce.js'] } },
+            });
+            const githubFiles = {
+                getLatestCommitSha: jest.fn(async () => 'head'),
+                getFileContent: jest.fn(async (_o: string, _r: string, file: string) => ({
+                    content: 'new',
+                    sha: 's',
+                    path: file,
+                })),
+            };
+            // The live site serves the file as the repository has it.
+            global.fetch = jest.fn(async () => ({ ok: true, text: async () => 'new' })) as unknown as typeof fetch;
+            const persist = jest.fn(async (_p: Project) => undefined);
+            return { project, githubFiles, persist };
+        }
+
+        it('is marked done, and saved, once a republish succeeds and the site serves the code', async () => {
+            const { project, githubFiles, persist } = withCodeStep();
+
+            const res = await republishStorefrontContent(params({ project, githubFiles, persist }));
+
+            expect(res.success).toBe(true);
+            expect(githubFiles.getLatestCommitSha).toHaveBeenCalledWith('me', 'shop');
+            const saved = persist.mock.calls.at(-1)?.[0];
+            expect(saved?.finishSetup?.['republish-code']).toMatchObject({ state: 'done', lastCheck: 'passed' });
+            expect(project.finishSetup?.['republish-code']).toMatchObject({ state: 'done' });
+        });
+
+        it('stays open, saying which file, when the site still serves the old code', async () => {
+            const { project, githubFiles, persist } = withCodeStep();
+            global.fetch = jest.fn(async () => ({ ok: true, text: async () => 'old' })) as unknown as typeof fetch;
+
+            await republishStorefrontContent(params({ project, githubFiles, persist }));
+
+            const step = project.finishSetup?.['republish-code'];
+            expect(step).toMatchObject({ lastCheck: 'failed' });
+            expect(step).not.toHaveProperty('state');
+            expect(step?.note).toContain('scripts/commerce.js');
+        });
+
+        it('is not checked when the republish fails', async () => {
+            const { project, githubFiles, persist } = withCodeStep();
+            mockPublishAllSiteContent.mockRejectedValueOnce(new Error('helix 503'));
+
+            await republishStorefrontContent(params({ project, githubFiles, persist }));
+
+            expect(githubFiles.getLatestCommitSha).not.toHaveBeenCalled();
+            expect(project.finishSetup?.['republish-code']).toStrictEqual({ files: ['scripts/commerce.js'] });
+        });
+
+        it('leaves the republish a success when the check cannot read the repository', async () => {
+            const { project, githubFiles, persist } = withCodeStep();
+            githubFiles.getLatestCommitSha.mockRejectedValueOnce(new Error('GitHub 502'));
+
+            const res = await republishStorefrontContent(params({ project, githubFiles, persist }));
+
+            expect(res.success).toBe(true);
+            expect(project.finishSetup?.['republish-code']).not.toHaveProperty('lastCheck', 'passed');
         });
     });
 });

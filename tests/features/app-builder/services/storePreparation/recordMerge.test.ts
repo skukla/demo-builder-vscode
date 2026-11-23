@@ -10,10 +10,10 @@ import type { WarehouseStepRecord } from '@/types/storePreparation';
 describe('mergedStepRecord, warehouse', () => {
     const FIRST: WarehouseStepRecord = {
         kind: 'warehouse',
-        createdSources: ['justrite_warehouse'],
+        createdSources: ['tailspin_warehouse'],
         createdStock: { id: 7, name: 'acme Stock' },
-        links: [{ stockId: 7, sourceCode: 'justrite_warehouse' }],
-        sourceFingerprints: { justrite_warehouse: 'first' },
+        links: [{ stockId: 7, sourceCode: 'tailspin_warehouse' }],
+        sourceFingerprints: { tailspin_warehouse: 'first' },
     };
 
     it('keeps the sources switched back on and the latest hash of each source', () => {
@@ -21,19 +21,19 @@ describe('mergedStepRecord, warehouse', () => {
             kind: 'warehouse',
             createdSources: [],
             links: [{ stockId: 7, sourceCode: 'test_warehouse' }],
-            enabledSources: ['justrite_warehouse', 'test_warehouse'],
-            sourceFingerprints: { justrite_warehouse: 'again', test_warehouse: 'test' },
+            enabledSources: ['tailspin_warehouse', 'test_warehouse'],
+            sourceFingerprints: { tailspin_warehouse: 'again', test_warehouse: 'test' },
         };
         expect(mergedStepRecord(FIRST, next)).toEqual({
             kind: 'warehouse',
-            createdSources: ['justrite_warehouse'],
+            createdSources: ['tailspin_warehouse'],
             createdStock: { id: 7, name: 'acme Stock' },
             links: [
-                { stockId: 7, sourceCode: 'justrite_warehouse' },
+                { stockId: 7, sourceCode: 'tailspin_warehouse' },
                 { stockId: 7, sourceCode: 'test_warehouse' },
             ],
-            enabledSources: ['justrite_warehouse', 'test_warehouse'],
-            sourceFingerprints: { justrite_warehouse: 'again', test_warehouse: 'test' },
+            enabledSources: ['tailspin_warehouse', 'test_warehouse'],
+            sourceFingerprints: { tailspin_warehouse: 'again', test_warehouse: 'test' },
         });
     });
 

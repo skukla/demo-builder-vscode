@@ -20,6 +20,7 @@
  */
 
 import { readFileSync, readdirSync, statSync } from 'fs';
+import { createRequire } from 'module';
 import { join, relative } from 'path';
 
 const ROOT = process.argv[2] ?? 'tests';
@@ -45,6 +46,15 @@ const norm = (s) => s.replace(/\s+/g, ' ').trim();
 /**
  * Each probe: what the fake is, how to recognise one being BUILT inline, and
  * how to recognise a suite importing a shared one instead.
+ *
+ * `builders` names the shared builders. A literal handed straight INTO one
+ * (`createMockStateManager({ saveProject: ... })`) is that builder's overrides,
+ * the right use, and is not counted as hand-rolled. Until 2026-11-21 it was:
+ * 12 of the 21 "hand-rolled" HandlerContexts were overrides to
+ * createMockHandlerContext.
+ *
+ * `notThis` sets aside a literal that matches the pattern but is a different
+ * fake. The number set aside is printed, so the exclusion stays visible.
  */
 const PROBES = [
     {
@@ -52,26 +62,35 @@ const PROBES = [
         // an object literal carrying the logger's method set
         inline: /\{[^{}]*\bdebug:\s*jest\.fn\(\)[^{}]*\berror:\s*jest\.fn\(\)[^{}]*\}/g,
         shared: /\b(createMockLogger|makeLogger|mockLogger)\b\s*(?:\(|,|\))/,
+        builders: ['createMockLogger', 'makeLogger'],
     },
     {
         name: 'CommandExecutor',
         inline: /\{[^{}]*\bexecute:\s*jest\.fn\([^)]*\)[^{}]*\}/g,
         shared: /\b(createMockCommandExecutor|mockCommandExecutor|meshDeps)\b/,
+        builders: ['createMockCommandExecutor', 'createFakeCommandExecutorDeps'],
     },
     {
         name: 'HandlerContext',
         inline: /\{[^{}]*\bsendMessage:\s*jest\.fn\(\)[^{}]*\}/g,
-        shared: /\b(createMockHandlerContext|createMockContext|makeContext)\b/,
+        shared: /\b(createMockHandlerContext|createMockHandlerContextBase|createMockContext|makeContext)\b/,
+        builders: ['createMockHandlerContext', 'createMockHandlerContextBase'],
+        // `{ sendMessage }` or `{ on, sendMessage }` alone is the webview message
+        // channel (a command's communicationManager), not a handler context.
+        notThis: (text) => /^\{\s*(?:on:\s*jest\.fn\(\),?\s*)?sendMessage:\s*jest\.fn\(\)(?:\.mockResolvedValue\(undefined\))?,?\s*\}$/.test(text),
+        notThisLabel: 'message-channel fakes',
     },
     {
         name: 'StateManager',
         inline: /\{[^{}]*\bsaveProject:\s*jest\.fn\([^)]*\)[^{}]*\}/g,
         shared: /\b(createMockStateManager|mockStateManager)\b/,
+        builders: ['createMockStateManager'],
     },
     {
         name: 'Project fixture',
         inline: /\{[^{}]*\bcomponentInstances:\s*\{[^{}]*\}[^{}]*\}/g,
         shared: /\b(createMockProject|makeProject|buildProject)\b/,
+        builders: ['createMockProject'],
     },
 ];
 
@@ -81,9 +100,14 @@ let anyBroken = false;
 for (const probe of PROBES) {
     const variants = new Map(); // normalised text -> files
     const sharedUsers = new Set();
+    const intoBuilder = new RegExp(`\\b(?:${probe.builders.join('|')})\\s*\\(\\s*$`);
+    let overrides = 0;
+    let setAside = 0;
     for (const [file, src] of SRC) {
         for (const m of src.matchAll(probe.inline)) {
             const key = norm(m[0]);
+            if (intoBuilder.test(src.slice(Math.max(0, m.index - 80), m.index))) { overrides += 1; continue; }
+            if (probe.notThis?.(key)) { setAside += 1; continue; }
             if (!variants.has(key)) variants.set(key, []);
             variants.get(key).push(file);
         }
@@ -106,6 +130,8 @@ for (const probe of PROBES) {
     console.log(`   suites importing a shared builder : ${sharedUsers.size}`);
     console.log(`   suites hand-rolling one inline    : ${inlineFiles.size}`);
     console.log(`   DISTINCT hand-rolled shapes       : ${variants.size}`);
+    console.log(`   builder overrides (not counted)   : ${overrides}`);
+    if (probe.notThis) console.log(`   ${probe.notThisLabel} set aside : ${setAside}`);
     if (sorted.length) {
         console.log(`   most common shape covers          : ${(topShare * 100).toFixed(0)}% of inline uses`);
         console.log(`   example of the most common        : ${sorted[0][0].slice(0, 88)}`);
@@ -118,4 +144,9 @@ for (const probe of PROBES) {
 if (anyBroken) {
     console.log('At least one probe matched nothing. Fix the probe before trusting this run.');
     process.exit(2);
+}
+
+// A run over the whole suite is the periodic check; the release check reads this date (PL-107).
+if (ROOT === 'tests') {
+    createRequire(import.meta.url)('../../../scripts/lib/pipelineLast.js').recordRun('test-divergence-scan');
 }

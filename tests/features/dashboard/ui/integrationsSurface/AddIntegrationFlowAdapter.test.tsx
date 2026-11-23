@@ -9,7 +9,7 @@
  */
 
 import { act } from '@testing-library/react';
-import { mockPostMessage, mockRequest } from '../../../../helpers/webviewClientMock';
+import { mockPostMessage } from '../../../../helpers/webviewClientMock';
 import {
     CATALOG,
     INTEGRATION,
@@ -489,25 +489,16 @@ describe('AddIntegrationFlowAdapter', () => {
     });
 
     /**
-     * The DASHBOARD webview registers `reAuthenticate`, not the wizard's
-     * `authenticate` — it awaits the browser sign-in and returns when it is done,
-     * so the picker can re-fetch straight after.
+     * The one Sign In (`authenticate`), the message every screen sends since
+     * 2026-11-18 — it awaits the browser sign-in and returns when it is done, so
+     * the picker can re-fetch straight after.
      */
     describe('sign-in', () => {
-        it('asks the dashboard to reAuthenticate', async () => {
-            mockRequest.mockResolvedValue(undefined);
+        // Walk F248 (owner: tidy it): the window owns the one Sign In; the host passes no copy.
+        it('leaves the sign-in to the window', () => {
             renderAdapter();
 
-            await modalProps().onSignIn();
-
-            expect(mockRequest).toHaveBeenCalledWith('reAuthenticate');
-        });
-
-        it('swallows a failed sign-in rather than rejecting into the modal', async () => {
-            mockRequest.mockRejectedValue(new Error('the browser was closed'));
-            renderAdapter();
-
-            await expect(modalProps().onSignIn()).resolves.toBeUndefined();
+            expect(modalProps().onSignIn).toBeUndefined();
         });
     });
 });

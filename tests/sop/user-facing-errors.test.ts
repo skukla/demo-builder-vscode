@@ -14,8 +14,10 @@
  * WHAT COUNTS AS TRANSLATED: a per-provider formatter (three exist — Adobe IMS/Console,
  * GitHub/DA.live/Helix, and `aio api-mesh`), or a domain error's own message. A feature
  * with no provider-specific knowledge uses an honest generic — "Could not reach Adobe
- * Console. See Debug Logs for details." — which is less specific and never misleading.
- * The raw text still goes to the Debug Logs channel, where it is useful.
+ * Console.", or "Demo Builder couldn't tell what went wrong." — which is less specific and
+ * never misleading. No sentence sends a person to Debug Logs (owner, 2026-11-19; PL-102,
+ * `no-debug-logs-sentence.test.ts`). The raw text still goes to the Debug Logs channel,
+ * where it is useful. PL-102 replaces this shape scan with the `PlainText` type.
  *
  * WHY A LEDGER AND NOT A BAN. 67 sites predate the rule. A rule that arrives as 67
  * build failures is a rule people switch off, so the list may only shrink — the same

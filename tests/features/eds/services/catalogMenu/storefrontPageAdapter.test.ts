@@ -11,7 +11,7 @@
 
 import { createStorefrontPages } from '@/features/eds/services/catalogMenu/storefrontPageAdapter';
 
-const TARGET = { daLiveOrg: 'skukla', daLiveSite: 'kukla-justrite' };
+const TARGET = { daLiveOrg: 'skukla', daLiveSite: 'kukla-tailspin' };
 
 function transport() {
     const daLive = {
@@ -33,7 +33,7 @@ describe('read', () => {
         t.daLive.readSource.mockResolvedValue({ status: 200, body: '<body>nav</body>', bytes: 16, truncated: false });
 
         expect(await t.pages.read('/nav')).toBe('<body>nav</body>');
-        expect(t.daLive.readSource).toHaveBeenCalledWith('skukla', 'kukla-justrite', 'nav.html', Number.POSITIVE_INFINITY);
+        expect(t.daLive.readSource).toHaveBeenCalledWith('skukla', 'kukla-tailspin', 'nav.html', Number.POSITIVE_INFINITY);
     });
 
     it('answers null for a page that does not exist', async () => {
@@ -64,12 +64,12 @@ describe('write', () => {
 
         expect(t.daLive.createSource).toHaveBeenCalledWith(
             'skukla',
-            'kukla-justrite',
+            'kukla-tailspin',
             'safety-signs.html',
             '<body>x</body>',
             { overwrite: true },
         );
-        expect(t.helix.previewAndPublishPage).toHaveBeenCalledWith('skukla', 'kukla-justrite', '/safety-signs');
+        expect(t.helix.previewAndPublishPage).toHaveBeenCalledWith('skukla', 'kukla-tailspin', '/safety-signs');
         expect(t.daLive.createSource.mock.invocationCallOrder[0]).toBeLessThan(
             t.helix.previewAndPublishPage.mock.invocationCallOrder[0],
         );
@@ -96,8 +96,8 @@ describe('remove', () => {
 
         await t.pages.remove('/safety-signs');
 
-        expect(t.helix.unpublishPage).toHaveBeenCalledWith('skukla', 'kukla-justrite', '/safety-signs');
-        expect(t.daLive.deleteSource).toHaveBeenCalledWith('skukla', 'kukla-justrite', 'safety-signs.html');
+        expect(t.helix.unpublishPage).toHaveBeenCalledWith('skukla', 'kukla-tailspin', '/safety-signs');
+        expect(t.daLive.deleteSource).toHaveBeenCalledWith('skukla', 'kukla-tailspin', 'safety-signs.html');
         expect(t.helix.unpublishPage.mock.invocationCallOrder[0]).toBeLessThan(
             t.daLive.deleteSource.mock.invocationCallOrder[0],
         );
@@ -124,8 +124,8 @@ describe('remove', () => {
  * site, files carry `ext`).
  */
 describe('listPages', () => {
-    const file = (path: string, ext = 'html') => ({ name: path, path: `/skukla/kukla-justrite${path}.${ext}`, ext });
-    const folder = (path: string) => ({ name: path, path: `/skukla/kukla-justrite${path}` });
+    const file = (path: string, ext = 'html') => ({ name: path, path: `/skukla/kukla-tailspin${path}.${ext}`, ext });
+    const folder = (path: string) => ({ name: path, path: `/skukla/kukla-tailspin${path}` });
 
     function listing(tree: Record<string, ReturnType<typeof file | typeof folder>[]>) {
         const t = transport();
@@ -142,9 +142,9 @@ describe('listPages', () => {
 
         expect((await t.pages.listPages()).sort()).toEqual(['/about', '/index', '/signs/danger-signs', '/signs/deep/page']);
         expect(t.daLive.listDirectory.mock.calls.map((c) => c.slice(0, 3))).toEqual([
-            ['skukla', 'kukla-justrite', '/'],
-            ['skukla', 'kukla-justrite', '/signs'],
-            ['skukla', 'kukla-justrite', '/signs/deep'],
+            ['skukla', 'kukla-tailspin', '/'],
+            ['skukla', 'kukla-tailspin', '/signs'],
+            ['skukla', 'kukla-tailspin', '/signs/deep'],
         ]);
     });
 
@@ -172,7 +172,7 @@ describe('listPages', () => {
     });
 
     it('accepts the extension spelled with or without its dot', async () => {
-        const t = listing({ '/': [{ name: 'about', path: '/skukla/kukla-justrite/about.html', ext: '.html' }] });
+        const t = listing({ '/': [{ name: 'about', path: '/skukla/kukla-tailspin/about.html', ext: '.html' }] });
 
         expect(await t.pages.listPages()).toEqual(['/about']);
     });

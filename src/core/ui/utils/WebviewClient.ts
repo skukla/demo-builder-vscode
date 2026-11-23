@@ -16,7 +16,7 @@
 
 import { FRONTEND_TIMEOUTS } from './frontendTimeouts';
 import type { Message } from '@/types/messages';
-import type { ProjectCreationConfig } from '@/types/webviewRequests';
+import type { AuthenticateRequest, ProjectCreationConfig } from '@/types/webviewRequests';
 
 declare global {
     interface Window {
@@ -269,8 +269,12 @@ class WebviewClient {
     }
 
     // Helper methods for common operations
-    public requestAuth(force: boolean = false): void {
-        this.postMessage('authenticate', { force });
+    /**
+     * Ask for an Adobe sign-in: `force` is the org switch, `fresh` renews the same account.
+     */
+    public requestAuth(force: boolean = false, fresh: boolean = false): void {
+        const request: AuthenticateRequest = fresh ? { force, fresh } : { force };
+        this.postMessage('authenticate', request);
     }
 
     public createProject(config: ProjectCreationConfig): void {

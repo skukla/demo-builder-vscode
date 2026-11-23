@@ -131,7 +131,10 @@
           "codePatches": [
             "header-nav-tools-defensive",
             "aem-assets-sku-sanitization",
-            "pdp-empty-data-redirect"
+            "pdp-empty-data-redirect",
+            "plp-search-skeleton",
+            "plp-search-url-after-first-result",
+            "pdp-loading-skeleton"
           ],
           "codePatchSource": {
             "owner": "skukla",
@@ -168,7 +171,10 @@
           "codePatches": [
             "header-nav-tools-defensive",
             "aem-assets-sku-sanitization",
-            "pdp-empty-data-redirect"
+            "pdp-empty-data-redirect",
+            "plp-search-skeleton",
+            "plp-search-url-after-first-result",
+            "pdp-loading-skeleton"
           ],
           "codePatchSource": {
             "owner": "skukla",
@@ -266,7 +272,10 @@
             "product-teaser-sku-encoding",
             "product-teaser-getproductlink-import",
             "product-teaser-image-url-handling",
-            "pdp-empty-data-redirect"
+            "pdp-empty-data-redirect",
+            "plp-search-skeleton",
+            "plp-search-url-after-first-result",
+            "pdp-loading-skeleton"
           ],
           "codePatchSource": {
             "owner": "skukla",
@@ -318,7 +327,10 @@
             "product-teaser-sku-encoding",
             "product-teaser-getproductlink-import",
             "product-teaser-image-url-handling",
-            "pdp-empty-data-redirect"
+            "pdp-empty-data-redirect",
+            "plp-search-skeleton",
+            "plp-search-url-after-first-result",
+            "pdp-loading-skeleton"
           ],
           "codePatchSource": {
             "owner": "skukla",
@@ -424,7 +436,10 @@
           "codePatches": [
             "header-nav-tools-defensive",
             "aem-assets-sku-sanitization",
-            "pdp-empty-data-redirect"
+            "pdp-empty-data-redirect",
+            "plp-search-skeleton",
+            "plp-search-url-after-first-result",
+            "pdp-loading-skeleton"
           ],
           "codePatchSource": {
             "owner": "skukla",
@@ -487,7 +502,10 @@
           "codePatches": [
             "header-nav-tools-defensive",
             "aem-assets-sku-sanitization",
-            "pdp-empty-data-redirect"
+            "pdp-empty-data-redirect",
+            "plp-search-skeleton",
+            "plp-search-url-after-first-result",
+            "pdp-loading-skeleton"
           ],
           "codePatchSource": {
             "owner": "skukla",

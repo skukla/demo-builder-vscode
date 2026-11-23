@@ -4,7 +4,7 @@ kind: fix
 area: eds
 needs: []
 value: high
-status: built
+status: shipped
 ---
 
 # The republish inside an add, a deploy or a save asks for the DA.live sign-in, and says when the CDN did not take it
@@ -68,3 +68,4 @@ Filed 2026-09-24.
 
 - 2026-09-24  fix(eds): the republish inside an add, deploy or save asks for the DA.live sign-in, and a CDN publish that did not land is heard (`7e974485a`)
 - 2026-09-24  LIVE 2026-09-24 11:06 — first add of erp-integration on Bodea through add_integration, on build 01d3cb887, in a window with no DA.live session: the sign-in ask appeared as a modal at the storefront republish (agent call), the owner signed in (token from clipboard, 10s), and the republish then pushed config.json to GitHub, published it to the CDN and verified it (attempt 1/10). The decline path was not exercised live.
+- 2026-11-20  Released in v1.0.0-beta.153

@@ -16,7 +16,7 @@
  * one-minute `aio app deploy`, reads as a frozen screen. The latest payload per id is
  * the answer to "where is it now?".
  *
- * A successful run is forgotten: the modal closes itself on success and the tile holds
+ * A successful run is forgotten: the modal shows the result until closed and the tile holds
  * the result. A failure is kept until the next run of that integration starts, so a
  * modal reopened after "Run in background" still shows the reason.
  *
@@ -29,10 +29,12 @@ import {
     forwardToBackgroundNotice,
     openBackgroundNotice,
 } from './operationBackgroundNotice';
+import { COULDNT_TELL, notYetPlain } from '@/core/utils/plainText';
 import { ErrorCode } from '@/types/errorCodes';
 import type { HandlerContext, HandlerResponse, MessageHandler } from '@/types/handlers';
 import { toError } from '@/types/typeGuards';
-import type { OperationProgressPayload } from '@/types/webviewPayloads';
+import type { OperationProgressPayload, OperationPrompt } from '@/types/webviewPayloads';
+import type { BackgroundOperationRequest } from '@/types/webviewRequests';
 
 /** How to reach the screen showing an operation's modal. */
 type SendToScreen = HandlerContext['sendMessage'];
@@ -41,6 +43,30 @@ const latest = new Map<string, OperationProgressPayload>();
 const screens = new Map<string, SendToScreen>();
 /** When each running operation began: its first `running` push after the last end. */
 const startedAt = new Map<string, number>();
+/**
+ * The question each operation waits on. A stage pushed while it waits carries it, so the screen
+ * keeps showing it: the datapack job's status poller pushes every few seconds, and its first push
+ * after the question took the question off the screen, leaving the install waiting on nobody
+ * (walk F162, 2026-11-16).
+ */
+const openPrompts = new Map<string, OperationPrompt>();
+
+/** The operation is waiting on this question until `releasePrompt`. */
+export function holdPrompt(id: string, prompt: OperationPrompt): void {
+    openPrompts.set(id, prompt);
+}
+
+/** The operation's question was answered or withdrawn: stage pushes no longer carry it. */
+export function releasePrompt(id: string): void {
+    openPrompts.delete(id);
+}
+
+/** A running stage with the open question on it, when one is open and the stage has none. */
+function withOpenPrompt(payload: OperationProgressPayload): OperationProgressPayload {
+    const prompt = openPrompts.get(payload.id);
+    if (!prompt || payload.state !== 'running' || payload.prompt) return payload;
+    return { ...payload, prompt };
+}
 
 /**
  * The payload with its run's timing: when it began on every push, and how long it
@@ -88,7 +114,7 @@ export function heldProgress(id: string): OperationProgressPayload | undefined {
 export async function pushOperationProgress(
     reported: OperationProgressPayload,
 ): Promise<void> {
-    const payload = withTiming(reported);
+    const payload = withOpenPrompt(withTiming(reported));
     if (payload.state === 'succeeded') {
         latest.delete(payload.id);
     } else {
@@ -137,7 +163,8 @@ export function narrateOutcomeToModal<P extends { progress?: 'modal' }>(
                 await pushOperationProgress(
                     result.success
                         ? { id, state: 'succeeded' }
-                        : { id, state: 'failed', error: result.error ?? 'The operation did not finish.' },
+                        // A handler's error is not yet typed at its source (PL-102 slice 4).
+                        : { id, state: 'failed', error: result.error ? notYetPlain(result.error) : COULDNT_TELL },
                 );
             }
             return result;
@@ -147,7 +174,7 @@ export function narrateOutcomeToModal<P extends { progress?: 'modal' }>(
             await pushOperationProgress({
                 id,
                 state: 'failed',
-                error: 'The operation stopped unexpectedly. Details are in Debug Logs.',
+                error: COULDNT_TELL,
             });
             throw error;
         }
@@ -182,23 +209,37 @@ export const handleGetOperationProgress: MessageHandler<{ id?: string }> = async
 /** Longest title a background notice takes — the modal's own title, never prose. */
 const MAX_TITLE = 200;
 
+/** A title the window gave: present, and the length of a title, never prose. */
+function titleOf(value: unknown): string | undefined {
+    const title = typeof value === 'string' ? value.trim() : '';
+    return title && title.length <= MAX_TITLE ? title : undefined;
+}
+
 /**
  * Handle `backgroundOperation` — the SC chose "Run in background": carry the
- * operation on in a progress notification (see operationBackgroundNotice). Nothing
- * opens for an operation that has already ended.
+ * operation on in a progress notification, ending in the window's own result titles
+ * (see operationBackgroundNotice). Nothing opens for an operation that has already ended.
  */
-export const handleBackgroundOperation: MessageHandler<{ id?: string; title?: string }> = async (
+export const handleBackgroundOperation: MessageHandler<Partial<BackgroundOperationRequest>> = async (
     _context,
     payload,
 ): Promise<HandlerResponse> => {
     const id = payload?.id;
-    const title = payload?.title?.trim();
-    if (!id || !title || title.length > MAX_TITLE) {
-        return { success: false, error: 'An operation id and title are required.', code: ErrorCode.INVALID_OPERATION };
+    const title = titleOf(payload?.title);
+    const doneTitle = titleOf(payload?.doneTitle);
+    const failedTitle = titleOf(payload?.failedTitle);
+    if (!id || !title || !doneTitle || !failedTitle) {
+        return {
+            success: false,
+            error: "An operation id, its title and its result's titles are required.",
+            code: ErrorCode.INVALID_OPERATION,
+        };
     }
+    const warnedTitle = titleOf(payload?.warnedTitle);
     const current = latest.get(id);
     if (current?.state === 'running') {
-        openBackgroundNotice(title, current, () => latest.get(id)?.state === 'running');
+        const titles = { doneTitle, failedTitle, ...(warnedTitle ? { warnedTitle } : {}) };
+        openBackgroundNotice(title, titles, current, () => latest.get(id)?.state === 'running');
     }
     return { success: true };
 };

@@ -27,6 +27,32 @@ const REPO = new URL('../../../..', import.meta.url).pathname;
 const PROJECT_MCP = `${ROOT}/bodea/.mcp.json`;
 
 /**
+ * A project folder with an ERP integration (a `demo-erp*` component), found rather than
+ * named: project folders are often named for a customer, and this repo is public.
+ */
+function erpProject() {
+    for (const name of readdirSync(ROOT)) {
+        const manifest = `${ROOT}/${name}/.demo-builder.json`;
+        if (!existsSync(manifest)) continue;
+        const ids = Object.keys(JSON.parse(readFileSync(manifest, 'utf8')).appBuilderComponents ?? {});
+        if (ids.some((id) => id.startsWith('demo-erp'))) return `${ROOT}/${name}`;
+    }
+    throw new Error('cwd "erp": no project under ~/.demo-builder/projects has an ERP integration');
+}
+
+/**
+ * Where a prompt's agent starts: `"project"` is bodea, `"erp"` is a project with an ERP,
+ * and another value names a project folder.
+ */
+function cwdOf(cwd) {
+    if (!cwd) return ROOT;
+    if (cwd === 'erp') return erpProject();
+    const dir = `${ROOT}/${cwd === 'project' ? 'bodea' : cwd}`;
+    if (!existsSync(`${dir}/.demo-builder.json`)) throw new Error(`cwd "${cwd}" names no project at ${dir}`);
+    return dir;
+}
+
+/**
  * The agent's memory directory for these runs.
  *
  * Denying `Write`/`Edit` is not enough on its own: `Bash` is allowed on purpose —
@@ -107,11 +133,11 @@ const NATIVE_TOOLS = [
 ALLOWED.push(...NATIVE_TOOLS);
 
 // ── Tier 2 (--tier2): scratch-project writes ─────────────────────────────────
-// The hand-curated write list joins the allowlist ONLY under the flag, and the
-// harness (tier2-harness.mjs) flips the current-project pointer to the scratch
-// project BEFORE any agent runs — export_project_settings writes SECRETS from
-// whatever project is current (tier2-design.md finding 1). Setup throws on a
-// failed flip; restore notes print at the TOP of the results.
+// The hand-curated write list joins the allowlist ONLY under the flag, and every
+// tier-2 agent runs INSIDE the scratch folder, which the extension scopes its
+// connection to — export_project_settings writes SECRETS from whatever project is
+// current (tier2-design.md finding 1). Setup proves that scope through the real
+// proxy and throws when it does not hold; restore notes print at the TOP of the results.
 const TIER2 = process.argv.includes('--tier2');
 let tier2Token = null;
 if (TIER2) {
@@ -122,7 +148,7 @@ if (TIER2) {
     // agent hand-edited the manifest as a workaround (itself a finding: denial
     // text invites 'other tools', and the agent obliged).
     ALLOWED.push(...tier2Writes().map((t) => `mcp__demo-builder__${t}`));
-    tier2Token = setup();
+    tier2Token = await setup();
 }
 
 
@@ -142,6 +168,13 @@ let PROMPTS = JSON.parse(readFileSync(`${AB}/prompts.json`, 'utf-8'));
 // --tier2 — outside it they would trip the unanswerable-prompt abort on
 // every full run, so they are not selectable at all.
 if (!TIER2) PROMPTS = PROMPTS.filter((p) => p.tier !== 2);
+// Tier-3 prompts expect a tool that is neither on the read-only allowlist
+// (readonly-tools.txt) nor on the tier-2 scratch write list (tier2-writes.txt). Most write
+// to Commerce, Adobe, GitHub or DA.live; some only touch state the scratch harness does
+// not reset, or are reads whose tool is not yet declared read-only. None runs unattended.
+// They stay in prompts.json so the tool they name still counts as prompted
+// (toolPromptCoverage.test.ts).
+PROMPTS = PROMPTS.filter((p) => p.tier !== 3);
 
 // `--only <id>` re-runs ONE prompt, and `--repeat <n>` runs the selection n times.
 // Both exist for the same reason: every result here is n=1, and agents are
@@ -227,7 +260,15 @@ let serving = 'unknown';
 try {
     serving = execFileSync('node', ['.claude/skills/mcp-live-probe/probe.mjs', 'info'],
         { encoding: 'utf8', cwd: REPO }).split('\n')[0].replace(/^serving:\s*/, '').trim();
-} catch { /* probe unavailable — recorded as unknown rather than guessed */ }
+} catch { /* probe unavailable: handled just below */ }
+
+// No server answering means every prompt would fail the same way, and a run of
+// failures would read as results. Stop before spending an agent session on any.
+if (serving === 'unknown' || serving === '') {
+    console.error('No Demo Builder dev host is serving the MCP socket, so the battery did not run.');
+    console.error('Start one (the mcp-live-probe skill has the relaunch steps) and run it again.');
+    process.exit(1);
+}
 
 // Adobe auth, read at the start AND checked again at the end.
 //
@@ -394,6 +435,13 @@ function runOnce(prompt, cwd = ROOT) {
                 if (ev.type === 'result') result = ev;
             }
         });
+        // An agent that cannot start (a cwd that no longer exists answers ENOENT) is this
+        // prompt's failure, never the run's: an unhandled error here once skipped the
+        // tier-2 restore (2026-11-21, after a rename moved the scratch folder).
+        child.on('error', (err) => {
+            said.push(`the agent did not start: ${err.message}`);
+            resolve({ calls, said, results, result });
+        });
         child.on('close', () => resolve({ calls, said, results, result }));
     });
 }
@@ -416,9 +464,14 @@ try {
         const memSnap = snapshotMemory();
         // `cwd: "project"` runs the prompt INSIDE the project directory — where
         // a producer's session actually sits, and the only place project skills
-        // (`.claude/skills/<name>/SKILL.md`) are discoverable. Default stays the
-        // projects root (the home surface), matching every recorded run so far.
-        const runCwd = cwd === 'project' ? `${ROOT}/bodea` : ROOT;
+        // (`.claude/skills/<name>/SKILL.md`) are discoverable. `cwd: "erp"` runs it in a
+        // project that has an ERP integration (`erpProject`): the extension scopes the
+        // session to it. A tier-2 prompt always runs in the scratch folder.
+        // Default stays the projects root (the home surface).
+        const runCwd = tier2Token ? tier2Token.cwd : cwdOf(cwd);
+        // Each tier-2 prompt starts from the fixture: one prompt renames the project, which
+        // moves its folder, and every prompt after it would start in a folder that is gone.
+        if (tier2Token) (await import('./tier2-harness.mjs')).resetScratch();
         const { calls, said, results, result } = await runOnce(prompt, runCwd);
         if (restoreMemory(memSnap)) {
             console.log('    (agent wrote to memory; restored so the next run is independent)');
@@ -501,7 +554,7 @@ try {
 } finally {
     if (tier2Token) {
         const { restore } = await import('./tier2-harness.mjs');
-        const notes = restore(tier2Token);
+        const notes = restore();
         console.log('\n=== TIER-2 RESTORE (read this FIRST) ===');
         for (const n of notes) console.log('  ' + n);
         if (notes.some((n) => n.includes('tier2 RED:'))) {

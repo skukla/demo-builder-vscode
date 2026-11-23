@@ -98,6 +98,22 @@ describe('what the wizard calls itself', () => {
         });
     });
 
+    // The tab matches the page's own title for an import (walk F277).
+    it('becomes the importer once a project file or copy seeds it', async () => {
+        const command = buildOpenable();
+
+        await command.execute({
+            importedSettings: projectFileV2({ selections: { frontend: 'eds-storefront' } }),
+            sourceDescription: 'a file',
+        });
+
+        expect(internals(command).getWebviewTitle()).toBe('Import Project');
+        expect(internals(command).getLoadingHeader()).toEqual({
+            title: 'Import Project',
+            subtitle: undefined,
+        });
+    });
+
     it('renders into the wizard bundle', () => {
         expect(internals(build()).getWebviewId()).toBe('demoBuilderWizard');
     });

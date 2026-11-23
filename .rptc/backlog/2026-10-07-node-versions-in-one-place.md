@@ -5,7 +5,8 @@ area: prerequisites
 parent: PR-1
 needs: []
 value: med
-status: active
+status: backlog
+plan: node-versions-in-one-place
 ---
 
 # Node versions in one place: one register, one resolver, one runner
@@ -64,7 +65,7 @@ the register), [[PL-36]] (an untested Node-version sort in the prerequisites ins
 ## Shipped so far
 
 - 2026-10-07  2026-10-07 Planned: .rptc/plans/node-versions-in-one-place/ (steps 0-8). Found while planning: getMeshNodeVersion and getInfrastructureNodeVersion look the extension up as adobe-demo-team.adobe-demo-builder (it is skukla.adobe-demo-builder), so mesh always falls back to a hardcoded 20; step 1 removes both.
-- 2026-10-07  2026-10-07 Step 0 run. MESH PASSED on Node 24 from a separate fnm store (FNM_DIR): aio-cli 11.1.4 + api-mesh 5.7.3 installed with no EBADENGINE; a minimal mesh created in a throwaway workspace (zzNode24Mesh), provisioned and answered a query; mesh and workspace then deleted. Adobe sign-in carried over to the store's aio (it reads ~/.config/aio). INGESTION: the tool installs and starts on Node 24, but it is DEAD CODE: ToolManager is built only for CleanupService.cleanupBackendData, which nothing turns on (no caller sets cleanupBackendData or an aco/commerce backendType); its data repo skukla/vertical-data-citisignal is gone (now PMET-public, private) and no branch has the definitions/project.json layout the tool reads. Recommendation: delete ToolManager, the backend-cleanup branch and the components.json tools entry instead of moving it to 24. NEW FINDINGS for step 2: npm 11.19 (Node 24.21) skips package install scripts by default (lmdb, @parcel/watcher, @swc/core, tree-sitter under aio; @apollo/protobufjs under the mesh plugin) - the mesh still worked, but App Builder builds must be tested before relying on it; and the api-mesh plugin echoes the SAVED aio workspace ('Select workspace: JustriteERP') while acting on the AIO_CONSOLE_WORKSPACE_ID env, a misleading line to keep out of any user message.
+- 2026-10-07  2026-10-07 Step 0 run. MESH PASSED on Node 24 from a separate fnm store (FNM_DIR): aio-cli 11.1.4 + api-mesh 5.7.3 installed with no EBADENGINE; a minimal mesh created in a throwaway workspace (zzNode24Mesh), provisioned and answered a query; mesh and workspace then deleted. Adobe sign-in carried over to the store's aio (it reads ~/.config/aio). INGESTION: the tool installs and starts on Node 24, but it is DEAD CODE: ToolManager is built only for CleanupService.cleanupBackendData, which nothing turns on (no caller sets cleanupBackendData or an aco/commerce backendType); its data repo skukla/vertical-data-citisignal is gone (now PMET-public, private) and no branch has the definitions/project.json layout the tool reads. Recommendation: delete ToolManager, the backend-cleanup branch and the components.json tools entry instead of moving it to 24. NEW FINDINGS for step 2: npm 11.19 (Node 24.21) skips package install scripts by default (lmdb, @parcel/watcher, @swc/core, tree-sitter under aio; @apollo/protobufjs under the mesh plugin) - the mesh still worked, but App Builder builds must be tested before relying on it; and the api-mesh plugin echoes the SAVED aio workspace ('Select workspace: TailspinERP') while acting on the AIO_CONSOLE_WORKSPACE_ID env, a misleading line to keep out of any user message.
 - 2026-10-07  refactor(node): every caller asks the register for its Node version (`249c9b56e`)
 - 2026-10-07  feat(node): Demo Builder's own Node store, and ensure a Node with the Adobe CLI under it (PR-1a step 2) (`e500a7f00`)
 - 2026-10-07  feat(node): the register of Node versions (PR-1a step 1) (`4050402eb`)
@@ -107,3 +108,5 @@ the register), [[PL-36]] (an untested Node-version sort in the prerequisites ins
 - 2026-10-08  refactor(app-builder): split appBuilderComponentRunner into add, redeploy and remove runs (`04d373365`)
 - 2026-10-08  docs: the god-file ratchet no longer cites the runner as a cohesive long file; log PR-1a and EDS-8 (`a6f122009`)
 - 2026-10-08  test(sop): a new import cycle in src fails the build (`e6ff8d1d9`)
+- 2026-11-21  Reconciled 2026-11-21: steps 0-9 built, 10 partly. Left: steps 11-14 of .rptc/plans/node-versions-in-one-place/overview.md: prune unused Nodes and a one-time shared-fnm cleanup (no such code in nodeFolder.ts), what the SC sees, docs, the owner's live check.
+- 2026-11-22  Paused 2026-11-22: back to backlog, last work 2026-10-08. Where it stopped is the 2026-11-21 reconcile line above.

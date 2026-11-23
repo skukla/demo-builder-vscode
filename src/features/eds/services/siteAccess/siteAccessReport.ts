@@ -76,7 +76,7 @@ function adminRefusal(listing: SiteAccessListing, owner: string): SiteAccessNoti
     if (listing.status === 'no_credential') return warning(SIGN_IN);
     if (listing.status !== 'not_authorized' && listing.status !== 'ok') {
         return warning(
-            `Could not read the site configuration for ${listing.site}. Check the Debug Logs for the response.`,
+            `Could not read the site configuration for ${listing.site}.`,
         );
     }
     return noRoleRemedy(listing, owner);

@@ -331,6 +331,22 @@ check says so and names the file.
 > cannot drift from the components it describes.
 > Enforced by `tests/sop/node-versions-from-components.test.ts`.
 
+> **Convention.** A component the builder owns ships by release, as the extension does: a push
+> reaches no SC, a published release does. `RELEASED_REPOS` lists those repositories, and only
+> `readNewestRelease` reads GitHub's releases. Each carries a CI job named `checks` and a
+> `RELEASING.md`, and a release goes through the `component-release` skill, which refuses a release
+> unless that job passed on that commit. Everything is on the extension's beta track until it
+> reaches 1.x, except `eds-demo-patches`, whose nightly gate publishes normal releases.
+> *Why:* following a branch meant merging to `main` shipped straight to every SC, with no
+> version, notes or hold. Three copies of the release lookup disagreed about which release was
+> newest, and one could hand a beta-channel install an alpha.
+> Enforced by `tests/sop/component-releases.test.ts`. Those repositories cannot be read from an
+> offline test, so `npm run components:ci` checks each one, daily by
+> `.github/workflows/component-ci.yml` (a failed run emails the owner) and in the periodic sweep.
+> It also fails a workflow that holds back the tools that only run the checks: `ubuntu-latest` and
+> the newest Playwright, never a number. Those reach no SC, and a held-back one breaks by itself
+> (the patch canary, 2026-11-02).
+
 > **Convention.** The boilerplate storefronts are built from moves forward when Adobe moves
 > it, not when someone remembers. The patches repo's daily drift gate verifies each new
 > boilerplate against our patches and, when every patch holds, publishes the release Demo
@@ -375,6 +391,27 @@ every time" and nothing tells you.
 > [ADR-020](../architecture/adr/020-session-accessors.md) · enforced by
 > `tests/sop/architecture-rules.test.ts`.
 > *Why:* a cache rebuilt per message is not a cache, and nothing reports it — the code looks correct and the work is done twice.
+
+A project also survives onto someone else's machine, as a project file, a Copy or a
+demo bundle. Every field of that file is either something that travels to the new
+project or a cloud resource that stays the sender's: their Adobe org, project and
+workspace, their repository and DA.live site, their mesh. The second kind may be read
+as provenance (a template to generate from, a content site to copy from) and never
+becomes the new project's own. F280 broke this: the file's workspace was seeded into
+the wizard, and creation deployed the mesh into the sender's workspace.
+
+> **Convention.** A file sent to someone else cannot point the new project at the
+> sender's cloud resources. Every field of `ProjectSeed` is classified `travels` or
+> `sendersOwn` in `src/types/projectFileOwnership.ts`, which `satisfies` a mapped type
+> over the file's interfaces, so an unclassified field is a compile error. Enforced by
+> `tests/features/project-creation/ui/wizard/sendersOwnFields.test.tsx` and
+> `tests/features/ai/server/createProjectFromFile-sendersOwn.test.ts`: a file with a
+> sentinel in every `sendersOwn` field goes through the real reader, wizard and
+> creation wire, and no sentinel may land there. The one exception is a comparison
+> key: an imported mesh is reused only when the SC chose the sender's workspace
+> themselves.
+> *Why:* the receiver's creation deploys, pushes and publishes into whatever it is
+> pointed at, and a file pointed it at a colleague's live demo.
 
 > **Also relevant.** [state-ownership.md](../architecture/state-ownership.md) ·
 > [state-management.md](../patterns/state-management.md)
@@ -446,9 +483,11 @@ meant.
 > it, and `Request failed with status code 403` does neither — it names a transport
 > detail and leaves an SC to guess which permission, which account, which site.
 > Translated means a per-provider formatter (three exist), a domain error's own message,
-> or an honest generic — "Could not reach Adobe Console. See Debug Logs for details." —
-> which is less specific and never misleading. The raw text still goes to the Debug Logs,
-> where it is useful.
+> or an honest generic — "Could not reach Adobe Console.", or when nothing says what went
+> wrong, "Demo Builder couldn't tell what went wrong." — which is less specific and never
+> misleading. No sentence sends a person to Debug Logs; the Open Debug Logs button may (owner,
+> 2026-11-19, PL-102). The raw text still goes to the Debug Logs, where it is useful. The door is
+> `src/core/utils/plainText.ts`: a field typed `PlainText` refuses raw text at compile time.
 >
 > **The rule is about WHOSE words reach the person, and that is not visible at the call
 > site.** `componentUpdater` passes its caught message straight through and is right to:
@@ -461,11 +500,16 @@ meant.
 > 67 sites predate the rule and are ledgered; the list may only shrink, because a rule
 > arriving as 67 build failures is a rule people switch off.
 > [ADR-023](../architecture/adr/023-error-handling.md) · Enforced by
-> `tests/sop/user-facing-errors.test.ts` against a shrink-only ledger.
+> `tests/sop/user-facing-errors.test.ts` against a shrink-only ledger, and by
+> `tests/sop/no-debug-logs-sentence.test.ts`, which fails on any on-screen sentence naming Debug
+> Logs (the Open Debug Logs button and the channel's name excepted), and by
+> `tests/sop/plain-text-debt.test.ts`: `notYetPlain`, which still lets untyped text reach a person,
+> has a ceiling that only falls (PL-102 slices 3 to 6 take it to zero).
 
 > **Convention.** A progress notification's title is an "-ing" verb and its object, and
 > says nothing else: "Deploying API Mesh", never "Demo Builder", never "Loading…", never
-> "Step 2/5:". The message under it is the stage name alone, 25 characters at most.
+> "Step 2/5:". The message under it is the stage name alone, short enough that the title,
+> ": " and the stage together fit the background notification: 62 characters.
 > *Why:* VS Code draws the title and message on one line of fixed width, puts ": "
 > between them itself, and spins a wheel beside them — so a trailing "…" or ":" is said
 > twice, a long stage is cut off mid-word, and a title that names the product instead of
@@ -488,7 +532,7 @@ meant.
 > kept deliberately (owner, 2026-10-16).
 >
 > 16 titles and 40 messages predate the rule and are ledgered; they are reworded slice
-> by slice in `.rptc/plans/operation-progress/extension-wide.md`. Stage names are held
+> by slice in `.rptc/complete/operation-progress/extension-wide.md`. Stage names are held
 > separately by `operationStages.test.ts`. Enforced by
 > `tests/sop/progress-wording.test.ts` against a shrink-only ledger.
 
@@ -498,10 +542,13 @@ meant.
 > known before it starts. A count of pages, types, attempts or projects is a count, and
 > counts go on line 2 ("Copying the content: 32 of 64 pages", `countLine`). Line 3 is the
 > step's expectation and the run's clock, joined by the one middle dot this UI keeps on
-> purpose. A surface with one line (a notification, an agent's chat) shows the step
+> purpose ("Usually about a minute · 1 minute, 5 seconds"; kept again 2026-11-04, owner,
+> over the house writing rule that otherwise bans one). A surface with one line (a notification, an agent's chat) shows the step
 > alone, and a count it has no line 2 for is left out rather than moved up. The lines
-> are short by design: line 1 at most 25 characters, line 2 at most 40 of text we
-> write, line 3's expectation at most 25 with the clock after it.
+> are short by design: line 1 short enough that the operation's title, ": " and the step
+> fit the background notification (62 characters, checked per operation, owner 2026-11-10;
+> it replaced a fixed 25), line 2 at most 40 of text we write, line 3's expectation at
+> most 25 with the clock after it.
 > *Why:* the same job was called three things depending on which flow ran it, and counts
 > sat where the step goes: "Publishing block library (11 of 11)" read as eleven
 > libraries, and Site Access's "Checking access (2 of 4)" read as step two of four
@@ -515,7 +562,7 @@ meant.
 > through a variable, or one reported by number ("report(1, …)"). No sites predate it:
 > the ones it found were fixed the day it landed. The table's own rules (the lengths
 > below, no label twice) are `operationStages.test.ts`. Plan:
-> `.rptc/plans/progress-vocabulary/overview.md`. Enforced by
+> `.rptc/complete/progress-vocabulary/overview.md`. Enforced by
 > `tests/sop/progress-steps.test.ts`.
 >
 > The limits keep each line to one line on the progress displays, so nothing jumps as
@@ -530,6 +577,25 @@ meant.
 > progress-steps suite named above, through `progressLineScan.ts`, which measures only
 > the text in the code: a template's placeholders are counts or names, and count as
 > nothing. It cannot see text assigned to a variable first. No sites predate it.
+
+> **Convention.** A progress step that takes something away says what happens to it in the
+> host system's own word, one verb per action: **Deleting** (the record is gone: Commerce,
+> Adobe Console, GitHub, DA.live, local files), **Removing … from …** (it still exists and
+> only its link goes, so it always says from what), **Uninstalling** (out of Commerce),
+> **Undeploying** (off App Builder Runtime), **Unpublishing** (off the live site),
+> **Restoring default configuration** (Commerce configuration back to its Default value),
+> **Closing** (orders and returns), **Restoring** (Commerce back to how a datapack's latest
+> save left it), **Replacing** (one datapack uninstalled, another installed) and
+> **Refreshing** (fetched again, nothing lost: a cache). "Clear" is
+> only an action's name (Clear Demo Data); as a step, "Clearing …" says nothing, nor do
+> "Taking …" and "Unlisting …". Commerce's nouns are its own: "cart price rules",
+> "configuration", "websites", never "cart rules", "config" or "site settings". A step stands
+> alone on one line, with no second line to explain the verb.
+> *Why:* the owner, 2026-11-10: "Removing", "Clearing" and "Taking … off" each meant three
+> different things, so the SC could not tell whether a step destroyed a record or only
+> unlinked it.
+> Enforced by `tests/sop/progress-verbs.test.ts`, which reads every stage table, storefront
+> job and wait label, and proves itself on planted defects.
 
 > **Convention.** A field with a fallback rule is read through that rule, everywhere.
 > *Why:* two fields carry one — the DA.live org IS the GitHub namespace, the site
@@ -569,19 +635,18 @@ meant.
 > that cannot tell those apart would fail honest lines, and a rule people switch off
 > is worse than one they can read.
 
-> **Convention.** A modal does not change size while it works.
+> **Convention.** A modal does not jump between sizes while it works.
 > *Why:* a body that renders a form, then a spinner, then a result is three different
-> amounts of content, and with nothing holding a floor under them the whole dialog
-> jumps at every step. The Data Installer's import modal did it twice in one dry run
-> before anyone measured it (owner, 2026-09-20: "this is bad UX"). Three things hold a
-> floor: `SteadyHeight` measures the tallest state so far and never goes below it,
-> `.modal-progress-body` fixes one height for a body whose states are known, and
-> `CenteredFeedbackContainer` reserves a height the caller names. Measure rather than
-> name a number when the tallest state is data-dependent — the import form is as tall
-> as the pack has data types, so any fixed reserve is dead space for a small pack and
-> still jumps for a large one.
+> amounts of content, and with nothing managing the change the whole dialog jumps at
+> every step. The Data Installer's import modal did it twice in one dry run before
+> anyone measured it (owner, 2026-09-20: "this is bad UX"). What manages it now: a wait keeps the
+> box it found, so a run has one change of size, when the real content arrives, and that change
+> takes effect at once with the body fading in (`useDialogViewChange`). Easing the size was tried
+> four ways on 2026-10-31 and 2026-11-02 and dropped: it folded, worked like an accordion, moved on
+> every small change, and sat empty while it expanded. `CenteredFeedbackContainer` reserves a
+> height the caller names. Dialogs are pinned near the top, so a change moves only the bottom edge.
 >
-> What no check can see is whether the floor is the RIGHT height; the ledger is where
+> What no check can see is whether the change LOOKS right; the ledger is where
 > a body the scan reads as multi-view says it has only one. Enforced by
 > `tests/sop/modal-steady-height.test.ts` against `modal-steady-height.ledger.json`.
 
@@ -866,6 +931,143 @@ check says so and names the file.
 > *Why:* ad-hoc mounting produces stacking and focus bugs that only appear in combination.
 > Enforced by `tests/sop/modal-hosting.test.ts`.
 
+> **Convention.** How something stands is drawn by one icon everywhere: `StatusIcon`, the wizard's
+> set. Warning is an orange circle with a `!`, error a red circle with an `X`, done a green check,
+> info a blue info icon. One red and one orange everywhere, with warning and error different shapes
+> so colour is not the only thing telling them apart (owner, 2026-11-02). Each colour is Spectrum's
+> status token for its role, the same rule for every status: an icon, dot or border takes
+> `--spectrum-semantic-<status>-color-icon`, text takes `--spectrum-semantic-<status>-color-text-small`
+> (owner, 2026-11-05: consistency first, no one-off rules).
+> *Why:* a triangle meant "needs you" in a dialog and "failed" on the sign-in step, chosen file by
+> file (owner, 2026-11-02: the wizard's iconography, "standardized across the wizard and all of the
+> modals"). Status text had taken the icon token, and red's is 4.40:1 on the dialog background,
+> under the 4.5 WCAG AA asks of text (measured in the real bundle, 2026-11-05).
+> Enforced by `tests/sop/status-icons.test.ts`.
+
+> **Convention.** The accent blue keeps its ramp, and each state keeps one shade: a focus ring is
+> `blue-400`, a selected card's border `blue-400`, a link `blue-500`, a selected card on hover
+> `blue-200`. Hover, pressed and selected differ from rest on purpose; the same state in two
+> shades does not (owner, 2026-11-05: "retain design choices, but enforce consistency in them").
+> *Why:* 17 focus rings were `blue-400` and two `blue-500`; selected cards and links split the
+> same way, with nothing to say which was meant.
+> Enforced by `tests/sop/status-icons.test.ts`: focus rings by their selector, the other states
+> by a list of the rules that draw them.
+
+> **Convention.** What names a thing is Title Case, across the extension's own UI: titles, buttons,
+> tabs, menu items, headings and field labels ("Run in Background", "Couldn't Load Adobe APIs").
+> Small words stay small in the middle; product names and identifiers keep their own form. What
+> tells the SC something keeps normal capitals: a sentence, a status note like "3 selected", and a
+> title that is a complete sentence. The Command Palette keeps its own title case.
+> *Why:* the owner overruled Spectrum's sentence case on 2026-11-02: "I don't like sentence case. I
+> don't think it goes with professional applications." Before the rule the dialogs used one and the
+> wizard the other, and that disagreement is what reads as unfinished.
+> Enforced by `tests/sop/ui-label-case.test.ts`, which reads every webview bundle with the compiler,
+> holds strings it cannot read to a pin, and proves itself on planted defects.
+
+> **Convention.** A setting with a fixed list of values names each value in the Settings dropdown:
+> every `enum` in `package.json`'s settings has `enumItemLabels`, one per value, in Title Case. The
+> stored values never change, so saved settings keep working.
+> *Why:* VS Code shows the raw value when a label is missing, so Settings showed Cleanup Behavior as
+> "ask", "deleteAll", "localOnly", which read like code (owner, release test 2.7, 2026-11-16).
+> Enforced by `tests/sop/setting-enum-labels.test.ts`, which reads every setting and checks each
+> label with the same Title Case check as the UI labels.
+
+> **Convention.** A message that sends the SC to Settings gives a button that opens the setting:
+> `workbench.action.openSettings` with the setting's id. On a datapack screen the failure carries
+> the id (`setting`) and `renderDataInstallerFailure` shows Open Settings; a VS Code message offers
+> an Open Settings action. A website's own Settings page is not a VS Code setting.
+> *Why:* the owner, release test 1.4, 2026-11-16: the words alone leave the SC hunting for a key.
+> The datapack screens said "Set it in Settings" for months while their Open Settings button was
+> never shown, because no screen passed it in.
+> Enforced by `tests/sop/settings-message-opens-setting.test.ts`, which reads every string the
+> extension shows with the compiler and fails one that says "in Settings" with no way to open the
+> setting beside it, proving itself on planted messages.
+
+> **Convention.** A datapack has one set of words, and every screen takes them from
+> `features/data-installer/datapackWords.ts`: it is **installed** and **uninstalled**, never
+> imported or removed; the trial run is **Dry Run**; the settings it carries are its **Store
+> Configuration**; and the thing is a "datapack", never a "pack" on its own. A sentence on screen
+> carries no long dash and no raw setting key (`demoBuilder.…`).
+> *Why:* the owner, 2026-11-10: one thing went by Import, Install and Load, its trial by Dry Run,
+> Validate and "Checking the import", and its settings by "Also Sets" and "settings layer". The SC
+> could not tell whether two buttons did the same thing. Dry Run is kept because SCs know it, and
+> Store Configuration matches Commerce Admin's Stores > Configuration.
+> Enforced by `tests/sop/datapack-words.test.ts`, which reads every string in the data installer
+> and the wait and stage tables with the compiler, exempts code, comments, logs and lines marked
+> as never reaching a screen, and proves itself on a planted "Check First".
+
+> **Convention.** A window's header names the thing and what happened to it: "My Luma Installed",
+> "My Luma Uninstalled", "Couldn't Save My Luma". Only a window with no one name to give (several
+> projects, a file not yet read) names the kind: "Projects Deleted", "Couldn't Read Projects",
+> "Couldn't Open the File"; then each project is a row beneath it. A header is a statement of
+> what happened or what the window does, never the reason for it, and carries no comma. A button
+> may carry a count ("Delete 3 Projects"). **One exception:** what an AGENT is doing names its
+> target ("Agent Deleting the Acme project", `toolNarration.ts`): nobody pressed anything, so the
+> notification is the SC's only way to see what the agent is touching (owner, 2026-11-04).
+> *Why:* the owner, 2026-11-04: headers like "Some Projects Weren't Deleted" read as the reason for
+> the header rather than the header. On 2026-11-10 the owner settled the rest: a result names what
+> it is about ("My Luma Installed"), withdrawing the 2026-11-04 line that put the name in the body.
+> **Not enforced** yet: the batch window follows it; an audit of every other window header is
+> under way and will decide whether a check can tell a name from a kind.
+
+> **Convention.** A dialog that is waiting shows nothing else: the title, the wait centred both ways
+> in the space between the rule and the buttons, and the way out. The wait says what it is doing in
+> the progress window's three rows (`StageWait`, words from `WAIT_STAGES`), and `Modal`'s `waiting`
+> prop does it. A flyout waits the same way (owner, 2026-11-08).
+> *Why:* half a form under a spinner invites a press that goes nowhere, and it kept coming back on
+> different surfaces (owner, 2026-11-01); a wordless spinner over a minute's work told the SC
+> nothing (owner, 2026-11-08).
+> Enforced by `tests/sop/modal-waits.test.ts`.
+
+> **Convention.** Every window is one of five layouts, and each layout is one component: Form
+> (`FormDialog`), Confirm (`ConfirmActionDialog`), Progress (`ProgressDialog`), Result
+> (`ResultDialog`) and Guide (`GuideDialog`), all in `core/ui/components/ui/`. The component owns the
+> width, the spacing, the kinds of text, the button order and how the window ends; a caller passes
+> words and actions, and has no prop for a size, a margin or a class. Confirm is small, and so is
+> Progress unless it shows rows; a result is small, and keeps the size of the run it ends only when
+> it has a list to read (owner, 2026-11-20); Cancel stands beside a button that commits and Close everywhere else; the
+> button that loses the SC's changes is outline, the dangerous one red. Every result is drawn the
+> wizard's way, in the one shared body (`ResultBody`): the title names the thing ("Release Save
+> Test 2", or the kind, "Projects", when there is no one thing), and the body has a large status
+> mark centred where the run's spinner was, the outcome under it in bold ("Up to Date",
+> "Couldn't Install"), one reason centred under that or several lines left-aligned in the capped
+> scroll, and "Took …" for a long run. No status icon goes in a result's title, and the next step
+> is always a footer button. This replaced "status in the title" for results (owner, 2026-11-17,
+> walk F222: a title that carries the outcome "combines a title with a result"); F222's "a result
+> keeps the run's size" was itself replaced by the small clean result (owner, 2026-11-20: the jump
+> at the end is accepted).
+> *Why:* the owner, 2026-11-10: the inventory in `.rptc/research/modal-conventions-audit/` found the
+> rules written down and drawn differently in nearly every window, because each window assembled
+> `Modal` on the spot. A rule a component owns cannot drift window by window.
+> Enforced by `tests/sop/modal-layouts.test.ts`: a file that renders `Modal` itself fails, except
+> the five layouts and the windows its ledger lists, each still to move, and the ledger may only
+> shrink. The result's look is enforced by `tests/core/ui/components/feedback/ResultBody.test.tsx`,
+> `tests/core/ui/components/ui/ResultDialog.test.tsx` and
+> `tests/core/ui/components/ui/ProgressDialog.test.tsx` (no icon in the title, the mark and the
+> outcome in the body).
+
+> **Convention.** Text in a window is set by the shared stylesheet, never by the window: a lead
+> (`LeadText`, `.lead-text`) and a line (`.dialog-line`) stop at about 60 characters (`max-width:
+> 60ch`), a lead over a body of sentences alone is 16px while lists, forms and rows stay 14px, and a
+> button takes Spectrum's weight (`.modal-button` sets none of its own).
+> *Why:* the owner, 2026-11-10: a sentence across a large window read as one thin line, a lead was
+> the same size as the rows under it, and a house bold made every button shout. Each had been fixed
+> in one window at a time.
+> Enforced by `tests/sop/modal-layouts.test.ts`, which fails a feature stylesheet that sets
+> `max-width`, `font-size` or `font-weight` on `.lead-text`, `.dialog-line` or `.modal-button`, and
+> checks the shared rules are there in `core/ui/styles/modal.css`.
+
+> **Convention.** Every result waits for the SC to close it, a clean one with nothing under its
+> outcome included; no window closes itself on a timer.
+> *Why:* the owner, 2026-11-17 (walk F195), over his 2026-11-10 rule that a clean title alone closed
+> itself after a glance: which results stayed depended on whether they had a sentence, which the SC
+> cannot see, so it read as inconsistent; a long run is when an SC looks away, and a window gone
+> before they look back hides whether it worked; and modal dialogs in real software wait to be
+> dismissed.
+> Enforced by `tests/core/ui/components/ui/ResultDialog.test.tsx` and
+> `tests/core/ui/components/ui/ProgressDialog.test.tsx`: a clean result with nothing under its
+> outcome is still open three glances later.
+
 > **Convention.** A CSS class used in a bundle is styled by that bundle.
 > *Why:* a stylesheet only reaches bundles whose entry imports it, so a class can be styled
 > on one surface and silently bare on the next, with no error anywhere.
@@ -961,6 +1163,14 @@ check says so and names the file.
 > the remote.
 > Enforced by `.claude/hooks/rules/21-push-no-verify.rule`, which blocks every time
 > rather than once per session.
+
+> **Convention.** The gate runs through the pipeline's `checks` tool, not typed by hand.
+> *Why:* `checks` runs exactly `npm run gate` (`.pipeline.yaml`: `checks: [npm run gate]`)
+> and reports pass or fail per check with the failing output, so nothing is read back from a
+> file; sessions typed the gate by hand 448 times in 11 sessions (reflect proposal 2,
+> accepted 2026-11-16).
+> Enforced by `.claude/hooks/rules/22-gate-via-checks.rule`, which stops the first
+> hand-typed `npm run gate` in a session and lets a repeat run.
 
 > **Convention.** A new webview message is wired through its skill.
 > *Why:* a message is only live when the MessageType, the handler, the feature's
@@ -1145,8 +1355,8 @@ promising an agent that every response parses.
 > *The first pass wrote 6, and two of them were wrong* — a gap was recorded without
 > checking whether the capability already existed. `set_console_apis` sets
 > subscriptions to exactly a list, so it un-adds what `add_console_apis` added;
-> `reset_datapack` removes a datapack's data from the instance, which is what
-> `start_datapack_import` put there. Both were found by asking "is there already a
+> `uninstall_datapack` removes a datapack's data from the instance, which is what
+> `install_datapack` put there. Both were found by asking "is there already a
 > reversal?" instead of "is the name paired?", which is the question the ledger exists
 > to force and which its own author skipped.
 > *Not a naming rule, and that was measured:* inferring `delete_x` from `create_x` flags
@@ -1156,6 +1366,24 @@ promising an agent that every response parses.
 > Enforced by `tests/sop/reversibility-ledger.test.ts`. It proves a reversal EXISTS, not
 > that it works — AB-7 is an open defect where `remove_integration` reported success
 > while leaving deployed code running, and this would not have caught it.
+
+> **Convention.** Every cloud resource the extension creates has its removal, and a path an
+> SC can use to reach it. `tests/templates/cloud-reversals.ledger.json` lists each kind of
+> resource (a GitHub repository, DA.live content, a Configuration Service site, a mesh, an
+> App Builder app, a Console project or workspace, datapack data, and more) with its create
+> call, its remove call, the reversal paths that reach the remove, and what Delete Project
+> does with it: removes it, keeps it on purpose because it has its own reversal, or leaves
+> it as an exemption naming a backlog item. Enforced by
+> `tests/templates/cloud-reversals.test.ts`: every file whose code makes a cloud write (an
+> HTTP write verb, an `aio` deploy or delete, a Console SDK create, a `git push`) must be
+> claimed with its exact count, so a new create fails until it has a row; a row whose create
+> is gone fails; a named path must reach its removal through imports; and the exemption
+> count only falls.
+> *Why:* the reversibility ledger above rules the agent's tools; this rules the code under
+> both surfaces. The beta.153 walk found two creates with no way back that neither caught:
+> the Configuration Service site (EDS-73) and the mesh and integrations a deleted project
+> leaves deployed (AB-87). The check is static, and its limits are written in the ledger's
+> `_method`: it proves a removal is loaded on the path, not that the path calls it.
 
 > **Convention.** A tool removes work; it does not add vocabulary the agent has to guess.
 > Every closed list a tool's input accepts (`z.enum`, `z.literal`, `z.nativeEnum`) is recorded
@@ -1436,7 +1664,12 @@ breaks the code on purpose and reports what nothing noticed.
 > came back by identity, "generates nonces efficiently" meant a thousand nonces are a
 > thousand DISTINCT nonces — a property the timing version would have passed on a
 > constant. A deadline with an order-of-magnitude margin is not a performance bound and
-> is ledgered with its reason.
+> is ledgered with its reason. The same enforcer refuses the opposite mistake, a measured
+> time checked only against zero: a difference of two clock readings is never negative, so
+> the check proves the field is there and nothing about its value. On 2026-11-06 a datapack
+> install charged coupons 20.1 s, then 39.2 s, of time that belonged to the work after it,
+> under a `seconds >= 0` check that stayed green. Stub the clock and assert the value; a
+> floor with an upper bound beside it ("a duration, not a clock reading") is left alone.
 > Enforced by `tests/sop/no-wall-clock-bounds.test.ts`.
 
 > **Convention.** Assert emptiness with `toStrictEqual`, never `toEqual`.
@@ -1796,6 +2029,10 @@ check says so and names the file.
 > reads the `dirtyPaths` each capture records, so it asks a direct question rather
 > than comparing a capture time against a commit time — captures happen on a dirty
 > tree before the commit, so a timestamp rule would reject the correct workflow.
+> A capture counts when it covered every surface the pushed stylesheets reach
+> (`css-reach.mjs`, from each bundle's esbuild inputs), so a change to one feature's
+> stylesheet needs that surface, not all nine (owner, 2026-11-04); a stylesheet that
+> reaches nothing in the new tree (deleted, moved) needs all of them.
 > It proves a baseline was taken, not that anyone read the diff. Bypass with
 > `CSS_BASELINE_BYPASS="reason"`, which keeps the rest of the gate that
 > `--no-verify` discards.
@@ -1836,12 +2073,12 @@ it is, and the count of unenforced rules is stated rather than hidden.
 
 Conventions decay unless something checks them. Four layers do:
 
-- **Hooks** stop a bad action as it happens — 25 rules in `.claude/hooks/rules/`
-- **Enforcer suites** fail the build when code drifts — 62 in `tests/sop/`
+- **Hooks** stop a bad action as it happens — 22 rules in `.claude/hooks/rules/`
+- **Enforcer suites** fail the build when code drifts — 74 in `tests/sop/`
 - **Typecheck and lint** run over the whole repository in CI
 - **Scans** measure at release cuts: duplication, dead code, agent coverage (import cycles moved to an enforcer suite on 2026-10-08)
 
-**This handbook states 131 conventions. 129 of them are enforced; 2 are not.**
+**This handbook states 148 conventions. 145 of them are enforced; 3 are not.**
 
 The last one to get there was "vendor CSS sits in the lowest cascade layer", and it was
 outstanding because it was **not yet true**: `@layer vendor` existed in no bundle, so a
@@ -1958,7 +2195,7 @@ not.
 > **Convention.** Capture an exit code in a variable. Never read one through a pipe.
 > *Why:* `head`, `tail`, `grep` and `wc` all exit 0 on empty input, so the pipe reports its
 > own success and hides the failure underneath.
-> Enforced by `.claude/hooks/rules/13-piped-exit-code.rule`, which blocks branching on
+> Enforced by the dev-pipeline plugin's shell guard (on through `.pipeline.yaml`), which blocks branching on
 > a pipe into `head`, `tail` or `wc` — those exit 0 whatever they were fed, so a failure
 > and an empty result are indistinguishable. `grep` is deliberately not blocked:
 > `cmd | grep -q x && …` is correct, because there grep's own exit code is the answer.
@@ -1974,7 +2211,7 @@ not.
 > an `eslint --fix` over 18 files that fixed none, where the unchanged recount was read
 > as "these warnings are not auto-fixable" — a wrong conclusion drawn from a command
 > that never ran. Through `xargs` it fixed all 18 and went five below the baseline.
-> Enforced by `.claude/hooks/rules/16-unsplit-var.rule`, which fires only when the
+> Enforced by the dev-pipeline plugin's shell guard (on through `.pipeline.yaml`), which fires only when the
 > variable was assigned from `$(...)` AND is passed bare to a command that takes a list
 > of files. `[ $n -gt 0 ]` does not fire; `echo $VAR` does not fire; a quoted `"$VAR"`
 > never fires. This rule was in prose here since August and was broken a third time by
@@ -1985,7 +2222,8 @@ not.
 > into separate arguments.
 > *Why:* both fail in ways that look like a clean result rather than an error — with no
 > match, zsh aborts and the command never runs at all.
-> Enforced by `.claude/hooks/rules/12-unquoted-glob.rule`.
+> Enforced by the dev-pipeline plugin's shell guard (on through `.pipeline.yaml`), which
+> also refuses a glob that matches nothing.
 
 > **Convention.** Anything claiming to be an instrument is in the registry, and the
 > registry and the disk must agree in both directions. A count written in prose has
@@ -1993,6 +2231,15 @@ not.
 > *Why:* two scans were once in no list at all, and a validator had been failing silently
 > for months because nothing ran it.
 > Enforced by `tests/sop/tooling-registry.test.ts`.
+
+> **Convention.** Every instrument with a command is also a dev-pipeline toolbox tool,
+> declared in `.pipeline.yaml` exactly as `tests/sop/toolboxTools.ts` derives it from the
+> registry, so an agent runs it through `run_tool` or `job_start` instead of a shell.
+> *Why:* a tool typed by hand is invisible to reflect's usage count, gets no time limit
+> or progress reporting, and runs from wherever the shell happens to be. Kept by hand,
+> the toolbox list would drift from the registry the way the instrument list once
+> drifted from the disk.
+> Enforced by `tests/sop/toolbox-tools.test.ts`.
 
 > **Convention.** A module path named in a document resolves. A citation must reach a
 > file or directory; an `import` in a code example must reach something importable.
@@ -2015,7 +2262,7 @@ not.
 > once is public forever — deleting it later does not help.
 
 > **Convention.** Commit to `develop`. Reach `master` only through a release.
-> [cut-release](../../.claude/skills/cut-release/SKILL.md) · enforced by `.githooks/commit-msg`.
+> [cut-release](../../.claude/skills/cut-release/SKILL.md).
 > *Why:* master is what ships to beta users automatically.
 
 > **Convention.** No backticks inside a double-quoted `git commit -m`. Write the message
@@ -2023,7 +2270,7 @@ not.
 > *Why:* bash treats `` `x` `` inside double quotes as command substitution, so naming a
 > file in backticks — the natural way to write it — silently executes the word and drops
 > it from the message.
-> Enforced by `.claude/hooks/rules/14-commit-backtick.rule`.
+> Enforced by the dev-pipeline plugin's shell guard (on through `.pipeline.yaml`).
 
 > **Convention.** A new React + Spectrum webview test starts from the webview-test skill.
 > *Why:* the suite runs on fake timers, and a test that does not know it hangs or resolves

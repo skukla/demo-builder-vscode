@@ -119,8 +119,8 @@ describe('fstabGenerator', () => {
 
 describe('parseFstabContentSource', () => {
     it('reads back exactly what generateFstabContent writes', () => {
-        const text = generateFstabContent({ daLiveOrg: 'jen', daLiveSite: 'isle5-demo' });
-        expect(parseFstabContentSource(text)).toEqual({ org: 'jen', site: 'isle5-demo' });
+        const text = generateFstabContent({ daLiveOrg: 'robin', daLiveSite: 'isle5-demo' });
+        expect(parseFstabContentSource(text)).toEqual({ org: 'robin', site: 'isle5-demo' });
     });
 
     it("reads the nested form a colleague's repository carries (the AEM Code Sync bot's `url:` + `type: markup`)", () => {

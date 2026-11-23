@@ -14,6 +14,7 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import type { ProgressTracker } from './shared';
 import { COMPONENT_IDS } from '@/core/constants';
+import { andList } from '@/core/utils/andList';
 import { parseGitHubUrl } from '@/core/utils/githubUrlParser';
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { catalogMenuSiteFor } from '@/features/ai/server/storefrontPages';
@@ -21,13 +22,18 @@ import { getGitHubServices } from '@/features/eds/handlers/edsServiceCache';
 import { detectB2bReadiness } from '@/features/eds/services/b2bReadinessDetection';
 import { authoredSheetRefresh } from '@/features/eds/services/catalogMenu/authoredSheetRefresh';
 import { syncConfigToRemote } from '@/features/eds/services/configSyncService';
+import { readPatchesRelease } from '@/features/eds/services/patches/lkgReader';
 import { writeBrokenLinks } from '@/features/eds/services/storefront/brokenLinksRecord';
+import { replaceFinishSetup } from '@/features/eds/services/storefront/codeStepRecord';
+import { otherProjectsPublishingTo } from '@/features/eds/services/storefront/sharedRepoProjects';
 import { recordStorefrontBuilt } from '@/features/eds/services/storefront/storefrontChanges';
 import { readRepoBoilerplate } from '@/features/eds/services/storefront/storefrontOrigin';
 import { extractConfigParamsFromConfigs } from '@/features/eds/services/storefrontConfigParams';
 import { resolveTemplateCommitSha } from '@/features/eds/services/templateCommitResolver';
 import { ensureEdsContent } from '@/features/project-creation/services/edsContentSetup';
+import { type StepFailure, stepFailureOf } from '@/features/project-creation/services/stepFailure';
 import type { HandlerContext } from '@/types/handlers';
+import type { ProjectImportedFrom } from '@/types/projectFile';
 import type { ProjectCreationConfig } from '@/types/webviewRequests';
 
 /**
@@ -46,6 +52,25 @@ function authoredSheetHookFor(
 }
 
 /**
+ * What an imported project records (EDS-72 decisions 1 and 3): the import, with the commit setup
+ * pushed the bundle's files as, so Reset can restore it. The bundle's path is this machine's and
+ * stays out. Nothing when setup made no repository from a bundle.
+ */
+function importRecordOf(typedConfig: ProjectCreationConfig): ProjectImportedFrom | undefined {
+    const made = typedConfig.edsConfig?.bundleImport;
+    if (!typedConfig.importedFrom || !made) return undefined;
+    const { bundlePath: _onThisMachine, ...importedFrom } = typedConfig.importedFrom;
+    const { templateBase: _inLastSyncedCommit, patchesRelease: _inMetadata, ...record } = made;
+    return { ...importedFrom, ...record };
+}
+
+/** Record the import on an imported project; any other project is left as it is. */
+function recordImport(project: import('@/types/base').Project, typedConfig: ProjectCreationConfig): void {
+    const imported = importRecordOf(typedConfig);
+    if (imported) project.importedFrom = imported;
+}
+
+/**
  * What the wizard's storefront setup found, recorded on the project it made. Each only when
  * setup reported it: an edit runs no setup, and must not wipe the record.
  */
@@ -58,7 +83,42 @@ function recordWhatSetupFound(
     // Built the way Demo Builder builds storefronts now: the "Needs reset" status reads it.
     if (typeof edsConfig.storefrontBuildComplete === 'boolean') {
         recordStorefrontBuilt(project, edsConfig.storefrontBuildComplete);
+        // Setup built it: what it left to finish replaces the record (PL-101).
+        replaceFinishSetup(project, edsConfig.codeNotServed);
     }
+}
+
+/**
+ * The template version updates count from. An imported project's code was built on the
+ * sender's template commit, not today's: updates count from that one, or Adobe's changes made
+ * in between are never offered (F252). Every other storefront asks the resolver.
+ */
+async function syncedCommitOf(
+    edsConfig: NonNullable<ProjectCreationConfig['edsConfig']>,
+    templateBranch: string | undefined,
+    fileOperations: Parameters<typeof resolveTemplateCommitSha>[1],
+    context: HandlerContext,
+): Promise<string | undefined> {
+    const senderBase = edsConfig.bundleImport?.templateBase;
+    if (senderBase) return senderBase;
+    return resolveTemplateCommitSha(
+        { ...edsConfig, ...(templateBranch ? { templateBranch } : {}) },
+        fileOperations,
+        context.logger,
+    );
+}
+
+/**
+ * The patches release a thin-layer storefront was built from. An imported project's code was built
+ * from the sender's release: recording today's would hide every release published in between
+ * (F255). Every other storefront reads the release this session works from.
+ */
+async function patchesReleaseOf(
+    edsConfig: NonNullable<ProjectCreationConfig['edsConfig']>,
+    lkgSource: Parameters<typeof readPatchesRelease>[0],
+    context: HandlerContext,
+): Promise<string | undefined> {
+    return edsConfig.bundleImport?.patchesRelease ?? readPatchesRelease(lkgSource, context.logger);
 }
 
 /**
@@ -112,11 +172,7 @@ export async function populateEdsMetadata(
     // baseline commit both read that branch.
     const templateBranch = typedConfig.demo?.source.branch;
     const { fileOperations } = getGitHubServices(context.context.secrets);
-    const lastSyncedCommit = await resolveTemplateCommitSha(
-        { ...typedConfig.edsConfig, ...(templateBranch ? { templateBranch } : {}) },
-        fileOperations,
-        context.logger,
-    );
+    const lastSyncedCommit = await syncedCommitOf(typedConfig.edsConfig, templateBranch, fileOperations, context);
     // What the new repository was built on (EDS-13f), read from the repository
     // itself, so a shipped brand, a saved package and a colleague's demo all
     // answer the same way. A failed read records nothing rather than a guess.
@@ -140,6 +196,10 @@ export async function populateEdsMetadata(
           }
         : undefined;
 
+    const patchesRelease = lkgSource
+        ? await patchesReleaseOf(typedConfig.edsConfig, lkgSource, context)
+        : undefined;
+
     edsInstance.metadata = {
         ...edsInstance.metadata,
         repoUrl: typedConfig.edsConfig.repoUrl,
@@ -151,9 +211,11 @@ export async function populateEdsMetadata(
         ...(templateBranch ? { templateBranch } : {}),
         lastSyncedCommit,
         ...(lkgSource ? { lkgSource } : {}),
+        ...(patchesRelease ? { patchesRelease } : {}),
         ...(boilerplate ? { boilerplate } : {}),
     };
     recordWhatSetupFound(project, typedConfig.edsConfig);
+    recordImport(project, typedConfig);
     await context.stateManager.saveProject(project);
     context.logger.debug(
         `[Project Creation] Populated EDS metadata for ${COMPONENT_IDS.EDS_STOREFRONT}: githubRepo=${edsInstance.metadata?.githubRepo}`,
@@ -179,7 +241,7 @@ export async function syncEdsConfigToRemote(
     }
 
     // Republish's step for the same job (progress vocabulary, owner 2026-10-16).
-    progressTracker(OPERATION_STAGES.publishingSettings.label, 92, 'Pushing config.json to GitHub');
+    progressTracker(OPERATION_STAGES.publishingSettings.label, 92, 'Uploading settings');
 
     const repoUrl = typedConfig.edsConfig?.repoUrl;
     if (!repoUrl) {
@@ -190,6 +252,21 @@ export async function syncEdsConfigToRemote(
     const repoInfo = parseGitHubUrl(repoUrl);
     if (!repoInfo) {
         context.logger.warn('[Phase 5] Could not parse repo URL, skipping config sync');
+        return;
+    }
+
+    // A repository another project here already uses keeps its config.json: the file holds one
+    // Commerce endpoint, and pushing this project's pointed the other's live storefront away from
+    // its API mesh (owner, 2026-11-20: an agent's create onto Scratch 1028's repository did).
+    const sharing = await otherProjectsPublishingTo(
+        context.stateManager,
+        `${repoInfo.owner}/${repoInfo.repo}`,
+        project.path,
+    );
+    if (sharing.length > 0) {
+        context.logger.info(
+            `[Phase 5] Left config.json in ${repoInfo.owner}/${repoInfo.repo} as it is: ${andList(sharing)} also uses the repository`,
+        );
         return;
     }
 
@@ -229,7 +306,7 @@ export async function syncEdsConfigToRemote(
     // config.json was generated earlier in this run. Same latent pattern the
     // republish path hit on 2026-08-10 (see updateStorefrontState) — narrower
     // window here, but fixing it means threading the snapshot through the
-    // pipeline. Tracked in .rptc/plans/pdp-prerender-validation/.
+    // pipeline. Tracked as backlog EDS-76.
     updateStorefrontState(project, project.componentConfigs || {});
     project.edsStorefrontStatusSummary = 'published';
     await context.stateManager.saveProject(project);
@@ -285,9 +362,9 @@ export async function setupEdsContent(
     progressTracker: ProgressTracker,
     /** Receives the copy's broken links, recorded on the project. */
     project?: import('@/types/base').Project,
-): Promise<void> {
+): Promise<StepFailure | undefined> {
     if (!isEdsStack || !typedConfig.edsConfig?.contentSource || !typedConfig.edsConfig?.repoUrl) {
-        return;
+        return undefined;
     }
 
     // B2B-readiness advisory (proceed-and-warn): a B2B-code storefront against a
@@ -347,8 +424,14 @@ export async function setupEdsContent(
             context.logger.info('[Phase 5b] Storefront content populated and published');
             if (project) await context.stateManager.saveProject(project);
         }
+        return undefined;
     } catch (error) {
+        // It used to end here on a log line, and the run said "Project Created" over a
+        // storefront with no pages. Now the run pauses on it (F307).
         context.logger.warn(`[Phase 5b] Content setup failed: ${(error as Error).message}`);
-        context.logger.warn('[Phase 5b] Run EDS Reset from the dashboard to populate content');
+        return stepFailureOf(CONTENT_NOT_COPIED);
     }
 }
+
+const CONTENT_NOT_COPIED =
+    "The storefront's pages could not be copied. Check that DA.live and GitHub are signed in, then try again.";

@@ -4,12 +4,12 @@ kind: fix
 area: eds
 needs: []
 value: low
-status: built
+status: shipped
 ---
 
 # An expired DA.live sign-in during the access grant is logged and passed over
 
-Filed 2026-10-19, split from EDS-29 by the unattended loop. EDS-29's run on Justrite
+Filed 2026-10-19, split from EDS-29 by the unattended loop. EDS-29's run on Tailspin
 (2026-10-05) logged this line before the publish failed:
 
 ```
@@ -41,3 +41,4 @@ and each needs its own look.
 
 - 2026-10-19  docs(loop): 2026-10-19 backlog-fix loop report; EDS-54 split from EDS-29 (`35c7e5097`)
 - 2026-10-20  fix(eds): an expired DA.live sign-in stops the access grant instead of being passed over (`d1027df3b`)
+- 2026-11-20  Released in v1.0.0-beta.153

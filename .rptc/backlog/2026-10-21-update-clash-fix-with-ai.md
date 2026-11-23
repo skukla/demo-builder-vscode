@@ -4,7 +4,9 @@ kind: feature
 area: eds
 needs: []
 value: high
-status: active
+status: gated
+plan: update-clash-fix-with-ai
+waiting-on: live runs of release rows 1.19 (the next real clash), 1.20 and 1.21
 ---
 
 # A storefront update that stops on a clash can be fixed with AI, from the builder
@@ -24,15 +26,15 @@ is; the Adobe row has no choice at all. Nothing an SC who does not read code can
 
 ## Measured 2026-10-20
 
-- JustRite (`skukla/kukla-justrite`, from `kmanns/justrite`), Adobe 71a67e0 to the tested
+- Tailspin (`skukla/kukla-tailspin`, from `org-e/tailspin`), Adobe 71a67e0 to the tested
   48bed04: one clash, `blocks/header/header.js`, with the update's own keep-list (the
   label sheets under `placeholders/` are already left alone; without that list a second
-  clash appears in `placeholders/checkout.json`). The clash is about 10 lines: Khalil's
+  clash appears in `placeholders/checkout.json`). The clash is about 10 lines: Person B's
   AEMY Studio edit tags the "Request a Quote" nav item, Adobe adds accessibility
   attributes to the line above. Keeping both is correct.
 - Adobe changed `blocks/header/header.js` 21 times in the year to 2026-10-20 (in 7
   different months) in `adobe-commerce/boilerplate-b2b-template`, and `scripts/scripts.js`
-  20 times. Both of Khalil's AEMY Studio commits touch only the header. So: rare today
+  20 times. Both of Person B's AEMY Studio commits touch only the header. So: rare today
   (nothing is pending for Bodea or the canary), recurring whenever Adobe ships.
 
 ## Decided (owner, 2026-10-20)
@@ -49,7 +51,7 @@ is; the Adobe row has no choice at all. Nothing an SC who does not read code can
 
 - 2026-10-20  feat(updates): a storefront's local copy is brought up to GitHub after an update (`d5e06e558`)
 - 2026-10-20  docs(backlog): plan Fix with AI for a storefront update that clashes (`cc90205fe`)
-- 2026-10-21  Built steps 1-5 on feature/update-clash-fix-with-ai: local copy refresh, keep the clash, the three-way question, Fix with AI opening the chosen engine, finish_storefront_update with its checks, Sync Storefront refusal. Not yet run live: release test plan rows 1.19 (JustRite, owner present) and 1.20.
+- 2026-10-21  Built steps 1-5 on feature/update-clash-fix-with-ai: local copy refresh, keep the clash, the three-way question, Fix with AI opening the chosen engine, finish_storefront_update with its checks, Sync Storefront refusal. Not yet run live: release test plan rows 1.19 (Tailspin, owner present) and 1.20.
 - 2026-10-20  feat(updates): a kept clash is offered as a Finish row (`89ce669a2`)
 - 2026-10-20  feat(updates): Fix with AI opens the chosen AI on a kept clash (`97cf24324`)
 - 2026-10-20  feat(ai): finish_storefront_update finishes a clash fixed with AI (`5db61f426`)
@@ -59,3 +61,4 @@ is; the Adobe row has no choice at all. Nothing an SC who does not read code can
 - 2026-10-20  feat(updates): a stopped update's clash can be kept in the local copy (`fc1345248`)
 - 2026-10-21  fix(updates): finishing a kept clash accepts what was committed since (`377934fc0`)
 - 2026-10-21  fix(ai): the storefront git-sync hook waits while an update's clash is kept (`f9bcee141`)
+- 2026-11-21  Reconciled 2026-11-21: steps 1-6 built and in v1.0.0-beta.153. Left: live runs, release rows 1.19 (re-walk on the next real clash), 1.20 and 1.21 (never run).

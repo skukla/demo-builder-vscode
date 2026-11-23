@@ -1,6 +1,7 @@
 /**
  * IntegrationStatusLabel — an integration's status as every surface shows it: a 6px
- * dot and the 11px uppercase label, red when the status is an error.
+ * dot and the 11px label, red when the status is an error. Capitals on the card, sentence case in
+ * its flyout (`integration-cards.css`).
  *
  * Three surfaces read it — the card, its flyout, and the progress modal (PL-59). The
  * card and flyout carried their own copies of this markup; a third copy is where two

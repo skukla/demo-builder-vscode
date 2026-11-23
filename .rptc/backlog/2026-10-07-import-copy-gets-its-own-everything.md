@@ -12,17 +12,17 @@ status: backlog
 
 ## What happened
 
-RC testing, 2026-10-06, Import from file with Justrite's own export:
+RC testing, 2026-10-06, Import from file with Tailspin's own export:
 
 - **Storefront.** The repository picker opened empty. The SC chose the only
-  sensible-looking entry, `kukla-justrite`, which is Justrite's own repository,
+  sensible-looking entry, `kukla-tailspin`, which is Tailspin's own repository,
   and nothing said that another project on this machine publishes there. The copy
-  would have shared Justrite's storefront.
-- **Integrations.** "Deploys to: Not set · Set up". The export carries Justrite's
+  would have shared Tailspin's storefront.
+- **Integrations.** "Deploys to: Not set · Set up". The export carries Tailspin's
   App Builder project and the wizard seeds it (`initializeAdobeContextFromImport`),
   but something clears it before this screen, so the safe outcome is currently an
-  accident. Had it survived, the copy's ERP would have deployed into Justrite's
-  workspace and replaced Justrite's.
+  accident. Had it survived, the copy's ERP would have deployed into Tailspin's
+  workspace and replaced Tailspin's.
 
 Both choices ask the SC to understand GitHub repositories and App Builder
 workspaces, and to know which ones another project is already using. They should
@@ -33,9 +33,9 @@ not have to.
 **An import or a copy is always a new demo.** The wizard does not ask what the SC
 intends; it fills in new resources and says so in one line each:
 
-> A new GitHub repository, **kukla-justrite-copy**. [Change]
+> A new GitHub repository, **kukla-tailspin-copy**. [Change]
 
-> Your integrations get their own Adobe project, **"Justrite Copy"** (new). [Change]
+> Your integrations get their own Adobe project, **"Tailspin Copy"** (new). [Change]
 
 Most SCs click Continue. Nothing about repositories or workspaces needs explaining.
 
@@ -44,9 +44,9 @@ not be shared by accident: the storefront's GitHub repository, and the Adobe
 project its integrations deploy into. In both pickers, every entry another project
 on this machine already uses carries a label, whichever project that is:
 
-> kukla-justrite — *Used by Justrite*
+> kukla-tailspin — *Used by Tailspin*
 
-Picking a labelled entry warns in one sentence: "Justrite already uses this. Both
+Picking a labelled entry warns in one sentence: "Tailspin already uses this. Both
 demos would share it, so changes to one appear in the other." Unused entries carry
 no label.
 
@@ -61,7 +61,7 @@ Only the storefront creates a GitHub repository per project (`githubRepoOperatio
 back, so there is no integration repository to label.
 
 Final Review ends with one sentence: "Creates a new repository and a new Adobe
-project. Nothing in Justrite changes."
+project. Nothing in Tailspin changes."
 
 ## What was considered and left out
 

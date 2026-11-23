@@ -10,7 +10,7 @@
  * OVERWRITES what visitors are currently served, so it carries a confirm gate.
  *
  * Until 2026-10-23 (EDS-63) this tool republished config.json alone, and the button's
- * job was reachable by an agent only as `sync_content`. Republishing JustRite's code
+ * job was reachable by an agent only as `sync_content`. Republishing Tailspin's code
  * after a reset was the button's job; the tool by that name would have sent the
  * settings file and reported success. One name, one job now; `sync_content` is gone.
  *

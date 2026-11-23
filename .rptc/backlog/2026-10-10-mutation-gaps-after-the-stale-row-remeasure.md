@@ -4,7 +4,8 @@ kind: chore
 area: platform
 needs: []
 value: med
-status: active
+status: gated
+waiting-on: the overnight mutation re-measure, started by the owner; close it if it still reads 0
 ---
 
 # Mutation gaps after the stale row remeasure
@@ -137,3 +138,5 @@ A module is done when no decision is unpinned, not when its score is high.
 - 2026-10-10  test(dashboard): the integrations tile reports a stopped removal when nothing else on it is rankable (`5c6f52d4b`)
 - 2026-10-10  chore(overnight): the loop starts its own resource guard (`f05162268`)
 - 2026-10-11  chore(mutation): judge each test once across every redundancy report (`eccb59af9`)
+- 2026-11-16  2026-11-16 beta.153 sweep: 377 of 687 mutation rows stale (350 module changes, 27 suite only). highValueSurvivors 1274 and noCoverage 389 rose because modulesPinned went 12 to 687, not a regression. Overnight re-measure owed: npm run test:mutation:sweep -- --stale --minutes 480
+- 2026-11-21  Reconciled 2026-11-21: the baseline reads 0 open gaps, but 377 of 687 rows were stale at the 11-16 sweep, so the zero is unproven. Left: the overnight re-measure (npm run test:mutation:sweep -- --stale --minutes 480), started by the owner; close if it still reads 0.

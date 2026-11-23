@@ -20,6 +20,8 @@ export type AgentOutcome =
     | { kind: 'done' }
     /** `text` is the step, in the user's words: "Sign in to GitHub". */
     | { kind: 'needsUser'; text: string }
+    /** Nothing happened: the agent was asked something, and answering is its job. */
+    | { kind: 'askedAgent' }
     | { kind: 'failed'; text: string };
 
 /** `needsAuth` values, as a person writes the service. */
@@ -32,6 +34,11 @@ const SERVICE_NAMES: Record<string, string> = {
 function isRecord(value: unknown): value is Record<string, unknown> {
     return typeof value === 'object' && value !== null;
 }
+
+/** The one refusal every confirm-gated tool words the same way (`mcpToolResult` callers). */
+const CONFIRM_REFUSAL = /\brequires confirm:true\b/u;
+/** A removal waiting on what to do about the SC's changes (`removalChanges.ts`). */
+const ASKED_CODE = 'CHANGES_NEED_ANSWER';
 
 /** The envelope's text, parsed when it is JSON; the text itself when it is prose. */
 function bodyOf(result: unknown): unknown {
@@ -59,6 +66,10 @@ function handBackStep(body: Record<string, unknown>): string | undefined {
     return undefined;
 }
 
+function asksTheAgent(body: unknown, text: string): boolean {
+    return CONFIRM_REFUSAL.test(text) || (isRecord(body) && body.code === ASKED_CODE);
+}
+
 function failureText(body: unknown): string {
     if (isRecord(body) && typeof body.error === 'string') {
         return body.error;
@@ -70,7 +81,7 @@ function failureText(body: unknown): string {
  * Read a returned tool answer.
  *
  * @param result - what the tool handler returned (normally an MCP text envelope)
- * @returns done, waiting on the user, or failed
+ * @returns done, waiting on the user, a question to the agent, or failed
  */
 export function outcomeOf(result: unknown): AgentOutcome {
     const body = bodyOf(result);
@@ -79,7 +90,8 @@ export function outcomeOf(result: unknown): AgentOutcome {
         return { kind: 'needsUser', text: step };
     }
     if (isRecord(result) && result.isError === true) {
-        return { kind: 'failed', text: failureText(body) };
+        const text = failureText(body);
+        return asksTheAgent(body, text) ? { kind: 'askedAgent' } : { kind: 'failed', text };
     }
     return { kind: 'done' };
 }

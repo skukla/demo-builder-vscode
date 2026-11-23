@@ -6,6 +6,7 @@ parent: AB-26
 needs: [AB-26g, AB-26h]
 value: high
 status: shipped
+plan: erp-business-structure
 ---
 
 # Business structure — sales organisation per website, prefix and ownership per pair, legal identity, warehouse names, the Organisation card
@@ -14,7 +15,7 @@ Slice of [[AB-26]] — `.rptc/plans/erp-programme/overview.md` §6. **Lane: 1 fo
 
 ## What
 
-The five steps of `.rptc/plans/erp-business-structure/`: the record-shape pin and contract v2; the integration's Structure settings, order `salesOrg`, prefix on `ext_order_id`, ownership filter, legal fields and `structure` block in the mirror; the ERP's records; the screens; the record and the SC-facing demo setup guide (`docs/demo-setup.md`).
+The five steps of `.rptc/complete/erp-business-structure/`: the record-shape pin and contract v2; the integration's Structure settings, order `salesOrg`, prefix on `ext_order_id`, ownership filter, legal fields and `structure` block in the mirror; the ERP's records; the screens; the record and the SC-facing demo setup guide (`docs/demo-setup.md`).
 
 ## Verification block (checked by the loop's done gate — §6a of the plan)
 

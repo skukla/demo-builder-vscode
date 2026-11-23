@@ -222,14 +222,10 @@ export class StateManager implements StateManagerInterface {
         // stale pointer forever — and answered confidently, because the manifest
         // really was re-read. Right data, wrong project. That bit the MCP surface
         // hardest (every window binds the same socket name and the last to bind
-        // serves), but it is not MCP-specific: loadProjectFromPath with
-        // persistAfterLoad:false assigns state.currentProject, so home-screen
-        // kebab actions on an unrelated project reassign this window's in-memory
-        // pointer too.
+        // serves), but it is not MCP-specific.
         //
         // Reading the pointer per call also makes the read self-healing: the
-        // window's in-memory copy converges on the next call, via the same
-        // loadProjectFromPath assignment.
+        // window's in-memory copy converges on the next call.
         //
         // Falls back to the in-memory path when disk has no pointer, so a project
         // held in memory but never persisted still resolves.
@@ -238,14 +234,11 @@ export class StateManager implements StateManagerInterface {
 
         if (pointerPath) {
             try {
-                // persistAfterLoad: false — avoids triggering saves during status
-                // bar polling.
-                const freshProject = await this.loadProjectFromPath(
-                    pointerPath,
-                    () => vscode.window.terminals,
-                    { persistAfterLoad: false },
-                );
+                // A read: no save during status bar polling. This window's in-memory copy
+                // converges on the pointer here.
+                const freshProject = await this.loadProjectFromPath(pointerPath, () => vscode.window.terminals);
                 if (freshProject !== null) {
+                    this.state.currentProject = freshProject;
                     return freshProject;
                 }
             } catch {
@@ -409,43 +402,44 @@ export class StateManager implements StateManagerInterface {
     // Project Loading (delegated)
 
     /**
-     * Load a project from a directory path
+     * Read a project from its directory. A read only: it saves nothing and leaves the open project
+     * alone. Opening one is {@link openProject}.
+     *
+     * The two were one call, opening and saving by default, and every read that forgot the
+     * `persistAfterLoad: false` it needed moved the open project to whatever it read: the
+     * home-screen kebab (2026-08-16), Check for Updates (2026-10-23), and the upkeep sweeps on a
+     * DA.live sign-in, mid-wizard (walk F206, 2026-11-17). A read can no longer do that.
      *
      * The manifest (.demo-builder.json) is the SINGLE SOURCE OF TRUTH for project data.
-     * No recovery from cache or recent projects needed - just load from manifest.
      *
      * @param projectPath - Path to the project directory
      * @param terminalProvider - Optional function to get terminals (for testing)
-     * @param options.persistAfterLoad - Whether to save the project after loading (default: true)
-     *                                   Set to false when just reloading for fresh data (e.g., getCurrentProject)
      */
     public async loadProjectFromPath(
         projectPath: string,
         terminalProvider: () => readonly vscode.Terminal[] = () => vscode.window.terminals,
-        options: { persistAfterLoad?: boolean } = {},
     ): Promise<Project | null> {
-        const { persistAfterLoad = true } = options;
-
-        // Load project from manifest - the single source of truth
         const project = await this.projectFileLoader.loadProject(projectPath, terminalProvider);
-
-        if (project) {
-            // Preserve runtime-only state not stored in the manifest
-            if (this.state.currentProject?.path === projectPath) {
-                project.meshStatusSummary = this.state.currentProject.meshStatusSummary;
-            }
-            if (persistAfterLoad) {
-                // Set as current project and persist to disk
-                await this.saveProject(project);
-
-                // Add to recent projects
-                await this.addToRecentProjects(project);
-            } else {
-                // Just update in-memory state without disk writes
-                this.state.currentProject = project;
-            }
+        // Preserve runtime-only state not stored in the manifest
+        if (project && this.state.currentProject?.path === projectPath) {
+            project.meshStatusSummary = this.state.currentProject.meshStatusSummary;
         }
+        return project;
+    }
 
+    /**
+     * Open a project: read it, make it the open project, save, and add it to the recent list. For
+     * what a person or a command means as "open this one"; a read is {@link loadProjectFromPath}.
+     */
+    public async openProject(
+        projectPath: string,
+        terminalProvider?: () => readonly vscode.Terminal[],
+    ): Promise<Project | null> {
+        const project = await this.loadProjectFromPath(projectPath, terminalProvider);
+        if (project) {
+            await this.saveProject(project);
+            await this.addToRecentProjects(project);
+        }
         return project;
     }
 

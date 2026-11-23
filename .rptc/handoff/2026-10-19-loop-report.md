@@ -83,7 +83,7 @@ too, but each still needs one check by you (below).
 - Nothing cloud-side was touched: no deploys, publishes, sign-ins or deletes.
 - Still open from before you left (not done, by design):
   - The bodea project needs a dashboard Reset.
-  - Justrite's "Prepare this store" settings are still in place.
+  - Tailspin's "Prepare this store" settings are still in place.
   - The live run of "removing the ERP integration undoes its setup" (row 4.31) is untested.
   - The ERP integration has to be re-added for the remaining plan rows.
 

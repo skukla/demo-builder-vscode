@@ -1,11 +1,12 @@
 /**
  * codeServed — after a code publish, the live site serves the code the repository has,
- * or the run says it does not (2026-10-23: JustRite's reset left three fixes off the
+ * or the run says it does not (2026-10-23: Tailspin's reset left three fixes off the
  * site while its card said the storefront was current).
  */
 
 import {
     codeNotServedSentence,
+    codeServedNow,
     confirmCodeServed,
     confirmStorefrontCodeServed,
     type CodeServedDeps,
@@ -72,7 +73,7 @@ describe('confirmCodeServed', () => {
         expect(publishes).toStrictEqual([]);
     });
 
-    // What AEM serves for an HTML file, from JustRite's live 404.html (2026-10-23): the CSP
+    // What AEM serves for an HTML file, from Tailspin's live 404.html (2026-10-23): the CSP
     // meta moved to a header, every nonce replaced. An exact comparison called the new page
     // "not served" for good.
     const COMMITTED_HTML = [
@@ -106,6 +107,29 @@ describe('confirmCodeServed', () => {
         await expect(confirmCodeServed(['404.html'], deps)).resolves.toStrictEqual(['404.html']);
     });
 
+    // Walk F204 (2026-11-17): Scratch 1028 B's creation reported placeholders/company-switcher.json
+    // as never reaching the site, three publishes in a row. The site served it, at the publish's
+    // time, in the sheet shape AEM gives a JSON file: unwrapped from "data", tagged ":type". Both
+    // copies below are the ones read that day from the repository and from the live site.
+    const STUB = 'Label overrides are authored as DA.live /placeholders sheets. This file only answers the storefront\'s request so the browser console stays quiet; it sets no label.';
+    const COMMITTED_SHEET = JSON.stringify({ data: { total: 1, offset: 0, limit: 1, data: [{ Key: '_stub', Value: STUB }] } }, null, 2);
+    const SERVED_SHEET = JSON.stringify({ total: 1, offset: 0, limit: 1, data: [{ Key: '_stub', Value: STUB }], ':type': 'sheet' });
+    const SHEET_PATH = 'placeholders/company-switcher.json';
+
+    it('reads a sheet-shaped JSON file as AEM serves it: the same rows are served', async () => {
+        const { deps, publishes } = world({ [SHEET_PATH]: COMMITTED_SHEET }, { [SHEET_PATH]: SERVED_SHEET });
+
+        await expect(confirmCodeServed([SHEET_PATH], deps)).resolves.toStrictEqual([]);
+        expect(publishes).toStrictEqual([]);
+    });
+
+    it('CONTROL: still sees a sheet-shaped JSON file whose rows the site serves old', async () => {
+        const old = SERVED_SHEET.replace('_stub', '_old');
+        const { deps } = world({ [SHEET_PATH]: COMMITTED_SHEET }, { [SHEET_PATH]: old }, 99);
+
+        await expect(confirmCodeServed([SHEET_PATH], deps)).resolves.toStrictEqual([SHEET_PATH]);
+    });
+
     it('treats a failed publish like any other file still not served', async () => {
         const { deps } = world({ 'scripts/a.js': 'new' }, { 'scripts/a.js': 'old' });
         deps.publish = jest.fn().mockRejectedValue(new Error('403'));
@@ -128,7 +152,7 @@ describe('codeNotServedSentence', () => {
 });
 
 describe('confirmStorefrontCodeServed', () => {
-    const SITE = { owner: 'skukla', repo: 'kukla-justrite' };
+    const SITE = { owner: 'skukla', repo: 'kukla-tailspin' };
     const originalFetch = global.fetch;
 
     function github(overrides: Record<string, jest.Mock> = {}) {
@@ -168,9 +192,9 @@ describe('confirmStorefrontCodeServed', () => {
 
         const said = await confirmStorefrontCodeServed(files, { previewCode: jest.fn() }, SITE, 'reset', createMockLogger());
 
-        expect(said).toBeUndefined();
-        expect(files.treeCommits.filesChangedSince).toHaveBeenCalledWith('skukla', 'kukla-justrite', 'reset');
-        expect(files.getFileContent).toHaveBeenCalledWith('skukla', 'kukla-justrite', 'scripts/commerce.js', 'head');
+        expect(said).toStrictEqual({ files: [] });
+        expect(files.treeCommits.filesChangedSince).toHaveBeenCalledWith('skukla', 'kukla-tailspin', 'reset');
+        expect(files.getFileContent).toHaveBeenCalledWith('skukla', 'kukla-tailspin', 'scripts/commerce.js', 'head');
         expect(files.treeCommits.earliestRecentCommitSha).not.toHaveBeenCalled();
     });
 
@@ -190,9 +214,9 @@ describe('confirmStorefrontCodeServed', () => {
 
         const said = await confirmStorefrontCodeServed(files, { previewCode }, SITE, 'reset', createMockLogger());
 
-        expect(said).toBeUndefined();
+        expect(said).toStrictEqual({ files: [] });
         expect(previewCode).not.toHaveBeenCalled();
-        expect(files.getFileContent).toHaveBeenCalledWith('skukla', 'kukla-justrite', '.hlxignore', 'head');
+        expect(files.getFileContent).toHaveBeenCalledWith('skukla', 'kukla-tailspin', '.hlxignore', 'head');
         const fetched = (global.fetch as jest.Mock).mock.calls.map(([url]) => new URL(url).pathname);
         expect(fetched).not.toContain('/blocks/hero-3/_hero-3.json');
     });
@@ -208,7 +232,7 @@ describe('confirmStorefrontCodeServed', () => {
 
         const said = await confirmStorefrontCodeServed(files, { previewCode }, SITE, 'reset', createMockLogger());
 
-        expect(said).toContain('blocks/hero-3/_hero-3.json');
+        expect(said.sentence).toContain('blocks/hero-3/_hero-3.json');
     });
 
     it("compares a just-created storefront from the commit its template made", async () => {
@@ -217,7 +241,7 @@ describe('confirmStorefrontCodeServed', () => {
 
         await confirmStorefrontCodeServed(files, { previewCode: jest.fn() }, SITE, undefined, createMockLogger());
 
-        expect(files.treeCommits.filesChangedSince).toHaveBeenCalledWith('skukla', 'kukla-justrite', 'template');
+        expect(files.treeCommits.filesChangedSince).toHaveBeenCalledWith('skukla', 'kukla-tailspin', 'template');
     });
 
     it('publishes the stale file on its own and says so when the site never catches up', async () => {
@@ -226,8 +250,10 @@ describe('confirmStorefrontCodeServed', () => {
 
         const said = await confirmStorefrontCodeServed(github(), { previewCode }, SITE, 'reset', createMockLogger());
 
-        expect(previewCode).toHaveBeenCalledWith('skukla', 'kukla-justrite', '/scripts/commerce.js');
-        expect(said).toContain('1 code file did not reach the live site (scripts/commerce.js)');
+        expect(previewCode).toHaveBeenCalledWith('skukla', 'kukla-tailspin', '/scripts/commerce.js');
+        expect(said.sentence).toContain('1 code file did not reach the live site (scripts/commerce.js)');
+        // PL-101: the files themselves, so the project's Finish Setup step can check them later.
+        expect(said.files).toStrictEqual(['scripts/commerce.js']);
     });
 
     /**
@@ -245,8 +271,8 @@ describe('confirmStorefrontCodeServed', () => {
         const said = await confirmStorefrontCodeServed(github(), { previewCode }, SITE, undefined, createMockLogger());
 
         expect(previewCode).toHaveBeenCalledTimes(1);
-        expect(previewCode).toHaveBeenCalledWith('skukla', 'kukla-justrite', '/*');
-        expect(said).toBeUndefined();
+        expect(previewCode).toHaveBeenCalledWith('skukla', 'kukla-tailspin', '/*');
+        expect(said).toStrictEqual({ files: [] });
     });
 
     it("says the pages show without styles or scripts when the template's code never arrives", async () => {
@@ -256,10 +282,11 @@ describe('confirmStorefrontCodeServed', () => {
         const said = await confirmStorefrontCodeServed(github(), { previewCode }, SITE, undefined, createMockLogger());
 
         expect(previewCode.mock.calls.map((call) => call[2])).toEqual(['/*', '/*', '/*']);
-        expect(said).toBe(
+        expect(said.sentence).toBe(
             "The storefront's code did not reach the live site (scripts/aem.js, styles/styles.css), so its pages " +
                 'show without styles or scripts. Select Republish on the project dashboard to publish the code again.',
         );
+        expect(said.files).toStrictEqual(['scripts/aem.js', 'styles/styles.css']);
     });
 
     it('CONTROL: publishes nothing more when the site serves the template and every change', async () => {
@@ -284,6 +311,55 @@ describe('confirmStorefrontCodeServed', () => {
 
         await expect(
             confirmStorefrontCodeServed(files, { previewCode: jest.fn() }, SITE, 'reset', createMockLogger()),
-        ).resolves.toBeUndefined();
+        ).resolves.toStrictEqual({ files: [] });
+    });
+});
+
+/**
+ * PL-101: the Finish Setup step's Check looks at the files the run left without publishing
+ * anything: a check never changes the site it checks.
+ */
+describe('codeServedNow', () => {
+    const SITE = { owner: 'skukla', repo: 'kukla-tailspin' };
+    const originalFetch = global.fetch;
+
+    function github(head: string | null = 'head') {
+        return {
+            getLatestCommitSha: jest.fn().mockResolvedValue(head),
+            getFileContent: jest
+                .fn()
+                .mockImplementation(async (_o: string, _r: string, path: string) => ({ content: 'new', sha: 's', path })),
+        };
+    }
+
+    function serve(body: Record<string, string>): void {
+        global.fetch = jest.fn(async (url: string) => {
+            const text = body[new URL(url).pathname.slice(1)];
+            return { ok: text !== undefined, text: async () => text };
+        }) as unknown as typeof fetch;
+    }
+
+    afterEach(() => {
+        global.fetch = originalFetch;
+    });
+
+    it('answers the given files the site does not serve as the repository has them at its head', async () => {
+        serve({ 'scripts/a.js': 'new', 'scripts/b.js': 'old' });
+        const files = github();
+
+        await expect(codeServedNow(files, SITE, ['scripts/a.js', 'scripts/b.js'])).resolves.toStrictEqual(['scripts/b.js']);
+        expect(files.getFileContent).toHaveBeenCalledWith('skukla', 'kukla-tailspin', 'scripts/b.js', 'head');
+    });
+
+    it('answers none when the site serves every file now', async () => {
+        serve({ 'scripts/a.js': 'new' });
+
+        await expect(codeServedNow(github(), SITE, ['scripts/a.js'])).resolves.toStrictEqual([]);
+    });
+
+    it('fails when the repository head cannot be read, rather than answering "served"', async () => {
+        serve({});
+
+        await expect(codeServedNow(github(null), SITE, ['scripts/a.js'])).rejects.toThrow();
     });
 });

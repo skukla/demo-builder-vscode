@@ -61,12 +61,17 @@ describe('endpoints', () => {
         ]);
     });
 
-    it('builds the helix status URL on the GitHub identity with the x-auth-token header', () => {
+    // A site with any admin role refuses the GitHub token alone, so the status read carries
+    // the admin Bearer too, as the extension's own does (githubAppService checkHelixStatus).
+    it('builds the helix status URL with the admin Bearer and the x-auth-token header', () => {
         const status = table.find((e: { action: string }) => e.action === 'helix-status');
         expect(status.url).toBe(
             'https://admin.hlx.page/status/acme/acme-storefront/main?editUrl=auto'
         );
-        expect(status.headers).toEqual({ 'x-auth-token': CFG.githubToken });
+        expect(status.headers).toEqual({
+            Authorization: `Bearer ${CFG.daToken}`,
+            'x-auth-token': CFG.githubToken,
+        });
     });
 
     it('keys the Config Service SITE entry on the REPO name, not the DA.live site name', () => {

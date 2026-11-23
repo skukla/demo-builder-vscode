@@ -1,5 +1,5 @@
 /**
- * Gift cards (datapack-engine step 11). A gift card is a product (`type_id: giftcard`), made with
+ * Gift Cards (datapack-engine step 11). A gift card is a product (`type_id: giftcard`), made with
  * `POST products` as the Data Installer's `GiftCardImportProcessor` makes it, so the `giftcards`
  * kind rides the products kind's install, update and removal, recorded under its own kind so a
  * repeat install finds its rows under `giftcards`. What is its own is its amounts:
@@ -17,12 +17,8 @@
 import { packedFingerprint } from '@/features/data-installer/services/demoBuilderEngine/storeCopies';
 import { productPackForm } from '@/features/data-installer/services/demoBuilderEngine/packForm';
 import { productLookups } from '@/features/data-installer/services/demoBuilderEngine/productLookups';
-import {
-    GIFT_CARD_KIND,
-    installProducts,
-    parseProductRows,
-    toCommerceProduct,
-} from '@/features/data-installer/services/demoBuilderEngine/productsKind';
+import { installProducts, parseProductRows, toCommerceProduct } from '@/features/data-installer/services/demoBuilderEngine/productsKind';
+import { GIFT_CARD_KIND } from '@/features/data-installer/services/demoBuilderEngine/productKinds';
 import { GIFT_CARD_6, GIFTCARD_AMOUNTS_ATTRIBUTE } from '../../../../helpers/commerceSalesRuleFixtures';
 import { by, fakeContext, page } from './demoBuilderEngine.testUtils';
 
@@ -84,7 +80,7 @@ describe('gift cards install', () => {
         await installProducts(ctx, parseProductRows([GIFT_CARD_ROW]), GIFT_CARD_KIND);
 
         expect(ctx.sent.map((c) => `${c.method} ${c.path}`)).toEqual(['POST products']);
-        expect(ctx.recorder.created).toEqual([{ kind: GIFT_CARD_KIND, id: 'mastercard-giftcard' }]);
+        expect(ctx.recorder.created).toEqual([{ kind: GIFT_CARD_KIND, id: 'mastercard-giftcard', key: 'mastercard-giftcard' }]);
     });
 });
 

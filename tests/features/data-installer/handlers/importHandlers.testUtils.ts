@@ -3,14 +3,21 @@
  *
  * Owns the mocks AND the SUT import (§3 of webview-test-authoring: `jest.mock`
  * hoists only within the module it appears in, so a spec that imported
- * `importHandlers` itself could bind to the REAL write client). Specs import
+ * `importHandlers` itself could bind to the REAL engine). Specs import
  * everything from here and never reach for the handlers directly.
+ *
+ * The engine is the seam: `buildDatapackEngine` answers whatever methods a test hands in
+ * (`stubEngine`), so these suites drive the handlers' order (validate, start, watch) without a
+ * store. Until 2026-11-06 the seam was the Data Installer service's write client, deleted with
+ * its engine (DI-12). `installedByDemoBuilder` answers true unless a suite says otherwise: a
+ * removal needs Demo Builder's install record.
  *
  * Split out when `importHandlers.test.ts` crossed the 500-line cap.
  */
 
 import * as vscode from 'vscode';
-import { DataInstallerWriteClient } from '@/features/data-installer/services/dataInstallerWriteClient';
+import { buildDatapackEngine, installedByDemoBuilder } from '@/features/data-installer/services/buildDatapackEngine';
+import type { DatapackEngine } from '@/features/data-installer/services/datapackEngine';
 import { watchImportJob } from '@/features/data-installer/services/importJobRunner';
 import type { Project } from '@/types/base';
 
@@ -18,14 +25,16 @@ import type { Project } from '@/types/base';
 // host initializes that at activation — which no handler test does. Without this
 // the detached watch dies in its own try/catch and simply never starts, showing
 // up as "watchImportJob was not called" rather than as a logger error.
-// These suites drive the SERVICE engine. Demo Builder's own is the default since 2026-10-28,
-// so they say which one they mean rather than lean on the default. A jest.fn, so a suite that
-// needs the other engine can still choose it.
-jest.mock('@/features/data-installer/services/dataInstallerConfig', () => ({
-    ...jest.requireActual('@/features/data-installer/services/dataInstallerConfig'),
-    selectedDatapackEngine: jest.fn(() => 'service'),
-}));
-jest.mock('@/features/data-installer/services/dataInstallerWriteClient');
+jest.mock('@/features/data-installer/services/buildDatapackEngine', () => {
+    const actual = jest.requireActual('@/features/data-installer/services/buildDatapackEngine');
+    return {
+        ...actual,
+        buildDatapackEngine: jest.fn(),
+        installedByDemoBuilder: jest.fn(),
+        // The real connection, unless a test hands in its own store (walk F146's website name).
+        projectCommerce: jest.fn((...args: unknown[]) => actual.projectCommerce(...args)),
+    };
+});
 jest.mock('@/features/data-installer/services/importJobRunner', () => ({
     watchImportJob: jest.fn(),
     IMPORT_POLL: { maxAttempts: 120, timeout: 600_000 },
@@ -47,9 +56,8 @@ import { createMockWebviewPanel } from '../../../helpers/webviewPanelFake';
 
 export { importHandlers };
 
-export const MockedWriteClient = DataInstallerWriteClient as jest.MockedClass<
-    typeof DataInstallerWriteClient
->;
+export const mockedBuildEngine = buildDatapackEngine as jest.MockedFunction<typeof buildDatapackEngine>;
+export const mockedInstalledByDemoBuilder = installedByDemoBuilder as jest.MockedFunction<typeof installedByDemoBuilder>;
 export const mockedWatch = watchImportJob as jest.MockedFunction<typeof watchImportJob>;
 
 const BASE = 'https://example-namespace.adobeioruntime.net/api/v1/web/data-installer-api';
@@ -126,21 +134,28 @@ export const PAYLOAD = {
 };
 
 /**
- * Install a partial write client. The class carries private state no literal can
- * supply, so the methods a test hands in stand for the whole instance.
+ * The engine the handlers build answers with these methods. A removal is checked as an install is
+ * unless the test hands in `validateRemoval`.
  */
-export function stubWriteClient(methods: Partial<DataInstallerWriteClient>): void {
-    MockedWriteClient.mockImplementation(() => methods as DataInstallerWriteClient);
+export function stubEngine(methods: Partial<DatapackEngine>): DatapackEngine {
+    const engine = {
+        getJobStatus: jest.fn(),
+        getJobFailureReason: jest.fn(),
+        ...methods,
+        validateRemoval: methods.validateRemoval ?? methods.validateImport,
+    } as DatapackEngine;
+    mockedBuildEngine.mockReturnValue(engine);
+    return engine;
 }
 
-/** A write client whose validate passes and whose start is accepted. */
-export function happyClient() {
+/** An engine whose validate passes and whose start is accepted. */
+export function happyEngine() {
     const validateImport = jest.fn().mockResolvedValue({ valid: true });
     const startImport = jest.fn().mockResolvedValue({ activationId: 'act-1' });
     const startDelete = jest.fn().mockResolvedValue({ activationId: 'act-9' });
     const checkCredentials = jest.fn().mockResolvedValue({ usable: true });
-    stubWriteClient({ validateImport, startImport, startDelete, checkCredentials });
-    return { validateImport, startImport, startDelete, checkCredentials };
+    const engine = stubEngine({ validateImport, startImport, startDelete, checkCredentials });
+    return { validateImport, startImport, startDelete, checkCredentials, engine };
 }
 
 /**
@@ -150,5 +165,6 @@ export function happyClient() {
 export function resetImportHandlerMocks(): void {
     jest.clearAllMocks();
     setupSettings();
+    mockedInstalledByDemoBuilder.mockResolvedValue(true);
     mockedWatch.mockResolvedValue({ outcome: 'success', perType: {} });
 }

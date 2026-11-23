@@ -44,7 +44,7 @@ const SCRAPED_DATA = z
     .strict();
 
 /** One product. */
-export const SCRAPED_PRODUCT: z.ZodType<ScrapedProduct, z.ZodTypeDef, unknown> = z
+export const SCRAPED_PRODUCT: z.ZodType<ScrapedProduct> = z
     .object({
         origin: z.string().url().describe('The listing page it was found on'),
         data: SCRAPED_DATA,
@@ -59,16 +59,14 @@ export const SCRAPED_PRODUCT: z.ZodType<ScrapedProduct, z.ZodTypeDef, unknown> =
 
 /** The tool's arguments, as a zod shape. */
 export const MAKE_ACO_PACK_INPUT = {
-    datapackName: z.string().trim().min(1).describe('Name of the new library pack, e.g. aco_acme_shop'),
+    datapackName: z.string().trim().min(1).describe('Name of the new datapack in My Datapacks, e.g. aco_acme_shop'),
     version: z.string().trim().min(1).describe('Its version, e.g. v1'),
     displayName: z.string().trim().min(1).optional().describe('The name everyone sees; the datapackName when omitted'),
     locale: z.string().trim().min(2).describe('The catalog locale ACO rows carry, e.g. en-US'),
-    currency: z.string().regex(ISO_CURRENCY).describe("The pack's one currency, ISO 4217: USD"),
+    currency: z.string().regex(ISO_CURRENCY).describe("The datapack's one currency, ISO 4217: USD"),
     priceBookId: z.string().trim().min(1).optional().describe('The price book the prices go in; main when omitted'),
     products: z.array(SCRAPED_PRODUCT).min(1).max(MAX_SCRAPED_PRODUCTS),
 };
 
 /** The arguments, checked (unknown keys such as `confirm` are dropped, not refused, here). */
 export const MAKE_ACO_PACK_ARGS = z.object(MAKE_ACO_PACK_INPUT);
-
-export type MakeAcoPackArgs = z.infer<typeof MAKE_ACO_PACK_ARGS>;

@@ -88,6 +88,7 @@ const validConfig = {
 
 // What the extension offers one Edge Delivery project (typed to the real payload).
 const blockLibraryChoices: ConfigureBlockLibraryChoices = {
+    included: [],
     native: [],
     available: [
         {
@@ -99,13 +100,6 @@ const blockLibraryChoices: ConfigureBlockLibraryChoices = {
             stackTypes: ['eds-storefront'],
         },
     ],
-    customDefaults: [],
-};
-
-// Module-level, so the prop is the same reference on every render.
-const NO_BLOCK_LIBRARY_CHOICES: ConfigureBlockLibraryChoices = {
-    native: [],
-    available: [],
     customDefaults: [],
 };
 
@@ -129,7 +123,7 @@ describe('ConfigureScreen - Authoring Experience radio (EDS only)', () => {
             />
         );
 
-        selectSection('Authoring');
+        selectSection('Storefront');
         expect(
             screen.getByRole('radiogroup', { name: 'Authoring Experience' })
         ).toBeInTheDocument();
@@ -137,7 +131,7 @@ describe('ConfigureScreen - Authoring Experience radio (EDS only)', () => {
         expect(screen.getByText('Experience Workspace')).toBeInTheDocument();
     });
 
-    it('adds an "Authoring" tab to the rail for EDS, last', () => {
+    it('adds a "Storefront" tab to the rail for EDS, last', () => {
         renderWithProvider(
             <ConfigureScreen
                 project={mockProject}
@@ -147,54 +141,15 @@ describe('ConfigureScreen - Authoring Experience radio (EDS only)', () => {
             />
         );
 
-        expect(railTabLabels()).toEqual([
-            'Project',
-            'Adobe Commerce',
-            'Catalog Service',
-            'Authoring',
-        ]);
+        expect(railTabLabels()).toEqual(['Adobe Commerce', 'Catalog Service', 'Storefront']);
     });
 
-    it('adds a "Block Libraries" tab immediately before "Authoring" when there are libraries to choose', () => {
-        renderWithProvider(
-            <ConfigureScreen
-                project={mockProject}
-                componentsData={mockComponentsData}
-                isEds
-                authoringExperience="da-live-classic"
-                blockLibraryChoices={blockLibraryChoices}
-            />
-        );
-
-        expect(railTabLabels()).toEqual([
-            'Project',
-            'Adobe Commerce',
-            'Catalog Service',
-            'Block Libraries',
-            'Authoring',
-        ]);
-    });
-
-    it('adds NO "Block Libraries" tab when the project has no library to choose', () => {
-        renderWithProvider(
-            <ConfigureScreen
-                project={mockProject}
-                componentsData={mockComponentsData}
-                isEds
-                authoringExperience="da-live-classic"
-                blockLibraryChoices={NO_BLOCK_LIBRARY_CHOICES}
-            />
-        );
-
-        expect(railTabLabels()).not.toContain('Block Libraries');
-    });
-
-    it('adds NO "Authoring" tab for a non-EDS project (the control)', () => {
+    it('adds NO "Storefront" tab for a non-EDS project (the control)', () => {
         renderWithProvider(
             <ConfigureScreen project={mockProject} componentsData={mockComponentsData} />
         );
 
-        expect(railTabLabels()).not.toContain('Authoring');
+        expect(railTabLabels()).not.toContain('Storefront');
     });
 
     it('defaults the selection to the initial authoringExperience value', () => {
@@ -207,7 +162,7 @@ describe('ConfigureScreen - Authoring Experience radio (EDS only)', () => {
             />
         );
 
-        selectSection('Authoring');
+        selectSection('Storefront');
         const radios = screen.getAllByRole('radio') as HTMLInputElement[];
         const ew = radios.find((r) => r.value === 'experience-workspace');
         const ue = radios.find((r) => r.value === 'da-live-classic');
@@ -239,7 +194,7 @@ describe('ConfigureScreen - Authoring Experience radio (EDS only)', () => {
         );
 
         // Flip to Experience Workspace
-        selectSection('Authoring');
+        selectSection('Storefront');
         const radios = screen.getAllByRole('radio') as HTMLInputElement[];
         const ew = radios.find((r) => r.value === 'experience-workspace')!;
         await user.click(ew);
@@ -299,14 +254,14 @@ describe('ConfigureScreen - Authoring Experience radio (EDS only)', () => {
             />
         );
 
-        selectSection('Block Libraries');
+        selectSection('Storefront');
         await user.click(screen.getByRole('button', { name: /Demo Builder Blocks/ }));
         expect(screen.getByRole('button', { name: /Demo Builder Blocks/ })).toHaveAttribute(
             'aria-pressed',
             'true'
         );
         // Save submits every section, not the mounted one.
-        selectSection('Project');
+        selectSection('Adobe Commerce');
         await user.click(screen.getByText('Save Changes'));
 
         await waitFor(() => {
@@ -342,7 +297,7 @@ describe('ConfigureScreen - Authoring Experience radio (EDS only)', () => {
         expect(mockRequest.mock.calls[0][1]).not.toHaveProperty('selectedBlockLibraries');
     });
 
-    it('renders the DA.live & authoring settings link inside the Authoring section', () => {
+    it('renders the authoring settings link inside the Authoring section', () => {
         renderWithProvider(
             <ConfigureScreen
                 project={mockProject}
@@ -352,13 +307,13 @@ describe('ConfigureScreen - Authoring Experience radio (EDS only)', () => {
             />
         );
 
-        selectSection('Authoring');
+        selectSection('Storefront');
         const authoringSection = screen
             .getByRole('radiogroup', { name: 'Authoring Experience' })
             .closest('#section-authoring-experience') as HTMLElement;
         expect(authoringSection).toBeInTheDocument();
         expect(
-            within(authoringSection).getByText(/DA\.live & authoring settings are configured in/i)
+            within(authoringSection).getByText(/More authoring settings are in/i)
         ).toBeInTheDocument();
         expect(within(authoringSection).getByText('Extension Settings')).toBeInTheDocument();
     });
@@ -376,7 +331,7 @@ describe('ConfigureScreen - Authoring Experience radio (EDS only)', () => {
             />
         );
 
-        selectSection('Authoring');
+        selectSection('Storefront');
         await user.click(screen.getByText('Extension Settings'));
 
         expect(webviewClient.postMessage).toHaveBeenCalledWith('open-eds-settings');
@@ -392,7 +347,7 @@ describe('ConfigureScreen - Authoring Experience radio (EDS only)', () => {
             />
         );
 
-        selectSection('Authoring');
+        selectSection('Storefront');
         expect(
             screen.queryByText(/Universal Editor settings are configured in/i)
         ).not.toBeInTheDocument();
@@ -404,7 +359,7 @@ describe('ConfigureScreen - Authoring Experience radio (EDS only)', () => {
         );
 
         expect(
-            screen.queryByText(/DA\.live & authoring settings are configured in/i)
+            screen.queryByText(/More authoring settings are in/i)
         ).not.toBeInTheDocument();
     });
 

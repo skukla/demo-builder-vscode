@@ -16,13 +16,15 @@
  * is real and after its sample data has landed.
  *
  * Never throws. A cold catalog costs a slow first PDP, which the runtime
- * smart-404 handles; aborting a completed project over it would be absurd.
+ * smart-404 handles; aborting a completed project over it would be absurd. A failure is
+ * resolved instead, and the run pauses on it until the SC retries or skips (F307).
  *
  * @module features/project-creation/services/catalogPrewarmPhase
  */
 
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import type { PdpPublisher } from '@/features/eds/services/catalogPrewarmService';
+import { type StepFailure, stepFailureOf } from '@/features/project-creation/services/stepFailure';
 import type { Project } from '@/types/base';
 import type { HandlerContext } from '@/types/handlers';
 
@@ -54,7 +56,7 @@ export async function executeCatalogPrewarmPhase(
         secrets: HandlerContext['context']['secrets'],
         daLiveTokenProvider: unknown,
     ) => PdpPublisher,
-): Promise<void> {
+): Promise<StepFailure | undefined> {
     const logger = context.logger;
     try {
         const { extractRepublishParams } = await import(
@@ -63,7 +65,7 @@ export async function executeCatalogPrewarmPhase(
         const params = extractRepublishParams(project);
         if (!params.success) {
             logger.debug(`[Catalog Prewarm] Skipping — ${params.error}`);
-            return;
+            return undefined;
         }
 
         const { resolveByomOverlayConfig } = await import('@/features/eds/handlers/edsHelpers');
@@ -74,7 +76,7 @@ export async function executeCatalogPrewarmPhase(
         );
         if (!overlayUrl) {
             logger.debug('[Catalog Prewarm] Skipping — no BYOM overlay configured');
-            return;
+            return undefined;
         }
 
         const { createDaLiveServiceTokenProvider } = await import(
@@ -117,8 +119,13 @@ export async function executeCatalogPrewarmPhase(
                 `[Catalog Prewarm] ${result.succeeded}/${result.attempted} SKUs pre-published`,
             );
         }
+        return result.failed > 0
+            ? stepFailureOf(`${result.failed} of ${result.attempted} product pages did not publish.`)
+            : undefined;
     } catch (error) {
-        // Non-fatal by design — see the module docblock.
+        // Not fatal by design: see the module docblock.
         logger.warn(`[Catalog Prewarm] Phase failed: ${(error as Error).message}`);
+        // The library's words stay in the log above; the SC reads the step's own.
+        return stepFailureOf('Product pages could not be published. Check that DA.live and GitHub are signed in, then try again.');
     }
 }

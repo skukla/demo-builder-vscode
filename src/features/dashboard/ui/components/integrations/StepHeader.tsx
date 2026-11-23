@@ -80,8 +80,8 @@ export function statusOf(item: SetupChecklistItem, run?: GuideRun): StepStatusVi
 
 interface StepHeaderProps {
     item: SetupChecklistItem;
-    /** The integration, for the plan's read of the store. */
-    integrationId: string;
+    /** The integration, for the plan's read of the store; absent, the step shows no plan. */
+    integrationId?: string;
     /** The guide's run, on the shown step only; it also lets the plan read the store. */
     run?: GuideRun;
     /** Check all steps is checking this step now. */
@@ -92,6 +92,6 @@ interface StepHeaderProps {
 export function StepHeader({ item, integrationId, run, checking = false }: StepHeaderProps): React.ReactElement {
     const status = statusOf(item, run);
     // Only the shown step reads the store for its plan: the others are drawn, invisible, for height.
-    const plan = status.plan && run ? <StepPlan id={integrationId} stepId={item.id} /> : undefined;
+    const plan = status.plan && run && integrationId ? <StepPlan id={integrationId} stepId={item.id} /> : undefined;
     return <SetupStepHeader item={item} status={status} plan={plan} busy={checking} />;
 }

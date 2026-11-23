@@ -98,7 +98,7 @@ describe('GitHubAppService — an inner code.status Helix will not stand behind'
 
     /**
      * EDS-23. An inner 400 was read as "installed, initializing". Measured on
-     * skukla/kukla-justrite: 400 while the App did NOT cover the repository (the
+     * skukla/kukla-tailspin: 400 while the App did NOT cover the repository (the
      * code endpoint said "github bot not installed on repository"), and STILL 400
      * after the owner added it and the code served 200. It says nothing either way,
      * so strict mode must not call it installed — the code endpoint decides.
@@ -107,7 +107,7 @@ describe('GitHubAppService — an inner code.status Helix will not stand behind'
         helixAnswers(400);
         const service = new GitHubAppService(mockTokenService);
 
-        const result = await service.isAppInstalled('skukla', 'kukla-justrite');
+        const result = await service.isAppInstalled('skukla', 'kukla-tailspin');
 
         expect(result).toEqual({ isInstalled: false, codeStatus: 400, transient: true });
     });

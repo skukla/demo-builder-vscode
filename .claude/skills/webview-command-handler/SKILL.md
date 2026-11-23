@@ -35,6 +35,15 @@ Two traps that fail SILENTLY — nothing throws, nothing logs, the UI just never
   (`getRegisteredTypes` + `dispatchHandler`, per `showProjectsList.ts`). But "no new handlers"
   is not "no more registration": the map you register must cover every message the surface's
   components send, INCLUDING components borrowed from another feature — see below.
+- **A surface that shows what a setting controls follows that setting.** The SC changes it in
+  VS Code's Settings with the surface still open and expects it to show; nobody knows to press
+  Refresh (owner, 2026-11-05: the Datapacks screen kept the Data Installer's packs after the
+  address was cleared). In the command: `this.disposables.add(vscode.workspace.onDidChangeConfiguration(...))`,
+  and when `affectsConfiguration` names one of its settings, `sendMessage` to the surface. In the
+  webview: `useVSCodeMessage`, then re-read or apply the payload. Four precedents, each different
+  after the check, which is why there is no shared helper: `showProjectsList.ts` (the view mode),
+  `configure.ts` (looks up the project first), `wizardSettingsWatch.ts` (four settings, four
+  messages) and `showDataInstaller.ts` with `useDatapackCatalog` (a bare reload).
 
 Precedents to copy rather than invent: `showProjectsList.ts` (command shape — it extends
 `BundledPanelCommand`, so the page HTML and the handler context come from setting

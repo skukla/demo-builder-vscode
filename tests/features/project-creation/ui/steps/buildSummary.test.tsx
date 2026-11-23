@@ -165,14 +165,14 @@ describe('commerceSummaryGroup - ACCS', () => {
 
         expect(group.rows.map((r) => r.label)).toEqual([
             'Backend',
-            'Sign-in',
+            'Sign-In',
             'Connection',
             'Business',
             'Catalog',
             'Datapacks',
         ]);
-        const signin = group.rows.find((r) => r.label === 'Sign-in');
-        expect(signin).toEqual({ label: 'Sign-in', value: 'Demo Org', done: true });
+        const signin = group.rows.find((r) => r.label === 'Sign-In');
+        expect(signin).toEqual({ label: 'Sign-In', value: 'Demo Org', done: true });
     });
 
     it('leaves a committed sub-step undone while its own state is not satisfied', () => {
@@ -220,6 +220,20 @@ describe('commerceSummaryGroup - Edit', () => {
         ]);
     });
 
+    // The datapack by the name its card showed, not its library name (live run 8, owner 2026-11-16).
+    it('names the chosen datapack as its card did', () => {
+        const group = commerceSummaryGroup(
+            editing({
+                selectedBackend: 'adobe-commerce-accs',
+                componentConfigs: { 'adobe-commerce-accs': { ACCS_WEBSITE_CODE: 'acme', ACCS_STORE_VIEW_CODE: 'acme_us' } },
+                datapack: { name: 'frescopa', version: 'main' },
+                datapackDisplayName: 'Frescopa',
+            }),
+        );
+
+        expect(group.rows.find((r) => r.label === 'Datapacks')?.value).toBe('Frescopa');
+    });
+
     it('reads the ACCS store view code on an ACCS project', () => {
         const group = commerceSummaryGroup(
             editing({
@@ -229,6 +243,23 @@ describe('commerceSummaryGroup - Edit', () => {
         );
 
         expect(group.rows.find((r) => r.label === 'Business')?.value).toBe('bodea_us');
+    });
+
+    // Names, not codes (owner, 2026-11-15): the store view as the Admin shows it, once discovery has read it.
+    it('names the store view by its name when discovery has read the store', () => {
+        const group = commerceSummaryGroup(
+            editing({
+                selectedBackend: 'adobe-commerce-accs',
+                componentConfigs: { 'adobe-commerce-accs': { ACCS_STORE_VIEW_CODE: 'bodea_us' } },
+                storeDiscoveryData: {
+                    websites: [],
+                    storeGroups: [],
+                    storeViews: [{ id: 1, code: 'bodea_us', name: 'Bodea US', store_group_id: 1, website_id: 1, is_active: 1 }],
+                },
+            }),
+        );
+
+        expect(group.rows.find((r) => r.label === 'Business')?.value).toBe('Bodea US');
     });
 
     it('goes back to the walk once the backend or package changed', () => {
@@ -242,26 +273,86 @@ describe('commerceSummaryGroup - Edit', () => {
     });
 });
 
-describe('storefrontSummaryGroup', () => {
-    it('names an added demo first, and says when its site will start empty', () => {
-        const demo = { kind: 'demo' as const, version: 1, name: 'Isle5 by Jen', source: { owner: 'jen', repo: 'isle5-demo' }, storefrontKind: 'eds' as const };
-        expect(storefrontSummaryGroup(state({ demo })).rows[0]).toEqual({
-            label: 'Demo',
-            value: 'Isle5 by Jen · Edge Delivery (no published pages yet: the site starts empty)',
+/**
+ * Import from a file: the file already chose the backend and the datapack, so the rows
+ * read what the import has, without a Continue past each step (F278, owner 2026-11-18).
+ * Unlike Edit, the settings steps ARE in the strip, so their rows follow their own steps
+ * and stay open until each is done.
+ */
+describe('commerceSummaryGroup - Import', () => {
+    const importing = (partial: Partial<WizardState> = {}) =>
+        state({ wizardMode: 'import', selectedBackend: 'adobe-commerce-paas', ...partial });
+
+    it('shows the Backend and the chosen datapack with nothing moved past', () => {
+        const group = commerceSummaryGroup(
+            importing({
+                commerceConnectValid: true,
+                commerceStoreViewChosen: true,
+                componentConfigs: {
+                    'adobe-commerce-paas': {
+                        ADOBE_COMMERCE_WEBSITE_CODE: 'base',
+                        ADOBE_COMMERCE_STORE_VIEW_CODE: 'default',
+                    },
+                },
+                datapack: { name: 'release-save-test-2', version: 'main' },
+                datapackDisplayName: 'Release Save Test 2',
+            }),
+        );
+
+        expect(group.rows.find((r) => r.label === 'Backend')).toEqual({
+            label: 'Backend',
+            value: 'Adobe Commerce (PaaS)',
             done: true,
         });
-        const withPages = { ...demo, contentSource: { org: 'jen', site: 'isle5-demo', indexPath: '/full-index.json' } };
-        expect(storefrontSummaryGroup(state({ demo: withPages })).rows[0].value).toBe('Isle5 by Jen · Edge Delivery');
+        expect(group.rows.find((r) => r.label === 'Connection')).toEqual({
+            label: 'Connection',
+            value: 'Connected',
+            done: true,
+        });
+        expect(group.rows.find((r) => r.label === 'Business')?.done).toBe(true);
+        expect(group.rows.find((r) => r.label === 'Datapacks')).toEqual({
+            label: 'Datapacks',
+            value: 'Release Save Test 2',
+            done: true,
+        });
+    });
+
+    it('leaves a step that is not done yet open, with no value', () => {
+        const group = commerceSummaryGroup(importing());
+
+        expect(group.rows.find((r) => r.label === 'Connection')).toEqual({
+            label: 'Connection',
+            value: undefined,
+            done: false,
+        });
+        expect(group.rows.find((r) => r.label === 'Business')).toEqual({
+            label: 'Business',
+            value: undefined,
+            done: false,
+        });
+    });
+});
+
+describe('storefrontSummaryGroup', () => {
+    it('names an added demo first, and says when its site will start empty', () => {
+        const demo = { kind: 'demo' as const, version: 1, name: 'Isle5 by Robin', source: { owner: 'robin', repo: 'isle5-demo' }, storefrontKind: 'eds' as const };
+        expect(storefrontSummaryGroup(state({ demo })).rows[0]).toEqual({
+            label: 'Demo',
+            value: 'Isle5 by Robin, Edge Delivery (no published pages yet: the site starts empty)',
+            done: true,
+        });
+        const withPages = { ...demo, contentSource: { org: 'robin', site: 'isle5-demo', indexPath: '/full-index.json' } };
+        expect(storefrontSummaryGroup(state({ demo: withPages })).rows[0].value).toBe('Isle5 by Robin, Edge Delivery');
         expect(storefrontSummaryGroup(state({})).rows[0].label).not.toBe('Demo');
     });
 
     it('calls a headless demo Headless, and never says its site starts empty', () => {
         // No content source on purpose: the empty-site note is about Edge Delivery pages,
         // so a headless demo without one must still read as the bare name and kind.
-        const demo = { kind: 'demo' as const, version: 1, name: 'Bodea', source: { owner: 'jen', repo: 'bodea-demo' }, storefrontKind: 'headless' as const };
+        const demo = { kind: 'demo' as const, version: 1, name: 'Bodea', source: { owner: 'robin', repo: 'bodea-demo' }, storefrontKind: 'headless' as const };
         expect(storefrontSummaryGroup(state({ demo })).rows[0]).toEqual({
             label: 'Demo',
-            value: 'Bodea · Headless',
+            value: 'Bodea, Headless',
             done: true,
         });
     });
@@ -345,18 +436,22 @@ describe('storefrontSummaryGroup', () => {
         );
         const libs = some.rows.find((r) => r.label === 'Block Libraries');
         expect(libs?.done).toBe(true);
-        expect(libs?.value).toBe('3 selected');
+        expect(libs?.value).toBe('3 included');
     });
 
-    // Demo Builder Blocks comes with every storefront and is kept out of the picker.
-    // A built project records it, so Edit counted 2 beside a picker showing 1
-    // (owner, 2026-10-17). The count is what the picker shows.
-    it('leaves the always-included library out of the count, as the picker does', () => {
-        const group = storefrontSummaryGroup(
-            state({ selectedBlockLibraries: ['demo-builder-blocks', 'demo-team-blocks'] }),
+    // The count is what the picker shows (owner, 2026-10-17). The picker shows the locked
+    // libraries since 2026-11-03, so they count, once each, and the row says "included"
+    // (owner, 2026-11-05: "1 selected" beside two ticked cards).
+    it('counts the locked libraries the picker shows, once each, as included', () => {
+        const stack = 'eds-accs';
+        const pkg = 'citisignal';
+        const shownLocked = storefrontSummaryGroup(state({ selectedStack: stack, selectedPackage: pkg }));
+        const recorded = storefrontSummaryGroup(
+            state({ selectedStack: stack, selectedPackage: pkg, selectedBlockLibraries: ['demo-builder-blocks', 'demo-team-blocks'] }),
         );
 
-        expect(group.rows.find((r) => r.label === 'Block Libraries')?.value).toBe('1 selected');
+        expect(shownLocked.rows.find((r) => r.label === 'Block Libraries')?.value).toBe('1 included');
+        expect(recorded.rows.find((r) => r.label === 'Block Libraries')?.value).toBe('2 included');
     });
 
     it('leaves not-yet-configured rows undone with no value', () => {

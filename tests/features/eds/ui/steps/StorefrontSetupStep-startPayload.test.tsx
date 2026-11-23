@@ -150,3 +150,25 @@ describe('StorefrontSetupStep — the start request on retry', () => {
         ).toBeInTheDocument();
     });
 });
+
+// EDS-72: an imported project's repository is made from its bundle; setup is told where it is.
+describe('StorefrontSetupStep — a project imported from a demo bundle', () => {
+    const importedFrom = { bundleName: 'Bodea Summit', bundlePath: '/x/bodea-demo-bundle.zip' };
+
+    it('names the bundle on the start request, on mount and on Retry', () => {
+        renderStep({ state: { ...RICH_STATE, importedFrom } });
+        failThenRetry();
+
+        const sent = startPayloads();
+        expect(sent).toHaveLength(2);
+        for (const payload of sent) {
+            expect(payload.edsConfig).toStrictEqual({ ...COMPLETE_EDS_CONFIG, bundleSource: { bundlePath: '/x/bodea-demo-bundle.zip' } });
+        }
+    });
+
+    it('CONTROL: names no bundle for any other project', () => {
+        renderStep({ state: RICH_STATE });
+
+        expect(startPayloads()[0].edsConfig).not.toHaveProperty('bundleSource');
+    });
+});

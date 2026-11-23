@@ -234,7 +234,7 @@ export function IntegrationsGrid({
         () => cards.find((card) => (card.componentId ?? card.id) === pendingRemoveId),
         [cards, pendingRemoveId],
     );
-    const removeConsequence = removalConsequence(pendingRemove);
+    const removeConsequences = removalConsequence(pendingRemove);
 
     const closeAddErp = useCallback((): void => setAddingErpTo(null), []);
     const addErp = useCallback<AddErpDialogProps['onAdd']>(
@@ -289,7 +289,7 @@ export function IntegrationsGrid({
                 ))}
                 {onAdd ? (
                     <AddCard
-                        name="Add an integration"
+                        name="Add an Integration"
                         onOpen={onAdd}
                         cardClassName={viewMode === 'rows' ? 'integration-row' : 'integration-card'}
                     />
@@ -307,7 +307,7 @@ export function IntegrationsGrid({
             <AppBuilderComponentRemoveDialog
                 isOpen={pendingRemoveId !== null}
                 componentName={pendingRemove?.name ?? pendingRemoveId ?? ''}
-                consequence={removeConsequence}
+                consequences={removeConsequences}
                 onConfirm={confirmRemove}
                 onClose={closeRemoveDialog}
             />

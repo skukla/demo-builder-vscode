@@ -144,6 +144,8 @@ describe('the recorder, driven through the real server', () => {
 describe('the sink — every recorded call reaches the listener (AI-2c)', () => {
     it('invokes the sink once per record, with the stamped entry', () => {
         const seen: unknown[] = [];
+        // Made at 5,000, recorded at 5,030: stamped 30ms into the session.
+        const clock = jest.spyOn(Date, 'now').mockReturnValueOnce(5_000).mockReturnValue(5_030);
         const r = new ToolTraceRecorder(10, (e) => seen.push(e));
 
         r.record({
@@ -158,7 +160,8 @@ describe('the sink — every recorded call reaches the listener (AI-2c)', () => 
 
         expect(seen).toHaveLength(1);
         expect(seen[0]).toMatchObject({ tool: 'get_project', resultBytes: 42 });
-        expect((seen[0] as { at: number }).at).toBeGreaterThanOrEqual(0);
+        expect((seen[0] as { at: number }).at).toBe(30);
+        clock.mockRestore();
     });
 
     it('a throwing sink never fails the record — the trace must not cost a call', () => {

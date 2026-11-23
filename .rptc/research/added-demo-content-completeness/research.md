@@ -17,14 +17,14 @@ ask the destination for the same paths and report the gap.
 ## Three findings that change what should be built
 
 1. **A project copied from a colleague's demo can arrive without its cart and checkout pages.**
-   CHECKED 2026-10-12: the source `main--jenhankib2bbodea--sayurihanki.aem.live` answers 200
+   CHECKED 2026-10-12: the source `main--org-k--org-j.aem.live` answers 200
    and the copy `main--bodea-storefront--skukla.aem.live` answers 404 for `/cart`, `/checkout`,
    `/search`, `/wishlist`, `/order-details`, `/customer/forgotpassword`, `/store-switcher`,
    `/metadata.json`, `/redirects.json` and `/enrichment/category-banner`. The research lists 18
    such documents (section 4).
 2. **The label-sheet stubs answer 404 on every storefront.** The storefront asks for
    `placeholders/<area>.json?sheet=data` (`scripts/commerce.js`, two call sites). CHECKED: with
-   that query the stub answers 404 on bodea, bju and justrite, and 200 without it. The source's
+   that query the stub answers 404 on bodea, client-c and tailspin, and 200 without it. The source's
    own authored sheet answers 200 with it. So the stubs (`placeholderStubs.ts`, "console
    hygiene") have not been quieting anything.
 3. **A sheet "copied" by the published-only route is not served.** The create log said
@@ -165,7 +165,7 @@ Also proven live along the way: the agent's `delete_project`, with today's token
 
 ## 9. The live test on bodea, 2026-10-12 (build `f3fdb09f5`)
 
-A reset of the project built on `sayurihanki/jenhankib2bbodea`, then every sheet read back from
+A reset of the project built on `org-j/org-k`, then every sheet read back from
 `main--bodea-storefront--skukla.aem.live` and compared with the source.
 
 | What | Before | After the reset |

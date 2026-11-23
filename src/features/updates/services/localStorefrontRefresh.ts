@@ -3,13 +3,13 @@
  *
  * Every EDS project has a git clone of its storefront at the eds-storefront instance's
  * `path`, and the generated AGENTS.md tells agents to edit there. Updates commit through
- * a throwaway clone or GitHub's API and never touch it, so it falls behind: JustRite's
+ * a throwaway clone or GitHub's API and never touch it, so it falls behind: Tailspin's
  * was 11 commits behind on 2026-10-20. An agent then edits an old copy, and EDS-57's
  * clash fix would start from one.
  *
  * The rule is that nothing local is ever lost. A local change whose content already
  * equals GitHub's copy is dropped, because GitHub holds it: the extension writes
- * `config.json` both locally and through the API, which is what JustRite's uncommitted
+ * `config.json` both locally and through the API, which is what Tailspin's uncommitted
  * change was (measured: byte-for-byte GitHub's). Any other local change, or a local
  * commit GitHub does not have, leaves the copy exactly as it is, with the reason.
  *
@@ -155,6 +155,13 @@ async function hasGitFolder(storefrontPath: string): Promise<boolean> {
     }
 }
 
+/** Whether the project has a local storefront copy on disk as a git repository. */
+export async function hasLocalCopy(project: Project): Promise<boolean> {
+    const copy = localCopyOf(project);
+    if (!copy) return false;
+    return hasGitFolder(copy.storefrontPath);
+}
+
 /** A project's local storefront copy, ready to run git in, with its GitHub fetch URL. */
 export interface LocalCopy extends LocalRefreshRequest {
     git: GitStep;
@@ -213,7 +220,7 @@ export async function refreshLocalStorefronts(
             onCopy?.(project, { state: 'done' });
         } catch (error) {
             ctx.logger.warn(`[Updates] Could not refresh the local storefront copy of ${project.name}: ${(error as Error).message}`);
-            onCopy?.(project, { state: 'skipped', message: 'Not brought up to date — details are in Debug Logs.' });
+            onCopy?.(project, { state: 'skipped', message: "Not brought up to date. Demo Builder couldn't tell what went wrong." });
         }
     }
 }

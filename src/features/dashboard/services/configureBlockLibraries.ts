@@ -18,6 +18,7 @@
 
 import { COMPONENT_IDS } from '@/core/constants';
 import {
+    getAlwaysIncludedBlockLibraries,
     getAvailableBlockLibraries,
     getNativeBlockLibraries,
 } from '@/features/components/services/blockLibraryLoader';
@@ -37,7 +38,7 @@ export interface BlockLibrarySelectionInput {
     customBlockLibraries?: unknown;
 }
 
-const NO_CHOICES: ConfigureBlockLibraryChoices = { native: [], available: [], customDefaults: [] };
+const NO_CHOICES: ConfigureBlockLibraryChoices = { included: [], native: [], available: [], customDefaults: [] };
 
 /**
  * The libraries the Configure screen offers for this project.
@@ -45,7 +46,7 @@ const NO_CHOICES: ConfigureBlockLibraryChoices = { native: [], available: [], cu
  * @param project - the project being configured
  * @param customLibrarySetting - the `demoBuilder.blockLibraries.custom` setting as
  *   read; a hand-edited settings file can hold anything, so it is checked here
- * @returns the three lists, all empty unless the project's stack is Edge Delivery
+ * @returns the four lists, all empty unless the project's stack is Edge Delivery
  */
 export function buildBlockLibraryChoices(
     project: Project,
@@ -55,6 +56,7 @@ export function buildBlockLibraryChoices(
     if (stack?.frontend !== COMPONENT_IDS.EDS_STOREFRONT) return NO_CHOICES;
     const packageId = project.selectedPackage ?? '';
     return {
+        included: getAlwaysIncludedBlockLibraries(stack, packageId),
         native: getNativeBlockLibraries(stack, packageId),
         available: getAvailableBlockLibraries(stack, packageId),
         customDefaults: parseCustomBlockLibrarySettings(

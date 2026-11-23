@@ -3,7 +3,7 @@
  * service's own request log (step 14). Each row says which engine ran it; a source that could
  * not be read says why its rows are missing.
  *
- * Paged by a "Load 50 more" button, deliberately NOT by a pagination component:
+ * Paged by a "Load 50 More" button, deliberately NOT by a pagination component:
  * the repo has none, one consumer does not justify inventing one, and this is a
  * feed — nobody asks for page 7 of an activity log. The button ACCUMULATES, so
  * the accumulator is the piece with the real complexity here.
@@ -14,10 +14,11 @@
  *   - changing the filter RESETS it; a new query must not inherit the old
  *     mode's rows
  *
- * `scenario` is rendered verbatim and never narrowed. The documented enum
- * (`SINGLE_DB`, `ENTIRE_DB`, …) does not match live data, which sends
- * `DATAPACK_ALL_ITEMS` / `DATAPACK_SPECIFIC_ITEMS`, so a mapping table would
- * blank exactly the values that occur.
+ * A row speaks the screen's words, never ids or wire words (owner, 2026-11-10): the pack by the
+ * name on its card, a save by when it was saved (`versionLabel`), and the operation as the
+ * button that runs it ("Install", "Uninstall", "Save", "Dry Run"). The service's `scenario` and the
+ * Commerce instance id are not shown: the first is a wire value, and the whole tab is already for
+ * the one instance.
  *
  * No table. `core/ui` has no table component; rows carry four short facts, which a
  * table's chrome would cost more than it organised.
@@ -27,6 +28,9 @@
 
 import { Button, Item, Picker } from '@adobe/react-spectrum';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { DRY_RUN, INSTALL } from '../../datapackWords';
+import { versionLabel } from '../../packVersions';
+import { plainFailure } from '../../plainFailure';
 import type { ActivityEntry, DatapackEngineId, HistoryPage, OperationMode } from '../../types';
 import { renderDataInstallerFailure } from '../dataInstallerFailure';
 import { useDataInstallerRequest } from '../hooks/useDataInstallerRequest';
@@ -43,6 +47,18 @@ const ALL_MODES = 'all';
 
 /** Modes the log can be filtered to, in the order the service processes them. */
 const MODES: OperationMode[] = ['import', 'export', 'delete', 'validate'];
+
+/** Each mode as the screen names it: both engines log an uninstall as `delete`, a save as `export`. */
+const MODE_WORDS: Record<OperationMode, string> = {
+    import: INSTALL,
+    export: 'Save',
+    delete: 'Uninstall',
+    validate: DRY_RUN,
+};
+
+/** A logged mode in the screen's words; nothing for one it has no word for. */
+const modeWord = (mode?: string): string | undefined =>
+    mode && mode in MODE_WORDS ? MODE_WORDS[mode as OperationMode] : undefined;
 
 /**
  * Filter options as ONE array.
@@ -64,8 +80,8 @@ const MODES: OperationMode[] = ['import', 'export', 'delete', 'validate'];
  * is NOT verified — the bug was seen in tests, never at runtime.
  */
 const MODE_OPTIONS: { key: string; label: string }[] = [
-    { key: ALL_MODES, label: 'All operations' },
-    ...MODES.map((mode) => ({ key: mode, label: mode })),
+    { key: ALL_MODES, label: 'All Operations' },
+    ...MODES.map((mode) => ({ key: mode, label: MODE_WORDS[mode] })),
 ];
 
 /** What each row calls the engine that ran it. */
@@ -166,8 +182,8 @@ export function DatapackActivityView(): React.JSX.Element {
     if (targetSettled && !commerceInstance) {
         return (
             <EmptyState
-                title="No project open"
-                description="Open a project to see the sample-data runs on its Commerce instance."
+                title="No Project Open"
+                description="Open a project to see its datapack activity."
             />
         );
     }
@@ -251,8 +267,8 @@ function renderActivityBody({
     if (entries.length === 0) {
         return (
             <EmptyState
-                title="No activity yet"
-                description="Neither Demo Builder nor the Data Installer has a run on this store matching this filter."
+                title="No Activity Yet"
+                description="No activity matches this filter."
             />
         );
     }
@@ -266,7 +282,7 @@ function renderActivityBody({
             {entries.length < total ? (
                 <div className="datapack-activity-more">
                     <Button variant="secondary" onPress={loadMore} isDisabled={loading}>
-                        Load {PAGE_SIZE} more
+                        Load {PAGE_SIZE} More
                     </Button>
                 </div>
             ) : null}
@@ -277,7 +293,7 @@ function renderActivityBody({
 /** Why one source's rows are missing, when they are: the feed must not quietly show less. */
 function SourceNotes({ page }: { page: HistoryPage<ActivityEntry> | null }): React.JSX.Element | null {
     const notes = [
-        page?.serviceError ? `The Data Installer's own log could not be read: ${page.serviceError}` : undefined,
+        page?.serviceError ? `Couldn't read the Data Installer's activity: ${page.serviceError}` : undefined,
         page?.engineError,
     ].filter((note): note is string => Boolean(note));
     if (notes.length === 0) return null;
@@ -292,26 +308,23 @@ function SourceNotes({ page }: { page: HistoryPage<ActivityEntry> | null }): Rea
     );
 }
 
-/** One logged run: which engine ran it, and, for Demo Builder's, whether it failed and why. */
+/** One logged run: which engine ran it, and for Demo Builder's, what it said in plain words (F221). */
 function ActivityRow({ entry }: { entry: ActivityEntry }): React.JSX.Element {
+    const mode = modeWord(entry.mode);
+    const said = entry.shown ?? (entry.detail ? plainFailure(entry.detail) : undefined);
     return (
         <div className="datapack-row" data-testid="activity-row">
             <div className="datapack-row-main">
-                <span className="datapack-row-title">{entry.id.name}</span>
-                <span className="datapack-row-version">{entry.id.version}</span>
-                {entry.mode ? <span className="datapack-row-mode">{entry.mode}</span> : null}
-                {entry.outcome === 'failed' ? <span className="datapack-row-mode">failed</span> : null}
+                <span className="datapack-row-title">{entry.displayName ?? entry.id.name}</span>
+                <span className="datapack-row-version">{versionLabel(entry.id.version)}</span>
+                {mode ? <span className="datapack-row-mode">{mode}</span> : null}
+                {entry.outcome === 'failed' ? <span className="datapack-row-mode">Failed</span> : null}
                 {entry.source ? <span className="datapack-row-mode">{SOURCE_LABELS[entry.source]}</span> : null}
             </div>
             <div className="datapack-row-meta">
-                {entry.commerceInstance ? (
-                    <span className="datapack-row-instance">{entry.commerceInstance}</span>
-                ) : null}
                 <span>{entry.dataTypes.length} data types</span>
-                {/* Verbatim: the documented enum does not match live values. */}
-                {entry.scenario ? <span>{entry.scenario}</span> : null}
                 {entry.at ? <span>{formatDateTime(entry.at)}</span> : null}
-                {entry.detail ? <span>{entry.detail}</span> : null}
+                {said ? <span>{said}</span> : null}
             </div>
         </div>
     );

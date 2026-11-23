@@ -46,7 +46,7 @@ jest.mock('@/features/updates/services/fixWithAi', () => ({
 }));
 
 export const bodea = createMockProject({ name: 'bodea', title: 'Bodea', path: '/p/bodea', status: 'stopped' });
-export const justrite = createMockProject({ name: 'justrite', title: 'JustRite', path: '/p/justrite', status: 'stopped' });
+export const tailspin = createMockProject({ name: 'tailspin', title: 'Tailspin', path: '/p/tailspin', status: 'stopped' });
 
 export function selections(): UpdateSelections {
     return {
@@ -56,7 +56,7 @@ export function selections(): UpdateSelections {
         finish: [],
         component: [],
         adobeMcp: [],
-        blockLibrary: [justrite, bodea].map((project) => ({
+        blockLibrary: [tailspin, bodea].map((project) => ({
             project,
             library: {
                 name: 'Demo Builder Blocks',
@@ -68,13 +68,12 @@ export function selections(): UpdateSelections {
             latestCommit: 'b',
         })),
         blockLibraryInstall: [],
-        inspector: [],
         integration: [],
     };
 }
 
 export function found(overrides: Partial<FoundUpdates> = {}): FoundUpdates {
-    return { selections: selections(), currentProjectPath: '/p/justrite', count: 3, ...overrides };
+    return { selections: selections(), currentProjectPath: '/p/tailspin', count: 3, ...overrides };
 }
 
 export function applied(overrides: Partial<ApplyUpdatesResult> = {}): ApplyUpdatesResult {

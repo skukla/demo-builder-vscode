@@ -15,7 +15,6 @@
 
 import { handleDeleteApiMesh } from '@/features/mesh/handlers/deleteHandler';
 import { HandlerContext } from '@/types/handlers';
-import { ServiceLocator } from '@/core/di/serviceLocator';
 import * as _vscode from 'vscode';
 import { MESH_DELETE_COMMAND } from '@/core/shell/meshDeleteCommand';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
@@ -26,7 +25,7 @@ import { createMockStateManager } from '../../../helpers/stateManagerFake';
 import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
 import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
 import { demoBuilderNode } from '@/core/shell/demoBuilderNode';
-import { poolUnits } from '../../../helpers/authenticationServiceFake';
+import { servicesFor } from './deleteHandler.testUtils';
 // Record the target rather than stubbing it out — the assertion IS the target.
 // buildOrgTargetFromProjectAdobe is pure, so the real one is used.
 const mockWithOrgContext = jest.fn((_target: unknown, fn: () => Promise<unknown>) => fn());
@@ -47,13 +46,7 @@ describe('handleDeleteApiMesh — org targeting', () => {
             execute: jest.fn().mockResolvedValue({ code: 0, stdout: 'deleted', stderr: '' }),
         };
 
-        (ServiceLocator.getAuthenticationService as jest.Mock).mockReturnValue(
-            poolUnits({
-                isAuthenticated: jest.fn().mockResolvedValue(true),
-                getCachedOrganization: jest.fn().mockReturnValue(undefined),
-            })
-        );
-        (ServiceLocator.getCommandExecutor as jest.Mock).mockReturnValue(mockCommandExecutor);
+        servicesFor(mockCommandExecutor);
 
         mockContext = createMockHandlerContext({
             context: createMockExtensionContext({
@@ -109,12 +102,7 @@ describe('handleDeleteApiMesh — org targeting', () => {
      */
     describe('refuses to run at all without Adobe sign-in', () => {
         beforeEach(() => {
-            (ServiceLocator.getAuthenticationService as jest.Mock).mockReturnValue(
-                poolUnits({
-                    isAuthenticated: jest.fn().mockResolvedValue(false),
-                    getCachedOrganization: jest.fn().mockReturnValue(undefined),
-                })
-            );
+            servicesFor(mockCommandExecutor, false);
         });
 
         it('reports the refusal and never reaches the CLI', async () => {

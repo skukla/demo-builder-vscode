@@ -148,7 +148,7 @@ belong inside a sub-plan about batteries — nobody would read it there.
 ### So the two sources do different jobs
 
 - **Transcripts give REALISM, not coverage.** They fix phrasing — real asks are
-  terse, contextual, and often refer to things by nickname ("Leah's instance",
+  terse, contextual, and often refer to things by nickname ("Avery's instance",
   "the headless project"). Invented prompts are always tidier than real ones, and
   a battery of tidy prompts measures a surface nobody is using.
 - **The code gives COVERAGE, not realism.** The task map below is the frame; each

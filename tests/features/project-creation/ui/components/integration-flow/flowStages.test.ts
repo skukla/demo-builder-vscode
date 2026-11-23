@@ -4,7 +4,7 @@
  * Pure stage machine for the Add Integration modal journey: stage-order
  * derivation per kind/mode (first-add vs later-add, signed-in vs signed-out,
  * changingDestination re-expansion), next/prev walks including the
- * vanished-stage clamp, per-stage canContinue gates (dup guard, phaseRunning),
+ * vanished-stage clamp, per-stage canContinue gates (dup guard),
  * footer labels for both modes, and the mesh kind-picker availability
  * predicate. No React, no wizard-state writes.
  */
@@ -37,7 +37,6 @@ function slice(overrides: Partial<FlowStateSlice> = {}): FlowStateSlice {
         destinationCommitted: false,
         projectCommitted: false,
         workspaceCommitted: false,
-        phaseRunning: false,
         selectedIds: [],
         meshSelected: false,
         ...overrides,
@@ -531,11 +530,6 @@ describe('canContinue', () => {
         expect(canContinue('dest-project', draft(), slice({ projectCommitted: true }))).toBe(true);
     });
 
-    it('dest-project blocks while a phase is running even with a pending pick', () => {
-        const d = draft({ pendingProject: { id: 'p1', name: 'Proj' } });
-        expect(canContinue('dest-project', d, slice({ phaseRunning: true }))).toBe(false);
-    });
-
     it('dest-workspace blocks with neither pending nor committed workspace', () => {
         expect(canContinue('dest-workspace', draft(), slice())).toBe(false);
     });
@@ -548,16 +542,8 @@ describe('canContinue', () => {
         );
     });
 
-    it('dest-workspace blocks while a phase is running', () => {
-        const d = draft({ pendingWorkspace: { id: 'w1', name: 'Stage' } });
-        expect(canContinue('dest-workspace', d, slice({ phaseRunning: true }))).toBe(false);
-    });
-
     it('api-access is informational — never blocks (nothing to select or provision)', () => {
         expect(canContinue('api-access', draft(), slice())).toBe(true);
-        // No provisioning happens here anymore, so an in-flight phase elsewhere
-        // doesn't gate this step either.
-        expect(canContinue('api-access', draft(), slice({ phaseRunning: true }))).toBe(true);
     });
 });
 

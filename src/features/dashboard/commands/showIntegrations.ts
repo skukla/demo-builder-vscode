@@ -5,7 +5,7 @@
  * integrations summary tile. Replaces the dashboard's in-page grid section: the
  * card grid needs ~1060px to read as three columns and a detail panel beside it,
  * neither of which fits the dashboard's ~900px content band alongside the status
- * header and action tiles (see `.rptc/plans/integrations-surface/overview.md`).
+ * header and action tiles (see `.rptc/complete/integrations-surface/overview.md`).
  *
  * Registers the EXISTING `dashboardHandlers` map wholesale — the grid's messages
  * (add/deploy/redeploy/verify/remove/rename, the console-API trio, openLiveSite)
@@ -153,6 +153,21 @@ export class ShowIntegrationsCommand extends BundledPanelCommand<IntegrationsIni
                     data,
                 );
             });
+        }
+        // A sign-in or sign-out finished anywhere re-checks the Add Integration flow's
+        // sign-in step (F303).
+        const auth = this.createHandlerContext().authManager;
+        if (auth) {
+            const recheck = () => {
+                void dispatchHandler(
+                    addIntegrationFlowHandlers,
+                    this.createHandlerContext(),
+                    'check-auth',
+                    undefined,
+                );
+            };
+            this.disposables.add(auth.onDidSignIn(recheck));
+            this.disposables.add(auth.onDidSignOut(recheck));
         }
     }
 

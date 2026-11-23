@@ -4,7 +4,7 @@ kind: chore
 area: platform
 needs: []
 value: med
-status: built
+status: shipped
 ---
 
 # Every clone pair gets a verdict, and the 34 that are the same job get extracted
@@ -572,3 +572,4 @@ thing left, and it belongs to that merge, not to a sitting.
 - 2026-10-09  chore(sweep): the sweep reports and never starts Stryker (`9ac4fc15f`)
 - 2026-10-09  chore(mutation): re-measure the 405 stale baseline rows (`7fb1dcc8e`)
 - 2026-10-10  merge: the sweep's stale-row report and re-measured mutation baseline into the integration branch (`1a40b339c`)
+- 2026-11-20  Released in v1.0.0-beta.153

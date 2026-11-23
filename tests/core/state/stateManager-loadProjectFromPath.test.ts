@@ -1,15 +1,10 @@
 /**
- * Loading a project from a path — with and without writing anything back.
+ * Reading a project from a path, and opening one.
  *
- * `loadProjectFromPath` does two jobs, and which one it does is decided by a single
- * flag that defaults to ON: it can adopt the project as the current one and write that
- * to disk, or it can read it and leave the disk alone.
- *
- * The read-only mode is what every SCAN depends on. Tools that inspect other projects
- * pass the flag so they do not rewrite a manifest merely by looking at it — a write
- * hiding inside a read. That contract was asserted from the CALLERS' side (they pass
- * the flag) and never here, where it is honoured, so the branch that acts on it was
- * unconstrained.
+ * `loadProjectFromPath` is a read: it writes nothing and leaves the open project alone.
+ * `openProject` is what opening means: read, adopt as the current project, save, add to
+ * the recent list. They were one call with a flag that defaulted to opening, and every
+ * read that forgot the flag moved the open project (walk F206, 2026-11-17).
  *
  * The loader itself is mocked; the subject is what StateManager does with what it
  * returns.
@@ -44,27 +39,26 @@ describe('StateManager.loadProjectFromPath', () => {
         return (fs.writeFile as jest.Mock).mock.calls.length - before;
     }
 
-    it('adopts and persists the project by default', async () => {
+    it('opening adopts and persists the project', async () => {
         const { stateManager } = managerLoading(loaded);
         await stateManager.initialize();
         const before = (fs.writeFile as jest.Mock).mock.calls.length;
 
-        const project = await stateManager.loadProjectFromPath('/projects/scanned');
+        const project = await stateManager.openProject('/projects/scanned');
 
         expect(project).toMatchObject({ path: '/projects/scanned' });
         // Adopting means state.json and the recent-projects list both move.
         expect(writesSince(before)).toBeGreaterThan(0);
     });
 
-    it('writes NOTHING when asked to read only', async () => {
+    it('writes NOTHING on a read', async () => {
         const { stateManager } = managerLoading(loaded);
         await stateManager.initialize();
         const before = (fs.writeFile as jest.Mock).mock.calls.length;
 
         const project = await stateManager.loadProjectFromPath(
             '/projects/scanned',
-            () => [],
-            { persistAfterLoad: false }
+            () => []
         );
 
         // The whole point: a scan that rewrote every manifest it opened would be a
@@ -115,9 +109,7 @@ describe('StateManager.loadProjectFromPath', () => {
             const reread = { ...createStateManagerProject(), path: '/projects/held' };
             const { stateManager } = await holding('/projects/held', reread);
 
-            const project = await stateManager.loadProjectFromPath('/projects/held', () => [], {
-                persistAfterLoad: false,
-            });
+            const project = await stateManager.loadProjectFromPath('/projects/held', () => []);
 
             // The manifest carries no mesh summary; this one came from memory.
             expect(project?.meshStatusSummary).toEqual(SUMMARY);
@@ -127,9 +119,7 @@ describe('StateManager.loadProjectFromPath', () => {
             const other = { ...createStateManagerProject(), path: '/projects/other' };
             const { stateManager } = await holding('/projects/held', other);
 
-            const project = await stateManager.loadProjectFromPath('/projects/other', () => [], {
-                persistAfterLoad: false,
-            });
+            const project = await stateManager.loadProjectFromPath('/projects/other', () => []);
 
             expect(project?.meshStatusSummary).toBeUndefined();
         });

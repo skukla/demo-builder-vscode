@@ -65,16 +65,18 @@ describe('ErpAssignDialogs', () => {
     it('confirms the undo, then starts it for the ERP with confirm', () => {
         const ops = renderDialogs();
         act(() => controls.confirmUndoAssignment(TARGET));
-        expect(screen.getByText(ERP_ASSIGN_DIALOG_COPY.undoBody('Accuform ERP'))).toBeInTheDocument();
+        expect(screen.getByText(ERP_ASSIGN_DIALOG_COPY.undoTitle('Accuform ERP'))).toBeInTheDocument();
+        for (const line of ERP_ASSIGN_DIALOG_COPY.undoBody) expect(screen.getByText(line)).toBeInTheDocument();
         fireEvent.click(screen.getByRole('button', { name: ERP_ASSIGN_DIALOG_COPY.undoAction }));
         expect(ops.start).toHaveBeenCalledWith({
             id: 'erp-integration',
             name: 'Accuform ERP',
             message: 'undoErpAssignment',
             payload: { erp: 'demo-erp-2', confirm: true },
-            title: "Undoing Accuform ERP's last assignment",
-            failureTitle: "Couldn't undo Accuform ERP's last assignment",
-            successTitle: "Accuform ERP's last assignment undone",
+            title: "Undoing Accuform ERP's Last Assignment",
+            thing: "Accuform ERP's Last Assignment",
+            failureTitle: "Couldn't Undo Accuform ERP's Last Assignment",
+            successTitle: "Accuform ERP's Last Assignment Undone",
         });
     });
 
@@ -91,6 +93,26 @@ describe('ErpAssignDialogs', () => {
         ]);
     });
 
+    // Red is for a dangerous action: neither of these is one, and it was fixed in the component.
+    it('draws each as a question with Cancel, and the action blue, not red', () => {
+        renderDialogs();
+        act(() => controls.confirmUndoAssignment(TARGET));
+        const undo = screen.getByRole('button', { name: ERP_ASSIGN_DIALOG_COPY.undoAction });
+        expect(undo.className).toContain('modal-button-primary');
+        expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
+        fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+
+        act(() => controls.changeSets('erp-integration', 'add'));
+        expect(screen.getByText(ERP_ASSIGN_DIALOG_COPY.addSetsTitle)).toBeInTheDocument();
+        for (const line of ERP_ASSIGN_DIALOG_COPY.addSetsBody) expect(screen.getByText(line)).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: ERP_ASSIGN_DIALOG_COPY.addSetsAction }).className).toContain('modal-button-primary');
+        fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+
+        act(() => controls.changeSets('erp-integration', 'remove'));
+        expect(screen.getByText(ERP_ASSIGN_DIALOG_COPY.removeSetsTitle)).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: ERP_ASSIGN_DIALOG_COPY.removeSetsAction }).className).toContain('modal-button-primary');
+    });
+
     it("turns the add's offer into a button that opens the modal for the ERP it names", async () => {
         renderDialogs();
         const step = controls.offerStep({
@@ -98,9 +120,9 @@ describe('ErpAssignDialogs', () => {
             id: 'erp-integration',
             erp: 'demo-erp-2',
             name: 'Accuform ERP',
-            message: 'Next: Accuform ERP owns no products yet. Assign products to it.',
+            message: 'Next: Accuform ERP owns no products yet. Assign Products to it.',
         });
-        expect(step).toMatchObject({ action: ERP_ASSIGN_DIALOG_COPY.offerAction, message: 'Next: Accuform ERP owns no products yet. Assign products to it.' });
+        expect(step).toMatchObject({ action: ERP_ASSIGN_DIALOG_COPY.offerAction, message: 'Next: Accuform ERP owns no products yet. Assign Products to it.' });
         await act(async () => step?.onPress());
         expect(mockRequest).toHaveBeenCalledWith('getErpAssignOptions', { id: 'erp-integration', erp: 'demo-erp-2' });
     });

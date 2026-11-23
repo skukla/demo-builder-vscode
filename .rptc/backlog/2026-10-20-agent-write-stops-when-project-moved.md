@@ -4,7 +4,7 @@ kind: fix
 area: ai
 needs: []
 value: high
-status: built
+status: shipped
 ---
 
 # An agent's write stops when the open project moved under it
@@ -13,7 +13,7 @@ Filed 2026-10-20 by the owner, after an add aimed at the wrong project. Follows 
 
 ## What happened
 
-An agent following the person's open project called `add_integration` for Justrite. The
+An agent following the person's open project called `add_integration` for Tailspin. The
 open project had become `patch-canary-b2b` in the meantime, so the add ran against that
 project instead. It stopped only because that project had no Adobe project to deploy into.
 (The running build predated AI-15, but AI-15 would not have stopped it either.)
@@ -47,3 +47,4 @@ stops it. An agent that has not looked at the project yet is not protected by th
 
 - 2026-10-20  fix(ai): an agent's write stops when the open project moved under it (`9c6843f63`)
 - 2026-10-20  docs(backlog): AI-76 built, with its commit and the four exempt tools (`b69820c03`)
+- 2026-11-20  Released in v1.0.0-beta.153

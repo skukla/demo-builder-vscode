@@ -126,7 +126,7 @@ describe('ourLineage — the gate for offering our fixes', () => {
         const isle5 = { owner: 'stephen-garner-adobe', repo: 'isle5' };
 
         expect(ourLineage({ lineage: { templateRepository: isle5 } }, CATALOG)).toBeUndefined();
-        expect(ourLineage({ lineage: { forkParent: { owner: 'jen', repo: 'other' } } }, CATALOG)).toBeUndefined();
+        expect(ourLineage({ lineage: { forkParent: { owner: 'robin', repo: 'other' } } }, CATALOG)).toBeUndefined();
         expect(ourLineage({ boilerplate: { name: 'my-store', version: '1.0.0' } }, CATALOG)).toBeUndefined();
         expect(ourLineage({}, CATALOG)).toBeUndefined();
     });

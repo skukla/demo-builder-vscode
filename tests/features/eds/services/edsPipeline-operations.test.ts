@@ -11,6 +11,7 @@
  */
 
 import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockProject } from '../../../helpers/projectFake';
 import {
     basePipelineParams,
     executeEdsPipeline,
@@ -27,6 +28,7 @@ const mockPublishLibraryPaths = jest.fn().mockResolvedValue(undefined);
 
 jest.mock('@/features/eds/handlers/edsHelpers', () => ({
     applyDaLiveOrgConfigSettings: (...args: unknown[]) => mockApplyDaLiveOrgConfigSettings(...args),
+    resolveProjectAuthoringExperience: () => 'da-live-classic',
     publishLibraryPaths: (...args: unknown[]) => mockPublishLibraryPaths(...args),
 }));
 
@@ -410,6 +412,22 @@ describe('executeEdsPipeline - operations', () => {
                 'test-org',
                 'test-site',
                 mockLogger,
+                undefined,
+            );
+        });
+
+        it('keeps a project\'s own authoring choice when it is reset', async () => {
+            await executeEdsPipeline(
+                { ...baseParams, skipContent: true, project: createMockProject() },
+                services,
+            );
+
+            expect(mockApplyDaLiveOrgConfigSettings).toHaveBeenCalledWith(
+                mockDaLiveContentOps,
+                'test-org',
+                'test-site',
+                mockLogger,
+                'da-live-classic',
             );
         });
     });

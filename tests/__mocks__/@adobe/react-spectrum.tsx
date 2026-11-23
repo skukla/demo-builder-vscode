@@ -119,6 +119,8 @@ const SPECTRUM_PROPS = [
     'isDisabled',
     'maxValue',
     'minValue',
+    // 2026-11-04: a project tile's selection box stays out of the tab order (the tile is the stop).
+    'excludeFromTabOrder',
 ];
 
 // Helper to filter out Spectrum-specific props
@@ -1123,9 +1125,19 @@ export const Menu: React.FC<any> = ({ children, items, onAction, ...props }) => 
     );
 };
 
-// DialogContainer mock
+// DialogContainer mock. The real one is OPEN whenever its child is a React element, whatever that
+// element renders (`isOpen: !!child`, @react-spectrum/dialog DialogContainer): a component that
+// returns null still opens it, drawing the full-screen underlay over the page. The mock marks that
+// state with `spectrum-underlay`, so a test can see a container left open with nothing in it
+// (step-07 Win1 regression, 2026-11-14: the batch and Updates windows dimmed the projects list).
+function opensContainer(children: React.ReactNode): boolean {
+    if (Array.isArray(children)) return children.some((child) => React.isValidElement(child));
+    return React.isValidElement(children);
+}
+
 export const DialogContainer: React.FC<any> = ({ children, _onDismiss, ...props }) => (
     <div data-testid="spectrum-dialog-container" {...filterSpectrumProps(props)}>
+        {opensContainer(children) ? <div data-testid="spectrum-underlay" aria-hidden="true" /> : null}
         {children}
     </div>
 );

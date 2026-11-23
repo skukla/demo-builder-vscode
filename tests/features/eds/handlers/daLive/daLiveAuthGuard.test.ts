@@ -117,6 +117,8 @@ jest.mock('@/core/vscode/operationProgress', () => ({
     heldProgress: () => ({ id: 'op', state: 'running', stage: 'Checking requirements' }),
     pushOperationProgress: jest.fn(),
     startModalRun: jest.fn(),
+    holdPrompt: jest.fn(),
+    releasePrompt: jest.fn(),
 }));
 
 // =============================================================================
@@ -178,6 +180,19 @@ describe('ensureDaLiveAuth', () => {
         expect(vscode.window.showWarningMessage).not.toHaveBeenCalled();
     });
 
+    // Resets run side by side (owner, 2026-11-04): two that find the sign-in expired at once share
+    // one prompt, as the Adobe guard's callers do, and both read its answer.
+    it('asks once for two callers that find the sign-in expired at the same time', async () => {
+        mockCheckSignIn.mockResolvedValue(NOT_SIGNED_IN);
+        showWarningMessageResponse = undefined;
+
+        const [first, second] = await Promise.all([ensureDaLiveAuth(mockContext), ensureDaLiveAuth(mockContext)]);
+
+        expect(vscode.window.showWarningMessage).toHaveBeenCalledTimes(1);
+        expect(first).toEqual({ authenticated: false, cancelled: true });
+        expect(second).toEqual(first);
+    });
+
     // =========================================================================
     // Expired Token - Sign In Flow
     // =========================================================================
@@ -201,7 +216,7 @@ describe('ensureDaLiveAuth', () => {
             expires_in: '3600000',
             email: 'user@example.com',
         })}.signature`;
-        showInfoMessageResponse = 'I have my token';
+        showInfoMessageResponse = 'I Have My Token';
         showInputBoxResponses = [validToken];
 
         // When: ensureDaLiveAuth is called
@@ -217,7 +232,7 @@ describe('ensureDaLiveAuth', () => {
         showWarningMessageResponse = 'Sign In';
 
         // Token-first flow: info message → invalid token
-        showInfoMessageResponse = 'I have my token';
+        showInfoMessageResponse = 'I Have My Token';
         showInputBoxResponses = ['not-a-jwt'];
 
         // When: ensureDaLiveAuth is called
@@ -325,10 +340,10 @@ describe('ensureDaLiveAuth', () => {
         // Then: showInformationMessage should have been called (first step of QuickPick)
         // Called twice: once for ensureDaLiveAuth warning, once for QuickPick info message
         expect(vscode.window.showInformationMessage).toHaveBeenCalledWith(
-            'Sign in to DA.live',
+            'Sign In to DA.live',
             expect.objectContaining({ modal: true, detail: expect.stringContaining('token from DA.live') }),
             'Open DA.live',
-            'I have my token'
+            'I Have My Token'
         );
     });
 });
@@ -359,7 +374,7 @@ describe('ensureDaLiveAuth — IMS verdict', () => {
 
         expect(result).toMatchObject({ authenticated: false, cancelled: true });
         expect(vscode.window.showWarningMessage).toHaveBeenCalledWith(
-            'Adobe no longer accepts your DA.live sign-in. Sign in to keep going.',
+            'Adobe no longer accepts your DA.live sign-in. Sign in to continue.',
             'Sign In'
         );
     });
@@ -375,7 +390,7 @@ describe('ensureDaLiveAuth — IMS verdict', () => {
         await ensureDaLiveAuth(mockContext, '[Test]');
 
         expect(vscode.window.showWarningMessage).toHaveBeenCalledWith(
-            'Your DA.live session has expired. Sign in to keep going.',
+            'Your DA.live session has expired. Sign in to continue.',
             'Sign In'
         );
     });

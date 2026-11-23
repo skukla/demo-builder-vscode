@@ -5,7 +5,8 @@ area: app-builder
 parent: AB-9
 needs: [AB-23]
 value: med
-status: built
+status: shipped
+plan: erp-linked-tiles
 ---
 
 # One integration, several ERPs
@@ -112,7 +113,7 @@ Deciding between them is the first thing this item needs; everything else follow
 4. **Reset, detach and removal per ERP:** the ledger records which ERP made each write;
    removing the integration removes all of its ERPs.
 5. **Cards:** the integration's Uses row lists every ERP (the stored link is already a list,
-   `.rptc/plans/erp-linked-tiles/overview.md`).
+   `.rptc/complete/erp-linked-tiles/overview.md`).
 
 ## Waiting on AB-23
 
@@ -232,3 +233,4 @@ one partner to several, and that is AB-16's own work either way.
 - 2026-09-28  docs(handoff): the midday loop, AB-26z and AB-16a proven live (`35ea1b8e4`)
 - 2026-09-30  2026-09-29 Proven live on Bodea: a project holds two ERP pairs (Northwind + Contoso); a split order fans to the owning ERP, each reports only its part, write isolation holds, reset returns both to zero. Item's own 'superseded' note now demonstrated end-to-end.
 - 2026-10-03  Reconciled 2026-10-03 (second pass): the body's 'Waiting on AB-23', 'Owner decisions before planning' and the one-integration-per-ERP comparison were replaced by the 2026-09-27 decision: one integration with a routing action.
+- 2026-11-20  Released in v1.0.0-beta.153

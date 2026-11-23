@@ -605,7 +605,7 @@ describe('AdobeProjectPicker — delete affordance', () => {
             expect(mockUpdateState).not.toHaveBeenCalled();
             // No inline error of ANY wording — a thrown TypeError's message would
             // land in the same red text and not match /could not delete/.
-            expect(container.querySelector('.text-red-600')).toBeNull();
+            expect(container.querySelector('.text-negative')).toBeNull();
         });
     });
 

@@ -1,5 +1,5 @@
 /**
- * The small grey capitals over a group inside a modal: "Start from", "How to send it",
+ * The small grey label over a group inside a modal: "Start from", "How to send it",
  * "Products each ERP will own", a project's name in the Updates list.
  *
  * Extracted 2026-10-20 (PL-80) from the add-integration flow's `.intflow-section-label`,

@@ -4,7 +4,7 @@ kind: feature
 area: app-builder
 needs: []
 value: high
-status: built
+status: shipped
 parent: AB-16
 ---
 
@@ -46,3 +46,4 @@ and a fresh mixed order afterwards routes cleanly to both ERPs.
 - 2026-09-28  2026-09-28 a reset now also starts the Admin page's Activity again (integration fa5f320, deployed): history and scheduled-run records deleted, one 'Demo reset' line recording what it closed, shown under every ERP's filter; removing the integration leaves them alone. 855 tests. Owner asked after seeing pre-reset price events under Activity.
 - 2026-09-28  2026-09-28 second full reset on Bodea (integration fa5f320): cancelled 3000000023, cleared 34 history records and the scheduled-run record, one 'Demo reset' line left; both ERPs wiped and refilled (3 products, 4 companies each). Bodea starts clean for the owner's demo.
 - 2026-09-28  2026-09-28 bug found and fixed: the 'Demo reset' line was never saved on Bodea. Its State key held an ISO time; aio-lib-state refuses ':' in keys and history swallows a failed write. Integration 6639565 keys it by milliseconds, and both test fakes of State now refuse bad keys like the library (no other key breaks the rule). Deployed; a reset on an empty Bodea (0 orders, historyCleared 0 confirming the lost line) wrote it.
+- 2026-11-20  Released in v1.0.0-beta.153

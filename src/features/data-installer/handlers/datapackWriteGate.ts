@@ -19,8 +19,7 @@
 
 import { commerceBackendOf, type CommerceBackend } from '../services/commerceBackend';
 import type { DataInstallerClient } from '../services/dataInstallerClient';
-import type { JobStatusSource } from '../services/importJobRunner';
-import { resolveDataInstallerAccess } from './dataInstallerHandlers';
+import { resolveDatapackAccess } from './dataInstallerHandlers';
 import type { Project } from '@/types/base';
 import { ErrorCode } from '@/types/errorCodes';
 import type { HandlerContext, HandlerResponse } from '@/types/handlers';
@@ -34,9 +33,7 @@ export interface DatapackWriteAccess {
     getToken: () => Promise<string>;
     /** The SC's IMS org code, for the gateway (`dataInstallerSignIn`). */
     orgCode?: string;
-    /** The service's job reads, for the service engine (`datapackEngine`). */
-    jobs: JobStatusSource;
-    /** The service catalog's reads, where Demo Builder's engine reads a pack's rows from. */
+    /** The catalog's reads, where the engine reads a pack's rows from. */
     catalog: Pick<DataInstallerClient, 'getDatapackDetail' | 'getDataItem'>;
     project: Project;
     /** The project's Commerce backend: what an export's scope header is chosen by. */
@@ -45,13 +42,13 @@ export interface DatapackWriteAccess {
 
 /** The refusal when no project is open, verbatim per write. */
 const NO_PROJECT: Record<DatapackWrite, string> = {
-    import: 'Open a project before importing a datapack.',
+    import: 'Open a project before installing a datapack.',
     export: 'Open a project before exporting.',
 };
 
 /** The refusal when the project has no Commerce backend, verbatim per write. */
 const NO_BACKEND: Record<DatapackWrite, string> = {
-    import: 'This project has no Adobe Commerce backend, so there is nothing to import into.',
+    import: 'This project has no Adobe Commerce backend, so there is nothing to install into.',
     export: 'This project has no Adobe Commerce backend, so there is nothing to export from.',
 };
 
@@ -66,7 +63,7 @@ export async function resolveDatapackWriteAccess(
     context: HandlerContext,
     write: DatapackWrite,
 ): Promise<DatapackWriteAccess | { response: HandlerResponse }> {
-    const access = await resolveDataInstallerAccess(context);
+    const access = await resolveDatapackAccess(context);
     if (!access.ok) {
         return { response: access.response };
     }
@@ -87,7 +84,6 @@ export async function resolveDatapackWriteAccess(
         baseUrl: access.baseUrl,
         getToken: access.getToken,
         orgCode: access.orgCode,
-        jobs: access.client,
         catalog: access.client,
         project,
         backend,

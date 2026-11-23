@@ -18,6 +18,8 @@
  * @module features/data-installer/services/demoBuilderEngine/refusedRows
  */
 
+import type { SkipCause } from '../../types';
+import { dataTypeLabel } from '../../ui/dataTypeLabel';
 import { type CatalogSession, type KindContext, MissingNameError, type SkippedRow } from './kindContext';
 import { CommerceReadError } from '@/features/app-builder/services/erpFillReaders';
 
@@ -45,6 +47,17 @@ export function isRowRefusal(error: unknown): boolean {
     return error instanceof CommerceReadError && error.status !== undefined && ROW_STATUSES.has(error.status);
 }
 
+/**
+ * Whether running the install again could get past the error that stopped it: Commerce asking us
+ * to slow down (429), failing (5xx) or not answering at all. Not a refusal of who we are (401, 403),
+ * which needs a sign-in, and not anything the engine did not expect, which would stop it again.
+ * An install run again carries on from its record and settles a write that got no answer.
+ */
+export function isWorthRetrying(error: unknown): boolean {
+    if (!(error instanceof CommerceReadError)) return false;
+    return error.status === undefined || error.status === 429 || error.status >= 500;
+}
+
 /** The row this install skipped that `kind` knows by `name`, if any. */
 export function skippedAs(session: CatalogSession, kinds: string | readonly string[], name: string): SkippedRow | undefined {
     const wanted = typeof kinds === 'string' ? [kinds] : kinds;
@@ -62,7 +75,7 @@ export function needsUnskipped(session: CatalogSession, kinds: string | readonly
 }
 
 /** Commerce's own message from a refusal: its JSON `message` with `%1` filled in, else its text. */
-function commerceMessage(error: CommerceReadError): string {
+export function commerceMessage(error: CommerceReadError): string {
     const text = error.message.replace(/^Commerce answered \d+ for [^:]*: /u, '');
     try {
         const body = JSON.parse(text) as { message?: string; parameters?: unknown };
@@ -86,8 +99,27 @@ export function reasonOf(session: CatalogSession, error: unknown): string {
     return error instanceof CommerceReadError ? commerceMessage(error) : String(error);
 }
 
-/** Write a row down as skipped, and say so in Debug Logs. */
-export function skipRow(ctx: Pick<KindContext, 'session' | 'log'>, row: SkippedRow): void {
+/**
+ * Why a row was skipped, as data (walk F221): the row it needed that this install skipped, the thing
+ * Commerce does not have, or Commerce's refusal with its status and its own message.
+ */
+export function causeOf(session: CatalogSession, error: unknown): SkipCause {
+    if (error instanceof MissingNameError) {
+        const needed = skippedAs(session, error.kind, error.missing);
+        if (needed) return { by: 'needs', kind: needed.kind, name: error.missing };
+        return { by: 'missing', kind: error.kind, name: error.missing };
+    }
+    if (error instanceof CommerceReadError) {
+        return { by: 'commerce', ...(error.status === undefined ? {} : { status: error.status }), message: commerceMessage(error) };
+    }
+    return { by: 'commerce', message: String(error) };
+}
+
+/** A row Commerce refused, by its own message, where no status came with it (a bulk answer, a setting). */
+export const commerceSaid = (message: string): SkipCause => ({ by: 'commerce', message });
+
+/** Write a row down as skipped, with why as data, and say so in Debug Logs. */
+export function skipRow(ctx: Pick<KindContext, 'session' | 'log'>, row: SkippedRow & { cause: SkipCause }): void {
     (ctx.session.skipped ??= []).push(row);
     ctx.log(`skipped ${row.kind} ${row.key}: ${row.reason}`);
 }
@@ -107,15 +139,29 @@ export async function tryRow<T>(
         return await work();
     } catch (error) {
         if (!isRowRefusal(error)) throw error;
-        skipRow(ctx, { ...row, reason: reasonOf(ctx.session, error) });
+        skipRow(ctx, { ...row, reason: reasonOf(ctx.session, error), cause: causeOf(ctx.session, error) });
         return undefined;
     }
 }
 
-/** The one line an install says about what it skipped, naming each row, or nothing. */
+/**
+ * How many skipped rows the line names. A bulk install can skip hundreds for one reason, and the line
+ * reaches every agent's status read (2026-11-05), whose `skipped` list names each one whole.
+ */
+const NAMED_SKIPS = 10;
+
+/**
+ * The note's line about what an install skipped, in Commerce's words, for the record and agents: it
+ * names the first rows and counts the rest. The SC reads the same rows grouped in plain words
+ * (`plainSkipped`, walk F221), never this line.
+ */
 export function skippedLine(skipped: readonly SkippedRow[] | undefined): string | undefined {
     if (!skipped || skipped.length === 0) return undefined;
-    const rows = skipped.map((row) => `${row.kind} ${row.key} (${row.reason.replace(/\.$/u, '')})`);
+    const rows = skipped
+        .slice(0, NAMED_SKIPS)
+        .map((row) => `${dataTypeLabel(row.kind).toLowerCase()} ${row.key} (${row.reason.replace(/\.$/u, '')})`);
     const count = skipped.length === 1 ? '1 row' : `${skipped.length} rows`;
-    return `Skipped ${count}, and installed the rest: ${rows.join('; ')}.`;
+    const more = skipped.length > NAMED_SKIPS ? `; and ${skipped.length - NAMED_SKIPS} more, each in the skipped list` : '';
+    // datapack-words: not on screen
+    return `Skipped ${count}, and installed the rest: ${rows.join('; ')}${more}.`;
 }

@@ -23,7 +23,7 @@ import '@testing-library/jest-dom';
 const SCOPE = [
     { label: 'Website', code: 'citisignal' },
     { label: 'Store', code: 'citisignal_store' },
-    { label: 'Store view', code: 'citisignal_us' },
+    { label: 'Store View', code: 'citisignal_us' },
 ];
 
 function makeMeshModel(overrides: Partial<IntegrationCardModel> = {}): IntegrationCardModel {
@@ -63,16 +63,16 @@ function renderPanel(model: IntegrationCardModel) {
     );
 }
 
-describe('IntegrationDetailPanel — Commerce scope row', () => {
+describe('IntegrationDetailPanel — Commerce Scope row', () => {
     it('renders the row with all three sub-labelled codes', () => {
         renderPanel(makeMeshModel());
 
-        expect(screen.getByText('Commerce scope')).toBeInTheDocument();
+        expect(screen.getByText('Commerce Scope')).toBeInTheDocument();
         expect(screen.getByText('Website')).toBeInTheDocument();
         expect(screen.getByText('citisignal')).toBeInTheDocument();
         expect(screen.getByText('Store')).toBeInTheDocument();
         expect(screen.getByText('citisignal_store')).toBeInTheDocument();
-        expect(screen.getByText('Store view')).toBeInTheDocument();
+        expect(screen.getByText('Store View')).toBeInTheDocument();
         expect(screen.getByText('citisignal_us')).toBeInTheDocument();
     });
 
@@ -81,7 +81,7 @@ describe('IntegrationDetailPanel — Commerce scope row', () => {
         // If the row appeared only when stale, it was built as a diff again.
         renderPanel(makeMeshModel({ status: 'stale', statusLabel: 'Update needed' }));
 
-        expect(screen.getByText('Commerce scope')).toBeInTheDocument();
+        expect(screen.getByText('Commerce Scope')).toBeInTheDocument();
         expect(screen.getByText('citisignal')).toBeInTheDocument();
     });
 
@@ -89,14 +89,14 @@ describe('IntegrationDetailPanel — Commerce scope row', () => {
         // Every mesh deployed before this shipped. It must not look broken.
         renderPanel(makeMeshModel({ commerceScope: undefined }));
 
-        expect(screen.queryByText('Commerce scope')).not.toBeInTheDocument();
+        expect(screen.queryByText('Commerce Scope')).not.toBeInTheDocument();
     });
 
     it('renders only the parts that are present', () => {
         renderPanel(makeMeshModel({ commerceScope: [{ label: 'Website', code: 'citisignal' }] }));
 
         expect(screen.getByText('Website')).toBeInTheDocument();
-        expect(screen.queryByText('Store view')).not.toBeInTheDocument();
+        expect(screen.queryByText('Store View')).not.toBeInTheDocument();
     });
 
     it('never appears on a non-mesh integration card', () => {
@@ -107,18 +107,18 @@ describe('IntegrationDetailPanel — Commerce scope row', () => {
                 id: 'custom-app',
                 isMesh: false,
                 name: 'Custom App',
-                kindLabel: 'Imported repo',
+                kindLabel: 'Imported Repository',
                 sourceLine: 'acme/custom-app',
                 urlLabel: 'App URL',
                 commerceScope: SCOPE,
             })
         );
 
-        expect(screen.queryByText('Commerce scope')).not.toBeInTheDocument();
+        expect(screen.queryByText('Commerce Scope')).not.toBeInTheDocument();
     });
 });
 
-describe('IntegrationDetailPanel — Commerce scope reads the way the picker did', () => {
+describe('IntegrationDetailPanel — Commerce Scope reads the way the picker did', () => {
     it('renders `Name (code)` when the name was captured', () => {
         // The name is what the user picked; the code is what is in the `.env` and
         // what they would grep for. Both earn their place in a DETAIL panel.
@@ -153,7 +153,7 @@ describe('IntegrationDetailPanel — Commerce scope reads the way the picker did
                 commerceScope: [
                     { label: 'Website', code: 'citisignal' },
                     { label: 'Store', code: 'citisignal_store' },
-                    { label: 'Store view', code: 'citisignal_us', name: 'CitiSignal US' },
+                    { label: 'Store View', code: 'citisignal_us', name: 'CitiSignal US' },
                 ],
             })
         );

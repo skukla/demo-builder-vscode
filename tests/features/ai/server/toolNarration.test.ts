@@ -122,7 +122,7 @@ describe('the phrases read as English, not as schema', () => {
     });
 });
 
-// The phrase is an agent notification's title ("Agent · <phrase>"), with the
+// The phrase is an agent notification's title ("Agent: <phrase>"), with the
 // current step after it. "Republishing the storefront configuration" plus a step
 // ran off the card (owner, 2026-09-21), the same wrap the 2026-08-27 feedback was
 // about. 32 characters keeps title and a short step on one line.
@@ -132,7 +132,7 @@ describe('every phrase fits a notification title', () => {
     });
 });
 
-// "Agent · Deleting the Adobe workspace" said everything but which one (owner,
+// "Agent: Deleting the Adobe workspace" said everything but which one (owner,
 // 2026-09-21). A call handed a readable name is narrated with it.
 describe('a call is narrated with the name it acts on', () => {
     it('names the workspace being deleted', () => {
@@ -193,14 +193,16 @@ describe('every named form says what it acts on, from the argument that names it
         ['delete_github_repo', { owner: 'skukla', repo: 'kukla-bodea' }, 'Deleting skukla/kukla-bodea'],
         ['cleanup_dalive_site', { org: 'skukla', site: 'kukla-bodea' }, 'Deleting skukla/kukla-bodea content'],
         ['delete_page', { path: '/drafts/spring-sale' }, 'Deleting /drafts/spring-sale'],
-        ['reset_datapack', { datapackName: 'Bodea B2B' }, 'Resetting Bodea B2B'],
-        ['clear_demo_data', { stores: [{ websiteCode: 'justrite_test_website', storeCode: 'justrite_test_store' }] }, 'Clearing justrite_test_store'],
+        ['uninstall_datapack', { datapackName: 'Bodea B2B' }, 'Uninstalling Bodea B2B'],
         ['share_datapack', { datapackName: 'acme-1a2b3c' }, 'Changing who can use the acme-1a2b3c pack'],
+        ['mark_demo_builder_datapack', { datapackName: 'acme-1a2b3c' }, 'Marking acme-1a2b3c as a Demo Builder datapack'],
         ['delete_library_datapack', { datapackName: 'Bodea B2B' }, 'Deleting Bodea B2B'],
-        ['copy_library_datapack_to_installer', { datapackName: 'Bodea B2B' }, 'Copying Bodea B2B'],
         ['rename_datapack', { datapackName: 'acme-demo-1a2b3c' }, 'Renaming the acme-demo-1a2b3c pack'],
-        ['start_datapack_import', { datapackName: 'Bodea B2B' }, 'Importing Bodea B2B'],
-        ['start_datapack_export', { datapackName: 'Bodea B2B' }, 'Exporting Bodea B2B'],
+        ['install_datapack', { datapackName: 'Bodea B2B' }, 'Installing Bodea B2B'],
+        ['create_datapack', { datapackName: 'Bodea B2B' }, 'Saving to Bodea B2B'],
+        ['undo_last_save', { datapackName: 'my-luma-1a2b3c' }, 'Undoing the last save of my-luma-1a2b3c'],
+        ['restore_datapack', { datapackName: 'my-luma-1a2b3c' }, 'Restoring my-luma-1a2b3c'],
+        ['update_datapack', { datapackName: 'luma-7f3e21' }, 'Updating luma-7f3e21'],
         ['remove_block_from_library', { blockId: 'hero-banner' }, 'Removing the hero-banner block'],
         ['set_site_admin', { email: 'fake-user@example.com' }, "Changing fake-user@example.com's access"],
         // Named as the ERP will be: the add makes the name end in "ERP" (pairNames).
@@ -235,12 +237,41 @@ describe('every named form says what it acts on, from the argument that names it
     });
 });
 
-// Live release test, 2026-10-22: "Agent · Adding another ERP: Loading demo data" showed for
+// Phase 8 (datapack simplification): the datapack tools narrate in the Datapacks screen's words.
+// Install, Uninstall, Save, Add from File, Save as File, Delete; never "import", "export",
+// "sample data" or "team".
+describe("the datapack tools narrate in the screen's words", () => {
+    const PHRASES: Array<[string, string]> = [
+        ['install_datapack', 'Installing a datapack'],
+        ['uninstall_datapack', 'Uninstalling a datapack'],
+        ['create_datapack', 'Saving to a datapack'],
+        ['save_store_changes_to_pack', 'Saving Commerce changes'],
+        ['restore_datapack', 'Restoring a datapack'],
+        ['update_datapack', 'Updating a datapack'],
+        ['add_datapack_from_file', 'Adding a datapack from a file'],
+        ['save_datapack_zip', 'Saving a datapack as a file'],
+        ['delete_library_datapack', 'Deleting a datapack'],
+        ['mark_demo_builder_datapack', 'Marking a Demo Builder datapack'],
+        ['clear_demo_data', 'Clearing the demo data'],
+        ['validate_datapack_import', 'Running a datapack dry run'],
+        ['get_datapack_import_status', 'Checking the datapack progress'],
+    ];
+
+    it.each(PHRASES)('%s says "%s"', (tool, phrase) => {
+        expect(narrationFor(tool)).toBe(phrase);
+    });
+
+    it('has no phrase for the Data Installer copy, which agents no longer have (D7)', () => {
+        expect(narrationFor('copy_library_datapack_to_installer')).toBeUndefined();
+    });
+});
+
+// Live release test, 2026-10-22: "Agent: Adding another ERP: Loading demo data" showed for
 // fifteen minutes beside an action the SC ran, and nothing said which was which.
 describe('a call that acts in the open project can name it', () => {
     it('names the ERP being added and the project it goes into', () => {
-        expect(narrationForCall('add_erp', { id: 'erp-integration', name: 'Accuform ERP' }, 'JustRite')).toBe(
-            'Adding Accuform ERP to JustRite'
+        expect(narrationForCall('add_erp', { id: 'erp-integration', name: 'Accuform ERP' }, 'Tailspin')).toBe(
+            'Adding Accuform ERP to Tailspin'
         );
     });
 
@@ -249,19 +280,11 @@ describe('a call that acts in the open project can name it', () => {
     });
 
     it('keeps the tool phrase when the ERP has no name, whatever the project', () => {
-        expect(narrationForCall('add_erp', { id: 'erp-integration' }, 'JustRite')).toBe(narrationFor('add_erp'));
+        expect(narrationForCall('add_erp', { id: 'erp-integration' }, 'Tailspin')).toBe(narrationFor('add_erp'));
     });
 
     it('does not add the project to a tool whose named form does not use it', () => {
-        expect(narrationForCall('delete_page', { path: '/x' }, 'JustRite')).toBe('Deleting /x');
+        expect(narrationForCall('delete_page', { path: '/x' }, 'Tailspin')).toBe('Deleting /x');
     });
 });
 
-describe('clear_demo_data names every store it is handed', () => {
-    it('names several stores, and a website handed alone as all its stores', () => {
-        const stores = [{ websiteCode: 'bodea', storeCode: 'bodea_store' }, { websiteCode: 'bodea', storeCode: 'bodea_outlet' }, { websiteCode: 'base' }];
-
-        expect(narrationForCall('clear_demo_data', { stores })).toBe('Clearing bodea_store, bodea_outlet and every store of base');
-        expect(narrationForCall('clear_demo_data', { stores: [] })).toBe(narrationFor('clear_demo_data'));
-    });
-});

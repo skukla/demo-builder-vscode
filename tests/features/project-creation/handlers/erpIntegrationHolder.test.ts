@@ -17,17 +17,17 @@ import { createMockStateManager } from '../../../helpers/stateManagerFake';
 
 const ENDPOINT = 'https://na1.api.commerce.adobe.com/tenant-x/graphql';
 const ON_INSTANCE = { 'adobe-commerce-accs': { ACCS_GRAPHQL_ENDPOINT: ENDPOINT } };
-const MESSAGE = 'justrite already has an ERP integration on this Commerce instance. Add your ERP there instead.';
+const MESSAGE = 'tailspin already has an ERP integration on this Commerce instance. Add your ERP there instead.';
 
 function deployed(kind: AppBuilderComponentState['kind']): AppBuilderComponentState {
     return { kind, name: kind, status: 'deployed', source: { owner: 'skukla', repo: 'x' } };
 }
 
-/** Justrite: the ERP integration, deployed, on the shared instance. */
-function justrite(endpoint = ENDPOINT): Project {
+/** Tailspin: the ERP integration, deployed, on the shared instance. */
+function tailspin(endpoint = ENDPOINT): Project {
     return createMockProject({
-        name: 'justrite',
-        path: '/projects/justrite',
+        name: 'tailspin',
+        path: '/projects/tailspin',
         componentSelections: { backend: 'adobe-commerce-accs' },
         componentConfigs: { 'adobe-commerce-accs': { ACCS_GRAPHQL_ENDPOINT: endpoint } },
         appBuilderComponents: { 'erp-integration': deployed('integration'), 'demo-erp': deployed('system') },
@@ -48,16 +48,16 @@ const REQUEST: CheckErpIntegrationHolderRequest = { backend: 'adobe-commerce-acc
 
 describe('check-erp-integration-holder', () => {
     it('names the project that runs an ERP integration on the instance', async () => {
-        const result = await handleCheckErpIntegrationHolder(contextWith(justrite()), REQUEST);
+        const result = await handleCheckErpIntegrationHolder(contextWith(tailspin()), REQUEST);
 
         expect(result).toEqual({
             success: true,
-            data: { holder: 'justrite', message: MESSAGE },
+            data: { holder: 'tailspin', message: MESSAGE },
         });
     });
 
     it('answers nothing for a different instance — control', async () => {
-        const other = justrite('https://na1.api.commerce.adobe.com/tenant-y/graphql');
+        const other = tailspin('https://na1.api.commerce.adobe.com/tenant-y/graphql');
 
         const result = await handleCheckErpIntegrationHolder(contextWith(other), REQUEST);
 
@@ -65,9 +65,9 @@ describe('check-erp-integration-holder', () => {
     });
 
     it('never names the project being edited', async () => {
-        const result = await handleCheckErpIntegrationHolder(contextWith(justrite()), {
+        const result = await handleCheckErpIntegrationHolder(contextWith(tailspin()), {
             ...REQUEST,
-            editProjectPath: '/projects/justrite',
+            editProjectPath: '/projects/tailspin',
         });
 
         expect(result.data.holder).toBeUndefined();
@@ -80,12 +80,12 @@ describe('check-erp-integration-holder', () => {
             componentSelections: { backend: 'adobe-commerce-accs' },
             componentConfigs: ON_INSTANCE,
         });
-        const context = contextWith(justrite(), open);
+        const context = contextWith(tailspin(), open);
         (context.stateManager.getCurrentProject as jest.Mock).mockResolvedValue(open);
 
         const result = await handleCheckErpIntegrationHolder(context, {});
 
-        expect(result.data.holder).toBe('justrite');
+        expect(result.data.holder).toBe('tailspin');
         // The open project is never its own holder.
         expect(context.stateManager.loadProjectFromPath).not.toHaveBeenCalledWith(
             '/projects/my-commerce-demo',
@@ -95,7 +95,7 @@ describe('check-erp-integration-holder', () => {
     });
 
     it('answers nothing, reading nothing, with no backend and no open project', async () => {
-        const context = contextWith(justrite());
+        const context = contextWith(tailspin());
         (context.stateManager.getCurrentProject as jest.Mock).mockResolvedValue(null);
 
         const result = await handleCheckErpIntegrationHolder(context, {});
@@ -117,11 +117,11 @@ function creating(overrides: Partial<ProjectCreationConfig> = {}): ProjectCreati
 
 describe('refuseSecondErpIntegration', () => {
     it('refuses a project that brings an ERP integration to a held instance', async () => {
-        await expect(refuseSecondErpIntegration(contextWith(justrite()), creating())).rejects.toThrow(MESSAGE);
+        await expect(refuseSecondErpIntegration(contextWith(tailspin()), creating())).rejects.toThrow(MESSAGE);
     });
 
     it('lets a project with no ERP integration through, reading nothing', async () => {
-        const context = contextWith(justrite());
+        const context = contextWith(tailspin());
 
         await expect(
             refuseSecondErpIntegration(context, creating({ selectedAppBuilderComponents: [] })),
@@ -130,14 +130,14 @@ describe('refuseSecondErpIntegration', () => {
     });
 
     it('lets a project on another instance through — control', async () => {
-        const other = justrite('https://na1.api.commerce.adobe.com/tenant-y/graphql');
+        const other = tailspin('https://na1.api.commerce.adobe.com/tenant-y/graphql');
 
         await expect(refuseSecondErpIntegration(contextWith(other), creating())).resolves.toBeUndefined();
     });
 
     it('lets an Edit of the holder itself through', async () => {
         await expect(
-            refuseSecondErpIntegration(contextWith(justrite()), creating({ editProjectPath: '/projects/justrite' })),
+            refuseSecondErpIntegration(contextWith(tailspin()), creating({ editProjectPath: '/projects/tailspin' })),
         ).resolves.toBeUndefined();
     });
 });

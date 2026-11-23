@@ -81,7 +81,7 @@ export const handleLoadErpDemoData: MessageHandler<ErpCallPayload & { progress?:
             const outcome = await withOperationProgress(
                 {
                     id: call.id,
-                    title: `Loading demo data into ${erpName}`,
+                    title: `Loading Demo Data into ${erpName}`,
                     inModal: progressSurfaceOf(payload) === 'modal',
                     cardLabel: `${erpName} records`,
                 },

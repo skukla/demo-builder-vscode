@@ -8,13 +8,13 @@
  *   (tests/fixtures/commerce-rest/products-page.json, 2026-09-27) for the product shape;
  * - bulk accept: the example on Adobe's `bulk-endpoints` page (read 2026-10-09), with our own
  *   SKUs and uuid;
- * - bulk status: a LIVE answer, recorded 2026-10-09 from the Justrite ACCS store after a
+ * - bulk status: a LIVE answer, recorded 2026-10-09 from the Tailspin ACCS store after a
  *   three-product assign (tests/fixtures/commerce-rest/bulk-status-products.json; the bulk id
  *   and user id replaced with stand-ins). `bulkStatus` builds the same shape for other counts;
  *   its success message is the one that answer carried;
  * - attribute sets, their attributes, their groups: Magento's service contracts for those routes
  *   (read 2026-10-09). No live answer is recorded in the repo. Set 4 "Default" and group 7
- *   "Product Details" follow the reference note on product create gotchas (Justrite, 2026-09-30).
+ *   "Product Details" follow the reference note on product create gotchas (Tailspin, 2026-09-30).
  */
 
 import type {

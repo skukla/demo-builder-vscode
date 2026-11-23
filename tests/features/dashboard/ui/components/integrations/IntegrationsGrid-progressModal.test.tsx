@@ -1,7 +1,7 @@
 /**
  * PL-59 — the progress modal an integration operation opens on the integrations
  * screen: titled with the action and the integration, then the stage, its step and
- * how long it usually takes; closes by itself on success; stays with the reason,
+ * how long it usually takes; waits for Close on success (walk F195); stays with the reason,
  * Retry and Debug Logs on failure; "Run in background" hides it and the running tile
  * brings it back.
  */
@@ -19,6 +19,7 @@ import {
 } from './IntegrationsGrid.testUtils';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { OperationProgressPayload } from '@/types/webviewPayloads';
+import { plain } from '@/core/utils/plainText';
 
 const NOT_DEPLOYED = { 'custom-app': { ...DEPLOYED_INTEGRATION, status: 'not-deployed' as const } };
 const DEPLOYING = { 'custom-app': { ...DEPLOYED_INTEGRATION, status: 'deploying' as const } };
@@ -48,6 +49,10 @@ async function startDeploy(user: ReturnType<typeof setupUser>): Promise<HTMLElem
     return screen.getByRole('dialog', { name: 'Deploying custom-app' });
 }
 
+
+/** The large mark a result draws in its body, which says how it ended (walk F222). */
+const markIn = (dialog: HTMLElement): Element | null => dialog.querySelector('.result-mark');
+
 describe('the progress modal', () => {
     // Titled like the operation's own notification ("Deploying ERP Sync"), so the
     // handover on "Run in background" reads as the same thing carrying on. The tile
@@ -58,7 +63,7 @@ describe('the progress modal', () => {
 
         const modal = await startDeploy(user);
 
-        expect(within(modal).getByText('Starting')).toBeInTheDocument();
+        expect(within(modal).getByText('Preparing')).toBeInTheDocument();
         expect(within(modal).queryByText('Not deployed')).not.toBeInTheDocument();
     });
 
@@ -132,26 +137,22 @@ describe('the progress modal', () => {
 
     // It used to vanish the instant the run succeeded, so a deploy the SC had
     // watched for two minutes ended with nothing said (owner, 2026-09-20). It shows
-    // the result, then closes itself.
-    it('shows the success, then closes by itself', async () => {
+    // the result, which waits for Close (walk F195).
+    it('shows the success and waits for Close', async () => {
         const user = setupUser();
         renderGrid({ appBuilderComponents: NOT_DEPLOYED });
-        const modal = await startDeploy(user);
+        await startDeploy(user);
 
         push({ id: 'custom-app', state: 'succeeded' });
 
-        const success = within(modal).getByTestId('status-display');
-        // The green tick itself is asserted where the mock carries the variant:
-        // tests/core/ui/components/feedback/OperationProgressModal-prompt.tsx.
-        expect(within(success).getByText('custom-app deployed')).toBeInTheDocument();
+        // The title names the thing; the outcome is under the large mark, green (walk F222).
+        expect(markIn(screen.getByRole('dialog', { name: 'custom-app' }))).toHaveAttribute('data-status', 'success');
 
-        // Long enough to read, then gone without a click.
+        // Walk F195 (owner, 2026-11-17): it stays until Close.
         await act(async () => {
-            jest.advanceTimersByTime(TIMEOUTS.UI.RESULT_GLANCE);
+            jest.advanceTimersByTime(TIMEOUTS.UI.RESULT_GLANCE * 3);
         });
-        expect(
-            screen.queryByRole('dialog', { name: 'Deploying custom-app' }),
-        ).not.toBeInTheDocument();
+        expect(screen.getByRole('dialog', { name: 'custom-app' })).toBeInTheDocument();
     });
 
     // AB-26z: the warning of a run that succeeded is said where the SC is looking, and
@@ -159,22 +160,21 @@ describe('the progress modal', () => {
     it('shows a success\'s warning under the result, and stays until closed', async () => {
         const user = setupUser();
         renderGrid({ appBuilderComponents: NOT_DEPLOYED });
-        const modal = await startDeploy(user);
+        await startDeploy(user);
 
-        push({ id: 'custom-app', state: 'succeeded', warning: 'Prices were not published.' });
+        push({ id: 'custom-app', state: 'succeeded', warning: plain('Prices were not published.') });
 
-        const result = within(modal).getByTestId('status-display');
-        expect(result).toHaveAttribute('data-variant', 'warning');
-        expect(within(result).getByText('custom-app deployed')).toBeInTheDocument();
-        expect(within(result).getByText('Prices were not published.')).toBeInTheDocument();
+        expect(markIn(screen.getByRole('dialog', { name: 'custom-app' }))).toHaveAttribute('data-status', 'warning');
+        const result = (): HTMLElement => screen.getByRole('dialog', { name: 'custom-app' });
+        expect(within(result()).getByTestId('operation-end')).toHaveTextContent('Prices were not published.');
 
         await act(async () => {
             jest.advanceTimersByTime(TIMEOUTS.UI.RESULT_GLANCE * 2);
         });
-        expect(screen.getByRole('dialog', { name: 'Deploying custom-app' })).toBeInTheDocument();
-        await user.click(within(modal).getByRole('button', { name: 'Close' }));
+        expect(result()).toBeInTheDocument();
+        await user.click(within(result()).getByRole('button', { name: 'Close' }));
         expect(
-            screen.queryByRole('dialog', { name: 'Deploying custom-app' }),
+            screen.queryByRole('dialog', { name: 'custom-app' }),
         ).not.toBeInTheDocument();
     });
 
@@ -183,30 +183,27 @@ describe('the progress modal', () => {
     it("shows a success's note under the result as a plain success, and stays until closed", async () => {
         const user = setupUser();
         renderGrid({ appBuilderComponents: NOT_DEPLOYED });
-        const modal = await startDeploy(user);
+        await startDeploy(user);
 
         push({
             id: 'custom-app',
             state: 'succeeded',
-            note: 'Demo data loaded. Prices are still being published and will finish by themselves in a few minutes.',
+            note: plain('Demo data loaded. Prices are still being published and will finish by themselves in a few minutes.'),
         });
 
-        const result = within(modal).getByTestId('status-display');
-        expect(result).toHaveAttribute('data-variant', 'success');
-        expect(within(result).getByText('custom-app deployed')).toBeInTheDocument();
-        expect(
-            within(result).getByText(
-                'Demo data loaded. Prices are still being published and will finish by themselves in a few minutes.',
-            ),
-        ).toBeInTheDocument();
+        const result = (): HTMLElement => screen.getByRole('dialog', { name: 'custom-app' });
+        expect(markIn(result())).toHaveAttribute('data-status', 'success');
+        expect(within(result()).getByTestId('operation-end')).toHaveTextContent(
+            'Demo data loaded. Prices are still being published and will finish by themselves in a few minutes.',
+        );
 
         await act(async () => {
             jest.advanceTimersByTime(TIMEOUTS.UI.RESULT_GLANCE * 2);
         });
-        expect(screen.getByRole('dialog', { name: 'Deploying custom-app' })).toBeInTheDocument();
-        await user.click(within(modal).getByRole('button', { name: 'Close' }));
+        expect(result()).toBeInTheDocument();
+        await user.click(within(result()).getByRole('button', { name: 'Close' }));
         expect(
-            screen.queryByRole('dialog', { name: 'Deploying custom-app' }),
+            screen.queryByRole('dialog', { name: 'custom-app' }),
         ).not.toBeInTheDocument();
     });
 
@@ -221,13 +218,14 @@ describe('the progress modal', () => {
         push({
             id: 'custom-app',
             state: 'succeeded',
-            details: ['Removed 49 product pages.'],
+            details: [plain('Removed 49 product pages.')],
             changes: [{ label: 'Product attributes', lines: ['Added erp_owner to the attribute set Default', 'By hand: Check the PDP.'] }],
             tookMs: 72000,
         });
 
-        const lines = within(modal).getAllByTestId('status-detail').map((line) => line.textContent);
-        expect(lines).toStrictEqual(['Removed 49 product pages.', 'Took 1 minute, 12 seconds']);
+        const end = within(modal).getByTestId('operation-end');
+        expect(within(end).getByText('Removed 49 product pages.')).toBeInTheDocument();
+        expect(within(end).getByText('Took 1 minute, 12 seconds')).toBeInTheDocument();
         const rows = within(within(modal).getByTestId('operation-changes')).getAllByRole('listitem');
         expect(rows).toHaveLength(1);
         expect(rows[0]).toHaveTextContent('Product attributes');
@@ -235,11 +233,11 @@ describe('the progress modal', () => {
             'Added erp_owner to the attribute set Default',
             'By hand: Check the PDP.',
         ]);
-        expect(within(modal).getByTestId('status-display')).toHaveAttribute('data-variant', 'success');
+        expect(markIn(screen.getByRole('dialog', { name: 'custom-app' }))).toHaveAttribute('data-status', 'success');
         await act(async () => {
             jest.advanceTimersByTime(TIMEOUTS.UI.RESULT_GLANCE * 2);
         });
-        expect(screen.getByRole('dialog', { name: 'Deploying custom-app' })).toBeInTheDocument();
+        expect(screen.getByRole('dialog', { name: 'custom-app' })).toBeInTheDocument();
     });
 
     it('stays open on failure with the reason', async () => {
@@ -247,18 +245,17 @@ describe('the progress modal', () => {
         renderGrid({ appBuilderComponents: NOT_DEPLOYED });
         const modal = await startDeploy(user);
 
-        push({ id: 'custom-app', state: 'failed', error: 'Adobe refused this.' });
+        push({ id: 'custom-app', state: 'failed', error: plain('Adobe refused this.') });
 
-        const failure = within(modal).getByTestId('status-display');
-        expect(within(failure).getByText("Couldn't deploy custom-app")).toBeInTheDocument();
-        expect(within(failure).getByText('Adobe refused this.')).toBeInTheDocument();
+        expect(markIn(screen.getByRole('dialog', { name: 'custom-app' }))).toHaveAttribute('data-status', 'error');
+        expect(within(modal).getByTestId('operation-end')).toHaveTextContent('Adobe refused this.');
     });
 
     it('Retry sends the same operation and starts the modal clean, not on the old reason', async () => {
         const user = setupUser();
         renderGrid({ appBuilderComponents: NOT_DEPLOYED });
         const modal = await startDeploy(user);
-        push({ id: 'custom-app', state: 'failed', error: 'Adobe refused this.' });
+        push({ id: 'custom-app', state: 'failed', error: plain('Adobe refused this.') });
         getClient().postMessage.mockClear();
 
         await user.click(within(modal).getByRole('button', { name: 'Retry' }));
@@ -269,7 +266,7 @@ describe('the progress modal', () => {
         });
         const again = screen.getByRole('dialog', { name: 'Deploying custom-app' });
         expect(within(again).queryByText('Adobe refused this.')).not.toBeInTheDocument();
-        expect(within(again).getByText('Starting')).toBeInTheDocument();
+        expect(within(again).getByText('Preparing')).toBeInTheDocument();
     });
 
     it('a new run never asks for the last run\'s state; a reopened one does', async () => {
@@ -282,7 +279,7 @@ describe('the progress modal', () => {
             expect.anything(),
         );
 
-        await user.click(within(modal).getByRole('button', { name: 'Run in background' }));
+        await user.click(within(modal).getByRole('button', { name: 'Run in Background' }));
         setCards(cardsFor({ appBuilderComponents: DEPLOYING }));
         await user.click(card('custom-app', 'Deploying'));
 
@@ -296,23 +293,25 @@ describe('the progress modal', () => {
         renderGrid({ appBuilderComponents: NOT_DEPLOYED });
         const modal = await startDeploy(user);
 
-        push({ id: 'custom-app', state: 'failed', error: 'boom' });
+        push({ id: 'custom-app', state: 'failed', error: plain('boom') });
         await user.click(within(modal).getByRole('button', { name: 'Open Debug Logs' }));
 
         expect(getClient().postMessage).toHaveBeenCalledWith('openDebugLogs', {});
     });
 
     // The modal used to just vanish (owner, 2026-09-19); the notification carries on.
-    it('"Run in background" hands the operation to a notification, by id and title', async () => {
+    it('"Run in Background" hands the operation to a notification, by id and title', async () => {
         const user = setupUser();
         renderGrid({ appBuilderComponents: NOT_DEPLOYED });
         const modal = await startDeploy(user);
 
-        await user.click(within(modal).getByRole('button', { name: 'Run in background' }));
+        await user.click(within(modal).getByRole('button', { name: 'Run in Background' }));
 
         expect(getClient().postMessage).toHaveBeenCalledWith('backgroundOperation', {
             id: 'custom-app',
             title: 'Deploying custom-app',
+            doneTitle: 'custom-app Deployed',
+            failedTitle: "Couldn't Deploy custom-app",
         });
     });
 
@@ -320,7 +319,7 @@ describe('the progress modal', () => {
         const user = setupUser();
         renderGrid({ appBuilderComponents: NOT_DEPLOYED });
         const modal = await startDeploy(user);
-        push({ id: 'custom-app', state: 'failed', error: 'boom' });
+        push({ id: 'custom-app', state: 'failed', error: plain('boom') });
 
         await user.click(within(modal).getByRole('button', { name: 'Close' }));
 
@@ -330,12 +329,12 @@ describe('the progress modal', () => {
         );
     });
 
-    it('hides on "Run in background"', async () => {
+    it('hides on "Run in Background"', async () => {
         const user = setupUser();
         renderGrid({ appBuilderComponents: NOT_DEPLOYED });
         const modal = await startDeploy(user);
 
-        await user.click(within(modal).getByRole('button', { name: 'Run in background' }));
+        await user.click(within(modal).getByRole('button', { name: 'Run in Background' }));
 
         expect(screen.queryByRole('dialog', { name: 'Deploying custom-app' })).not.toBeInTheDocument();
     });
@@ -344,7 +343,7 @@ describe('the progress modal', () => {
         const user = setupUser();
         const { setCards } = renderGrid({ appBuilderComponents: NOT_DEPLOYED });
         const modal = await startDeploy(user);
-        await user.click(within(modal).getByRole('button', { name: 'Run in background' }));
+        await user.click(within(modal).getByRole('button', { name: 'Run in Background' }));
 
         setCards(cardsFor({ appBuilderComponents: DEPLOYING }));
         await user.click(card('custom-app', 'Deploying'));
@@ -390,7 +389,7 @@ describe('the mesh deploy', () => {
             progress: 'modal',
         });
         const modal = screen.getByRole('dialog', { name: 'Deploying API Mesh' });
-        await user.click(within(modal).getByRole('button', { name: 'Run in background' }));
+        await user.click(within(modal).getByRole('button', { name: 'Run in Background' }));
 
         setCards(cardsFor({ ...meshOptions, meshStatus: 'deploying', meshStatusText: 'Deploying…' }));
         await user.click(card('API Mesh', 'Deploying…'));

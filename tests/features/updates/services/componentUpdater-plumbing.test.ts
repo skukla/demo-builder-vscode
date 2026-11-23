@@ -1,27 +1,34 @@
 /**
  * ComponentUpdater — the plumbing: what it hands the shell, the filesystem, the
- * download, the registry and the file watcher, and the decisions around each.
+ * move to a release, the registry and the file watcher, and the decisions around each.
  *
  * The sibling suites pin the workflow shape (core), the .env merge and error
  * wording (extended) and the snapshot/rollback guarantees (rollback). This one
- * pins the ARGUMENTS: exact options to every `execute`, `fs.rm`, `fs.mkdir`,
- * `fetch` and `registerProgrammaticWrites` call, the download timeout and its
- * cleanup, the guards before the snapshot, and the registry lookup both the
- * post-update build and the rollback reinstall share.
+ * pins the ARGUMENTS: exact options to every `execute`, `fs.rm`, `moveToRelease`
+ * and `registerProgrammaticWrites` call, the guards before the snapshot, and the
+ * registry lookup both the post-update build and the rollback reinstall share.
  */
 
 // FIRST: this module owns the jest.mock calls the imports below must see.
-import { fs, setupUpdater, vscode, type UpdaterHarness } from './componentUpdater.testUtils';
+import {
+    ComponentUpdater,
+    fs,
+    setupUpdater,
+    vscode,
+    type CommandExecutor,
+    type UpdaterHarness,
+} from './componentUpdater.testUtils';
+import { mkdirSync, mkdtempSync, rmSync } from 'fs';
+import * as os from 'os';
+import * as path from 'path';
 import { DEFAULT_SHELL } from '@/core/shell/defaultShell';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import { validateGitHubDownloadURL } from '@/core/validation/URLValidator';
 import { ComponentRegistryManager } from '@/features/components/services/ComponentRegistryManager';
 import { demoBuilderNode } from '@/core/shell/demoBuilderNode';
 import { createMockProject } from '../../../helpers/projectFake';
 
-const DOWNLOAD = 'https://github.com/test/repo/archive/v1.0.0.zip';
+const TAG = 'v1.0.0';
 const COMPONENT = '/path/to/project/components/test-component';
-const TEMP_ZIP = '/path/to/project/components/test-component-temp.zip';
 const RM_OPTS = { recursive: true, force: true };
 const npmOpts = (useNodeVersion: string | null) => ({
     cwd: COMPONENT,
@@ -40,7 +47,12 @@ function registryAnswers(definition: unknown): void {
 
 const OK = { code: 0, stdout: '', stderr: '' };
 
-/** Shell answers, in the order the calls will come (extract, install, build...). */
+const FAILED_MOVE = {
+    status: 'failed',
+    detail: 'Could not fetch refs/tags/v1.0.0 from GitHub: bad object.',
+};
+
+/** Shell answers, in the order the calls will come (install, build...). */
 function shellAnswers(
     h: UpdaterHarness,
     ...answers: Array<Partial<{ code: number; stdout?: string; stderr?: string }>>
@@ -50,7 +62,7 @@ function shellAnswers(
 
 async function rejection(h: UpdaterHarness, componentId = 'test-component'): Promise<string> {
     let message = '';
-    await h.updater.updateComponent(h.project, componentId, DOWNLOAD, '1.0.0').catch((e: Error) => {
+    await h.updater.updateComponent(h.project, componentId, TAG, '1.0.0').catch((e: Error) => {
         message = e.message;
     });
     expect(message).not.toBe('');
@@ -82,81 +94,58 @@ describe('ComponentUpdater — plumbing', () => {
         });
 
         it('releases the lock afterwards, so the same component can be updated again', async () => {
-            await h.updater.updateComponent(h.project, 'test-component', DOWNLOAD, '1.0.0');
+            await h.updater.updateComponent(h.project, 'test-component', TAG, '1.0.0');
 
             await expect(
-                h.updater.updateComponent(h.project, 'test-component', DOWNLOAD, '1.0.1')
+                h.updater.updateComponent(h.project, 'test-component', TAG, '1.0.1')
             ).resolves.toBeUndefined();
         });
     });
 
     describe('the happy path, call by call', () => {
-        it('removes the old directory recursively, makes the target, extracts with the shell', async () => {
-            await h.updater.updateComponent(h.project, 'test-component', DOWNLOAD, '1.0.0');
+        it('moves the component path, its repoUrl and the release, after the snapshot', async () => {
+            const repoUrl = 'https://github.com/skukla/citisignal-nextjs';
+            h.project.componentInstances!['test-component'].repoUrl = repoUrl;
 
-            expect(fs.rm).toHaveBeenNthCalledWith(1, COMPONENT, RM_OPTS);
-            expect(fs.mkdir).toHaveBeenCalledWith(COMPONENT, { recursive: true });
-            expect(h.executor.execute).toHaveBeenNthCalledWith(
-                1,
-                `unzip -q "${TEMP_ZIP}" -d "${COMPONENT}"`,
-                { shell: DEFAULT_SHELL, timeout: TIMEOUTS.NORMAL, enhancePath: true }
+            await h.updater.updateComponent(h.project, 'test-component', 'v1.1.0', '1.1.0');
+
+            expect(h.moveToRelease).toHaveBeenCalledTimes(1);
+            expect(h.moveToRelease).toHaveBeenCalledWith(COMPONENT, repoUrl, {
+                tag: 'v1.1.0',
+                version: '1.1.0',
+            });
+            expect((fs.cp as jest.Mock).mock.invocationCallOrder[0]).toBeLessThan(
+                h.moveToRelease.mock.invocationCallOrder[0]
             );
-            expect(fs.unlink).toHaveBeenCalledWith(TEMP_ZIP);
         });
 
-        it('fetches with an abort signal and clears the download timer once the download lands', async () => {
-            jest.useFakeTimers();
-            try {
-                await h.updater.updateComponent(h.project, 'test-component', DOWNLOAD, '1.0.0');
+        it("never removes the component's own folder: only the snapshot goes", async () => {
+            await h.updater.updateComponent(h.project, 'test-component', TAG, '1.0.0');
 
-                const [url, init] = (global.fetch as jest.Mock).mock.calls[0];
-                expect(url).toBe(DOWNLOAD);
-                expect(init.signal).toBeInstanceOf(AbortSignal);
-                expect(jest.getTimerCount()).toBe(0);
-            } finally {
-                jest.useRealTimers();
-            }
+            const removed = (fs.rm as jest.Mock).mock.calls.map(([target]) => target);
+            expect(removed).toStrictEqual([expect.stringMatching(/test-component\.snapshot-\d+$/)]);
+            expect(fs.rename).not.toHaveBeenCalled();
         });
 
-        it('aborts a download that outlives the browser-auth timeout', async () => {
-            jest.useFakeTimers();
-            try {
-                (global.fetch as jest.Mock).mockImplementationOnce(
-                    (_url: string, init: { signal: AbortSignal }) =>
-                        new Promise((_resolve, reject) => {
-                            init.signal.addEventListener('abort', () =>
-                                reject(new Error('aborted'))
-                            );
-                        })
-                );
-                const update = h.updater.updateComponent(
-                    h.project,
-                    'test-component',
-                    DOWNLOAD,
-                    '1.0.0'
-                );
-                update.catch(() => undefined);
-                await jest.advanceTimersByTimeAsync(TIMEOUTS.AUTH.BROWSER);
+        it('a folder already at the release still installs and records the version', async () => {
+            h.moveToRelease.mockResolvedValueOnce({ status: 'current', detail: 'Up to date.' });
 
-                await expect(update).rejects.toThrow();
-                expect((global.fetch as jest.Mock).mock.calls[0][1].signal.aborted).toBe(true);
-            } finally {
-                jest.useRealTimers();
-            }
-        });
+            await h.updater.updateComponent(h.project, 'test-component', TAG, '1.0.0');
 
-        it('a temp zip that cannot be unlinked does not fail the update', async () => {
-            (fs.unlink as jest.Mock).mockRejectedValue(new Error('EBUSY'));
-
-            await expect(
-                h.updater.updateComponent(h.project, 'test-component', DOWNLOAD, '1.0.0')
-            ).resolves.toBeUndefined();
+            expect(h.executor.execute).toHaveBeenCalledWith(
+                'npm install --no-fund',
+                expect.objectContaining({ cwd: COMPONENT })
+            );
+            expect(h.project.componentVersions?.['test-component']).toMatchObject({
+                version: '1.0.0',
+            });
+            expect(h.project.componentInstances?.['test-component'].version).toBe('1.0.0');
         });
 
         it("keeps other components' version records when writing this one", async () => {
             h.project.componentVersions = { other: { version: '0.1.0', lastUpdated: 'x' } };
 
-            await h.updater.updateComponent(h.project, 'test-component', DOWNLOAD, '1.0.0');
+            await h.updater.updateComponent(h.project, 'test-component', TAG, '1.0.0');
 
             expect(h.project.componentVersions.other).toEqual({
                 version: '0.1.0',
@@ -175,7 +164,7 @@ describe('ComponentUpdater — plumbing', () => {
                 return '{"name":"test"}';
             });
 
-            await h.updater.updateComponent(h.project, 'test-component', DOWNLOAD, '1.0.0');
+            await h.updater.updateComponent(h.project, 'test-component', TAG, '1.0.0');
 
             expect(vscode.commands.executeCommand).toHaveBeenCalledWith(
                 'demoBuilder._internal.registerProgrammaticWrites',
@@ -184,21 +173,8 @@ describe('ComponentUpdater — plumbing', () => {
         });
     });
 
-    describe('download URL validation', () => {
-        it('a rejected URL is refused before any download, and rolled back', async () => {
-            jest.mocked(validateGitHubDownloadURL).mockImplementation(() => {
-                throw new Error('not a GitHub host');
-            });
-
-            expect(await rejection(h)).toBe(
-                'Update failed and was rolled back: Security check failed: not a GitHub host'
-            );
-            expect(global.fetch).not.toHaveBeenCalled();
-        });
-    });
-
     describe('verification', () => {
-        it('requires package.json after extraction', async () => {
+        it('requires package.json after the move', async () => {
             (fs.access as jest.Mock).mockImplementation(async (p: string) => {
                 if (p.endsWith('/package.json')) throw new Error('ENOENT');
             });
@@ -208,7 +184,7 @@ describe('ComponentUpdater — plumbing', () => {
             expect(h.logger.error).toHaveBeenCalledWith(
                 '[Updates] Update failed, rolling back to snapshot',
                 expect.objectContaining({
-                    message: 'Component verification failed: package.json missing after extraction',
+                    message: 'Component verification failed: package.json missing after the update',
                 })
             );
         });
@@ -218,24 +194,24 @@ describe('ComponentUpdater — plumbing', () => {
         it('installs with the exact shell options and no build when the registry has no entry', async () => {
             registryAnswers(undefined);
 
-            await h.updater.updateComponent(h.project, 'test-component', DOWNLOAD, '1.0.0');
+            await h.updater.updateComponent(h.project, 'test-component', TAG, '1.0.0');
 
             expect(h.executor.execute).toHaveBeenNthCalledWith(
-                2,
+                1,
                 'npm install --no-fund',
                 npmOpts(null)
             );
-            expect(h.executor.execute).toHaveBeenCalledTimes(2);
+            expect(h.executor.execute).toHaveBeenCalledTimes(1);
         });
 
         it('tolerates a catalog entry with no configuration block', async () => {
             registryAnswers({ id: 'test-component', name: 'Test' });
 
             await expect(
-                h.updater.updateComponent(h.project, 'test-component', DOWNLOAD, '1.0.0')
+                h.updater.updateComponent(h.project, 'test-component', TAG, '1.0.0')
             ).resolves.toBeUndefined();
             expect(h.executor.execute).toHaveBeenNthCalledWith(
-                2,
+                1,
                 'npm install --no-fund',
                 npmOpts(demoBuilderNode())
             );
@@ -244,15 +220,15 @@ describe('ComponentUpdater — plumbing', () => {
         it("runs the configured build on Demo Builder's Node", async () => {
             registryAnswers({ id: 'test-component', configuration: { buildScript: 'build' } });
 
-            await h.updater.updateComponent(h.project, 'test-component', DOWNLOAD, '1.0.0');
+            await h.updater.updateComponent(h.project, 'test-component', TAG, '1.0.0');
 
             expect(h.executor.execute).toHaveBeenNthCalledWith(
-                2,
+                1,
                 'npm install --no-fund',
                 npmOpts(demoBuilderNode())
             );
             expect(h.executor.execute).toHaveBeenNthCalledWith(
-                3,
+                2,
                 'npm run build -- --force',
                 npmOpts(demoBuilderNode())
             );
@@ -266,7 +242,7 @@ describe('ComponentUpdater — plumbing', () => {
                 'peer dep',
             ],
         ])('a failed install reports its %s', async (_label, result, detail) => {
-            shellAnswers(h, OK, result);
+            shellAnswers(h, result);
 
             expect(await rejection(h)).toBe(
                 'Update failed and was rolled back: ' +
@@ -279,7 +255,7 @@ describe('ComponentUpdater — plumbing', () => {
             ['stdout when stderr is empty', { code: 1, stderr: '', stdout: 'out' }, 'out'],
         ])('a failed build reports its exit code and %s', async (_label, result, detail) => {
             registryAnswers({ id: 'test-component', configuration: { buildScript: 'build' } });
-            shellAnswers(h, OK, OK, result);
+            shellAnswers(h, OK, result);
 
             expect(await rejection(h)).toBe(
                 'Update failed and was rolled back: ' +
@@ -289,8 +265,7 @@ describe('ComponentUpdater — plumbing', () => {
 
         it('dumps at most the first 500 characters of each build stream, and copes with a missing one', async () => {
             registryAnswers({ id: 'test-component', configuration: { buildScript: 'build' } });
-            shellAnswers(h, OK, OK, { code: 1, stderr: 'e'.repeat(600) }
-            );
+            shellAnswers(h, OK, { code: 1, stderr: 'e'.repeat(600) });
 
             expect(await rejection(h)).toContain('Build failed (exit 1): ' + 'e'.repeat(600));
             const dump = h.logger.debug.mock.calls.find(
@@ -303,7 +278,7 @@ describe('ComponentUpdater — plumbing', () => {
     describe('build output dump, the other way round', () => {
         it('truncates a long stdout and copes with a missing stderr', async () => {
             registryAnswers({ id: 'test-component', configuration: { buildScript: 'build' } });
-            shellAnswers(h, OK, OK, { code: 1, stdout: 'o'.repeat(600) });
+            shellAnswers(h, OK, { code: 1, stdout: 'o'.repeat(600) });
 
             await rejection(h);
 
@@ -318,7 +293,7 @@ describe('ComponentUpdater — plumbing', () => {
         it('rewrites the record to the Node it was just installed under', async () => {
             registryAnswers({ id: 'test-component', configuration: {} });
 
-            await h.updater.updateComponent(h.project, 'test-component', DOWNLOAD, '1.0.0');
+            await h.updater.updateComponent(h.project, 'test-component', TAG, '1.0.0');
 
             expect(h.project.componentInstances?.['test-component'].metadata?.nodeVersion).toBe(
                 demoBuilderNode()
@@ -329,7 +304,7 @@ describe('ComponentUpdater — plumbing', () => {
             registryAnswers({ id: 'test-component', configuration: { skipNpmInstall: true } });
             const before = h.project.componentInstances?.['test-component'].metadata;
 
-            await h.updater.updateComponent(h.project, 'test-component', DOWNLOAD, '1.0.0');
+            await h.updater.updateComponent(h.project, 'test-component', TAG, '1.0.0');
 
             expect(h.project.componentInstances?.['test-component'].metadata).toBe(before);
         });
@@ -338,11 +313,11 @@ describe('ComponentUpdater — plumbing', () => {
     describe('rollback', () => {
         it("removes the broken tree recursively before restoring, then reinstalls on Demo Builder's Node", async () => {
             registryAnswers({ id: 'test-component', configuration: {} });
-            shellAnswers(h, { code: 1, stderr: 'unzip: bad zip' });
+            h.moveToRelease.mockRejectedValueOnce(new Error(FAILED_MOVE.detail));
 
             await rejection(h);
 
-            expect(fs.rm).toHaveBeenNthCalledWith(2, COMPONENT, RM_OPTS);
+            expect(fs.rm).toHaveBeenNthCalledWith(1, COMPONENT, RM_OPTS);
             expect(h.executor.execute).toHaveBeenLastCalledWith(
                 'npm install --no-fund',
                 npmOpts(demoBuilderNode())
@@ -354,7 +329,7 @@ describe('ComponentUpdater — plumbing', () => {
             (ComponentRegistryManager as jest.Mock).mockImplementation(() => ({
                 getComponentById: jest.fn().mockRejectedValue(new Error('registry unreadable')),
             }));
-            shellAnswers(h, { code: 1, stderr: 'unzip: bad zip' });
+            h.moveToRelease.mockRejectedValueOnce(new Error(FAILED_MOVE.detail));
 
             await rejection(h);
 
@@ -363,13 +338,37 @@ describe('ComponentUpdater — plumbing', () => {
                 npmOpts(null)
             );
         });
+    });
 
-        it('an extraction failure with no stderr reads as unknown', async () => {
-            shellAnswers(h, { code: 1, stderr: '' });
+    describe('the move a real updater makes when none is handed in', () => {
+        let clone: string;
 
-            expect(await rejection(h)).toBe(
-                'Update failed and was rolled back: Extraction failed (exit code 1): unknown error'
+        beforeEach(() => {
+            // The folder test is on the real disk, so the clone's .git has to exist there.
+            clone = mkdtempSync(path.join(os.tmpdir(), 'component-updater-'));
+            mkdirSync(path.join(clone, '.git'));
+            h.project.componentInstances!['test-component'].path = clone;
+        });
+
+        afterEach(() => rmSync(clone, { recursive: true, force: true }));
+
+        it('runs git in the folder through the executor, with the tag it was given', async () => {
+            registryAnswers({ id: 'test-component', configuration: {} });
+            const updater = new ComponentUpdater(
+                h.logger,
+                '/mock/extension/path',
+                h.executor as unknown as CommandExecutor
             );
+
+            await updater.updateComponent(h.project, 'test-component', 'v1.1.0', '1.1.0');
+
+            expect(h.executor.execute).toHaveBeenCalledWith('git fetch origin refs/tags/v1.1.0', {
+                cwd: clone,
+                enhancePath: true,
+                shell: DEFAULT_SHELL,
+                timeout: TIMEOUTS.LONG,
+            });
+            expect(h.moveToRelease).not.toHaveBeenCalled();
         });
     });
 });

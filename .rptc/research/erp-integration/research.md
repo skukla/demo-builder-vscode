@@ -26,7 +26,7 @@ from `develop`.
 - The Integrations page (dashboard) lists deployed components with status; `deployedUrls`
   are captured on deploy. No "open this app's UI" affordance yet.
 
-## The colleague's mock (`jogosset/agilent-erp-mock`, private, read 2026-09-14 with the owner's access)
+## The colleague's mock (`org-f/client-a-erp-mock`, private, read 2026-09-14 with the owner's access)
 
 One App Builder app that is BOTH the ERP and the Commerce integration, App Management
 generation (`app.commerce.config.mjs`, `install.yaml`, `@adobe/aio-commerce-lib-app`), not
@@ -36,7 +36,7 @@ a React Spectrum admin SPA registered through the Admin UI SDK (runs inside the 
 Admin and standalone); two totals-collector webhooks (contract pricing, max-discount
 ceiling) and an order-place webhook that creates the ERP order and writes `ext_order_id`
 back; quotes synced as negotiable quotes; a configurable-product rule engine. Data is
-seeded from a fixed Agilent product CSV mirrored into the ERP, and its accounts mirror two
+seeded from a fixed Client A product CSV mirrored into the ERP, and its accounts mirror two
 sandbox companies by id — i.e. it is BOUND to one instance's data. Its admin action has
 `seed` (idempotent master data) and `reset` (wipe transactional, keep master). Requires the
 App Builder Data Services entitlement on the Console project. Node >=18, runtime nodejs:22.

@@ -8,9 +8,6 @@ import type { StateManager } from '@/types/state';
 import {
     extractEdsMetadata,
     getLinkedEdsProjects,
-    formatCleanupResults,
-    summarizeCleanupResults,
-    type CleanupResultItem,
 } from '@/features/eds/services/resourceCleanupHelpers';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
 
@@ -148,6 +145,19 @@ describe('getLinkedEdsProjects', () => {
         });
     }
 
+    // Owner, 2026-11-20: "Kept the GitHub repository: scratch-1028 also uses it." named the folder.
+    it('names each project as the SC knows it: its title, else its folder name', async () => {
+        const storefront = (repo: string) => ({
+            [COMPONENT_IDS.EDS_STOREFRONT]: createEdsComponentInstance({ githubRepo: repo, daLiveOrg: 'org', daLiveSite: 'site' }),
+        });
+        const titled = createMockProject({ name: 'scratch-1028', title: 'Scratch 1028', path: '/p/a', componentInstances: storefront('o/a') });
+        const untitled = createMockProject({ name: 'scratch-1028-c', title: undefined, path: '/p/b', componentInstances: storefront('o/b') });
+
+        const result = await getLinkedEdsProjects(stateManagerWithProjects([titled, untitled]));
+
+        expect(result.map((p) => p.name)).toEqual(['Scratch 1028', 'scratch-1028-c']);
+    });
+
     it('should return all EDS projects with metadata', async () => {
         const edsProject1 = createMockProject({
             name: 'eds-project-1',
@@ -209,7 +219,9 @@ describe('getLinkedEdsProjects', () => {
         const call = (stateManager.loadProjectFromPath as jest.Mock).mock.calls[0];
         expect(call[0]).toBe('/path/to/eds1');
         expect(call[1]()).toStrictEqual([]);
-        expect(call[2]).toEqual({ persistAfterLoad: false });
+        // A read: nothing is opened (walk F206).
+        expect(call).toHaveLength(2);
+        expect(stateManager.openProject).not.toHaveBeenCalled();
     });
 
     it('should exclude non-EDS projects', async () => {
@@ -277,204 +289,5 @@ describe('getLinkedEdsProjects', () => {
 
         expect(result).toHaveLength(1);
         expect(result[0].name).toBe('eds-project');
-    });
-});
-
-// ==========================================================
-// formatCleanupResults Tests
-// ==========================================================
-
-describe('formatCleanupResults', () => {
-    it('should format all successful results', () => {
-        const results: CleanupResultItem[] = [
-            { type: 'github', name: 'owner/repo', success: true },
-            { type: 'daLive', name: 'org/site', success: true },
-            { type: 'helix', name: 'owner/repo', success: true },
-        ];
-
-        const formatted = formatCleanupResults(results);
-
-        expect(formatted).toContain('✓ Cleaned up:');
-        expect(formatted).toContain('GitHub repo');
-        expect(formatted).toContain('DA.live site');
-        expect(formatted).toContain('Helix CDN');
-    });
-
-    it('should format mixed results (success and failure)', () => {
-        const results: CleanupResultItem[] = [
-            { type: 'github', name: 'owner/repo', success: true },
-            { type: 'daLive', name: 'org/site', success: false, error: 'Access denied' },
-        ];
-
-        const formatted = formatCleanupResults(results);
-
-        expect(formatted).toContain('✓ Cleaned up:');
-        expect(formatted).toContain('GitHub repo');
-        expect(formatted).toContain('✗ Failed:');
-        expect(formatted).toContain('DA.live site');
-        expect(formatted).toContain('Access denied');
-    });
-
-    it('should format skipped results', () => {
-        const results: CleanupResultItem[] = [
-            { type: 'github', name: 'owner/repo', success: true },
-            { type: 'datapack', name: 'citisignal', success: false, skipped: true },
-        ];
-
-        const formatted = formatCleanupResults(results);
-
-        expect(formatted).toContain('✓ Cleaned up:');
-        expect(formatted).toContain('○ Skipped:');
-        expect(formatted).toContain('Datapack');
-    });
-
-    it('should handle empty results', () => {
-        const results: CleanupResultItem[] = [];
-
-        const formatted = formatCleanupResults(results);
-
-        expect(formatted).toBe('No cleanup operations performed.');
-    });
-
-    it('lists every outcome exactly once, each under its own heading', () => {
-        // The three groups are built by three filters over the same array. A
-        // filter that stops filtering puts every resource under every heading,
-        // and no `toContain` assertion can see that.
-        const results: CleanupResultItem[] = [
-            { type: 'github', name: 'owner/repo', success: true },
-            { type: 'daLive', name: 'org/site', success: false, error: 'Access denied' },
-            { type: 'datapack', name: 'citisignal', success: false, skipped: true },
-        ];
-
-        expect(formatCleanupResults(results)).toBe(
-            '\u2713 Cleaned up: GitHub repo (owner/repo)\n' +
-                '\u2717 Failed: DA.live site (org/site) - Access denied\n' +
-                '\u25cb Skipped: Datapack (citisignal)'
-        );
-    });
-
-    it('leaves out the skipped heading entirely when nothing was skipped', () => {
-        const results: CleanupResultItem[] = [
-            { type: 'github', name: 'owner/repo', success: true },
-        ];
-
-        expect(formatCleanupResults(results)).toBe('\u2713 Cleaned up: GitHub repo (owner/repo)');
-    });
-
-    it('should format all failed results', () => {
-        const results: CleanupResultItem[] = [
-            { type: 'github', name: 'owner/repo', success: false, error: 'Token missing' },
-            { type: 'daLive', name: 'org/site', success: false, error: 'Access denied' },
-        ];
-
-        const formatted = formatCleanupResults(results);
-
-        expect(formatted).not.toContain('✓ Cleaned up:');
-        expect(formatted).toContain('✗ Failed:');
-        expect(formatted).toContain('Token missing');
-        expect(formatted).toContain('Access denied');
-    });
-});
-
-// ==========================================================
-// summarizeCleanupResults Tests
-// ==========================================================
-
-describe('summarizeCleanupResults', () => {
-    it('should summarize all successful results', () => {
-        const results: CleanupResultItem[] = [
-            { type: 'github', name: 'owner/repo', success: true },
-            { type: 'daLive', name: 'org/site', success: true },
-        ];
-
-        const summary = summarizeCleanupResults(results);
-
-        expect(summary.total).toBe(2);
-        expect(summary.succeeded).toBe(2);
-        expect(summary.failed).toBe(0);
-        expect(summary.skipped).toBe(0);
-        expect(summary.message).toBe('Successfully cleaned up 2 resources.');
-    });
-
-    it('should summarize single successful result', () => {
-        const results: CleanupResultItem[] = [
-            { type: 'github', name: 'owner/repo', success: true },
-        ];
-
-        const summary = summarizeCleanupResults(results);
-
-        expect(summary.succeeded).toBe(1);
-        expect(summary.message).toBe('Successfully cleaned up 1 resource.');
-    });
-
-    it('should summarize mixed results', () => {
-        const results: CleanupResultItem[] = [
-            { type: 'github', name: 'owner/repo', success: true },
-            { type: 'daLive', name: 'org/site', success: false, error: 'Access denied' },
-        ];
-
-        const summary = summarizeCleanupResults(results);
-
-        expect(summary.succeeded).toBe(1);
-        expect(summary.failed).toBe(1);
-        expect(summary.message).toBe('Cleaned up 1 resource, 1 failed.');
-    });
-
-    it('should summarize all failed results', () => {
-        const results: CleanupResultItem[] = [
-            { type: 'github', name: 'owner/repo', success: false },
-            { type: 'daLive', name: 'org/site', success: false },
-        ];
-
-        const summary = summarizeCleanupResults(results);
-
-        expect(summary.succeeded).toBe(0);
-        expect(summary.failed).toBe(2);
-        expect(summary.message).toBe('Failed to clean up 2 resources.');
-    });
-
-    it('should count skipped separately from failures', () => {
-        const results: CleanupResultItem[] = [
-            { type: 'github', name: 'owner/repo', success: true },
-            { type: 'datapack', name: 'citisignal', success: false, skipped: true },
-        ];
-
-        const summary = summarizeCleanupResults(results);
-
-        expect(summary.succeeded).toBe(1);
-        expect(summary.failed).toBe(0);
-        expect(summary.skipped).toBe(1);
-        expect(summary.message).toBe('Successfully cleaned up 1 resource.');
-    });
-
-    it('pluralises the cleaned count and not the failed one in a mixed run', () => {
-        const results: CleanupResultItem[] = [
-            { type: 'github', name: 'owner/repo', success: true },
-            { type: 'daLive', name: 'org/site', success: true },
-            { type: 'helix', name: 'owner/repo', success: false },
-        ];
-
-        expect(summarizeCleanupResults(results).message).toBe(
-            'Cleaned up 2 resources, 1 failed.'
-        );
-    });
-
-    it('does not pluralise a run where the single resource failed', () => {
-        const results: CleanupResultItem[] = [
-            { type: 'github', name: 'owner/repo', success: false },
-        ];
-
-        expect(summarizeCleanupResults(results).message).toBe(
-            'Failed to clean up 1 resource.'
-        );
-    });
-
-    it('should handle empty results', () => {
-        const results: CleanupResultItem[] = [];
-
-        const summary = summarizeCleanupResults(results);
-
-        expect(summary.total).toBe(0);
-        expect(summary.message).toBe('No resources were cleaned up.');
     });
 });

@@ -163,8 +163,8 @@ export async function handleCreateAdobeWorkspace(
 
         // Refresh the workspace list and return it ON THIS RESPONSE (best-effort).
         // It must NOT be a `sendMessage` push: the only listener for `get-workspaces`
-        // lives in AdobeWorkspacePicker, which AdobeWorkspaceField has replaced with
-        // the create panel by the time this runs. WebviewClient drops a message with
+        // lives in AdobeWorkspacePicker, which the Add Integration flow's create window
+        // has replaced by the time this runs. WebviewClient drops a message with
         // no registered listener, so the pushed refresh was lost and the remounted
         // picker read a stale cache. The caller awaits this response, so it lands.
         //

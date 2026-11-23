@@ -25,13 +25,13 @@
 
 import * as vscode from 'vscode';
 import { BaseCommand } from '@/core/base/baseCommand';
+import { shouldOfferGraduation } from '@/core/releases/releaseTrack';
 import { createNonSwitchingStateManager } from '@/core/state/workingProjectStateManager';
 import { withProgressRegister } from '@/core/vscode/progressRegister';
 import { createHeadlessHandlerContext } from '@/features/ai/server/headlessHandlerContext';
 import { integrationUpdateProbe } from '@/features/dashboard/handlers/integrationUpdateHandlers';
 import { presentUpdates } from '@/features/updates/handlers/updatesModalHandlers';
 import { findAllUpdates, type FoundUpdates } from '@/features/updates/services/allUpdates';
-import { shouldOfferGraduation } from '@/features/updates/services/releaseTrack';
 import { UpdateManager } from '@/features/updates/services/updateManager';
 
 const REVIEW = 'Review';
@@ -69,7 +69,7 @@ export class CheckUpdatesCommand extends BaseCommand {
     /** The SC's check: told in a notification, then the modal or "up to date". */
     private async checkInNotification(): Promise<void> {
         try {
-            const found = await withProgressRegister({ title: 'Checking for updates' }, () => this.check());
+            const found = await withProgressRegister({ title: 'Checking for Updates' }, () => this.check());
             await this.maybeOfferGraduation();
             if (found.count === 0) {
                 const version: string = this.context.extension.packageJSON.version;

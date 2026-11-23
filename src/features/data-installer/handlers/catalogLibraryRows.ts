@@ -1,0 +1,153 @@
+/**
+ * The list of datapacks every surface shows: Demo Builder's datapack store first, then whatever
+ * the Data Installer adds if it answers (owner, 2026-11-03). The store is the source we promise.
+ * The Data Installer is an extra, asked at each load, so nothing has to change if access to it
+ * comes or goes, and an SC can have it while a colleague does not.
+ *
+ * - A pack in both shows once, as the store's, so every SC gets the same data under one name.
+ * - The store's own default is its team packs and the SC's own; a colleague's shared pack is
+ *   community, behind the same switch as the Data Installer's non-curated packs.
+ *
+ * @module features/data-installer/handlers/catalogLibraryRows
+ */
+
+import type { DataInstallerClient } from '../services/dataInstallerClient';
+import { resolveDataInstallerBaseUrl } from '../services/dataInstallerConfig';
+import { classifyTransportError, DataInstallerApiError } from '../services/dataInstallerErrors';
+import { type NameMemory, rememberNewestSaves, rememberPackNames } from '../services/packNames';
+import type { CatalogPage, DatapackSummary, Page } from '../types';
+import { sleep } from '@/core/utils/sleep';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { ErrorCode } from '@/types/errorCodes';
+import type { HandlerResponse } from '@/types/handlers';
+
+export const LIBRARY_LIST_FAILED = 'Could not list the datapack store.';
+
+/** Tries at the store's list before it counts as down (owner, 2026-11-17, walk F215). */
+export const LIBRARY_LIST_TRIES = 3;
+
+/**
+ * A failure another try could change, and quickly: the store erred (5xx) or could not be reached.
+ * Not a timeout: that try already waited the full 30 s, and three would hold the spinner 90 s before
+ * the banner's Try Again (owner, 2026-11-17).
+ */
+function worthAnotherTry(error: unknown): boolean {
+    if (error instanceof DataInstallerApiError) return error.status >= 500;
+    return classifyTransportError(error) === 'unreachable';
+}
+
+/** The last failure, saying how many tries it took, so a log, a screen and an agent all know. */
+function afterTries(error: unknown, tries: number): unknown {
+    if (tries === 1 || !(error instanceof Error)) return error;
+    const message = `${error.message} (tried ${tries} times)`;
+    return error instanceof DataInstallerApiError ? new DataInstallerApiError(message, error.status, error.action) : new Error(message);
+}
+
+/**
+ * The store's catalog, each row tagged `library`: shared packs plus the SC's own. A quick failure
+ * another try could change is asked again, up to three tries a second apart, so a one-off error never
+ * reaches a screen (it did once, 2026-11-17, answering normally a moment later).
+ *
+ * @param onRetry - told of each failed try before the next, for the log
+ */
+export async function listLibrary(
+    client: DataInstallerClient,
+    paging: { limit?: number; skip?: number },
+    onRetry?: (failedTry: number, error: unknown) => void,
+): Promise<Page<DatapackSummary>> {
+    for (let attempt = 1; ; attempt += 1) {
+        try {
+            const listed = await client.findDatapacks(paging);
+            return { ...listed, items: listed.items.map((item) => ({ ...item, store: 'library' as const })) };
+        } catch (error) {
+            if (attempt >= LIBRARY_LIST_TRIES || !worthAnotherTry(error)) throw afterTries(error, attempt);
+            onRetry?.(attempt, error);
+            await sleep(TIMEOUTS.DATAPACK_STORE_RETRY);
+        }
+    }
+}
+
+/**
+ * Whether a pack can be installed into a Commerce store at all, as far as its row says: it holds a
+ * data type, and not only Adobe Commerce Optimizer ones, which wait on ACO support (owner,
+ * 2026-11-05). The SC's own always shows, so they can remove it.
+ */
+export function isListable(item: DatapackSummary): boolean {
+    if (item.store === 'library' && item.mine) return true;
+    const types = item.dataTypes;
+    // A row that does not say what it holds is shown: hiding it would be a guess, and a crash on a
+    // row the service sent short would take the whole list with it.
+    if (!Array.isArray(types)) return true;
+    return types.length > 0 && !types.every((type) => type.startsWith('aco_'));
+}
+
+/** Whether a store row is in the default list: a team pack or the SC's own. */
+function inDefaultList(item: DatapackSummary): boolean {
+    return item.team === true || item.mine === true;
+}
+
+/** Why the Data Installer's rows are absent: never asked (no address, or turned off), the SC's sign-in turned away, or no answer. */
+function whyMissing(installer: HandlerResponse): NonNullable<CatalogPage['installerMissing']> {
+    const address = resolveDataInstallerBaseUrl();
+    if (!address.ok && address.reason === 'not-configured') return 'no-address';
+    if (!address.ok && address.reason === 'turned-off') return 'turned-off';
+    return installer.code === ErrorCode.AUTH_FORBIDDEN ? 'no-access' : 'no-answer';
+}
+
+/** The Data Installer's part when the SC switched it off: not asked, so nothing to report. */
+export const INSTALLER_OFF = 'off';
+
+/**
+ * Keep the names of every pack a list answered with, then hand the answer on. The wizard's Datapacks
+ * step, the Datapacks screen and the agent's `find_datapacks` all list through here, so a pack the SC
+ * has seen is named everywhere after (owner, 2026-11-16). Never throws: a name is not worth a list.
+ */
+export async function rememberingNames(memory: NameMemory | undefined, response: HandlerResponse): Promise<HandlerResponse> {
+    try {
+        if (memory && response.success) {
+            const { items } = response.data as Page<DatapackSummary>;
+            await rememberPackNames(memory, items);
+            // And each pack's newest save, so the dashboard's tile can say a newer version waits (F218).
+            await rememberNewestSaves(memory, items);
+        }
+    } catch {
+        // The list still answers; the names are kept next time.
+    }
+    return response;
+}
+
+/**
+ * The two answers as one list. Fails only when neither store answered, with the store's reason,
+ * so a sign-in problem still reads as one.
+ *
+ * @param library - the store's answer
+ * @param installer - the Data Installer's answer, or `INSTALLER_OFF` when the SC switched it off
+ * @param includeCommunity - whether a colleague's shared pack is listed
+ */
+export function mergedCatalog(
+    library: HandlerResponse,
+    asked: HandlerResponse | typeof INSTALLER_OFF,
+    includeCommunity: boolean,
+): HandlerResponse {
+    const off = asked === INSTALLER_OFF;
+    const installer: HandlerResponse = off ? { success: true, data: { items: [] } } : asked;
+    if (!library.success && !installer.success) return library;
+    const own = library.success ? (library.data as Page<DatapackSummary>).items : [];
+    const names = new Set(own.map((item) => item.id.name));
+    const theirs = installer.success ? (installer.data as Page<DatapackSummary>).items : [];
+    const items = [
+        ...own.filter((item) => includeCommunity || inDefaultList(item)),
+        ...theirs.filter((item) => !names.has(item.id.name)),
+    ].filter(isListable);
+    const page: CatalogPage = {
+        items,
+        // No `total`: the two stores' totals do not add up to anything a caller can use.
+        count: items.length,
+        // Copy to the Data Installer is offered while its address is set and switched on.
+        ...(resolveDataInstallerBaseUrl().ok ? { installerOn: true } : {}),
+        ...(library.success ? {} : { storeMissing: true }),
+        ...(installer.success ? {} : { installerMissing: whyMissing(installer) }),
+        ...(off ? { installerOff: true } : {}),
+    };
+    return { success: true, data: page };
+}

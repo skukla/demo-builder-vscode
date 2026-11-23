@@ -124,6 +124,15 @@ sibling modules with verbatim re-exports, and the scan correctly reported no cha
    A `triage.json` row wins over the heuristic, so a verb-named handler that does real work
    can be listed as an alias or a gap.
 
+4. **A map is not always `export const X = defineHandlers({`.** Until 2026-11-14 the extractor
+   matched only that shape, so a factory's `return defineHandlers({` (`createDemoDataHandlers`)
+   and a wrapped map (`importHandlers = announcingChanges(...(defineHandlers({`) were invisible:
+   8 keys, among them `check-demo-data` and `clear-demo-data`. It now finds any `defineHandlers({`
+   (self-test case included). The same day `copy` left the UI-verb list, since `copyAiPrompt` and
+   `copy-library-datapack-to-installer` are not navigation; both are now listed exclusions.
+   Measured on `fix/release-walk-fixes`: 200 types, 140 reachable, 3 gaps, 16 untriaged before;
+   208, 147, 3 and 16 after.
+
 ## What the scan CANNOT tell you
 
 It measures **reachability, not usability**. A feature reachable through a tool may still be

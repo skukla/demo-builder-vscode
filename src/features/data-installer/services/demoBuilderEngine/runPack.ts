@@ -5,12 +5,12 @@
  * The order is the service's (catalog spec §0): sets before the attributes put in them,
  * categories and stock before the products that name them, products before their quantities.
  * A pack holding a kind this engine cannot install is refused before anything is written, so a
- * half-installed pack is never the answer to "we don't do that kind yet" (`product_export` and
- * `customers_export`, today). A pack of ACO kinds never reaches this: the engine sends it to the
- * project's ACO instance (`aco/acoJobs.ts`, PL-60), and refuses one that mixes the two. Customers and B2B
+ * half-installed pack is never the answer to "we don't do that kind yet". A pack of ACO kinds
+ * never reaches this: the engine sends it to the project's ACO instance (`aco/acoEngineRoutes.ts`,
+ * PL-60), and refuses one that mixes the two. Customers and B2B
  * (step 08) come after the catalog, in the service's order: groups before the products whose tier
- * prices name them, customers before the companies that make them admins. Store settings (step 09)
- * come last, once the pack's data is in, and are put back first on removal. Gift cards, cart rules
+ * prices name them, customers before the companies that make them admins. Store configuration (step 09)
+ * comes last, once the pack's data is in, and is put back first on removal. Gift cards, cart rules
  * and coupons (step 11) sit where the service puts them.
  *
  * Removal walks the record in reverse, dropping each object from it as it goes, so a removal
@@ -19,29 +19,40 @@
  * @module features/data-installer/services/demoBuilderEngine/runPack
  */
 
+import { type KeptRootStep, PREPARING_UNINSTALL } from '../../types';
+import { leaveAdopted } from './adoptedObjects';
 import { installAssignments, installAttributeSets, parseAssignmentRows, parseAttributeSetRows } from './attributeSetsKind';
-import { installAttributes, parseAttributeRows } from './attributesKind';
+import { INSTALLS_WITH, installAttributes, parseAttributeRows } from './attributesKind';
 import { ASSIGNMENT_KINDS, CATALOG_KIND, COMPANY_KIND, CUSTOMER_GROUP_KIND, CUSTOMER_KIND } from './b2bKeys';
 import { CART_RULE_KIND, installCartRules, parseCartRuleRows } from './cartRulesKind';
 import { installCategories, parseCategoryPack } from './categoriesKind';
 import { installCompanies, parseCompanyRows } from './companiesKind';
 import { COUPON_KIND, installCoupons, parseCouponRows } from './couponsKind';
 import { installCustomerGroups, installCustomers, parseCustomerGroupRows, parseCustomerRows } from './customerKinds';
+import { CUSTOMERS_EXPORT_KIND, installCustomersExport, parseCustomersExport } from './customersExportKind';
 import {
+    type CreatedObject,
+    type InstallRecord,
     type RecordFiles,
     forgetInstallRecord,
     openInstallRecord,
     readInstallRecord,
     removalOrder,
 } from './installRecord';
+import { jobClock } from './jobClock';
 import type { KindContext, SettingsDone, SkippedRow } from './kindContext';
 import { type RootPlacement, placeCategories, rootPlacement } from './packRoot';
-import { type PackRootStep, settlePackRoot } from './packRootStep';
+import { type PackRootStep, keptRootStep, settlePackRoot } from './packRootStep';
 import { settlePending } from './pendingFinders';
-import { GIFT_CARD_KIND, PRODUCT_KINDS, installProducts, parseProductRows } from './productsKind';
+import { PRODUCT_EXPORT_KIND, installProductExport, parseProductExport } from './productExportKind';
+import { GIFT_CARD_KIND, PRODUCT_KINDS } from './productKinds';
+import { installProducts, parseProductRows } from './productsKind';
 import { recordFingerprints } from './recordFingerprints';
-import { type KeptContainer, type RemovalAccess, decideRemovals, takeBack } from './removers';
-import { type KeptThing, applyRemovals, applyUpdates, keptOf, ownedFrom, planRepeat } from './repeatInstall';
+import { removalCounter } from './removalProgress';
+import { type RefusedRemoval, takeBackAll } from './removalRuns';
+import { type KeptContainer, type RemovalAccess, decideRemovals } from './removers';
+import { type KeptThing, type KindPlan, applyRemovals, applyUpdates, keptOf, ownedFrom, planRepeat, rowsToCount } from './repeatInstall';
+import { startRowCount } from './rowCount';
 import { flatAssignments, installCatalogs, installAssignments as installCatalogAssignments, parseCatalogRows } from './sharedCatalogKinds';
 import { installSourceItems, parseSourceItems } from './sourceItemsKind';
 import {
@@ -53,7 +64,9 @@ import {
     parseStocks,
 } from './stockKinds';
 import { STORE_CONFIG_KIND, installStoreConfig, packSettings, putBackSettings } from './storeConfigKind';
+import { packKindOf } from './storeCopies';
 import { UrlKeyClashError, placedClashes } from './urlKeyClashes';
+import type { CommerceProduct } from '@/types/commerceWire';
 import type { DatapackId } from '@/types/datapack';
 
 /** A pack's rows, by data kind, as its items hold them. */
@@ -86,9 +99,13 @@ const STEPS: readonly KindStep[] = [
     step('sources', parseSources, installSources),
     step('stock_source_links', parseStockSourceLinks, installStockSourceLinks),
     step('products', parseProductRows, installProducts),
+    // Products in Commerce's import form, the service's own kind, in the service's place (`productExportKind.ts`).
+    step(PRODUCT_EXPORT_KIND, parseProductExport, installProductExport),
     // Step 11: gift cards are products, made as products are, after them as the service makes them.
     step(GIFT_CARD_KIND, parseProductRows, (ctx, rows) => installProducts(ctx, rows, GIFT_CARD_KIND)),
     step('source_items', parseSourceItems, installSourceItems),
+    // Customers in Commerce's import form, the service's own kind, in the service's place (`customersExportKind.ts`).
+    step(CUSTOMERS_EXPORT_KIND, parseCustomersExport, installCustomersExport),
     // Step 08: customers, then the catalogs and companies, then what is assigned to the catalogs.
     step(CUSTOMER_KIND, parseCustomerRows, installCustomers),
     // Step 11: cart rules, then their coupons, in the service's place: after the groups, categories and
@@ -100,7 +117,7 @@ const STEPS: readonly KindStep[] = [
     ...ASSIGNMENT_KINDS.map(
         (kind): KindStep => ({ kind, check: (records) => void flatAssignments(kind, records), install: (ctx, r) => installCatalogAssignments(ctx, kind, r) }),
     ),
-    // Step 09: the pack's store settings, once its data is in.
+    // Step 09: the pack's store configuration, once its data is in.
     { kind: STORE_CONFIG_KIND, check: (records, websiteCode) => void packSettings(records, websiteCode), install: installStoreConfig },
 ];
 
@@ -118,6 +135,19 @@ export class UnsupportedKindsError extends Error {
 /** The pack's kinds this engine cannot install. */
 export function unsupportedKinds(items: PackItems): string[] {
     return Object.keys(items).filter((kind) => !INSTALLABLE_KINDS.includes(kind));
+}
+
+/**
+ * Why an install asked for these kinds is refused: a kind that goes in with another names the one
+ * to ask for (`INSTALLS_WITH`); the rest are kinds this engine does not install yet.
+ */
+export function refusedKindsReason(kinds: readonly string[]): string {
+    const partOf = kinds.filter((kind) => kind in INSTALLS_WITH);
+    const notYet = kinds.filter((kind) => !(kind in INSTALLS_WITH));
+    return [
+        ...partOf.map((kind) => `${kind} is no data type of its own: it installs with ${INSTALLS_WITH[kind]}, so ask for that.`),
+        ...(notYet.length > 0 ? [`Demo Builder does not install ${notYet.join(', ')} yet.`] : []),
+    ].join(' ');
 }
 
 /** One kind of a pack the install would refuse, from its rows alone, and the install's reason. */
@@ -167,7 +197,7 @@ export interface InstallOutcome {
     kept: KeptThing[];
     /** Containers it did not take out because they hold what the engine did not make. */
     containers: KeptContainer[];
-    /** What the store settings kind set and put back (step 09), when the pack holds settings. */
+    /** What the store configuration kind set and put back (step 09), when the pack holds settings. */
     settings?: SettingsDone;
     /** Where the pack's own root went (step 12), when it has one. */
     rootPlacement?: RootPlacement;
@@ -175,19 +205,51 @@ export interface InstallOutcome {
     rootStep?: PackRootStep;
     /** The rows skipped because Commerce refused them or they needed one that was (step 14 item 3). */
     skipped: SkippedRow[];
+    /** What it took out because the pack no longer has it. */
+    tookOut: CreatedObject[];
+    /** What Commerce would not take out: still in the store and on the record. */
+    notTakenOut: RefusedRemoval[];
+    /**
+     * Whether any product or gift card was added or brought up to the pack. Search and images
+     * lines follow it, not the pack holding products (walk F76: a reinstall with nothing to change
+     * still said products would take 20 minutes to appear).
+     */
+    productsWritten: boolean;
+    /**
+     * The products the read-back after the writes read (`recordFingerprints`), as the store holds them
+     * then: the install check reads only the rest (`checkAfterInstall`). Absent when it read none.
+     */
+    productsRead?: CommerceProduct[];
+}
+
+/** The comparison a re-import's form just made, when it still holds (`recentComparison.ts`). */
+export type EarlierPlans = (created: readonly CreatedObject[], items: PackItems) => KindPlan[] | undefined;
+
+/** Whether the plans add or update a product or gift card. */
+function writesProducts(plans: readonly KindPlan[]): boolean {
+    return plans.some((plan) => PRODUCT_KINDS.includes(plan.kind) && (plan.added.length > 0 || plan.objects.some((o) => o.outcome === 'update')));
 }
 
 /**
- * Install every kind the pack holds, in order. Installing again brings what this engine made up
- * to the pack, takes out what the pack no longer has, and keeps the SC's own edits
- * (`repeatInstall.ts`); then everything made or changed is read back and hashed.
+ * Install every kind in `packItems`, in order. A caller installing part of a pack hands in only
+ * those kinds (`askedRows`), so nothing here sees the rest: not installed, not compared, and still on
+ * the record. Installing again brings what this engine made of these kinds up to the pack, takes out
+ * rows the pack no longer has, and keeps the SC's own edits (`repeatInstall.ts`); then what was made
+ * or changed is read back and hashed.
  *
- * @param onKind - called as each kind starts, for progress
+ * @param onKind - called as each kind starts, for progress, and with undefined once the last kind's
+ *   rows are in: what follows (taking out, reading back) is no one kind's time
+ * @param earlier - the form's comparison, used instead of reading the store again when it holds
  * @throws UnsupportedKindsError before any write, when the pack holds a kind not listed above
  * @throws PackRowsError before any write, naming every kind whose rows Commerce could not take
  * @throws UrlKeyClashError before any write, when a category would take a url key the store uses
  */
-export async function installPack(ctx: KindContext, packItems: PackItems, onKind: (kind: string) => void = () => undefined): Promise<InstallOutcome> {
+export async function installPack(
+    ctx: KindContext,
+    packItems: PackItems,
+    onKind: (kind: string | undefined) => void = () => undefined,
+    earlier: EarlierPlans = () => undefined,
+): Promise<InstallOutcome> {
     const unsupported = unsupportedKinds(packItems);
     if (unsupported.length > 0) throw new UnsupportedKindsError(unsupported);
     const problems = packRowProblems(packItems, ctx.session.websiteCode);
@@ -197,7 +259,7 @@ export async function installPack(ctx: KindContext, packItems: PackItems, onKind
     // Step 12: under the store's own root, the pack's root is left out; the record says which once made.
     const placement = rootPlacement(packItems.categories, ctx.recorder.created, ctx.session.storeRoot);
     const items = placeCategories(packItems, placement);
-    const plans = await planRepeat(ctx, items, ctx.recorder.created);
+    const plans = earlier(ctx.recorder.created, items) ?? (await planRepeat(ctx, items, ctx.recorder.created));
     ctx.session.owned = ownedFrom(plans);
     const scope = { storeRootId: ctx.session.rootCategory.id, created: ctx.recorder.created, owned: ctx.session.owned };
     const clashes = await placedClashes(ctx.get, items, placement, scope);
@@ -211,19 +273,26 @@ export async function installPack(ctx: KindContext, packItems: PackItems, onKind
     for (const step of STEPS) {
         if (!(step.kind in items)) continue;
         onKind(step.kind);
-        await applyUpdates(ctx, plans, step.kind);
-        await step.install(ctx, items[step.kind]);
+        // Walk F125: "<done> of <total>" for the rows this run handles of the kind (`rowCount.ts`).
+        const counting = { ...ctx, count: startRowCount(ctx.progress, step.kind, rowsToCount(ctx, plans, step.kind, items[step.kind])) };
+        await applyUpdates(counting, plans, step.kind);
+        await step.install(counting, items[step.kind]);
         // The pack kept its own root: the one Admin step, checked and asked for before the rest goes in.
         if (step.kind === 'categories' && placement === 'own' && ctx.session.storeRoot) rootStep = await settlePackRoot(ctx, ctx.session.storeRoot, ctx.asker);
     }
-    const containers = await applyRemovals(ctx, plans);
-    await recordFingerprints(ctx, items);
+    onKind(undefined);
+    const { containers, tookOut, refused } = await applyRemovals(ctx, plans);
+    const productsRead = await recordFingerprints(ctx, items);
     const settings = ctx.session.settings;
     const keptSettings = (settings?.kept ?? []).map((key): KeptThing => ({ kind: STORE_CONFIG_KIND, key }));
     return {
         kept: [...keptOf(plans), ...keptSettings],
         containers,
         skipped: ctx.session.skipped ?? [],
+        tookOut,
+        notTakenOut: refused,
+        productsWritten: writesProducts(plans),
+        ...(productsRead.length > 0 ? { productsRead } : {}),
         ...(settings ? { settings } : {}),
         ...(placement ? { rootPlacement: placement } : {}),
         ...(rootStep ? { rootStep } : {}),
@@ -241,8 +310,22 @@ export interface RemovalResult {
      * (step 05). They stay on the record, so a later removal takes them once they are empty.
      */
     kept: KeptContainer[];
-    /** What putting the pack's store settings back did (step 09), when it had any. */
+    /** What putting the pack's store configuration back did (step 09), when it had any. */
     settings?: SettingsDone;
+    /** The kept root's Admin step, when a store shows the pack's root (step 12). */
+    keptRoot?: KeptRootStep;
+    /** What Commerce would not take back: still in the store and on the record. */
+    refused: RefusedRemoval[];
+}
+
+/**
+ * What a removal of this record takes, by pack kind in install order: what it lists, and what it is
+ * waiting to hear about, since a create that landed unanswered goes too. Read by the confirm and by
+ * the removal's own job, so a removal says what it does whatever an install was asked for.
+ */
+export function kindsOnRecord(record: Pick<InstallRecord, 'created' | 'pending'>): string[] {
+    const kinds = new Set([...record.created, ...(record.pending ?? [])].map((object) => packKindOf(object.kind)));
+    return [...INSTALLABLE_KINDS.filter((kind) => kinds.has(kind)), ...[...kinds].filter((kind) => !INSTALLABLE_KINDS.includes(kind))];
 }
 
 /**
@@ -258,22 +341,38 @@ export interface RemovalResult {
 export async function removePack(
     commerce: RemovalAccess,
     files: RecordFiles,
-    target: { projectPath: string; pack: DatapackId },
+    target: { projectPath: string; pack: DatapackId; log?: (line: string) => void; progress?: (line: string) => void; alsoLeaving?: readonly string[] },
 ): Promise<RemovalResult> {
     const record = await readInstallRecord(files, target.projectPath, target.pack);
-    if (!record) return { removed: 0, noRecord: true, kept: [] };
+    if (!record) return { removed: 0, noRecord: true, kept: [], refused: [] };
     const recorder = await openInstallRecord(files, target.projectPath, target.pack, () => record.startedAt);
+    const took = jobClock(target.log ?? (() => undefined), `Removal of ${target.pack.name}`);
+    // Walk F161: the first stretch reads Commerce, and says so, before anything is taken back.
+    target.progress?.(PREPARING_UNINSTALL);
     // Step 14 item 1: a create that landed unanswered is taken back too; one that never did costs nothing.
     await settlePending(commerce.get, recorder, () => undefined);
-    const created = recorder.created;
+    took('settled what an earlier run left half made');
+    // What the store had before stays there, off the record (walk F187).
+    const created = await leaveAdopted(recorder, [...recorder.created]);
     // Settings first: they went in last. Each leaves the record once put back or kept.
     const settingObjects = created.filter((o) => o.kind === STORE_CONFIG_KIND);
     const settings = settingObjects.length > 0 ? await putBackSettings(commerce, settingObjects, (o) => recorder.drop(o)) : undefined;
-    const { take, kept } = await decideRemovals(commerce.get, removalOrder({ ...record, created: [...created] }).filter((o) => o.kind !== STORE_CONFIG_KIND));
-    for (const object of take) {
-        await takeBack(commerce, object);
-        await recorder.drop(object);
-    }
-    if (kept.length === 0) await forgetInstallRecord(files, target.projectPath, target.pack);
-    return { removed: take.length + settingObjects.length, noRecord: false, kept, ...(settings ? { settings } : {}) };
+    const leaving = target.alsoLeaving ? { alsoLeaving: target.alsoLeaving } : {};
+    const { take, kept } = await decideRemovals(commerce.get, removalOrder({ ...record, created: [...created] }).filter((o) => o.kind !== STORE_CONFIG_KIND), leaving);
+    took(`decided what to take back: ${take.length} objects, ${kept.length} kept`);
+    // In the record's order, with as few calls as Commerce allows (`removalRuns.ts`).
+    let taken = 0;
+    // How far it has got, by data type (walk F161): "1,200 of 2,046 products".
+    const counter = removalCounter(take, target.progress);
+    counter.begin();
+    const said = (objects: readonly CreatedObject[]) => {
+        taken += objects.length;
+        counter.said(objects);
+    };
+    const refused = await takeBackAll({ ...commerce, log: target.log, deleted: counter.deleted }, recorder, take, said);
+    took('took everything back');
+    if (kept.length === 0 && refused.length === 0) await forgetInstallRecord(files, target.projectPath, target.pack);
+    const keptRoot = await keptRootStep(commerce.get, kept, record.rootStep?.storeRootId);
+    const removed = taken + settingObjects.length;
+    return { removed, noRecord: false, kept, refused, ...(settings ? { settings } : {}), ...(keptRoot ? { keptRoot } : {}) };
 }

@@ -42,7 +42,7 @@ describe('checkIntegrationUpdates', () => {
         const result = await checkIntegrationUpdates(p, d);
 
         expect(result).toEqual({ reports: [{ id: 'erp', available: true }], changed: true });
-        expect(d.checkClone).toHaveBeenCalledWith('/p/components/erp', 'release');
+        expect(d.checkClone).toHaveBeenCalledWith('/p/components/erp', 'release', undefined);
         expect(p.appBuilderComponents?.erp?.updateAvailable).toEqual({ commit: 'abc123', checkedAt: NOW });
     });
 
@@ -172,5 +172,57 @@ describe('clearUpdateAvailable', () => {
         clearUpdateAvailable(state);
 
         expect(state).not.toHaveProperty('updateAvailable');
+    });
+});
+
+describe('a release', () => {
+    it('is recorded by version, so the update row can say what it moves to', async () => {
+        const p = project({ erp: component() });
+        const d = deps({
+            '/p/components/erp': { status: 'available', from: 'a', to: 'b', version: '1.2.0' },
+        });
+
+        await checkIntegrationUpdates(p, d);
+
+        expect(p.appBuilderComponents?.erp?.updateAvailable).toEqual({
+            commit: 'b',
+            release: '1.2.0',
+            checkedAt: NOW,
+        });
+    });
+
+    it('is not named when the clone already has it', async () => {
+        const p = project({ erp: component() });
+        const d = deps({
+            '/p/components/erp': { status: 'current', from: 'a', to: 'a', version: '1.2.0' },
+        });
+
+        await checkIntegrationUpdates(p, d);
+
+        expect(p.appBuilderComponents?.erp?.updateAvailable).toBeUndefined();
+    });
+
+    // A folder with no git history has no commit to name, only a release.
+    it('is offered with no commit to name', async () => {
+        const p = project({ erp: component() });
+        const d = deps({ '/p/components/erp': { status: 'available', version: '1.2.0' } });
+
+        await checkIntegrationUpdates(p, d);
+
+        expect(p.appBuilderComponents?.erp?.updateAvailable).toEqual({
+            release: '1.2.0',
+            checkedAt: NOW,
+        });
+    });
+
+    it('counts as a change when only the release differs', async () => {
+        const p = project({
+            erp: component({ updateAvailable: { commit: 'b', release: '1.1.0', checkedAt: 'earlier' } }),
+        });
+        const d = deps({
+            '/p/components/erp': { status: 'available', from: 'a', to: 'b', version: '1.2.0' },
+        });
+
+        expect((await checkIntegrationUpdates(p, d)).changed).toBe(true);
     });
 });

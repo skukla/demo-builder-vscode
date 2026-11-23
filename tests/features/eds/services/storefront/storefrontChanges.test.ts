@@ -27,8 +27,8 @@ const CHANGES: StorefrontChange[] = [
 /** An EDS project, created on `created`, with the storefront metadata given. */
 function eds(created: Date | string | undefined, metadata: Record<string, unknown> = {}): Project {
     return {
-        name: 'justrite',
-        path: '/p/justrite',
+        name: 'tailspin',
+        path: '/p/tailspin',
         status: 'ready',
         created: created as Date,
         lastModified: new Date('2026-10-23T00:00:00Z'),

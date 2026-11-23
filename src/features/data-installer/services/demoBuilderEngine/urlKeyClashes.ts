@@ -99,11 +99,11 @@ export async function placedClashes(get: CommerceGet, items: Record<string, unkn
 /** The sentence the preview shows (and the install stops with), or undefined when nothing collides. */
 export function clashLine(clashes: readonly UrlKeyClash[]): string | undefined {
     if (clashes.length === 0) return undefined;
-    const which = clashes.length === 1 ? "one of the pack's categories" : `${clashes.length} of the pack's categories`;
-    const each = clashes.map((c) => `${c.name} (url key "${c.urlKey}", already used by the store's category ${c.storeCategory})`).join(', ');
+    const which = clashes.length === 1 ? "one of the datapack's categories" : `${clashes.length} of the datapack's categories`;
+    const each = clashes.map((c) => `${c.name} (url key "${c.urlKey}", already used by the category ${c.storeCategory} in Commerce)`).join(', ');
     return (
         `Commerce would refuse ${which}: ${each}. ` +
-        "In the Admin, Catalog > Categories, change the store's category's URL Key (Search Engine Optimization), then install."
+        "In the Admin, Catalog > Categories, change that category's URL Key (Search Engine Optimization), then install."
     );
 }
 

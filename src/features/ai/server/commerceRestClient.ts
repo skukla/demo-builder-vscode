@@ -27,7 +27,7 @@
  */
 
 import { buildCommerceEndpoints } from './commerceEndpointsTool';
-import { restRetryDelay } from './commerceRestRetry';
+import { restRetryDelay, saysDeadlock } from './commerceRestRetry';
 import {
     type CredentialStore,
     forgetCredential,
@@ -395,10 +395,10 @@ export async function requestRest(
     // Counted as it is sent, not as it answers: a write that fails or times out may still land.
     // Once per call: a 429 sent again was not processed the first time.
     if (method !== 'GET') noteStoreWrite();
-    // Reads, and any call Commerce answered 429, go again; other writes never (`commerceRestRetry`).
+    // Reads, and any call Commerce answered 429 or a deadlock, go again; other writes never (`commerceRestRetry`).
     for (let retries = 0; ; retries += 1) {
         const { answer, timedOut } = await sendOnce(method, target, path, body, fetchImpl, route);
-        const attempt = 'failed' in answer ? { failed: true as const, timedOut } : { status: answer.status };
+        const attempt = 'failed' in answer ? { failed: true as const, timedOut } : { status: answer.status, deadlocked: saysDeadlock(answer.text) };
         const wait = restRetryDelay(method, attempt, retries);
         if (wait === undefined) return answer;
         await sleep(wait);

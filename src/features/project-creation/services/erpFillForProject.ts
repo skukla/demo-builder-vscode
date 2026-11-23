@@ -52,7 +52,7 @@ export interface ErpFillForProjectDeps {
     /**
      * Where the workspace credential is kept across reloads (VS Code SecretStorage). Required,
      * so no caller can skip it: without it every reload read the credential from Adobe
-     * Console again, about two minutes on Justrite (2026-10-18).
+     * Console again, about two minutes on Tailspin (2026-10-18).
      */
     credentials: CredentialStore | undefined;
     /** The signed-in identity the integration's and the ERP's actions take. */
@@ -104,7 +104,7 @@ async function commerceReply(
         : await requestRest(method, target, path, body, fetchImpl);
     const route = path.split('?')[0];
     if ('failed' in answer)
-        throw new CommerceReadError(`Commerce did not answer ${route}: ${answer.failed}`);
+        throw new CommerceReadError(`Commerce did not respond to ${route}: ${answer.failed}`);
     if (!answer.ok) {
         throw new CommerceReadError(
             `Commerce answered ${answer.status} for ${route}: ${answer.text.slice(0, 200)}`,

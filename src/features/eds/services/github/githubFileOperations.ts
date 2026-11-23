@@ -185,17 +185,15 @@ export class GitHubFileOperations extends GitHubAuthenticatedOperations {
         const octokit = await this.ensureAuthenticated();
 
         try {
-            // First get the branch's latest commit SHA
-            const branchResponse = await octokit.request(
-                'GET /repos/{owner}/{repo}/branches/{branch}',
-                {
-                    owner,
-                    repo,
-                    branch,
-                },
-            );
+            // First the commit `branch` names. The commits route takes a branch or a tag:
+            // a library is read at its release.
+            const commit = await octokit.request('GET /repos/{owner}/{repo}/commits/{ref}', {
+                owner,
+                repo,
+                ref: branch,
+            });
 
-            const treeSha = branchResponse.data.commit.commit.tree.sha;
+            const treeSha = commit.data.commit.tree.sha;
 
             // Get the tree recursively
             const treeResponse = await octokit.request(
@@ -336,6 +334,13 @@ export class GitHubFileOperations extends GitHubAuthenticatedOperations {
     // stay and name their owner. New callers take `treeCommits` / `repoArchive`
     // directly; nothing new is added here.
     // =========================================================================
+
+    /** The commit a branch or a tag names: a library is read at its release. */
+    async getRefCommit(owner: string, repo: string, ref: string): Promise<string> {
+        const octokit = await this.ensureAuthenticated();
+        const commit = await octokit.request('GET /repos/{owner}/{repo}/commits/{ref}', { owner, repo, ref });
+        return commit.data.sha;
+    }
 
     /** Owned by {@link GitHubTreeCommits.getBranchInfo}. */
     getBranchInfo(owner: string, repo: string, branch?: string): Promise<{ treeSha: string; commitSha: string }> {

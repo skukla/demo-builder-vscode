@@ -98,8 +98,8 @@ function renderHeader(overrides: Partial<SearchHeaderProps> = {}) {
     return render(<SearchHeader {...baseProps} {...overrides} />);
 }
 
-const cardsButton = (): HTMLElement => screen.getByRole('button', { name: 'Card view' });
-const rowsButton = (): HTMLElement => screen.getByRole('button', { name: 'List view' });
+const cardsButton = (): HTMLElement => screen.getByRole('button', { name: 'Card View' });
+const rowsButton = (): HTMLElement => screen.getByRole('button', { name: 'List View' });
 
 // `unsafeStyle()` and SELECTED_BACKGROUND lived here to read the style object
 // the component handed the button. It hands it none since 2026-09-10 — the fill
@@ -121,15 +121,15 @@ describe('SearchHeader view toggle', () => {
         it('renders nothing without a current mode', () => {
             renderHeader({ onViewModeChange: jest.fn() });
 
-            expect(screen.queryByRole('button', { name: 'Card view' })).not.toBeInTheDocument();
-            expect(screen.queryByRole('button', { name: 'List view' })).not.toBeInTheDocument();
+            expect(screen.queryByRole('button', { name: 'Card View' })).not.toBeInTheDocument();
+            expect(screen.queryByRole('button', { name: 'List View' })).not.toBeInTheDocument();
         });
 
         it('renders nothing without a change handler', () => {
             // A toggle nothing listens to would look live and do nothing.
             renderHeader({ viewMode: 'cards' });
 
-            expect(screen.queryByRole('button', { name: 'Card view' })).not.toBeInTheDocument();
+            expect(screen.queryByRole('button', { name: 'Card View' })).not.toBeInTheDocument();
         });
     });
 
@@ -203,9 +203,8 @@ describe('SearchHeader action-button group', () => {
         // An empty group is not invisible: the count row is space-between, so a
         // zero-width sibling still occupies the end slot.
         const { container } = renderHeader({
-            totalCount: 3,
-            filteredCount: 3,
-            searchThreshold: 5,
+            totalCount: 0,
+            filteredCount: 0,
             alwaysShowCount: true,
         });
 

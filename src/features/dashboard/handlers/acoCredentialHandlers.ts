@@ -9,7 +9,7 @@
  */
 
 import { runGuards } from './appBuilderComponentGuards';
-import { loadProjectAndGuard, reconcileExtras } from './consoleApiHandlers';
+import { loadProjectAndGuard, reconcileAcoApis } from './consoleApiHandlers';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { removeAcoCredential, setUpAcoCredential, type AcoCredentialDeps } from '@/features/app-builder/services/acoCredential';
 import { createApiSubscriberClient } from '@/features/app-builder/services/apiSubscriberClientAdapter';
@@ -36,7 +36,7 @@ export function credentialDeps(context: HandlerContext, project: Project): AcoCr
     const authService = ServiceLocator.getAuthenticationService();
     return {
         listOrgServices: (codes) => createApiSubscriberClient(authService).getServicesForOrg(organization, codes),
-        setAcoApis: (codes) => reconcileExtras(context, project, codes, ACO_ADDON_ID),
+        setAcoApis: (codes) => reconcileAcoApis(context, project, codes),
         readCredential: async () => {
             const s2s = await (await authService.getEntityServices()).credentials.getS2SDeployCredentials(organization, projectId, workspace);
             return { clientId: s2s.clientId, clientSecret: s2s.clientSecret };

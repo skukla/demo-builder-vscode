@@ -123,16 +123,23 @@ export interface StateManager {
     removeFromRecentProjects(projectPath: string): Promise<void>;
 
     /**
-     * Load project from filesystem path
+     * Read a project from its directory: saves nothing, leaves the open project alone (walk F206).
      * @param projectPath - Path to the project directory
      * @param terminalProvider - Optional function to get terminals for process detection
-     * @param options - Optional loading options
-     * @param options.persistAfterLoad - Whether to save the project after loading (default: true)
      */
     loadProjectFromPath(
         projectPath: string,
         terminalProvider?: () => readonly import('vscode').Terminal[],
-        options?: { persistAfterLoad?: boolean },
+    ): Promise<Project | null>;
+
+    /**
+     * Open a project: read it, make it the open project, save, and add it to the recent list.
+     * @param projectPath - Path to the project directory
+     * @param terminalProvider - Optional function to get terminals for process detection
+     */
+    openProject(
+        projectPath: string,
+        terminalProvider?: () => readonly import('vscode').Terminal[],
     ): Promise<Project | null>;
 
     /**

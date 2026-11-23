@@ -29,13 +29,11 @@ export async function executeCommandForProject(
         return { success: false, error: 'Project path is required' };
     }
 
-    const project = await context.stateManager.loadProjectFromPath(projectPath);
+    // Opened, so the command knows which project to operate on.
+    const project = await context.stateManager.openProject(projectPath);
     if (!project) {
         return { success: false, error: 'Project not found' };
     }
-
-    // Set as current project so the command knows which project to operate on
-    await context.stateManager.saveProject(project);
 
     // Execute the command. The CARD that started it already shows the
     // transition, so the command's own notification would be a second, slower

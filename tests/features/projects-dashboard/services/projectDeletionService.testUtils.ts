@@ -1,6 +1,6 @@
 /**
- * The module wall, the fakes and the fixtures every project-delete suite shares:
- * projectDeletionService, deletionConfirmation(-modal) and edsExternalCleanup.
+ * The module wall and the fakes every project-delete suite shares: projectDeletionService
+ * (the answered delete the batch runs, `runProjectDelete`) and edsExternalCleanup.
  *
  * Extracted when the second suite arrived. The wall is thirty lines of jest.mock
  * covering seven modules, and the two suites need exactly the same one: the first
@@ -9,41 +9,24 @@
  * header once described — a mock supplying a method the source had stopped calling,
  * with 23 tests green over an unreachable branch.
  *
- * Suites import `deleteProject`/`deleteProjectFiles` FROM HERE. `jest.mock` hoists
+ * Suites import `runProjectDelete`/`deleteProjectFiles` FROM HERE. `jest.mock` hoists
  * above the imports of the module it appears in — this one — so a suite that imported
  * the subject itself could bind it before these mocks were registered.
  */
 
 export const mockShowWarningMessage = jest.fn();
-export const mockShowInformationMessage = jest.fn();
 export const mockExecuteCommand = jest.fn();
 export const mockRm = jest.fn();
-export const mockGetConfiguration = jest.fn();
-export const mockCreateQuickPick = jest.fn();
 export const mockGetSession = jest.fn();
-export const mockProgressReport = jest.fn();
-export const mockWithProgressOptions = jest.fn();
 
 jest.mock('vscode', () => ({
-    workspace: { getConfiguration: (...a: unknown[]) => mockGetConfiguration(...a) },
     window: {
         showWarningMessage: (...a: unknown[]) => mockShowWarningMessage(...a),
-        createQuickPick: () => mockCreateQuickPick(),
-        showInformationMessage: (...a: unknown[]) => mockShowInformationMessage(...a),
-        withProgress: (
-            opts: unknown,
-            task: (p: { report: (v: unknown) => void }) => Promise<unknown>,
-        ) => {
-            mockWithProgressOptions(opts);
-            return task({ report: (v: unknown) => mockProgressReport(v) });
-        },
+        // The GitHub sign-in's success line (`signInToGitHub`, PL-104 fix 2).
+        setStatusBarMessage: jest.fn(),
     },
     commands: { executeCommand: (...a: unknown[]) => mockExecuteCommand(...a) },
     authentication: { getSession: (...a: unknown[]) => mockGetSession(...a) },
-    ThemeIcon: class {
-        constructor(public readonly id: string) {}
-    },
-    ProgressLocation: { Notification: 15 },
 }));
 
 jest.mock('fs/promises', () => ({ rm: (...a: unknown[]) => mockRm(...a) }));
@@ -54,6 +37,12 @@ export const mockDeleteRepository = jest.fn();
 export const mockDeleteDaLiveSite = jest.fn();
 export const mockGetToken = jest.fn();
 export const mockStoreToken = jest.fn();
+/**
+ * The check the one GitHub sign-in (`signInToGitHub`) makes of the token it was handed, and
+ * the clear before its stale-session retry (PL-104 fix 2). Valid unless a test says otherwise.
+ */
+export const mockValidateToken = jest.fn(async (): Promise<{ valid: boolean }> => ({ valid: true }));
+export const mockClearToken = jest.fn();
 export const mockEnsureDaLiveAuth = jest.fn();
 /**
  * The repository's files, listed BEFORE it is deleted so AEM's copy of its code can be
@@ -70,6 +59,8 @@ jest.mock('@/features/eds/handlers/edsHelpers', () => ({
         tokenService: {
             getToken: (...a: unknown[]) => mockGetToken(...a),
             storeToken: (...a: unknown[]) => mockStoreToken(...a),
+            validateToken: () => mockValidateToken(),
+            clearToken: () => mockClearToken(),
         },
         repoLifecycle: { deleteRepository: (...a: unknown[]) => mockDeleteRepository(...a) },
         fileOperations: {
@@ -79,17 +70,14 @@ jest.mock('@/features/eds/handlers/edsHelpers', () => ({
     // `{ authenticated }` — read from edsHelpers, not guessed. The first draft
     // wrote `{ success, authService }` and the DA.live cleanup silently skipped.
     ensureDaLiveAuth: (...a: unknown[]) => mockEnsureDaLiveAuth(...a),
-    getDaLiveAuthService: jest.fn().mockReturnValue({}),
+    // The DA.live session the storefront teardown runs on itself (PL-104 fix 7), and the
+    // one sign-in reader a delete with nobody to ask checks instead of asking (fix 6).
+    getDaLiveAuthService: () => ({
+        getAccessToken: () => mockDaLiveAccessToken(),
+        checkSignIn: () => mockDaLiveCheckSignIn(),
+    }),
     // The DA.live session the code removal reads without asking (EDS-67).
     tryCreateDaLiveTokenProvider: () => ({ getAccessToken: () => mockDaLiveAccessToken() }),
-}));
-
-// requireActual keeps `extractEdsMetadata` REAL — it decides
-// which confirmation path runs, and a stub of it would hide the fixture bug
-// the CONTROL test exists to catch.
-jest.mock('@/features/eds/services/resourceCleanupHelpers', () => ({
-    ...jest.requireActual('@/features/eds/services/resourceCleanupHelpers'),
-    formatCleanupResults: () => '',
 }));
 
 // The site deletion is now ONE call on the content operations, made by the
@@ -113,14 +101,13 @@ jest.mock('@/features/eds/services/daLive/daLiveContentOperations', () => ({
     },
 }));
 /**
- * The DA.live session's token, as the provider hands it over. The provider is an OBJECT
- * with `getAccessToken` (daLiveTokenProviders.ts); this mock returned a bare function
- * until EDS-67, which nothing noticed because nothing it reached called it.
+ * The DA.live session's token: what the storefront teardown runs on (PL-104 fix 7) and what
+ * the code removal after a repository delete reads. The delete hands the session itself to the
+ * teardown now, so the `daLiveTokenProviders` mock this file held went with it.
  */
 export const mockDaLiveAccessToken = jest.fn(async (): Promise<string | null> => 'token');
-jest.mock('@/features/eds/services/daLive/daLiveTokenProviders', () => ({
-    createDaLiveServiceTokenProvider: () => ({ getAccessToken: () => mockDaLiveAccessToken() }),
-}));
+/** The one sign-in reader's verdict on the DA.live token (`DaLiveAuthService.checkSignIn`). */
+export const mockDaLiveCheckSignIn = jest.fn(async (): Promise<{ state: string }> => ({ state: 'valid' }));
 
 /**
  * The org-config cleanup that runs AFTER the site content is gone. Dynamically
@@ -142,7 +129,7 @@ jest.mock('@/features/eds/services/daLive/daLiveConfigService', () => ({
 
 /**
  * The PRODUCTION Helix default, so a call that passes no `services` is testable.
- * Without it, `deleteProject(context, project)` would construct a real HelixService
+ * Without it, a delete handed no `services` would construct a real HelixService
  * and call its real static key-store init.
  */
 export const mockHelixInitKeyStore = jest.fn();
@@ -188,16 +175,17 @@ export const mockSleep = jest.fn().mockResolvedValue(undefined);
 jest.mock('@/core/utils/sleep', () => ({ sleep: (...a: unknown[]) => mockSleep(...a) }));
 
 /**
- * Deleting the project's own library pack ("Also delete its pack", step 07). Its real module
- * reaches the datapack library; every delete suite asserts only whether, and with what, it is
- * called.
+ * Uninstall Datapack (walk F96): removing the data (`removeDataBeforeDelete`: `stopped` saying why
+ * it did not all come out, `saved` where the changes went first; `{}` when it all came out with
+ * nothing to say). The real module reaches the store; its own suite is `datapackDataRemoval.test.ts`,
+ * and every delete suite asserts only whether, and with what, it is called.
  */
-export const mockDeleteProjectDemoPack = jest.fn();
-jest.mock('@/features/projects-dashboard/services/demoPackDeletion', () => ({
-    deleteProjectDemoPack: (...a: unknown[]) => mockDeleteProjectDemoPack(...a),
+export const mockRemoveDataBeforeDelete = jest.fn().mockResolvedValue({});
+jest.mock('@/features/projects-dashboard/services/datapackDataRemoval', () => ({
+    removeDataBeforeDelete: (...a: unknown[]) => mockRemoveDataBeforeDelete(...a),
 }));
 
 // Below the mocks on purpose — see the note above about hoisting.
-export { deleteProject } from '@/features/projects-dashboard/services/projectDeletionService';
+export { runProjectDelete } from '@/features/projects-dashboard/services/projectDeletionService';
 export { deleteProjectFiles } from '@/features/projects-dashboard/services/projectFilesDeletion';
 export type { DeletionServices } from '@/features/projects-dashboard/services/edsExternalCleanup';

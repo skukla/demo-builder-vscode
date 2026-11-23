@@ -4,7 +4,7 @@ kind: feature
 area: app-builder
 needs: []
 value: med
-status: built
+status: shipped
 parent: AB-16
 ---
 
@@ -23,7 +23,7 @@ A product's `erp_owner` holds the id the integration's ERP list knows the owning
 integration's own ERP has the literal id `erp` (`SINGLE_ERP_ID`, from before several ERPs
 existed: "an install with one ERP keeps working exactly as before"), and an ERP added later
 has its Demo Builder component id (`demo-erp-2`). So Northwind is `erp` and Contoso is
-`demo-erp-2`: two kinds of id, and neither names the ERP. The JustRite picture (deck slide 24,
+`demo-erp-2`: two kinds of id, and neither names the ERP. The Tailspin picture (deck slide 24,
 "owner: Cabinet ERP") says the value names the system. The same id is on every key-map row,
 every ERP event, the ledger, and the Admin page's ERP switcher.
 
@@ -66,7 +66,8 @@ the six owned products then move with a reset + redeploy + load (AB-52).
 ## Shipped so far
 - 2026-09-30  Built 2026-09-30 on loop/2026-09-30-erp-programme: erpListId.ts (erpListIdFor, listIdOf, ensureListId, broughtByItsIntegration), listId on AppBuilderComponentState + manifest schema, catalog firstId removed (json/schema/type), runner records the id before the first deploy and carries it through the deploying record, mergeKeyMap drops the first-ERP fallback, set_erp_settings answers the ERP row. demo-erp a509b04: theme from a hash of a named id. 305 suites + demo-erp 402 green; tsc, typecheck:tests, lint clean. Not yet live: Bodea's ERPs still carry erp / demo-erp-2 until reset + redeploy (AB-52 step 4).
 - 2026-09-30  Also: the runner sends the integration its ERP list after any deploy that changes it (an integration that lists systems; a listed system's redeploy). Found while porting — a first pair never sent the list; the standalone id erp happened to match. Test: appBuilderComponentRunner-listSystems.test.ts.
-- 2026-10-01  Proven live 2026-10-01 on the justrite project: get_erp_status lists the two ERPs with listId justrite and accuform; the integration's list is [justrite, accuform]; products carry erp_owner=justrite (43) and erp_owner=accuform (96). Built; ships with the ERP branch.
-- 2026-10-03  Reconciled 2026-10-03 (second pass): the ERP half (demo-erp a509b04, a theme chosen from a named ERP id) is not on ERP main: main's theme code reads only numbered ids, so justrite and accuform both start with the default theme. To land.
-- 2026-10-03  ERP half landed on ERP main 2026-10-03 (3d62b41, the a509b04 change). Measured: justrite and accuform both hash to foundry, so a hash alone cannot keep two ERPs apart; Demo Builder now gives an added ERP a theme no other ERP uses (in progress on loop/2026-10-03-erp-themes).
+- 2026-10-01  Proven live 2026-10-01 on the tailspin project: get_erp_status lists the two ERPs with listId tailspin and accuform; the integration's list is [tailspin, accuform]; products carry erp_owner=tailspin (43) and erp_owner=accuform (96). Built; ships with the ERP branch.
+- 2026-10-03  Reconciled 2026-10-03 (second pass): the ERP half (demo-erp a509b04, a theme chosen from a named ERP id) is not on ERP main: main's theme code reads only numbered ids, so tailspin and accuform both start with the default theme. To land.
+- 2026-10-03  ERP half landed on ERP main 2026-10-03 (3d62b41, the a509b04 change). Measured: tailspin and accuform both hash to foundry, so a hash alone cannot keep two ERPs apart; Demo Builder now gives an added ERP a theme no other ERP uses (in progress on loop/2026-10-03-erp-themes).
 - 2026-10-03  feat(erp): an added ERP gets a theme no other ERP in the project uses (AB-51) (`0faf8a5e8`)
+- 2026-11-20  Released in v1.0.0-beta.153

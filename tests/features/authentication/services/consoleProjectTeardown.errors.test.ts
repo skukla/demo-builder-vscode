@@ -31,7 +31,7 @@ describe('teardownConsoleProject failure handling', () => {
 
             expect(result.success).toBe(false);
             expect(result.projectDeleted).toBe(false);
-            expect(result.shouldClearConsoleSelection).toBe(false);
+            expect(harness.deps.clearConsoleSelectionIfCurrent).not.toHaveBeenCalled();
             expect(result.items.filter((item) => item.outcome === 'failed')).toHaveLength(1);
             expect(harness.deps.getWorkspaces).not.toHaveBeenCalled();
             expect(harness.deps.deleteConsoleProject).not.toHaveBeenCalled();
@@ -346,7 +346,7 @@ describe('teardownConsoleProject failure handling', () => {
 
             expect(result.success).toBe(false);
             expect(result.projectDeleted).toBe(false);
-            expect(result.shouldClearConsoleSelection).toBe(false);
+            expect(harness.deps.clearConsoleSelectionIfCurrent).not.toHaveBeenCalled();
             const projectItem = result.items[result.items.length - 1];
             expect(projectItem.kind).toBe('project');
             expect(projectItem.outcome).toBe('failed');

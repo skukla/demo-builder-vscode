@@ -10,7 +10,6 @@
  * this module only removes the mechanical duplication.
  */
 
-import semver from 'semver';
 import * as vscode from 'vscode';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 
@@ -26,15 +25,10 @@ export const GITHUB_API_BASE = 'https://api.github.com';
 
 export interface GitHubCompareResponse {
     ahead_by: number;
+    /** The commits in the range, oldest first (GitHub lists at most 250). */
+    commits?: Array<{ commit: { message: string } }>;
     /** The changed files, at most 300 (GitHub's cap); a rename also names its old path. */
     files?: Array<{ filename: string; previous_filename?: string }>;
-}
-
-export interface GitHubReleaseInfo {
-    /** Raw tag name as returned by GitHub (may include a `v` prefix). */
-    tag: string;
-    /** Clean semver version stripped of any leading `v`. */
-    version: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -112,7 +106,7 @@ export async function fetchWithTimeout(url: string, options: RequestInit = {}): 
 // ---------------------------------------------------------------------------
 
 /**
- * Fetch the latest commit SHA for a branch.
+ * Fetch the commit a branch or tag names.
  * Returns null on any error (graceful degradation).
  */
 export async function getLatestBranchCommit(
@@ -124,7 +118,7 @@ export async function getLatestBranchCommit(
     try {
         const headers = await buildGitHubHeaders(secrets);
         const response = await fetchWithTimeout(
-            `${GITHUB_API_BASE}/repos/${owner}/${repo}/branches/${branch}`,
+            `${GITHUB_API_BASE}/repos/${owner}/${repo}/commits/${branch}`,
             { headers },
         );
 
@@ -133,41 +127,7 @@ export async function getLatestBranchCommit(
         }
 
         const data = await response.json();
-        return data.commit?.sha ?? null;
-    } catch {
-        return null;
-    }
-}
-
-/**
- * Fetch the latest release for a repo and return its tag + cleaned semver version.
- * Returns null on any error (graceful degradation): network failure, non-OK
- * response (e.g., 404 for repos with no releases, 403 rate-limit), missing
- * `tag_name`, or a tag that does not parse as semver.
- */
-export async function getLatestRelease(
-    secrets: vscode.SecretStorage,
-    owner: string,
-    repo: string,
-): Promise<GitHubReleaseInfo | null> {
-    try {
-        const headers = await buildGitHubHeaders(secrets);
-        const response = await fetchWithTimeout(
-            `${GITHUB_API_BASE}/repos/${owner}/${repo}/releases/latest`,
-            { headers },
-        );
-
-        if (!response.ok) return null;
-
-        const data = (await response.json()) as { tag_name?: string };
-        const tag = data.tag_name;
-        if (typeof tag !== 'string') return null;
-
-        // An empty tag coerces to null here, so it needs no check of its own.
-        const version = semver.valid(semver.coerce(tag));
-        if (!version) return null;
-
-        return { tag, version };
+        return data.sha ?? null;
     } catch {
         return null;
     }

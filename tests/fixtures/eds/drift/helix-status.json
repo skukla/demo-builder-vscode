@@ -1,0 +1,73 @@
+{
+  "webPath": "/",
+  "resourcePath": "/index.md",
+  "live": {
+    "url": "https://main--acme-storefront--acme.aem.live/",
+    "status": 200,
+    "contentBusId": "helix-content-bus/0000000000000000000000000000000000000000000000000000000000000/live/index.md",
+    "contentType": "text/plain; charset=utf-8",
+    "lastModified": "Wed, 04 Nov 2026 22:01:58 GMT",
+    "sourceLocation": "markup:https://content.da.live/acme/acme-storefront/",
+    "sourceLastModified": "Wed, 04 Nov 2026 22:01:52 GMT",
+    "lastModifiedBy": "sc@example.test",
+    "permissions": [
+      "delete",
+      "delete-forced",
+      "list",
+      "read",
+      "write"
+    ]
+  },
+  "preview": {
+    "url": "https://main--acme-storefront--acme.aem.page/",
+    "status": 200,
+    "contentBusId": "helix-content-bus/0000000000000000000000000000000000000000000000000000000000000/preview/index.md",
+    "contentType": "text/plain; charset=utf-8",
+    "lastModified": "Wed, 04 Nov 2026 22:01:53 GMT",
+    "sourceLocation": "markup:https://content.da.live/acme/acme-storefront/",
+    "sourceLastModified": "Wed, 04 Nov 2026 22:01:52 GMT",
+    "lastModifiedBy": "sc@example.test",
+    "permissions": [
+      "delete",
+      "delete-forced",
+      "list",
+      "read",
+      "write"
+    ]
+  },
+  "edit": {
+    "url": "https://da.live/edit#/acme/acme-storefront/index",
+    "sourceLocation": "markup:https://content.da.live/acme/acme-storefront/",
+    "status": 401
+  },
+  "code": {
+    "status": 400,
+    "permissions": [
+      "delete",
+      "delete-forced",
+      "read",
+      "write"
+    ]
+  },
+  "links": {
+    "status": "https://admin.hlx.page/status/acme/acme-storefront/main/",
+    "preview": "https://admin.hlx.page/preview/acme/acme-storefront/main/",
+    "live": "https://admin.hlx.page/live/acme/acme-storefront/main/",
+    "code": "https://admin.hlx.page/code/acme/acme-storefront/main/",
+    "logout": "https://admin.hlx.page/logout/acme/acme-storefront/main"
+  },
+  "profile": {
+    "client_id": "example-client",
+    "user_id": "00000000000000000000000@00000000000000000000000.e",
+    "state": "{\"session\":\"https://ims-na1.adobelogin.com/ims/session/v1/placeholder\"}",
+    "as": "ims-na1",
+    "sid": "0000000000000_00000000-0000-0000-0000-000000000000_va6c2",
+    "pba": "ORG,MedSecNoEV,LowSec",
+    "expires_in": "86400000",
+    "scope": "AdobeID,openid,org.read",
+    "created_at": "0000000000000",
+    "ttl": 85453,
+    "ownerOrg": "00000000000000000000000@AdobeOrg",
+    "email": "sc@example.test"
+  }
+}

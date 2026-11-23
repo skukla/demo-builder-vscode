@@ -41,6 +41,7 @@ import { buildYourProjectAreas } from './buildYourProjectAreas';
 import { CommerceStep } from './CommerceStep';
 import { IntegrationsStep } from './IntegrationsStep';
 import { StorefrontStep } from './StorefrontStep';
+import { useChosenDatapackName } from './useChosenDatapackName';
 import { InlineNotice } from '@/core/ui/components/feedback/InlineNotice';
 import { TwoColumnLayout } from '@/core/ui/components/layout/TwoColumnLayout';
 import { useCanProceedAll } from '@/core/ui/hooks/useCanProceed';
@@ -125,6 +126,9 @@ export function BuildYourProjectStep({
         ? driver.isComplete(state, driver.active(state))
         : activeArea.status === 'completed' && !heldByAnother;
     useCanProceedAll([canLeaveArea], setCanProceed);
+    // The summary's Datapacks row (and the Final Review's) names a pack the project
+    // arrived with, before the SC opens the Datapacks step (F284).
+    useChosenDatapackName(state, updateState);
 
     // Body props shared by every area. The active body gets a NO-OP setCanProceed
     // so it cannot override the step's gate (it still persists validity to state).

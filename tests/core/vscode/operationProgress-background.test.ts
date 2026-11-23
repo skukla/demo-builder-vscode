@@ -32,10 +32,17 @@ import {
     handleGetOperationProgress,
     pushOperationProgress,
 } from '@/core/vscode/operationProgress';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import type { BackgroundOperationRequest } from '@/types/webviewRequests';
 import { createMockHandlerContext } from '../../helpers/handlerContextTestHelpers';
+import { plain } from '@/core/utils/plainText';
 
 const ID = 'erp-integration';
 const TITLE = 'Redeploying ERP integration';
+/** The result's own words, which the notification ends in (prototype-conventions rule 21). */
+const DONE = 'ERP Integration Redeployed';
+const FAILED = "Couldn't Redeploy ERP Integration";
+const REQUEST: BackgroundOperationRequest = { id: ID, title: TITLE, doneTitle: DONE, failedTitle: FAILED };
 
 async function runningInBackground(): Promise<void> {
     await pushOperationProgress({
@@ -44,15 +51,21 @@ async function runningInBackground(): Promise<void> {
         stage: 'Deploying the app',
         step: 'Running aio app deploy',
     });
-    await handleBackgroundOperation(createMockHandlerContext(), { id: ID, title: TITLE });
+    await handleBackgroundOperation(createMockHandlerContext(), REQUEST);
 }
 
 beforeEach(async () => {
+    // The result's notification closes itself after a timer: fake, so no test waits on it.
+    jest.useFakeTimers();
     jest.clearAllMocks();
     mockShowWarning.mockResolvedValue(undefined);
     // Leave nothing held between tests: end any run a test left open.
     await pushOperationProgress({ id: ID, state: 'succeeded' });
     jest.clearAllMocks();
+});
+
+afterEach(() => {
+    jest.useRealTimers();
 });
 
 describe('Run in background', () => {
@@ -75,6 +88,16 @@ describe('Run in background', () => {
         expect(mockProgressReport).toHaveBeenLastCalledWith({ message: 'Installing into Commerce' });
     });
 
+    // Owner walk, 2026-11-16: "Installing Frescopa: Installing Frescopa". A stage that only says what
+    // the title does gives way to the step: the part under way.
+    it('says the step, not the stage, when the stage is the title again', async () => {
+        await pushOperationProgress({ id: 'datapack-x', state: 'running', stage: 'Installing Frescopa', step: 'Categories, 4 of 10' });
+        await handleBackgroundOperation(createMockHandlerContext(), { ...REQUEST, id: 'datapack-x', title: 'Installing Frescopa' });
+
+        expect(mockProgressReport).toHaveBeenLastCalledWith({ message: 'Categories, 4 of 10' });
+        await pushOperationProgress({ id: 'datapack-x', state: 'succeeded' });
+    });
+
     it('shows the pair count after the stage', async () => {
         await runningInBackground();
 
@@ -88,24 +111,63 @@ describe('Run in background', () => {
         expect(mockProgressReport).toHaveBeenLastCalledWith({ message: 'Deploying the app (2 of 2)' });
     });
 
-    it('closes when the operation succeeds, saying so in the status bar', async () => {
+    it("closes when the operation succeeds, then says the result's words in a notification that closes itself", async () => {
         await runningInBackground();
+        const narrating = mockProgressEnded;
 
         await pushOperationProgress({ id: ID, state: 'succeeded' });
 
-        await expect(mockProgressEnded).resolves.toBeUndefined();
-        expect(mockStatusBar).toHaveBeenCalledWith(`$(check) ${TITLE} — done`, expect.any(Number));
+        await expect(narrating).resolves.toBeUndefined();
+        // The second progress notification is the result: titled with its words, no button.
+        expect(mockWithProgress).toHaveBeenLastCalledWith(
+            expect.objectContaining({ title: DONE, location: 15, cancellable: false }),
+            expect.any(Function),
+        );
+        let closed = false;
+        void mockProgressEnded?.then(() => {
+            closed = true;
+        });
+        await Promise.resolve();
+        expect(closed).toBe(false);
+        await jest.advanceTimersByTimeAsync(TIMEOUTS.UI.NOTIFICATION);
+        expect(closed).toBe(true);
+        expect(mockStatusBar).not.toHaveBeenCalled();
         expect(mockShowWarning).not.toHaveBeenCalled();
+        expect(mockShowInformation).not.toHaveBeenCalled();
     });
 
-    it('says a success\'s warning in a notification, since the status bar cannot hold it', async () => {
+    it("names a success by its own title when the run gave one (a save with nothing to save)", async () => {
         await runningInBackground();
 
-        await pushOperationProgress({ id: ID, state: 'succeeded', warning: 'Prices were not published.' });
+        await pushOperationProgress({ id: ID, state: 'succeeded', title: 'No Changes to Save' });
+
+        expect(mockWithProgress).toHaveBeenLastCalledWith(
+            expect.objectContaining({ title: 'No Changes to Save' }),
+            expect.any(Function),
+        );
+    });
+
+    it("says a success's warning in a warning notification that stays, under the result's words", async () => {
+        await runningInBackground();
+
+        await pushOperationProgress({ id: ID, state: 'succeeded', warning: plain('Prices were not published.') });
 
         await expect(mockProgressEnded).resolves.toBeUndefined();
-        expect(mockShowWarning).toHaveBeenCalledWith(`${TITLE} — done. Prices were not published.`);
+        expect(mockShowWarning).toHaveBeenCalledWith(`${DONE}. Prices were not published.`);
         expect(mockStatusBar).not.toHaveBeenCalled();
+        expect(mockWithProgress).toHaveBeenCalledTimes(1);
+    });
+
+    it('says a warning under the title the window ends on with one, when it has its own', async () => {
+        await pushOperationProgress({ id: ID, state: 'running', stage: 'Resetting' });
+        await handleBackgroundOperation(createMockHandlerContext(), {
+            ...REQUEST,
+            warnedTitle: "Couldn't Reset Projects",
+        });
+
+        await pushOperationProgress({ id: ID, state: 'succeeded', warning: plain('1 project not reset.') });
+
+        expect(mockShowWarning).toHaveBeenCalledWith("Couldn't Reset Projects. 1 project not reset.");
     });
 
     it("says a success's note in a plain notification, never a warning", async () => {
@@ -114,12 +176,12 @@ describe('Run in background', () => {
         await pushOperationProgress({
             id: ID,
             state: 'succeeded',
-            note: 'Demo data loaded. Prices are still being published and will finish by themselves in a few minutes.',
+            note: plain('Demo data loaded. Prices are still being published and will finish by themselves in a few minutes.'),
         });
 
         await expect(mockProgressEnded).resolves.toBeUndefined();
         expect(mockShowInformation).toHaveBeenCalledWith(
-            `${TITLE} — done. Demo data loaded. Prices are still being published and will finish by themselves in a few minutes.`,
+            `${DONE}. Demo data loaded. Prices are still being published and will finish by themselves in a few minutes.`,
         );
         expect(mockShowWarning).not.toHaveBeenCalled();
         expect(mockStatusBar).not.toHaveBeenCalled();
@@ -129,14 +191,11 @@ describe('Run in background', () => {
         mockShowWarning.mockResolvedValue('Open Debug Logs');
         await runningInBackground();
 
-        await pushOperationProgress({ id: ID, state: 'failed', error: 'Adobe refused this.' });
+        await pushOperationProgress({ id: ID, state: 'failed', error: plain('Adobe refused this.') });
         await mockProgressEnded;
         await Promise.resolve();
 
-        expect(mockShowWarning).toHaveBeenCalledWith(
-            `${TITLE} did not finish: Adobe refused this.`,
-            'Open Debug Logs',
-        );
+        expect(mockShowWarning).toHaveBeenCalledWith(`${FAILED}. Adobe refused this.`, 'Open Debug Logs');
         expect(mockExecuteCommand).toHaveBeenCalledWith('demoBuilder.showDebugLogs');
     });
 
@@ -147,17 +206,26 @@ describe('Run in background', () => {
 
         await expect(mockProgressEnded).resolves.toBeUndefined();
         await pushOperationProgress({ id: ID, state: 'succeeded' });
-        expect(mockStatusBar).not.toHaveBeenCalled();
+        expect(mockWithProgress).toHaveBeenCalledTimes(1);
     });
 
     it('opens nothing for an operation that has already ended', async () => {
-        await handleBackgroundOperation(createMockHandlerContext(), { id: ID, title: TITLE });
+        await handleBackgroundOperation(createMockHandlerContext(), REQUEST);
 
         expect(mockWithProgress).not.toHaveBeenCalled();
     });
 
     it('refuses a request with no id or title', async () => {
         const result = await handleBackgroundOperation(createMockHandlerContext(), { id: ID });
+
+        expect(result).toMatchObject({ success: false, code: 'INVALID_OPERATION' });
+        expect(mockWithProgress).not.toHaveBeenCalled();
+    });
+
+    it("refuses a request without the result's words, which the notification ends in", async () => {
+        await pushOperationProgress({ id: ID, state: 'running', stage: 'Deploying the app' });
+
+        const result = await handleBackgroundOperation(createMockHandlerContext(), { id: ID, title: TITLE });
 
         expect(result).toMatchObject({ success: false, code: 'INVALID_OPERATION' });
         expect(mockWithProgress).not.toHaveBeenCalled();

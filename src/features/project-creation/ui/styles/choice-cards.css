@@ -1,9 +1,9 @@
 /**
  * .choice-* styles — the choice cards used to pick between options in a stage.
  *
- * FEATURE-SCOPED (ADR-017 §6 and §7). The component belongs to project-creation
- * and no other feature uses these classes, so the sheet lives here — even though
- * TWO entries render it, `wizard` and `integrations`, and both import it. §7 asks
+ * FEATURE-SCOPED (ADR-017 §6 and §7). The component belongs to project-creation,
+ * so the sheet lives here, even though five entries render it and import it:
+ * `wizard`, `integrations`, `dashboard`, `configure` and `dataInstaller`. §7 asks
  * who OWNS a family, not how many bundles reach it.
  *
  * Its `prefers-reduced-motion` block was moved BY HAND, whole, and placed AFTER
@@ -58,13 +58,12 @@
 }
 
 .choice-card:hover:not(:disabled) {
-    background: var(--spectrum-global-color-gray-75);
-    transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    background: var(--spectrum-global-color-gray-100);
+    border-color: var(--spectrum-global-color-gray-500);
 }
 
 .choice-card:focus-visible {
-    outline: 2px solid var(--spectrum-global-color-blue-500);
+    outline: 2px solid var(--spectrum-global-color-blue-400);
     outline-offset: 2px;
 }
 
@@ -73,12 +72,10 @@
     outline: 1px solid var(--spectrum-global-color-blue-400);
     outline-offset: -1px;
     background: var(--spectrum-global-color-blue-100);
-    transform: none;
 }
 
 .choice-card[data-selected="true"]:hover {
-    background: var(--spectrum-global-color-blue-100);
-    transform: none;
+    background: var(--spectrum-global-color-blue-200);
 }
 
 .choice-card:disabled {
@@ -109,6 +106,31 @@
     color: var(--spectrum-global-color-gray-500);
 }
 
+/* A screen of a dozen or more short choices: as tall as its words, as wide as its grid cell. */
+.choice-card--compact {
+    min-width: 0;
+    min-height: 0;
+    padding: var(--spectrum-global-dimension-size-125);
+}
+
+.choice-card--compact .choice-card-description {
+    margin-top: var(--spectrum-global-dimension-size-50);
+}
+
+/* A long name wraps before the corner check rather than running under it. */
+.choice-card--compact .choice-card-name {
+    padding-right: var(--spectrum-global-dimension-size-300);
+    line-height: 1.3;
+}
+
+/* The note sits in the card's bottom corner, out of the flow: one arriving moves nothing. */
+.choice-card--compact .choice-card-note {
+    position: absolute;
+    right: var(--spectrum-global-dimension-size-125);
+    bottom: var(--spectrum-global-dimension-size-125);
+    margin-top: 0;
+}
+
 /* Catalog entries render as square tiles in the wrapping row (not full-width rows). */
 .choice-card--tile {
     flex: 0 0 auto;
@@ -123,15 +145,24 @@
     -webkit-box-orient: vertical;
     overflow: hidden;
 }
+
+/* A grid of many picks (block libraries): three to a row when the 720px row allows, fewer as
+   it narrows. Columns keep their width when there are fewer cards, so two libraries do not
+   stretch into two very wide cards (owner, 2026-11-03). */
+.choice-grid--columns {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+}
+
+.choice-grid--columns > .choice-card {
+    min-width: 0;
+}
 }
 
 @layer overrides {
 @media (prefers-reduced-motion: reduce) {
 .choice-card {
     transition: none;
-}
-.choice-card:hover:not(:disabled) {
-    transform: none;
 }
 }
 }

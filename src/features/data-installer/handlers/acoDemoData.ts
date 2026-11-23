@@ -15,6 +15,7 @@
 import type { AcoAccess } from '../services/aco/acoJobs';
 import { type AcoSearch, AcoSearchError, type AcoWipePlan, planAcoWipe, runAcoWipe } from '../services/aco/acoWipe';
 import { type InstallRecord, type RecordFiles, readProjectRecords } from '../services/demoBuilderEngine/installRecord';
+import { COULDNT_TELL } from '@/core/utils/plainText';
 import type { AcoStorefrontSettings } from '@/types/aco';
 import type { Project } from '@/types/base';
 import type { DemoDataRequest } from '@/types/demoDataWipe';
@@ -52,7 +53,8 @@ async function allRecords(deps: AcoDemoDataDeps, context: HandlerContext, projec
 function failure(context: HandlerContext, error: unknown, fallback: string): HandlerResponse {
     if (error instanceof AcoSearchError) return { success: false, error: `${fallback} ${error.message}` };
     context.logger.warn(`${LOG_PREFIX} ${fallback} ${error instanceof Error ? error.message : String(error)}`);
-    return { success: false, error: `${fallback} Details are in Debug Logs.`, code: ErrorCode.UNKNOWN };
+    // No sentence sends the SC to Debug Logs (PL-102): the honest line is that we could not tell.
+    return { success: false, error: `${fallback} ${COULDNT_TELL}`, code: ErrorCode.UNKNOWN };
 }
 
 /** What clearing the project's ACO catalog would do, under a token. */

@@ -591,7 +591,7 @@ export function registerContentAuthoringTools(
 
             // The preview copy goes too: without it the page stayed on the site's
             // preview address after the source was gone (measured 2026-10-22 on
-            // JustRite's /apparel). Best-effort and reported, never a reason to
+            // Tailspin's /apparel). Best-effort and reported, never a reason to
             // stop: the live page, the one visitors see, is already down.
             const previewRemoved = await runWithAdobeTarget(() =>
                 helixFactory(r.ctx).deletePreview(daLiveOrg, daLiveSite, webPath),

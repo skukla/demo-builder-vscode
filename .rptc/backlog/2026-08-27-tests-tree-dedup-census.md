@@ -32,7 +32,7 @@ Lesson worth keeping: a dead helper next to N clones of its job usually
 means the helper is broken, not unwanted. Fixed via trampolines +
 `renderLoadedStep`; 23 tests, count unchanged, all green.
 
-Remaining clusters, largest first (re-run before working — lines move):
+The clusters as they stood, largest first (all were cleared when the clone ledger reached zero, `798637134`):
 `npx jscpd tests --min-lines 20 --min-tokens 140 --reporters console`
 
 1. eds/services/reset/edsResetService-meshAuth.test.ts (8 clones — internal)
@@ -131,7 +131,7 @@ measuring:**
 - **The line count alone misleads, in both directions.** `dashboardHandlers`
   measures ZERO removable lines and reads as a correct split; its four suites in
   fact share five mocked modules and one is mocked by all four. It stays as debt.
-  `processCleanup` measures the largest remaining saving, 36 lines, and is NOT
+  `processCleanup` measures the largest unclaimed saving, 36 lines, and is NOT
   debt: its five suites split by strategy — three drive real child processes, two
   mock tree-kill — and its "duplication" is a ten-line comment repeated three
   times. Reading the per-suite mock sets is what separates these.
@@ -194,7 +194,7 @@ the family's shared setup), so the weaker directory check still carries those.
 - 2026-09-02  Seven ledger rows were never families — the detector groups by a filename's first hyphen-token, so three unrelated 'no-*' enforcers read as one family and securityValidation-* as another (c5e4a10b4). Detector now requires a real subject; ledger 61 -> 54.
 - 2026-09-02  Ledger split into measured debt vs adjudicated splits, each with a written reason grounded in the removable-lines ranking AND the per-suite mock sets. 26 adjudicated; debt 54 -> 28. dashboardHandlers looked legitimate by line count but its 4 suites share 5 mocked modules — kept as debt.
 - 2026-09-02  Adjudication complete: 31 families carry written reasons, 23 remain as measured debt (ae71936df). processCleanup adjudicated despite the largest measured saving — its duplication is an explanatory comment and its suites split real-vs-mocked.
-- 2026-09-02  All 23 remaining families worked: 11 extracted to a shared setup, 12 adjudicated. Debt list EMPTY, 43 families carry a written reason (0b4ab06e0). Clones 160 -> 67, duplicated lines 7,863 -> 3,368. Left: lane B (PL-13's conversions) and choosing the clone floor.
+- 2026-09-02  All 23 open families worked: 11 extracted to a shared setup, 12 adjudicated. Debt list EMPTY, 43 families carry a written reason (0b4ab06e0). Clones 160 -> 67, duplicated lines 7,863 -> 3,368. Left: lane B (PL-13's conversions) and choosing the clone floor.
 - 2026-09-02  Clone-ledger loop: 12 items worked. 62 pairs / 2506 duplicated lines -> 53 outstanding / 1826. Findings beyond duplication: 4 missing assertions (picker wiring, list_content paging, stopDemo component status, plus PL-35 filed), 1 flaky test root-caused (guessed 50ms sleep, now polls), 1 over-strong rule corrected (mocks CAN move if imported before the harness), 1 enforcer scope gap documented (no-bare-sleep walks src only).
 - 2026-09-02  test(ai-bundle): eleven suites, one fixture file — and the enforcer that caught the second copy (`57a0d94ab`)
 - 2026-09-02  refactor(tests): two comms suites stop hand-rolling a handshake the helper could do (`9cb2835e0`)
@@ -225,7 +225,7 @@ the family's shared setup), so the weaker directory check still carries those.
 - 2026-09-02  refactor(tests): three small mock walls become one each (`505d55361`)
 - 2026-09-02  refactor(tests): three more families share their setup (`81598638f`)
 - 2026-09-02  refactor(tests): three families extract their shared setup (`9d92dd001`)
-- 2026-09-02  docs(backlog): PL-9's remaining work, with the three things the numbers hid (`2b789e364`)
+- 2026-09-02  docs(backlog): PL-9's remaining work, with the three things the numbers hid (`2b789e364`); that work was completed 2026-09-03
 - 2026-09-02  test(sop): 26 split families adjudicated — debt and correct splits now differ (`260df7956`)
 - 2026-09-02  docs(backlog): re-measure PL-9 — the baseline was four days stale (`fe9abe1d2`)
 - 2026-09-02  test(ai-bundle): one fs/promises wall for six suites, and an enforcer for the order it depends on (`86ed3f3c3`)
@@ -261,4 +261,4 @@ the family's shared setup), so the weaker directory check still carries those.
 - 2026-09-02  docs(handoff): the clone burn-down report — zero outstanding, and one product bug (`2fb3496cb`)
 - 2026-09-02  Merge loop/2026-09-02-clone-burndown-2: the test-tree duplication burn-down reaches zero (`798637134`)
 - 2026-09-02  docs(backlog): log the burn-down close to PL-9 (`5138b5d32`)
-- 2026-09-03  Clone ledger reached ZERO outstanding 2026-09-02; the 'remaining clusters' section in this item is spent. Follow-up now tracked in the 2026-09-02 register and PL-38.
+- 2026-09-03  Clone ledger reached ZERO outstanding 2026-09-02; the clusters list in this item is spent. Follow-up now tracked in the 2026-09-02 register and PL-38.

@@ -5,7 +5,8 @@ area: platform
 parent: PL-81
 needs: []
 value: med
-status: built
+status: shipped
+plan: pl-80-updates-modal
 ---
 
 # Check for Updates in a modal, with the updates already ticked
@@ -75,3 +76,4 @@ The agent's `apply_updates` keeps working against the same apply service either 
 - 2026-10-30  fix(updates): Review opens the Updates window when a dashboard is open (`86a006623`)
 - 2026-10-30  fix(projects-list): a second open during the page load joins it (`445f32684`)
 - 2026-10-30  Merge parity/g7-review-opens-updates: Review opens the Updates window; one projects-list load at a time (`dfa3fe87b`)
+- 2026-11-20  Released in v1.0.0-beta.153

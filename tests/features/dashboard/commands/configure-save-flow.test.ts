@@ -31,7 +31,10 @@ import { createMockStateManager } from '../../../helpers/stateManagerFake';
 import { internals } from '../../../helpers/commandInternals';
 
 const mockApplyAcoAddonChange = jest.fn();
-jest.mock('@/features/dashboard/handlers/acoCredentialHandlers', () => ({ applyAcoAddonChange: (...a: unknown[]) => mockApplyAcoAddonChange(...a), projectAcoOffer: () => 'not-offered' }));
+jest.mock('@/features/dashboard/handlers/acoCredentialHandlers', () => ({
+    applyAcoAddonChange: (...a: unknown[]) => mockApplyAcoAddonChange(...a),
+    projectAcoOffer: () => 'not-offered',
+}));
 jest.mock('@/commands/handlerContextFactory', () => ({
     createPanelHandlerContext: jest.fn(() => ({ stub: 'handler-context' })),
 }));
@@ -40,7 +43,7 @@ jest.mock('@/features/projects-dashboard/handlers/dashboardHandlers', () => ({
     handleRenameProject: jest.fn(async () => ({ success: true })),
 }));
 
-jest.mock('@/features/components/services/commerceSecretMigration', () => ({
+jest.mock('@/features/components/services/declaredSecretStore', () => ({
     loadDeclaredSecretFlags: jest.fn(async () => ({})),
     migrateDeclaredSecrets: jest.fn(async (configs: unknown) => ({
         sanitizedConfigs: configs,
@@ -95,8 +98,8 @@ interface SaveInternals {
         newProjectName?: string;
         authoringExperience?: string;
         selectedBlockLibraries?: string[];
-        acoAddon?: boolean; }): Promise<unknown>;
-    renameProjectIfRequested(project: Project, newName: string | undefined): Promise<Project>;
+        acoAddon?: boolean;
+    }): Promise<unknown>;
     applyAuthoringExperienceMetadata(project: Project, experience: string | undefined): boolean;
     applyAuthoringSideEffects(project: Project, experience: string): Promise<void>;
 }
@@ -200,7 +203,22 @@ describe('ConfigureProjectWebviewCommand - save spine', () => {
             mockApplyAcoAddonChange.mockResolvedValue({ success: false, error: 'Remove the ACO packs first' });
             expect(await save(command).handleSaveConfiguration({ configChanges: {}, acoAddon: false })).toEqual({ success: false, error: 'Remove the ACO packs first' });
             expect(stateManager.saveProject).not.toHaveBeenCalled();
-        }); });
+        });
+        it('saves the ACO switch at once, before the rest of the save can fail', async () => {
+            // The credential has already changed, so the project is saved straight after; one save
+            // more than a save with no ACO switch, the first already holding ACO on.
+            stateManager.getCurrentProject.mockResolvedValue(edsProject());
+            await save(command).handleSaveConfiguration({ configChanges: {} });
+            const plain = stateManager.saveProject.mock.calls.length;
+            stateManager.saveProject.mockClear();
+            stateManager.getCurrentProject.mockResolvedValue(edsProject());
+            mockApplyAcoAddonChange.mockImplementation(async (_c: unknown, p: Project) => ((p.selectedAddons = ['adobe-commerce-aco']), { success: true }));
+            await save(command).handleSaveConfiguration({ configChanges: {}, acoAddon: true });
+            expect(stateManager.saveProject).toHaveBeenCalledTimes(plain + 1);
+            expect(stateManager.saveProject.mock.calls[0][0]).toMatchObject({ selectedAddons: ['adobe-commerce-aco'] });
+        });
+    });
+
     describe('handleSaveConfiguration', () => {
         it('returns a coded failure — not a throw — when there is no project', async () => {
             stateManager.getCurrentProject.mockResolvedValue(undefined);
@@ -526,66 +544,6 @@ describe('ConfigureProjectWebviewCommand - save spine', () => {
         });
     });
 
-    describe('renameProjectIfRequested', () => {
-        it('does nothing when no new name was sent', async () => {
-            const project = edsProject();
-
-            await expect(save(command).renameProjectIfRequested(project, undefined)).resolves.toBe(
-                project
-            );
-            expect(handleRenameProject).not.toHaveBeenCalled();
-        });
-
-        it('does nothing when the "new" name is the name it already has', async () => {
-            const project = edsProject();
-
-            await expect(
-                save(command).renameProjectIfRequested(project, 'Test Project')
-            ).resolves.toBe(project);
-            expect(handleRenameProject).not.toHaveBeenCalled();
-        });
-
-        it('renames by PATH and answers the project read back at its new path', async () => {
-            const renamed = createMockProject({ name: 'Renamed', path: '/test/renamed' });
-            stateManager.getCurrentProject.mockResolvedValue(renamed);
-
-            const result = await save(command).renameProjectIfRequested(edsProject(), 'Renamed');
-
-            expect(result).toBe(renamed);
-            expect(handleRenameProject).toHaveBeenCalledWith(expect.anything(), {
-                projectPath: '/test/project',
-                newName: 'Renamed',
-            });
-        });
-
-        it('aborts the save with the rename error the handler reported', async () => {
-            (handleRenameProject as jest.Mock).mockResolvedValue({
-                success: false,
-                error: 'A project called Renamed already exists',
-            });
-
-            await expect(
-                save(command).renameProjectIfRequested(edsProject(), 'Renamed')
-            ).rejects.toThrow('A project called Renamed already exists');
-        });
-
-        it('aborts with a generic message when the rename failed without saying why', async () => {
-            (handleRenameProject as jest.Mock).mockResolvedValue({ success: false });
-
-            await expect(
-                save(command).renameProjectIfRequested(edsProject(), 'Renamed')
-            ).rejects.toThrow('Failed to rename project');
-        });
-
-        it('aborts when the renamed project cannot be read back', async () => {
-            stateManager.getCurrentProject.mockResolvedValue(undefined);
-
-            await expect(
-                save(command).renameProjectIfRequested(edsProject(), 'Renamed')
-            ).rejects.toThrow('Project not found after rename');
-        });
-    });
-
     describe('applyAuthoringExperienceMetadata', () => {
         it('records a changed experience on the EDS instance and reports the change', () => {
             const project = edsProject('da-live-classic');
@@ -697,7 +655,7 @@ describe('ConfigureProjectWebviewCommand - save spine', () => {
             expect(vscode.window.withProgress).toHaveBeenCalledWith(
                 {
                     location: vscode.ProgressLocation.Notification,
-                    title: 'Switching author mode',
+                    title: 'Switching Author Mode',
                     // Not cancellable: half-applying an authoring flip leaves the
                     // storefront pointing at an editor that is no longer configured.
                     cancellable: false,

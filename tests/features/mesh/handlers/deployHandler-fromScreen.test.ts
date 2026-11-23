@@ -3,8 +3,9 @@
  * doors hand the deploy.
  *
  * `deployMeshFromScreen` (PL-59 phase 2) had no test: nothing checked that it reports
- * to the screen's modal under the id the screen chose, that it holds the one mesh
- * lock while it runs, or that the dashboard is told afterwards. The deploy itself is
+ * to the screen's modal under the id the screen chose. The one mesh lock and the mesh
+ * prompt moved into the deploy itself (PL-104 fix 4), so they are tested there
+ * (`deployMeshWithFeedback-lock.test.ts`), not on each door. The deploy itself is
  * mocked here, so every claim is made on the ARGUMENTS it receives — a mock answers
  * the same whatever it is handed.
  */
@@ -27,7 +28,6 @@ jest.mock('@/features/eds/handlers/edsHelpers', () => ({
 import * as vscode from 'vscode';
 import { deployMeshFromScreen, handleDeployApiMesh } from '@/features/mesh/handlers/deployHandler';
 import type { DeployMeshWithFeedbackDeps } from '@/features/mesh/services/deployMeshWithFeedback';
-import { meshDeployLock } from '@/features/mesh/services/meshDeployLock';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { ErrorCode } from '@/types/errorCodes';
 import { createMockProject } from '../../../helpers/projectFake';
@@ -67,12 +67,11 @@ describe('deployMeshFromScreen', () => {
         );
     });
 
-    it('answers the mesh id and endpoint, and tells the dashboard a mesh action was taken', async () => {
+    it('answers the mesh id and endpoint, and leaves the mesh prompt to the deploy', async () => {
         const result = await deployMeshFromScreen(ctx(), 'op-42');
 
         expect(result).toStrictEqual({ success: true, data: { meshId: 'm1', endpoint: 'https://mesh/graphql' } });
-        expect(vscode.commands.executeCommand).toHaveBeenCalledTimes(1);
-        expect(vscode.commands.executeCommand).toHaveBeenCalledWith(ACTION_TAKEN);
+        expect(vscode.commands.executeCommand).not.toHaveBeenCalledWith(ACTION_TAKEN);
     });
 
     it('carries the storefront warning the same way the tool does', async () => {
@@ -107,33 +106,16 @@ describe('deployMeshFromScreen', () => {
         expect(mockDeployMeshWithFeedback).not.toHaveBeenCalled();
     });
 
-    it('holds the mesh lock for the whole deploy, and lets go when it ends', async () => {
-        let lockedDuringDeploy: boolean | undefined;
-        mockDeployMeshWithFeedback.mockImplementation(async () => {
-            lockedDuringDeploy = meshDeployLock.isLocked();
-            return DEPLOYED;
+    it("answers another door's running deploy with the deploy's own refusal", async () => {
+        mockDeployMeshWithFeedback.mockResolvedValue({
+            success: false,
+            error: 'A mesh deploy is already running.',
+            alreadyRunning: true,
         });
 
-        await deployMeshFromScreen(ctx(), 'op-42');
+        const result = await deployMeshFromScreen(ctx(), 'op-42');
 
-        expect(lockedDuringDeploy).toBe(true);
-        expect(meshDeployLock.isLocked()).toBe(false);
-    });
-
-    it('refuses a second deploy while one is running, without reading the project', async () => {
-        // One deploy at a time, whichever door started it: the palette command holds
-        // this same lock.
-        const release = await meshDeployLock.acquire();
-        const context = ctx();
-        try {
-            const result = await deployMeshFromScreen(context, 'op-42');
-
-            expect(result).toStrictEqual({ success: false, error: 'A mesh deploy is already running.' });
-            expect(context.stateManager.getCurrentProject).not.toHaveBeenCalled();
-            expect(mockDeployMeshWithFeedback).not.toHaveBeenCalled();
-        } finally {
-            release();
-        }
+        expect(result).toStrictEqual({ success: false, error: 'A mesh deploy is already running.' });
     });
 });
 

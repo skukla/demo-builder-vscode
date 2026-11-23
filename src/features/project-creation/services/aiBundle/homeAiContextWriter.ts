@@ -37,7 +37,7 @@ import { generateHomeClaudeSettings } from './claudeSettingsWriter';
 import { buildHomeAgentsMd } from './homeAgentsMd';
 import { buildHomeToolEntries, installHomeMcpTools } from './homeMcpTools';
 import { buildDemoBuilderMcpEntry, resolveNodePath, type McpServerEntry } from './mcpConfigWriter';
-import { DEMO_BUILDER_SKILLS } from './skillsWriter';
+import { DEMO_BUILDER_SKILLS, RENAMED_AWAY_SKILLS } from './skillsWriter';
 import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import { EnvironmentSetup } from '@/core/shell/environmentSetup';
 import { resolveMcpSocketPath } from '@/core/utils/mcpSocketPath';
@@ -242,10 +242,10 @@ export async function ensureHomeMcpTools(
 
 /**
  * The two `mcp.json` files and the skills. A skill that drives an ai-defaults tool
- * (`SKILL_MCP_TOOL_DEPENDENCIES`) is written only while the home has that tool, and its
- * folder is removed when it does not: the rule a project's skills follow (`skillsWriter`),
- * so the opt-out takes a tool and its skills out together. Removing is safe here because
- * the home is regenerated wholesale and the names are ours.
+ * (`SKILL_MCP_TOOL_DEPENDENCIES`) is written only while the home has that tool, so the opt-out
+ * takes a tool and its skills out together. Only the `SKILL.md` Demo Builder writes is
+ * removed, and its folder only when nothing else is left in it: a file the SC put beside
+ * it stays (CLAUDE.md, a user's own edits are never overwritten).
  */
 async function writeHomeToolSurface(
     projectsRoot: string,
@@ -281,12 +281,18 @@ async function writeHomeToolSurface(
         ...DEMO_BUILDER_SKILLS.map(async ({ name, content }) => {
             const skillDir = path.join(skillsDir, name);
             if (!usable(name)) {
-                await fsPromises.rm(skillDir, { recursive: true, force: true });
+                await fsPromises.rm(path.join(skillDir, 'SKILL.md'), { force: true });
+                // An empty folder goes; one holding the SC's own files stays (rmdir refuses it).
+                await fsPromises.rmdir(skillDir).catch(() => undefined);
             } else {
                 await fsPromises.mkdir(skillDir, { recursive: true });
                 await fsPromises.writeFile(path.join(skillDir, 'SKILL.md'), content, 'utf-8');
             }
             await fsPromises.rm(path.join(skillsDir, `${name}.md`), { force: true });
         }),
+        // A renamed skill's old guide names tools that no longer exist (v66).
+        ...RENAMED_AWAY_SKILLS.map((name) =>
+            fsPromises.rm(path.join(skillsDir, name, 'SKILL.md'), { force: true }),
+        ),
     ]);
 }

@@ -20,64 +20,66 @@ export const RESET_STAGES = {
     resettingCode: {
         label: 'Resetting the code',
         expectation: 'Usually about a minute',
-        detail: 'Template code, back in your repository',
+        detail: 'Restoring template code',
     },
     publishingCodeAndSettings: {
-        label: 'Publishing code, settings',
+        label: 'Publishing code and settings',
         expectation: 'Usually under a minute',
-        detail: 'Code, permissions and site config',
+        detail: 'Publishing code and configuration',
     },
     clearingOldContent: {
-        label: 'Clearing old content',
+        label: 'Deleting old content',
         expectation: 'Usually under a minute',
-        detail: 'The pages the reset replaces',
+        detail: 'Deleting replaced pages',
     },
     copyingContent: {
         label: 'Copying the content',
         expectation: 'Usually under a minute',
-        detail: "The demo's pages into DA.live",
+        detail: 'Copying pages to DA.live',
     },
     settingUpAuthoring: {
         label: 'Setting up authoring',
         expectation: 'Usually under a minute',
-        detail: 'The block library and DA.live settings',
+        detail: 'Configuring block library and editor',
     },
     publishingPages: {
         label: 'Publishing the pages',
         expectation: 'Usually about a minute',
-        detail: 'Pages, sheets and the block library',
+        detail: 'Publishing pages and sheets',
     },
     removingOldPages: {
-        label: 'Removing old pages',
+        label: 'Unpublishing old pages',
         expectation: 'Usually a few seconds',
-        detail: 'Live pages from before the reset',
+        detail: 'Removing old pages from the CDN',
     },
     checkingCopiedPages: {
         label: 'Checking copied pages',
         expectation: 'Usually a few seconds',
-        detail: 'The live site serves every demo page',
+        detail: 'Verifying live pages',
     },
     warmingProductPages: {
         label: 'Warming product pages',
         expectation: 'Usually about a minute',
-        detail: 'So the first visit to a product is fast',
+        detail: 'Loading product pages',
     },
     // Project creation writes every page new: 50 seconds for 11 category pages
     // (2026-10-15), where a reset that keeps them takes seconds.
     addingCatalogMenu: {
         label: 'Adding the catalog menu',
         expectation: 'Usually under a minute',
-        detail: 'A page for each store category',
+        detail: 'Creating category pages',
     },
+    // The live site serves what was written: the reset's code and its config (owner, 2026-11-04;
+    // the code check reported on step 2 until then, after the content had run).
     checkingSettings: {
-        label: 'Checking the settings',
+        label: 'Checking the live site',
         expectation: 'Usually a few seconds',
-        detail: 'The live site has the new config',
+        detail: 'Verifying live site',
     },
     redeployingMesh: {
         label: 'Redeploying the mesh',
         expectation: 'Usually a few minutes',
-        detail: 'So the storefront can read the store',
+        detail: 'Deploying mesh',
     },
 } as const;
 

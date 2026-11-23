@@ -44,6 +44,7 @@ const fs = require('fs');
 const path = require('path');
 const { execFileSync } = require('child_process');
 const { shapeDrift, checkEndpoint: coreCheckEndpoint } = require('./lib/driftCore');
+const { recordRun } = require('./lib/pipelineLast');
 
 const FIXTURES = path.join(__dirname, '..', 'tests', 'fixtures', 'data-installer');
 
@@ -146,28 +147,45 @@ function modeFindings(counts) {
 }
 
 /**
- * Check one endpoint against its fixture (thin adapter over the shared core in
- * `scripts/lib/driftCore.js`, keeping this script's token-based signature —
- * the Data Installer authenticates every read with one IMS Bearer token).
+ * The headers that sign one read: the IMS bearer and, when known, the org. Adobe's gateway
+ * answers 401 "missing x-gw-ims-org-id header" to the bearer alone, the same rule the
+ * extension's own requests follow (`signInHeaders` in dataInstallerSignIn.ts).
  */
-async function checkEndpoint({ action, url, fixture, token, fetchImpl }) {
+function signInHeaders(token, orgCode) {
+    return { Authorization: `Bearer ${token}`, ...(orgCode ? { 'x-gw-ims-org-id': orgCode } : {}) };
+}
+
+/**
+ * Check one endpoint against its fixture (thin adapter over the shared core in
+ * `scripts/lib/driftCore.js`, keeping this script's token-based signature).
+ */
+async function checkEndpoint({ action, url, fixture, token, orgCode, fetchImpl }) {
     return coreCheckEndpoint({
         action,
         url,
         fixture,
-        headers: { Authorization: `Bearer ${token}` },
+        headers: signInHeaders(token, orgCode),
         fetchImpl,
     });
 }
 
+/** One value from the aio CLI's config, or undefined when it holds none. */
+function readAioConfig(key) {
+    const raw = execFileSync('aio', ['config', 'get', key, '--json'], { encoding: 'utf8' });
+    return raw.trim() ? JSON.parse(raw) : undefined;
+}
+
 /** The IMS token the extension itself uses. */
 function readToken() {
-    const raw = execFileSync('aio', ['config', 'get', 'ims.contexts.cli.access_token', '--json'], {
-        encoding: 'utf8',
-    });
-    const token = JSON.parse(raw).token;
+    const token = readAioConfig('ims.contexts.cli.access_token')?.token;
     if (!token) throw new Error('no IMS token — run `aio login`');
     return token;
+}
+
+/** The signed-in org's code (`…@AdobeOrg`), from DATA_INSTALLER_ORG_CODE or the aio CLI. */
+function readOrgCode() {
+    const configured = (process.env.DATA_INSTALLER_ORG_CODE ?? '').trim();
+    return configured || readAioConfig('console.org')?.code;
 }
 
 /**
@@ -198,6 +216,7 @@ function readBaseUrl() {
 async function main() {
     const baseUrl = readBaseUrl();
     const token = readToken();
+    const orgCode = readOrgCode();
     const results = [];
 
     for (const endpoint of ENDPOINTS) {
@@ -207,12 +226,15 @@ async function main() {
                 url: `${baseUrl}/${endpoint.action}${endpoint.query}`,
                 fixture: JSON.parse(fs.readFileSync(path.join(FIXTURES, endpoint.fixture), 'utf8')),
                 token,
+                orgCode,
                 fetchImpl: fetch,
             }),
         );
     }
 
     let failed = 0;
+    // Endpoints that could not be read: the run only counts as run without them.
+    let unread = 0;
     for (const result of results) {
         if (result.ok) {
             console.log(`  ok        ${result.action}`);
@@ -220,6 +242,7 @@ async function main() {
         }
         failed += 1;
         if (result.unreachable || result.error) {
+            unread += 1;
             console.log(`  FAILED    ${result.action} — ${result.error}`);
             continue;
         }
@@ -237,7 +260,7 @@ async function main() {
             : `\n${failed} of ${results.length} endpoints need attention. Re-capture the fixture, or fix the parser.`,
     );
 
-    const findings = await checkModeCoverage({ baseUrl, token, fetchImpl: fetch });
+    const findings = await checkModeCoverage({ baseUrl, token, orgCode, fetchImpl: fetch });
     console.log(
         findings.length === 0
             ? `\noperation_mode: ${DECIDED_MODES.join(', ')} — no undecided capability.`
@@ -256,6 +279,8 @@ async function main() {
         );
     }
 
+    // A failed control (`invalidates`) means the mode counts were not read either.
+    if (unread === 0 && !findings.some((f) => f.invalidates)) recordRun('data-installer-drift');
     process.exit(failed === 0 && findings.length === 0 ? 0 : 1);
 }
 
@@ -265,20 +290,20 @@ async function main() {
  * `get-processor-order` is a GET that touches no instance and starts no work, so
  * this stays safe to run at any time — the rule the whole script is built on.
  */
-async function checkModeCoverage({ baseUrl, token, fetchImpl }) {
+async function checkModeCoverage({ baseUrl, token, orgCode, fetchImpl }) {
     const counts = {};
     for (const mode of [...DECIDED_MODES, ...CANDIDATE_MODES, CONTROL_MODE]) {
-        counts[mode] = await countProcessors({ baseUrl, token, fetchImpl, mode });
+        counts[mode] = await countProcessors({ baseUrl, token, orgCode, fetchImpl, mode });
     }
     return modeFindings(counts);
 }
 
 /** How many processors this mode reports, or `null` if the request did not land. */
-async function countProcessors({ baseUrl, token, fetchImpl, mode }) {
+async function countProcessors({ baseUrl, token, orgCode, fetchImpl, mode }) {
     try {
         const response = await fetchImpl(
             `${baseUrl}/get-processor-order?operation_mode=${encodeURIComponent(mode)}`,
-            { headers: { Authorization: `Bearer ${token}` } },
+            { headers: signInHeaders(token, orgCode) },
         );
         if (response.status !== 200) return null;
         const body = JSON.parse(await response.text());

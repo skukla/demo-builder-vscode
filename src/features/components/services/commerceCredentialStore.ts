@@ -42,8 +42,6 @@
 
 import { lookupComponentConfigValue, type ConfigMap } from './envVarHelpers';
 import {
-    ACCS_OAUTH_CLIENT_ID,
-    ACCS_OAUTH_CLIENT_SECRET,
     PAAS_ADMIN_PASSWORD,
     PAAS_ADMIN_USERNAME,
 } from '@/core/config/envVarKeys';
@@ -66,7 +64,7 @@ const COMMERCE_SECRET_PREFIX = 'demoBuilder.componentSecret';
  *
  * @param projectId - stable project identifier
  * @param componentId - the component declaring the field (e.g. `adobe-commerce-accs`)
- * @param varName - the env var name (e.g. `ACCS_OAUTH_CLIENT_SECRET`)
+ * @param varName - the env var name (e.g. `ADOBE_COMMERCE_ADMIN_PASSWORD`)
  */
 export function commerceSecretKey(
     projectId: string,
@@ -119,30 +117,11 @@ async function readOne(
     }
     // Each half is looked up INDEPENDENTLY. Falling back through the pair readers
     // instead would apply their both-or-nothing rule to the fallback itself: once
-    // the secret moves to storage, `readAccsOAuthPair(configs)` returns undefined
+    // the secret moves to storage, `readPaasAdminPair(configs)` returns undefined
     // and the id — sitting right there in config — becomes unreadable too. That
     // half-and-half split is not an edge case, it is the steady state after
     // migration, so the pair would be lost the moment the migration succeeded.
     return lookupComponentConfigValue(configs ?? {}, varName);
-}
-
-/**
- * The ACCS OAuth pair for a project, wherever it lives.
- *
- * Both halves or nothing — the rule the sync readers already hold, kept here so a
- * half-migrated project cannot present as configured.
- */
-export async function resolveAccsOAuthPair(
-    deps: CommercePairDeps,
-    configs: ConfigMap,
-    componentId = 'adobe-commerce-accs',
-): Promise<CommercePair | undefined> {
-    const clientId = await readOne(deps, componentId, ACCS_OAUTH_CLIENT_ID, configs);
-    const clientSecret = await readOne(deps, componentId, ACCS_OAUTH_CLIENT_SECRET, configs);
-
-    // Both-or-nothing applies HERE, to the assembled pair — never to either
-    // lookup, which is what made a half-migrated project unreadable.
-    return clientId && clientSecret ? { clientId, clientSecret } : undefined;
 }
 
 /** The PaaS admin pair for a project, wherever it lives. Same both-or-nothing rule. */

@@ -1,7 +1,7 @@
 /**
  * The theme a freshly added ERP is moved to, so two ERPs side by side look different from the
  * start (AB-51). The ERP picks its own starting theme from a hash of its list id and cannot see
- * the other ERPs, so two can land on one (Justrite's `justrite` and `accuform` both hash to
+ * the other ERPs, so two can land on one (Tailspin's `tailspin` and `accuform` both hash to
  * foundry); Demo Builder sees them all.
  *
  * Two ERPs look the same when they share a COLOUR. The ERP stores a look (colour, logo, menu

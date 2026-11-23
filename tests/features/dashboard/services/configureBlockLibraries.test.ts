@@ -48,6 +48,21 @@ describe('buildBlockLibraryChoices', () => {
         expect(choices.native).toStrictEqual([]);
     });
 
+    it('lists the libraries every storefront gets, so the screen can show the storefront has them', () => {
+        const choices = buildBlockLibraryChoices(edsProject(), []);
+
+        // Shown locked since 2026-11-03: hidden, the SC could not tell the storefront had them.
+        expect(choices.included.map((lib) => lib.id)).toEqual(['demo-builder-blocks']);
+        expect(choices.available.map((lib) => lib.id)).not.toContain('demo-builder-blocks');
+    });
+
+    it('lists every storefront\'s libraries for a package added from a colleague\'s repo', () => {
+        const choices = buildBlockLibraryChoices(edsProject({ selectedPackage: 'added:someone/store' }), []);
+
+        expect(choices.included.map((lib) => lib.id)).toEqual(['demo-builder-blocks']);
+        expect(choices.native).toStrictEqual([]);
+    });
+
     it('lists a library native to the package as native, never as a choice', () => {
         const choices = buildBlockLibraryChoices(edsProject({ selectedPackage: 'bodea' }), []);
 
@@ -61,13 +76,13 @@ describe('buildBlockLibraryChoices', () => {
             ['https://github.com/acme/my-blocks'],
         );
 
-        expect(choices).toEqual({ native: [], available: [], customDefaults: [] });
+        expect(choices).toEqual({ included: [], native: [], available: [], customDefaults: [] });
     });
 
     it('offers nothing when the project names a stack the catalog does not have', () => {
         const choices = buildBlockLibraryChoices(edsProject({ selectedStack: 'gone' }), []);
 
-        expect(choices).toEqual({ native: [], available: [], customDefaults: [] });
+        expect(choices).toEqual({ included: [], native: [], available: [], customDefaults: [] });
     });
 
     it('offers the custom libraries from the setting, skipping an address it cannot read', () => {

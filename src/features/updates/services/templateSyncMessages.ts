@@ -9,7 +9,7 @@ import { PLACEHOLDER_STUB_PATHS } from '@/features/eds/services/placeholderStubs
 import { TemplateSyncStepError } from '@/features/updates/services/templateSyncStepError';
 import type { ClashEdit, TemplateSyncResult, TemplateSyncTarget } from '@/features/updates/services/templateSyncTypes';
 
-/** One clashing file in plain words: "blocks/header/header.js, an edit that came with kmanns/justrite". */
+/** One clashing file in plain words: "blocks/header/header.js, an edit that came with org-e/tailspin". */
 export function describeEdit(edit: ClashEdit): string {
     if (edit.whose === 'copied-demo' && edit.from) return `${edit.file}, an edit that came with ${edit.from}`;
     return `${edit.file}, an edit made in this storefront`;
@@ -27,6 +27,9 @@ export function describeTemplateConflicts(edits: readonly ClashEdit[]): string {
     return `The update stopped on ${edits.length} ${noun} edited (${edits.map(describeEdit).join('; ')}). `
         + 'Nothing was changed: the storefront on GitHub is as it was.';
 }
+
+/** A storefront whose record lacks the repositories a template sync reads. */
+export const MISSING_TEMPLATE_METADATA = 'Missing required metadata: githubRepo, templateOwner, or templateRepo';
 
 export const NO_RECORDED_VERSION = 'This storefront has no recorded template version to update from; '
     + 'reset it to its template once so updates have a starting point.';
@@ -52,7 +55,7 @@ export function describeStepFailure(error: unknown): string {
     const sentence = error instanceof TemplateSyncStepError
         ? error.message
         : 'The template update could not finish.';
-    return `${sentence} See Debug Logs for details.`;
+    return sentence;
 }
 
 /**

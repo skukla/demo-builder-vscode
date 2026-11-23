@@ -2,7 +2,7 @@
  * EDS-23 — "the AEM Code Sync App does not cover this repository".
  *
  * `/status` cannot say it: its inner `code.status: 400` read the same before the
- * App covered skukla/kukla-justrite and after. The code endpoint can, in its
+ * App covered skukla/kukla-tailspin and after. The code endpoint can, in its
  * `x-error`. These pin the classification against the live-captured string and
  * the undetermined verdict the resolver now returns for an inner 400.
  */
@@ -23,8 +23,8 @@ import { createMockLogger } from '../../../helpers/loggerFake';
 
 const REPO: RepoInfo = {
     repoOwner: 'skukla',
-    repoName: 'kukla-justrite',
-    repoUrl: 'https://github.com/skukla/kukla-justrite',
+    repoName: 'kukla-tailspin',
+    repoUrl: 'https://github.com/skukla/kukla-tailspin',
 };
 
 describe('isAppNotOnRepositoryError', () => {
@@ -48,7 +48,7 @@ describe('isAppNotOnRepositoryError', () => {
 describe('buildAppNotOnRepositoryMessage', () => {
     it('names the repository, says what is wrong, and links the install page', () => {
         const message = buildAppNotOnRepositoryMessage(REPO.repoOwner, REPO.repoName);
-        expect(message).toContain('skukla/kukla-justrite');
+        expect(message).toContain('skukla/kukla-tailspin');
         expect(message).toMatch(/AEM Code Sync/);
         expect(message).toContain(GITHUB_APP_INSTALL_URL);
     });
@@ -69,6 +69,6 @@ describe('resolveAppInstallation — an inner 400', () => {
             helixError: undefined,
             noCredential: undefined,
         });
-        expect(isAppInstalled).toHaveBeenCalledWith('skukla', 'kukla-justrite');
+        expect(isAppInstalled).toHaveBeenCalledWith('skukla', 'kukla-tailspin');
     });
 });

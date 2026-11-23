@@ -29,15 +29,15 @@ const mockRequest = webviewClient.request as jest.Mock;
 const ID: DatapackId = { name: 'zz-test-root-db12', version: 'v1' };
 const STEP: PackRootStep = {
     state: 'open',
-    storeCode: 'justrite_test_store',
-    storeName: 'Justrite Test Store',
+    storeCode: 'tailspin_test_store',
+    storeName: 'Tailspin Test Store',
     rootId: 215,
     rootName: 'ZZ Root DB12',
     storeRootId: 119,
-    sharedWith: 'the store justrite_store (website justrite)',
+    sharedWith: 'the store tailspin_store (website tailspin)',
 };
-const NOTE = 'The store Justrite Test Store still uses the root category Justrite Catalog, not ZZ Root DB12.';
-const DONE: PackRootStep = { ...STEP, state: 'done', note: "The store Justrite Test Store shows ZZ Root DB12's categories.", lastCheck: 'passed' };
+const NOTE = 'Tailspin Test Store still uses the root category Tailspin Catalog, not ZZ Root DB12.';
+const DONE: PackRootStep = { ...STEP, state: 'done', note: "Tailspin Test Store now shows the categories under ZZ Root DB12.", lastCheck: 'passed' };
 
 /** The handler's envelope, as `setupStepAnswer` builds it. */
 function answer(step: PackRootStep | null, pack: DatapackId = ID): HandlerResponse {
@@ -81,7 +81,7 @@ beforeEach(() => {
 it('shows what the Check found without closing the panel: read without a note, Check answers with one', async () => {
     answering(answer(STEP), answer({ ...STEP, note: NOTE, lastCheck: 'failed' }));
     await renderStep();
-    await press(within(panel()).getByRole('button', { name: 'Show step' }));
+    await press(within(panel()).getByRole('button', { name: 'Show Step' }));
     expect(screen.queryByText(NOTE)).not.toBeInTheDocument();
 
     await press(screen.getByRole('button', { name: 'Check' }));
@@ -101,7 +101,7 @@ it('shows nothing, and asks nothing, with no pack; nothing when the pack left no
     expect(screen.getAllByTestId('panel').every((node) => node.childElementCount === 0)).toBe(true);
 });
 
-it('puts one quiet line in the panel, and the step itself in the dialog Show step opens', async () => {
+it('puts one quiet line in the panel, and the step itself in the dialog Show Step opens', async () => {
     answering(answer(STEP));
     await renderStep();
 
@@ -110,23 +110,23 @@ it('puts one quiet line in the panel, and the step itself in the dialog Show ste
     expect(panel().querySelector('.inline-notice')).toBeNull();
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
 
-    await press(within(panel()).getByRole('button', { name: 'Show step' }));
+    await press(within(panel()).getByRole('button', { name: 'Show Step' }));
 
     // The step's title IS the dialog's title, once: no "One step in the Admin" over a second heading.
-    expect(within(dialog()).getAllByText("Show ZZ Root DB12's categories on the storefront")).toHaveLength(1);
+    expect(within(dialog()).getAllByText('Set the Root Category')).toHaveLength(1);
     expect(within(dialog()).queryByText('One step in the Admin')).not.toBeInTheDocument();
-    expect(within(dialog()).getByLabelText('Stores > All Stores > Justrite Test Store')).toBeInTheDocument();
+    expect(within(dialog()).getByLabelText('Stores > All Stores > Tailspin Test Store')).toBeInTheDocument();
     expect(within(dialog()).getByText('Root Category: ZZ Root DB12')).toBeInTheDocument();
     expect(within(dialog()).getByText(/shares its root category with another store/)).toBeInTheDocument();
     expect(banner()).toHaveTextContent('Not set up');
 });
 
-it("has Open the Admin and Check in the dialog's footer", async () => {
+it("has Open Admin and Check in the dialog's footer", async () => {
     answering(answer(STEP), answer(STEP));
     await renderStep();
-    await press(within(panel()).getByRole('button', { name: 'Show step' }));
+    await press(within(panel()).getByRole('button', { name: 'Show Step' }));
 
-    await press(screen.getByRole('button', { name: 'Open the Admin' }));
+    await press(screen.getByRole('button', { name: 'Open Admin' }));
     expect(mockRequest).toHaveBeenCalledWith('openAdminPanel', {});
     await press(screen.getByRole('button', { name: 'Check' }));
     expect(mockRequest).toHaveBeenCalledWith('check-datapack-setup-step', { datapackName: ID.name, version: ID.version }, undefined);
@@ -141,7 +141,7 @@ it('shows the Check running in the banner, not on the button', async () => {
         return Promise.resolve(answer(STEP));
     });
     await renderStep();
-    await press(within(panel()).getByRole('button', { name: 'Show step' }));
+    await press(within(panel()).getByRole('button', { name: 'Show Step' }));
 
     await press(screen.getByRole('button', { name: 'Check' }));
     const status = banner().parentElement as HTMLElement;
@@ -158,33 +158,33 @@ it('shows the Check running in the banner, not on the button', async () => {
 
 // The browser takes two or three seconds to start; until the extension answers, the button
 // shows a spinner rather than nothing (owner, 2026-10-31).
-it('shows Open the Admin as busy until the Admin has opened', async () => {
+it('shows Open Admin as busy until the Admin has opened', async () => {
     let opened: (value: HandlerResponse) => void = () => undefined;
     mockRequest.mockImplementation((type: string) => {
         if (type === 'openAdminPanel') return new Promise<HandlerResponse>((resolve) => { opened = resolve; });
         return Promise.resolve(answer(STEP));
     });
     await renderStep();
-    await press(within(panel()).getByRole('button', { name: 'Show step' }));
+    await press(within(panel()).getByRole('button', { name: 'Show Step' }));
 
-    await press(screen.getByRole('button', { name: 'Open the Admin' }));
-    expect(screen.getByRole('button', { name: 'Open the Admin' })).toHaveAttribute('aria-busy', 'true');
+    await press(screen.getByRole('button', { name: 'Open Admin' }));
+    expect(screen.getByRole('button', { name: 'Open Admin' })).toHaveAttribute('aria-busy', 'true');
 
     // The extension answers once Chrome's window is likely up (`openInIncognito` waits it out).
     await act(async () => opened({ success: true }));
-    expect(screen.getByRole('button', { name: 'Open the Admin' })).not.toHaveAttribute('aria-busy');
+    expect(screen.getByRole('button', { name: 'Open Admin' })).not.toHaveAttribute('aria-busy');
 });
 
 it('a Check that finds it done says so in the dialog, offers no Check, and leaves nothing in the panel', async () => {
     answering(answer(STEP), answer(DONE));
     await renderStep();
-    await press(within(panel()).getByRole('button', { name: 'Show step' }));
+    await press(within(panel()).getByRole('button', { name: 'Show Step' }));
 
     await press(screen.getByRole('button', { name: 'Check' }));
 
     expect(banner()).toHaveTextContent('Done');
     // What the Check found, as the panel says it, not the guide's "Already set up in the store."
-    expect(banner()).toHaveTextContent("The store Justrite Test Store shows ZZ Root DB12's categories.");
+    expect(banner()).toHaveTextContent("Tailspin Test Store now shows the categories under ZZ Root DB12.");
     expect(banner()).not.toHaveTextContent('Already set up');
     expect(screen.queryByRole('button', { name: 'Check' })).not.toBeInTheDocument();
     // Nothing in the panel once done: the dialog already said so (owner, 2026-10-31).
@@ -195,7 +195,7 @@ it("says Couldn't check, with what it met, when the check could not read the sto
     const met = 'Could not read the stores: Commerce answered 503';
     answering(answer(STEP), answer({ ...STEP, note: met, lastCheck: 'unknown' }));
     await renderStep();
-    await press(within(panel()).getByRole('button', { name: 'Show step' }));
+    await press(within(panel()).getByRole('button', { name: 'Show Step' }));
 
     await press(screen.getByRole('button', { name: 'Check' }));
 
@@ -208,7 +208,7 @@ it("says Couldn't check in plain words when no answer comes back, never the tran
         throw new Error('Request timeout: check-datapack-setup-step');
     });
     await renderStep();
-    await press(within(panel()).getByRole('button', { name: 'Show step' }));
+    await press(within(panel()).getByRole('button', { name: 'Show Step' }));
 
     await press(screen.getByRole('button', { name: 'Check' }));
 
@@ -221,7 +221,7 @@ it("says Couldn't check with the handler's own sentence when it refuses", async 
     const refusal = 'Project uses a different Adobe organization. Use "Switch IMS Org" to continue.';
     answering(answer(STEP), { success: false, error: refusal });
     await renderStep();
-    await press(within(panel()).getByRole('button', { name: 'Show step' }));
+    await press(within(panel()).getByRole('button', { name: 'Show Step' }));
 
     await press(screen.getByRole('button', { name: 'Check' }));
 

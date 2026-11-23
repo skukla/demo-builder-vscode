@@ -17,6 +17,7 @@ jest.mock('fs/promises', () => ({
     mkdir: jest.fn().mockResolvedValue(undefined),
     writeFile: jest.fn().mockResolvedValue(undefined),
     rm: jest.fn().mockResolvedValue(undefined),
+    rmdir: jest.fn().mockResolvedValue(undefined),
     // The home's own tools dir (homeMcpTools): nothing installed unless a test says so.
     readFile: jest.fn(),
     access: jest.fn(),

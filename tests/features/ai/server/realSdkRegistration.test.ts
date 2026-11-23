@@ -27,6 +27,8 @@ import { registerAdobeTools } from '@/features/ai/server/adobeTools';
 import { registerApplyUpdatesTool } from '@/features/ai/server/applyUpdatesTool';
 import { registerFinishStorefrontUpdateTool } from '@/features/ai/server/finishStorefrontUpdateTool';
 import { registerAuthTools } from '@/features/ai/server/authTools';
+import { registerCancelProjectCreationTool } from '@/features/ai/server/cancelProjectCreationTool';
+import { registerContinueProjectCreationTool } from '@/features/ai/server/continueProjectCreationTool';
 import { registerCloudResourceTools } from '@/features/ai/server/cloudResourceTools';
 import { registerComponentRequirementsTool } from '@/features/ai/server/componentRequirementsTool';
 import { registerConfigureProjectTool } from '@/features/ai/server/configureProjectTool';
@@ -43,6 +45,7 @@ import { registerAddedDemoTools } from '@/features/ai/server/addedDemoTools';
 import { registerDemoPackageTools } from '@/features/ai/server/demoPackageTools';
 import { registerResetProjectTool } from '@/features/ai/server/resetProjectTool';
 import { registerLifecycleTools } from '@/features/ai/server/lifecycleTools';
+import { registerReportIssueTool } from '@/features/ai/server/reportIssueTool';
 import { registerCommerceEndpointsTool } from '@/features/ai/server/commerceEndpointsTool';
 import { registerCommerceQueryTool } from '@/features/ai/server/commerceQueryTool';
 import { registerAcoTools } from '@/features/ai/server/acoTools';
@@ -137,6 +140,8 @@ describe('registration against the real MCP SDK', () => {
             registerAuthTools(s, ctxFactory);
             registerAdobeTools(s, ctxFactory);
             registerCreateProjectTool(s, ctxFactory);
+            registerCancelProjectCreationTool(s, ctxFactory);
+            registerContinueProjectCreationTool(s);
             registerCreateProjectFromFileTool(s, ctxFactory);
             registerCopyProjectTool(s, ctxFactory);
             registerCurrentProjectTool(s, ctxFactory);
@@ -165,6 +170,7 @@ describe('registration against the real MCP SDK', () => {
             registerFinishStorefrontUpdateTool(s, ctxFactory);
             registerViewTools(s, async () => undefined);
             registerLifecycleTools(s, ctxFactory, async () => undefined);
+            registerReportIssueTool(s, { openUrl: async () => undefined, loadProjects: async () => [], version: '0.0.0' });
         }).not.toThrow();
     });
 

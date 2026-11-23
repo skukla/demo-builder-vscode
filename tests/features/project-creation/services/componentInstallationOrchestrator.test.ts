@@ -251,6 +251,18 @@ describe('cloneAllComponents — phase 1', () => {
         );
     });
 
+    it("says which component is downloading, or how many when several go side by side", async () => {
+        const one = makePhaseContext({ ids: ['alpha'] });
+        await cloneAllComponents(one);
+        expect(one.progressTracker).toHaveBeenCalledWith('Downloading components', 25, 'Downloading alpha');
+
+        const two = makePhaseContext({ ids: ['alpha', 'beta'], componentInstances: {} });
+        await cloneAllComponents(two);
+        expect(two.progressTracker).toHaveBeenCalledWith('Downloading components', 25, 'Downloading 2 components');
+        // No past-tense line once they are down: the next step's line replaces it.
+        expect(two.progressTracker).not.toHaveBeenCalledWith('Downloading components', 40, expect.anything());
+    });
+
     it('fails the whole phase when a clone reports success but returns no component', async () => {
         mockInstallComponent.mockResolvedValue({ success: true, component: undefined });
         const ctx = makePhaseContext();

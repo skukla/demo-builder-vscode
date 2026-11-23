@@ -28,6 +28,10 @@ import '@/features/data-installer/ui/styles/datapack.css';
 // migration (.rptc/plans/css-architecture-migration). The wizard is the only
 // entry whose import graph reaches PrerequisitesStep.
 import '@/features/prerequisites/ui/styles/prerequisites.css';
+// The step bar Prerequisites draws (`StepProgressBar`).
+import '@/core/ui/styles/step-progress.css';
+// Prerequisites' box of tiles (`.step-tiles`, `.step-tile`).
+import '@/core/ui/styles/step-tiles.css';
 // .brand-* and .expandable-* rules, moved out of utilities.css by the CSS
 // migration. They share a sheet because `.expandable-brand-card` IS a brand card,
 // not because they could not be separated — the refusal that forced them to move
@@ -79,6 +83,8 @@ import '@/core/ui/styles/shared-ui.css';
 import '@/core/ui/styles/menu-trigger.css';
 // .icon-* — the icon-above-label pattern.
 import '@/core/ui/styles/icon-label.css';
+// A scrolling list's fade: the Updates window, the batch window, the API picker (ADR-017 §6).
+import '@/core/ui/styles/scroll-fade.css';
 import type { WizardInitialData } from '@/types/webviewPayloads';
 
 // Get root element

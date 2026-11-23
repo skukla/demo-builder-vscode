@@ -98,7 +98,6 @@ describe('IntegrationsActionBand', () => {
             searchQuery: 'erp',
             onSearchQueryChange: SET_QUERY,
             searchPlaceholder: 'Filter integrations',
-            searchThreshold: 0,
             totalCount: 2,
             filteredCount: 1,
             itemNoun: 'integration',
@@ -112,8 +111,16 @@ describe('IntegrationsActionBand', () => {
     });
 
     it.each([
-        ['names both kinds once a system is on screen', [INTEGRATION, SYSTEM], '1 integration, 1 system'],
-        ['counts integrations alone without a system', [INTEGRATION, INTEGRATION], '2 integrations'],
+        [
+            'names both kinds once a system is on screen',
+            [INTEGRATION, SYSTEM],
+            '1 integration, 1 system',
+        ],
+        [
+            'counts integrations alone without a system',
+            [INTEGRATION, INTEGRATION],
+            '2 integrations',
+        ],
         ['says none for an empty project', [], '0 integrations'],
         ['pluralises systems', [SYSTEM, SYSTEM], '0 integrations, 2 systems'],
     ])('%s', (_label, cards, text) => {
@@ -127,7 +134,7 @@ describe('IntegrationsActionBand', () => {
         const props = renderBand();
 
         const row = screen.getByTestId('page-destination');
-        expect(row).toHaveTextContent('Deploys to');
+        expect(row).toHaveTextContent('Adobe Project');
         expect(row).toHaveTextContent('Kukla Mesh');
         expect(row).not.toHaveTextContent('Stage');
 
@@ -142,7 +149,7 @@ describe('IntegrationsActionBand', () => {
         const props = renderBand({ destination: undefined });
 
         const row = screen.getByTestId('page-destination');
-        expect(row).toHaveTextContent('Deploys to');
+        expect(row).toHaveTextContent('Adobe Project');
         expect(row).toHaveTextContent('Not chosen yet');
 
         await user.click(screen.getByRole('button', { name: 'Choose' }));

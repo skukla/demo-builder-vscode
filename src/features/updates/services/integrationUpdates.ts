@@ -25,6 +25,7 @@ import {
 } from '@/features/app-builder/services/integrationUpdateCheck';
 import { integrationUsing, systemsUsedBy } from '@/features/components/services/appBuilderComponentLinks';
 import { emptyResult, type CategoryResult } from '@/features/updates/services/updateApplyResult';
+import type { OnProgress } from '@/features/updates/services/updateApplyTemplate';
 import type { UpdateContext } from '@/features/updates/services/updateCore';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import type { Project } from '@/types/base';
@@ -39,8 +40,10 @@ export interface IntegrationPairUpdate {
     componentId: string;
     /** The members the update covers, in the order they update. */
     members: string[];
-    /** The pair by name, integration first: "ERP Integration and Justrite ERP". */
+    /** The pair by name, integration first: "ERP Integration and Tailspin ERP". */
     label: string;
+    /** The releases this update moves to. Absent for code that has none. */
+    releases?: Array<{ name: string; version: string }>;
     /**
      * True when the project's Adobe org is not the one the token reaches (the
      * org step of the guard chain): listed, but not deployed from this org.
@@ -80,6 +83,19 @@ function pairLabel(project: Project, integrationId: string, catalog: Integration
         .join(' and ');
 }
 
+/** The release each member moves to, for the members that ship by release. */
+function releasesOf(project: Project, newer: string[]): Array<{ name: string; version: string }> {
+    return newer.flatMap((id) => {
+        const version = getAppBuilderComponent(project, id)?.updateAvailable?.release;
+        return version ? [{ name: componentNameOf(project, id), version }] : [];
+    });
+}
+
+function releasesField(project: Project, newer: string[]): Pick<IntegrationPairUpdate, 'releases'> {
+    const releases = releasesOf(project, newer);
+    return releases.length > 0 ? { releases } : {};
+}
+
 /** One pair per integration whose members have newer code, in report order. */
 function pairsOf(project: Project, availableIds: string[], probe: IntegrationUpdateProbe, otherOrg: boolean): IntegrationPairUpdate[] {
     const newerByIntegration = new Map<string, string[]>();
@@ -94,6 +110,7 @@ function pairsOf(project: Project, availableIds: string[], probe: IntegrationUpd
             componentId,
             members: pairUpdateOrder(project, componentId, probe.catalog),
             label: pairLabel(project, integrationId, probe.catalog),
+            ...releasesField(project, newer),
             otherOrg,
         };
     });
@@ -143,7 +160,7 @@ export function describeIntegrationUpdate(update: IntegrationPairUpdate): string
 export async function applyIntegrationUpdates(
     items: IntegrationPairUpdate[],
     ctx: UpdateContext,
-    onProgress?: (stage: string, item?: string) => void,
+    onProgress?: OnProgress,
 ): Promise<CategoryResult> {
     const stage = OPERATION_STAGES.updatingIntegrations.label;
     const result = emptyResult();
@@ -160,8 +177,10 @@ export async function applyIntegrationUpdates(
         }
         onProgress?.(stage, where);
         try {
-            const updated = await ctx.updateIntegrationPair(item.project, item.componentId, (message, subMessage) =>
-                onProgress?.(stage, `${where}: ${subMessage ?? message}`),
+            // Which part is in flight goes with its step, so the Updates window can say it under
+            // the bar ("Installing dependencies: Acme ERP", owner 2026-11-19).
+            const updated = await ctx.updateIntegrationPair(item.project, item.componentId, (message, subMessage, position) =>
+                onProgress?.(stage, position ? message : `${where}: ${subMessage ?? message}`, position),
             );
             if (updated.success) {
                 result.successCount++;

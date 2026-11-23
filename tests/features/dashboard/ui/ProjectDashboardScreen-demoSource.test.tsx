@@ -7,7 +7,7 @@
  * the check re-runs. Without a demo row there is no door at all.
  */
 
-import { screen, fireEvent } from '@testing-library/react';
+import { screen, fireEvent, within } from '@testing-library/react';
 import { setupTestContext, renderDashboard, TestContext } from './ProjectDashboardScreen.testUtils';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 
@@ -23,12 +23,16 @@ jest.mock('@/features/project-creation/ui/components/add-demo/AddDemoModal', () 
 jest.mock('@/features/dashboard/ui/components/share/ShareModal', () => ({
     ShareModal: () => <div role="dialog" aria-label="Share Demo" />,
 }));
+jest.mock('@/features/dashboard/ui/components/share/SavePackageModal', () => ({
+    SavePackageModal: () => <div role="dialog" aria-label="Save as Package" />,
+}));
 
-const DEMO = { name: 'Isle5 by Jen', source: { owner: 'jen', repo: 'isle5-demo' }, storefrontKind: 'eds' as const };
-const PAGES = "The Isle5 by Jen demo's pages can't be reached right now.";
-const GUIDANCE = "If it moved, change the source. If it's gone for good, keep this project as your own demo.";
-const KEEP = 'Keep as my own demo';
-const UNREACHABLE = "The Isle5 by Jen demo's repository can't be reached. Reset and updates are unavailable until it is.";
+const DEMO = { name: 'Isle5 by Robin', source: { owner: 'robin', repo: 'isle5-demo' }, storefrontKind: 'eds' as const };
+const PAGES = "The Isle5 by Robin demo's pages can't be reached right now.";
+// Walk F243 (owner): the button names what it opens, in an application's words.
+const GUIDANCE = "If it moved, change the source. If it's gone, save this project as a package.";
+const KEEP = 'Save as Package';
+const UNREACHABLE = "The Isle5 by Robin demo's repository can't be reached. Reset and updates are unavailable until it is.";
 
 describe('ProjectDashboardScreen - added demo source', () => {
     let ctx: TestContext;
@@ -43,10 +47,10 @@ describe('ProjectDashboardScreen - added demo source', () => {
             checkId: 'demo-source',
             status: 'warning',
             message: UNREACHABLE,
-            data: { demoName: 'Isle5 by Jen', unreachable: true, contentUnreachable: true },
+            data: { demoName: 'Isle5 by Robin', unreachable: true, contentUnreachable: true },
         });
 
-    it('shows nothing until the check warns, then the sentence with a Change source button', async () => {
+    it('shows nothing until the check warns, then the sentence with a Change Source button', async () => {
         renderDashboard({ demo: DEMO });
         expect(screen.queryByTestId('demo-source-banner')).not.toBeInTheDocument();
 
@@ -55,30 +59,31 @@ describe('ProjectDashboardScreen - added demo source', () => {
         const banner = await screen.findByTestId('demo-source-banner');
         expect(banner).toHaveTextContent("This demo's source can't be reached");
         expect(banner).toHaveTextContent(UNREACHABLE);
-        expect(screen.getByRole('button', { name: 'Change source' })).toBeInTheDocument();
+        expect(within(await screen.findByTestId('demo-source-banner')).getByRole('button', { name: 'Change Source' })).toBeInTheDocument();
     });
 
-    // Save as demo package's own dialog is gone (owner, 2026-10-22): keeping the
-    // project as your own is the Share dialog's save, card on your Welcome step.
-    it('offers Keep as my own demo beside Change source on an Edge Delivery project, opening the Share dialog', async () => {
+    // Keeping the project as your own is a card on your own Welcome step: Save as Package's job
+    // since EDS-72, when Share Demo's link stopped placing the card.
+    it('offers Save as Package beside Change Source on an Edge Delivery project, opening Save as Package', async () => {
         renderDashboard({ demo: DEMO, isEds: true });
         emitWarning();
 
         const banner = await screen.findByTestId('demo-source-banner');
         expect(banner).toHaveTextContent(GUIDANCE);
-        expect(screen.getByRole('button', { name: 'Change source' })).toBeInTheDocument();
-        fireEvent.click(screen.getByRole('button', { name: KEEP }));
-        expect(screen.getByRole('dialog', { name: 'Share Demo' })).toBeInTheDocument();
+        expect(within(await screen.findByTestId('demo-source-banner')).getByRole('button', { name: 'Change Source' })).toBeInTheDocument();
+        fireEvent.click(within(banner).getByRole('button', { name: KEEP }));
+        expect(screen.getByRole('dialog', { name: 'Save as Package' })).toBeInTheDocument();
+        expect(screen.queryByRole('dialog', { name: 'Share Demo' })).not.toBeInTheDocument();
     });
 
-    it('offers only Change source on a headless project, which has no storefront of its own to keep', async () => {
+    it('offers only Change Source on a headless project, which has no storefront of its own to keep', async () => {
         renderDashboard({ demo: { ...DEMO, storefrontKind: 'headless' as const } });
         emitWarning();
 
         const banner = await screen.findByTestId('demo-source-banner');
         expect(banner).not.toHaveTextContent(GUIDANCE);
-        expect(screen.getByRole('button', { name: 'Change source' })).toBeInTheDocument();
-        expect(screen.queryByRole('button', { name: KEEP })).not.toBeInTheDocument();
+        expect(within(await screen.findByTestId('demo-source-banner')).getByRole('button', { name: 'Change Source' })).toBeInTheDocument();
+        expect(within(banner).queryByRole('button', { name: KEEP })).not.toBeInTheDocument();
     });
 
     it('names the pages, not the source, when only the pages are out of reach, and offers no Keep', async () => {
@@ -87,14 +92,14 @@ describe('ProjectDashboardScreen - added demo source', () => {
             checkId: 'demo-source',
             status: 'warning',
             message: PAGES,
-            data: { demoName: 'Isle5 by Jen', unreachable: false, contentUnreachable: true },
+            data: { demoName: 'Isle5 by Robin', unreachable: false, contentUnreachable: true },
         });
 
         const banner = await screen.findByTestId('demo-source-banner');
         expect(banner).toHaveTextContent("This demo's pages can't be reached");
         expect(banner).not.toHaveTextContent("This demo's source can't be reached");
         expect(banner).toHaveTextContent(PAGES);
-        expect(screen.queryByRole('button', { name: KEEP })).not.toBeInTheDocument();
+        expect(within(banner).queryByRole('button', { name: KEEP })).not.toBeInTheDocument();
     });
 
     it('clears the notice when the check comes back ok', async () => {
@@ -130,6 +135,6 @@ describe('ProjectDashboardScreen - added demo source', () => {
 
         emitWarning();
 
-        expect(screen.queryByRole('button', { name: 'Change source' })).not.toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: 'Change Source' })).not.toBeInTheDocument();
     });
 });

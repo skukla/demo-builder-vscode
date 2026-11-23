@@ -55,7 +55,7 @@ describe('installAttributeSets', () => {
                 },
             },
         ]);
-        expect(ctx.recorder.created).toEqual([{ kind: ATTRIBUTE_SET_KIND, id: '12' }]);
+        expect(ctx.recorder.created).toEqual([{ kind: ATTRIBUTE_SET_KIND, id: '12', key: 'Coolers' }]);
         expect(ctx.session.setIds.get('Coolers')).toBe(12);
         expect(ctx.session.groupIds.get('Coolers')).toBe(80);
     });
@@ -121,7 +121,25 @@ describe('installAssignments', () => {
                 body: { attributeSetId: 4, attributeGroupId: 9, attributeCode: 'bodea_fabric', sortOrder: 10 },
             },
         ]);
-        expect(ctx.recorder.created).toEqual([{ kind: ASSIGNMENT_KIND, id: '4/bodea_fabric' }]);
+        // Keyed by the pack's name for it, as a reinstall looks it up; the id is what removal sends.
+        expect(ctx.recorder.created).toEqual([{ kind: ASSIGNMENT_KIND, id: '4/bodea_fabric', key: 'Default/bodea_fabric' }]);
+    });
+
+    it('reads each set once for many assignments sent together, and adds a repeated row once', async () => {
+        const reads: string[] = [];
+        const counted = (answer: unknown) => (path: string) => () => (reads.push(path), answer);
+        const setPath = 'products/attribute-sets/4/attributes';
+        const ctx = await fakeContext({
+            [SETS_PAGE]: STORE_SETS,
+            [setPath]: counted([{ attribute_code: 'sku' }])(setPath),
+            [groupsOf(4)]: counted({ items: [{ attribute_group_id: 7, attribute_group_name: 'General' }] })(groupsOf(4)),
+        });
+        const codes = ['a1', 'a2', 'a3', 'a4', 'a5', 'a6', 'a1'];
+
+        await installAssignments(ctx, parseAssignmentRows(codes.map((attributeCode) => ({ ...ROW, attributeCode }))));
+
+        expect(reads).toEqual([setPath, groupsOf(4)]);
+        expect(ctx.sent.map((c) => (c.body as { attributeCode: string }).attributeCode).sort()).toEqual(['a1', 'a2', 'a3', 'a4', 'a5', 'a6']);
     });
 
     it('puts an attribute in the group the set kind made', async () => {
@@ -155,7 +173,7 @@ describe('installAssignments', () => {
 
         await installAssignments(ctx, parseAssignmentRows([{ ...ROW, attributeSetId: 'Nope' }]));
 
-        expect(ctx.session.skipped).toEqual([{ kind: 'attribute_assign_to_set', key: `Nope/${ROW.attributeCode}`, reason: 'The store has no attribute set named Nope.' }]);
+        expect(ctx.session.skipped).toEqual([{ kind: 'attribute_assign_to_set', key: `Nope/${ROW.attributeCode}`, reason: 'Commerce has no attribute set named Nope.', cause: { by: 'missing', kind: 'attribute_sets', name: 'Nope' } }]);
         expect(ctx.sent).toStrictEqual([]);
     });
 });

@@ -1,0 +1,472 @@
+{
+    "_what": "Every kind of cloud resource the extension creates in a system the SC owns, the call that removes it, and the user-facing path that reaches that call. Property 1 of the root CLAUDE.md (whatever can be done can be undone), made checkable. Enforced by tests/templates/cloud-reversals.test.ts on every jest run. Seeded 2026-11-18 by reading every write the net in cloudReversalsScan.ts finds.",
+    "_rules": [
+        "Every file the write net hits (cloudReversalsScan.ts WRITE_SIGNATURES, webview ui/ code skipped) is claimed exactly once, with its exact hit count: in a resource row's `sites`, or in `notCreates` with why it makes nothing. A new write fails until it is classified; a changed count fails until someone re-reads the file.",
+        "A claimed file the net no longer hits is a stale claim and fails. Delete it in the change that moved the write.",
+        "A row's `create` must still match in one of its own sites, or the row is a ghost and fails.",
+        "A row's `remove` must match somewhere in src/, and must be reachable from every path in `reversedBy` (some file in the path entry's value-import closure contains it).",
+        "`projectDelete` sets exactly one of: `removes` (Delete Project reaches the removal, so `reversedBy` must hold `delete-project`), `separately` (the resource outlives a project on purpose and has its own reversal), or `exemption` with a `backlog` id that exists in .rptc/backlog. An exemption whose removal Delete Project already reaches is stale and fails: fix the row.",
+        "A row with no `reversedBy` at all must be an exemption.",
+        "`exemptionCeiling` counts the exemptions. It only falls."
+    ],
+    "_method": "Static, and it says so. The net finds a write by its call shape, not by tracing data; a write whose verb arrives through a variable and is never written as a literal anywhere in its file would be missed (none found 2026-11-18: every request helper's caller names its verb). Claims are per file with a count, so a second write added to an already-claimed file fails on the count but is not classified by itself. Reachability is import reachability: it proves the removal is loaded on the path, not that the path calls it. It was calibrated on the two known gaps: the Configuration Service delete (EDS-73) and the mesh delete and undeploy (AB-87) are all unreachable from Delete Project, while the repository delete and the DA.live content delete are reachable. A removal pattern names a CALL SITE on the reversal path, not the function's definition: Delete Project's closure loads componentWorkspace.ts, where the integration workspace delete is defined, without calling it.",
+    "exemptionCeiling": 8,
+    "reversals": {
+        "delete-project": {
+            "name": "Delete Project (and the agent's delete_project), through runProjectDelete",
+            "entry": "features/projects-dashboard/services/projectDeletionService.ts"
+        },
+        "manage-github-repos": {
+            "name": "Manage GitHub Repositories, Delete",
+            "entry": "features/eds/commands/manageGitHubRepos.ts"
+        },
+        "remove-integration": {
+            "name": "an integration's Remove on the dashboard",
+            "entry": "features/dashboard/handlers/appBuilderComponentRemove.ts"
+        },
+        "delete-mesh": {
+            "name": "the mesh delete (`delete-api-mesh`)",
+            "entry": "features/mesh/handlers/deleteHandler.ts"
+        },
+        "delete-adobe-project": {
+            "name": "Delete Adobe Project",
+            "entry": "features/authentication/handlers/deleteAdobeProjectHandler.ts"
+        },
+        "agent-adobe-resources": {
+            "name": "the agent's delete_adobe_project and delete_adobe_workspace",
+            "entry": "features/ai/server/adobeResourceTools.ts"
+        },
+        "uninstall-datapack": {
+            "name": "Uninstall Datapack (`reset-datapack`)",
+            "entry": "features/data-installer/handlers/importHandlers.ts"
+        },
+        "delete-library-datapack": {
+            "name": "Delete in the datapack library (`delete-library-datapack`)",
+            "entry": "features/data-installer/handlers/datapackLibraryHandlers.ts"
+        },
+        "undo-store-preparation": {
+            "name": "Undo on the demo setup (and the agent's undo_commerce_store_preparation)",
+            "entry": "features/dashboard/handlers/storePreparationHandlers.ts"
+        },
+        "agent-aco-admin": {
+            "name": "the agent's delete_aco_access_key, and write_aco_admin with a delete mutation (PL-60)",
+            "entry": "features/ai/server/acoTools.ts"
+        }
+    },
+    "resources": {
+        "aco-catalog-rows": {
+            "what": "An ACO datapack's rows in the project's Adobe Commerce Optimizer instance: products, categories, product metadata, price books and prices, loaded through the ingestion API (PL-60). The install record lists each row by the pack's own key.",
+            "create": "async function write\\(path: AcoIngestionPath",
+            "remove": "runAcoRemoval\\(",
+            "reversedBy": ["delete-project", "uninstall-datapack"],
+            "projectDelete": {
+                "removes": "Delete Project uninstalls the project's datapack through the engine, and an ACO pack's record sends that removal to ACO (removeIfAco)."
+            },
+            "sites": {
+                "features/data-installer/services/aco/acoClient.ts": 1
+            }
+        },
+        "aco-admin-objects": {
+            "what": "Objects made through ACO's admin GraphQL API: restricted access keys (create_aco_access_key) and, through the agent's write_aco_admin, catalog views, policies and price books (PL-60).",
+            "create": "/admin/graphql",
+            "remove": "deleteRestrictedAccessKey",
+            "reversedBy": ["agent-aco-admin"],
+            "projectDelete": {
+                "separately": "They live in the SC's ACO instance, which outlives any one project. The agent removes each the way it made it: delete_aco_access_key for a key, write_aco_admin with the matching delete mutation (deleteCatalogView, deletePolicy) for the rest."
+            },
+            "sites": {
+                "features/data-installer/services/aco/acoAdminClient.ts": 1
+            }
+        },
+        "github-repository": {
+            "what": "The storefront's GitHub repository, from a template, a source repository or a zip. Its files, commits, settings and pushes live inside it and go with it.",
+            "create": "'POST /repos/\\{template_owner\\}/\\{template_repo\\}/generate'|'POST /(?:user|orgs/\\{org\\})/repos'",
+            "remove": "\\.deleteRepository\\(",
+            "reversedBy": [
+                "delete-project",
+                "manage-github-repos"
+            ],
+            "projectDelete": {
+                "removes": "performGitHubCleanup deletes the repository when the SC ticks it."
+            },
+            "sites": {
+                "features/eds/services/github/githubRepoLifecycle.ts": 8,
+                "features/eds/services/github/githubFileOperations.ts": 2,
+                "features/eds/services/github/githubTreeCommits.ts": 4,
+                "features/updates/services/forkSyncService.ts": 1,
+                "features/eds/services/storefront/storefrontSyncService.ts": 3
+            }
+        },
+        "dalive-site": {
+            "what": "The storefront's DA.live content: copied pages, sheets, the block library sheet and account chrome under /source/{org}/{site}/.",
+            "create": "DA_LIVE_BASE_URL\\}/(?:copy|source)/",
+            "remove": "\\.deleteAllSiteContent\\(",
+            "reversedBy": [
+                "delete-project"
+            ],
+            "projectDelete": {
+                "removes": "tearDownStorefront deletes all of the site's DA.live content."
+            },
+            "sites": {
+                "features/eds/services/daLive/daLiveSiteCopy.ts": 1,
+                "features/eds/services/daLive/daLiveFileCopy.ts": 1,
+                "features/eds/services/daLive/daLiveSpreadsheetCopy.ts": 1,
+                "features/eds/services/daLive/daLiveSourceOperations.ts": 3,
+                "features/eds/services/daLive/daLiveAccountChrome.ts": 1,
+                "features/eds/services/daLive/daLiveBlockLibrarySheet.ts": 1,
+                "features/eds/services/daLive/daLiveOrgOperations.ts": 1
+            }
+        },
+        "dalive-site-config": {
+            "what": "DA.live's own config sheet for the site (content.da.live/config/{org}/{site}/) and its permissions.",
+            "create": "\\bputConfigAt\\(|\\bpostSiteConfig\\(",
+            "remove": "configService\\.deleteSiteConfig\\(",
+            "reversedBy": [
+                "delete-project"
+            ],
+            "projectDelete": {
+                "removes": "tearDownStorefront removes the site's permissions, then its config sheet."
+            },
+            "sites": {
+                "features/eds/services/daLive/daLiveConfigService.ts": 2,
+                "features/eds/services/daLive/daLiveConfigOperations.ts": 1
+            }
+        },
+        "config-service-site": {
+            "what": "The AEM Configuration Service site record (PUT /config/{owner}/sites/{repo}.json), with the access grants and admin API keys stored under it.",
+            "create": "async registerSite\\(",
+            "remove": "requestConfigService\\(this\\.tokenProvider, this\\.logger, 'DELETE'",
+            "reversedBy": [],
+            "projectDelete": {
+                "exemption": "No path removes the record: its one delete is inside updateSiteConfig's delete-and-re-register. Delete Project removes the admin API key under it (tearDownStorefront) and leaves the record.",
+                "backlog": "EDS-73"
+            },
+            "sites": {
+                "features/eds/services/configService/configurationService.ts": 2,
+                "features/eds/services/configService/configServiceRequest.ts": 1,
+                "features/eds/services/configService/configServiceAccess.ts": 3,
+                "features/eds/services/helix/helixApiKeys.ts": 2
+            }
+        },
+        "helix-published-pages": {
+            "what": "Pages previewed and published on aem.page and aem.live.",
+            "create": "buildPartitionUrl\\(partition",
+            "remove": "\\bunpublish\\w*\\(",
+            "reversedBy": [
+                "delete-project"
+            ],
+            "projectDelete": {
+                "removes": "tearDownStorefront unpublishes every page, and Delete Project stops while any is still live (EDS-65)."
+            },
+            "sites": {
+                "features/eds/services/helix/helixApiClient.ts": 2,
+                "features/eds/services/helix/helixBulkPublish.ts": 1,
+                "features/eds/services/helix/helixPageContent.ts": 1,
+                "features/eds/services/helix/helixPageDeletion.ts": 1
+            }
+        },
+        "helix-code": {
+            "what": "The site's code synced to the AEM code bus.",
+            "create": "buildPartitionUrl\\('code'",
+            "remove": "\\bdeleteCode\\(",
+            "reversedBy": [
+                "delete-project"
+            ],
+            "projectDelete": {
+                "removes": "performGitHubCleanup deletes the site's code once the repository is gone."
+            },
+            "sites": {
+                "features/eds/services/helix/helixCodeOperations.ts": 2
+            }
+        },
+        "publish-key-registration": {
+            "what": "The storefront's publish key, registered with the shared prepublish-pdp action so a product added later can publish on first visit.",
+            "create": "key: publishKey",
+            "reversedBy": [],
+            "projectDelete": {
+                "exemption": "Nothing unregisters it. Delete Project deletes the key itself, so the action keeps a dead key for the site, and a site recreated on the same owner/repo name relies on the next registration replacing it.",
+                "backlog": "EDS-74"
+            },
+            "sites": {
+                "features/eds/services/pdp/publishKeyRegistrar.ts": 1
+            }
+        },
+        "api-mesh": {
+            "what": "The API Mesh in the project's Adobe workspace.",
+            "create": "api-mesh:\\$\\{command\\}",
+            "remove": "execute\\(MESH_DELETE_COMMAND",
+            "reversedBy": [
+                "remove-integration",
+                "delete-mesh"
+            ],
+            "projectDelete": {
+                "exemption": "Delete Project leaves the mesh deployed in the workspace.",
+                "backlog": "AB-87"
+            },
+            "sites": {
+                "features/mesh/services/meshDeployment.ts": 1,
+                "core/shell/meshDeleteCommand.ts": 1
+            }
+        },
+        "app-builder-app": {
+            "what": "An App Builder integration's deployed app (runtime actions, and what its deploy hooks register).",
+            "create": "aio app deploy",
+            "remove": "aio app undeploy",
+            "reversedBy": [
+                "remove-integration"
+            ],
+            "projectDelete": {
+                "exemption": "Delete Project leaves every integration deployed.",
+                "backlog": "AB-87"
+            },
+            "sites": {
+                "features/app-builder/services/appDeployment.ts": 4,
+                "features/app-builder/services/appBuilderComponentTeardown.ts": 2,
+                "features/app-builder/services/runtimeNamespace.ts": 1,
+                "features/app-builder/services/runtimeUndeclaredActions.ts": 1
+            }
+        },
+        "app-management-install": {
+            "what": "An app-management integration's installation through the App Management API: its Commerce association and the event providers its install creates. The I/O Events wire is here because nothing else creates through it (its create methods have no caller), and the provider delete is the agent's one-provider teardown.",
+            "create": "'POST', '/installation'",
+            "remove": "\\buninstallAppManagementApp\\(",
+            "reversedBy": [
+                "remove-integration"
+            ],
+            "projectDelete": {
+                "exemption": "Delete Project leaves the installation in place.",
+                "backlog": "AB-87"
+            },
+            "sites": {
+                "features/app-builder/services/appManagementClient.ts": 8,
+                "features/app-builder/services/appManagementInstaller.ts": 1,
+                "features/authentication/services/ioEventsTransport.ts": 3,
+                "features/authentication/services/eventProviderLifecycle.ts": 1
+            }
+        },
+        "adobe-console-project": {
+            "what": "An Adobe Developer Console project, created in the wizard or by the agent. Its teardown removes its event registrations and providers first.",
+            "create": "client\\.createFireflyProject\\(",
+            "remove": "\\.delete(?:Console)?Project\\(",
+            "reversedBy": [
+                "delete-adobe-project",
+                "agent-adobe-resources"
+            ],
+            "projectDelete": {
+                "separately": "An Adobe project is picked on its own step and can hold more than one demo, so Delete Project keeps it; Delete Adobe Project removes it."
+            },
+            "sites": {
+                "features/authentication/services/adobeConsoleProjectOps.ts": 2,
+                "features/authentication/handlers/projectHandlers.ts": 1,
+                "features/authentication/handlers/deleteAdobeProjectHandler.ts": 2,
+                "features/authentication/services/consoleProjectTeardown.ts": 1,
+                "features/authentication/services/consoleProjectTeardownEvents.ts": 1,
+                "features/ai/server/adobeResourceTools.ts": 3
+            }
+        },
+        "adobe-console-workspace": {
+            "what": "A Console workspace (the project's own, or an integration's dedicated one), with the runtime namespace, credentials, API subscriptions and extension points that live inside it.",
+            "create": "client\\.createWorkspace\\(",
+            "remove": "await releaseWorkspaces\\(|workspaceOps\\.deleteWorkspace\\(",
+            "reversedBy": [
+                "remove-integration",
+                "agent-adobe-resources"
+            ],
+            "projectDelete": {
+                "exemption": "An integration's dedicated workspace goes with its Remove, not with Delete Project; the project's own workspace goes with Delete Adobe Project.",
+                "backlog": "AB-87"
+            },
+            "sites": {
+                "features/authentication/services/adobeConsoleWorkspaceOps.ts": 3,
+                "features/authentication/handlers/workspaceHandlers.ts": 1,
+                "features/app-builder/services/componentWorkspace.ts": 2,
+                "features/app-builder/services/componentRelocation.ts": 3,
+                "features/app-builder/services/appBuilderAddRun.ts": 1,
+                "features/project-creation/services/appBuilderComponentRunnerDeps.ts": 1,
+                "features/project-creation/services/workspaceRegistryDeps.ts": 1,
+                "features/authentication/services/adobeWorkspaceCredentials.ts": 4,
+                "features/app-builder/services/credentialSubscribe.ts": 3,
+                "features/authentication/services/adobeOrgServices.ts": 2,
+                "features/authentication/services/adobeConsoleExtensionPoints.ts": 1
+            }
+        },
+        "datapack-data": {
+            "what": "The Commerce records a datapack install makes (Demo Builder's engine: every kind records each object before it creates it), and the demo-data wipe that closes what a demo made.",
+            "create": "\\bcreateOne\\(",
+            "remove": "\\btakeBack(?:All)?\\(",
+            "reversedBy": [
+                "uninstall-datapack",
+                "delete-project"
+            ],
+            "projectDelete": {
+                "removes": "With Uninstall Datapack ticked, runProjectDelete runs removeDataBeforeDelete first."
+            },
+            "sites": {
+                "features/data-installer/services/demoBuilderEngine/attributeSetsKind.ts": 3,
+                "features/data-installer/services/demoBuilderEngine/attributesKind.ts": 2,
+                "features/data-installer/services/demoBuilderEngine/bulkProducts.ts": 1,
+                "features/data-installer/services/demoBuilderEngine/bulkRemoval.ts": 1,
+                "features/data-installer/services/demoBuilderEngine/cartRulesKind.ts": 2,
+                "features/data-installer/services/demoBuilderEngine/categoriesKind.ts": 1,
+                "features/data-installer/services/demoBuilderEngine/companiesKind.ts": 2,
+                "features/data-installer/services/demoBuilderEngine/couponsKind.ts": 2,
+                "features/data-installer/services/demoBuilderEngine/customerImport.ts": 2,
+                "features/data-installer/services/demoBuilderEngine/customerKinds.ts": 3,
+                "features/data-installer/services/demoBuilderEngine/importApi.ts": 1,
+                "features/data-installer/services/demoBuilderEngine/kindContext.ts": 1,
+                "features/data-installer/services/demoBuilderEngine/productExportKind.ts": 3,
+                "features/data-installer/services/demoBuilderEngine/productsKind.ts": 1,
+                "features/data-installer/services/demoBuilderEngine/repeatInstall.ts": 3,
+                "features/data-installer/services/demoBuilderEngine/sharedCatalogKinds.ts": 3,
+                "features/data-installer/services/demoBuilderEngine/sourceItemsKind.ts": 1,
+                "features/data-installer/services/demoBuilderEngine/stockKinds.ts": 6,
+                "features/data-installer/services/demoDataWipe/wipeCartRules.ts": 1,
+                "features/data-installer/services/demoDataWipe/wipeOrderRun.ts": 6
+            }
+        },
+        "datapack-store-pack": {
+            "what": "A pack written into a datapack store (the Data Installer's catalog or Demo Builder's own store).",
+            "create": "'create-datapack'",
+            "remove": "\\.deleteDatapack\\(",
+            "reversedBy": [
+                "delete-library-datapack"
+            ],
+            "projectDelete": {
+                "separately": "A pack in a store is the SC's library entry and outlives any one project; the library's Delete removes it."
+            },
+            "sites": {
+                "features/data-installer/services/datapackStoreWriter.ts": 5
+            }
+        },
+        "commerce-store-preparation": {
+            "what": "The demo setup's Commerce changes (AB-77): warehouses and stocks, shared catalogs, ERP attributes, store configuration. Each step records what it made so its undo takes back only that.",
+            "create": "async apply\\(deps\\)",
+            "remove": "\\bundoPreparation\\(",
+            "reversedBy": [
+                "undo-store-preparation",
+                "remove-integration"
+            ],
+            "projectDelete": {
+                "exemption": "Delete Project does not undo the demo setup; an ERP integration's Remove does (erpSetupTeardown), so it comes with AB-87 when that fix runs each integration's Remove.",
+                "backlog": "AB-87"
+            },
+            "sites": {
+                "features/app-builder/services/storePreparation/configSetup.ts": 1,
+                "features/app-builder/services/storePreparation/erpAttributesSetup.ts": 2,
+                "features/app-builder/services/storePreparation/sharedCatalogsSetup.ts": 4,
+                "features/app-builder/services/storePreparation/warehouseSetup.ts": 6
+            }
+        },
+        "erp-integration-data": {
+            "what": "What the ERP integration holds and writes: its records from the ERP fill, its settings, key map and ERP list, and what it wrote into Commerce (owner attribute sets, products).",
+            "create": "\\bfillErpForProject\\(",
+            "remove": "\\bwipeSystemRecords\\(",
+            "reversedBy": [
+                "remove-integration"
+            ],
+            "projectDelete": {
+                "exemption": "Delete Project leaves the ERP's records in its workspace database; the integration's Remove wipes and detaches them first.",
+                "backlog": "AB-87"
+            },
+            "sites": {
+                "features/app-builder/services/erpIntegrationClient.ts": 11,
+                "features/dashboard/handlers/erpDemoControlHandlers.ts": 3,
+                "features/dashboard/handlers/erpIntegrationHandlers.ts": 4,
+                "features/dashboard/handlers/erpResetHandlers.ts": 1,
+                "features/app-builder/services/erpOwnerAttributeSets.ts": 2,
+                "features/app-builder/services/erpProducts.ts": 1,
+                "features/project-creation/services/erpAssignProducts.ts": 1,
+                "features/project-creation/services/erpFillForProject.ts": 2,
+                "features/project-creation/services/erpMappingAfterFill.ts": 1,
+                "features/project-creation/services/erpOwnershipSync.ts": 1,
+                "features/app-builder/services/systemRecordsWipe.ts": 1
+            }
+        }
+    },
+    "notCreates": {
+        "core/utils/operationStages.ts": {
+            "hits": 1,
+            "why": "A progress label naming the command."
+        },
+        "features/ai/server/actionDescriptors.ts": {
+            "hits": 6,
+            "why": "Tool descriptions and the commerce_rest_write verb list; the handlers they dispatch to are claimed."
+        },
+        "types/commerceWire.ts": {
+            "hits": 3,
+            "why": "A type naming the verbs."
+        },
+        "features/app-builder/services/commerceBulk.ts": {
+            "hits": 2,
+            "why": "The bulk helper's verb parameter type; its callers are claimed."
+        },
+        "features/data-installer/services/dataInstallerTransport.ts": {
+            "hits": 1,
+            "why": "The read client's verb parameter type."
+        },
+        "features/data-installer/services/dataInstallerClient.ts": {
+            "hits": 1,
+            "why": "batch-get-data-items: a read sent as POST."
+        },
+        "features/ai/server/commerceQueryTool.ts": {
+            "hits": 2,
+            "why": "A GraphQL read; the tool refuses mutations. The second POST signs in as a buyer for signInAs (generateCustomerToken): a session token that expires, no record made (PL-60)."
+        },
+        "features/ai/server/acoTools.ts": {
+            "hits": 1,
+            "why": "run_aco_query, a GraphQL read of the ACO storefront; it refuses a mutation. The writes go through acoClient.ts and acoAdminClient.ts, claimed above (PL-60)."
+        },
+        "features/data-installer/services/aco/acoConnector.ts": {
+            "hits": 1,
+            "why": "Reads the Commerce backend's GraphQL schema to tell whether the ACO connector is installed (PL-60)."
+        },
+        "features/data-installer/services/aco/acoToken.ts": {
+            "hits": 1,
+            "why": "Asks IMS for an access token with the project's client credentials (PL-60); a token expires and makes no record."
+        },
+        "features/data-installer/services/aco/acoWipe.ts": {
+            "hits": 1,
+            "why": "The ACO storefront search Clear Demo Data reads to plan; its deletes go through acoClient.ts (PL-60)."
+        },
+        "features/eds/services/b2bReadinessDetection.ts": {
+            "hits": 1,
+            "why": "A GraphQL read."
+        },
+        "features/eds/services/catalogEnumeration.ts": {
+            "hits": 1,
+            "why": "A GraphQL read."
+        },
+        "features/eds/services/commerceStoreDiscovery.ts": {
+            "hits": 1,
+            "why": "A GraphQL read."
+        },
+        "features/eds/services/catalogMenu/catalogMenuSiteDeps.ts": {
+            "hits": 1,
+            "why": "A Catalog Service GraphQL read."
+        },
+        "features/mesh/services/meshEndpoint.ts": {
+            "hits": 1,
+            "why": "A GraphQL query to the deployed mesh."
+        },
+        "features/eds/services/helix/helixPublishedPaths.ts": {
+            "hits": 1,
+            "why": "The admin API's bulk status job: a read sent as POST."
+        },
+        "features/app-builder/services/runtimeActivations.ts": {
+            "hits": 1,
+            "why": "Invokes a deployed web action; what that action writes belongs to its integration's row."
+        },
+        "features/eds/services/pdp/pdp404Snippet.ts": {
+            "hits": 1,
+            "why": "Browser code written into the storefront; the POST runs in the visitor's browser, not here."
+        },
+        "features/ai/server/commerceRestClient.ts": {
+            "hits": 4,
+            "why": "The agent's Commerce REST passthrough: the caller names the route, and the same tool sends the DELETE, so the removal travels with the capability."
+        },
+        "features/ai/server/commerceRestWriteTool.ts": {
+            "hits": 4,
+            "why": "The agent's Commerce REST passthrough: the caller names the route, and the same tool sends the DELETE."
+        }
+    }
+}

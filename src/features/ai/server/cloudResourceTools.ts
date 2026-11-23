@@ -27,13 +27,15 @@ import {
     getGitHubServices,
     tryCreateDaLiveTokenProvider,
 } from '@/features/eds/handlers/edsHelpers';
+import { createRepoFromSource } from '@/features/eds/handlers/storefrontSetup/storefrontSetupPhase1';
 import { type TokenProvider } from '@/features/eds/services/daLive/daLiveApiClient';
 import { DaLiveContentOperations } from '@/features/eds/services/daLive/daLiveContentOperations';
 import { DaLiveOrgOperations } from '@/features/eds/services/daLive/daLiveOrgOperations';
-import { firstUsableDaLiveToken } from '@/features/eds/services/daLive/daLiveTokenChain';
+import { createDaLiveServiceTokenProvider } from '@/features/eds/services/daLive/daLiveTokenProviders';
 import { projectsSharingRepo } from '@/features/eds/services/storefront/sharedRepoProjects';
 import { deleteStorefrontRepository } from '@/features/eds/services/storefront/storefrontCodeRemoval';
 import { tearDownStorefront } from '@/features/eds/services/storefront/storefrontTeardown';
+import { TemplateSyncService } from '@/features/updates/services/templateSyncService';
 import type { HandlerContext } from '@/types/handlers';
 
 /** Silent GitHub auth pre-flight → `true` when a valid token is present. */
@@ -58,9 +60,10 @@ const NEEDS_ADOBE = {
 };
 
 /**
- * Build DA.live org + content operations on the DA.live session when there is
- * one, else on the Adobe IMS token (`firstUsableDaLiveToken`). Returns null when
- * neither is available (the caller turns that into a `needsAuth` handoff).
+ * Build DA.live org + content operations on the DA.live session, the one sign-in
+ * DA.live and Helix accept (PL-104 fix 7: the Adobe IMS fallback is gone, see
+ * `storefrontTeardown`). Returns null when it holds no token (the caller turns that
+ * into a `needsAuth` handoff).
  */
 async function buildDaLiveOps(
     ctx: HandlerContext,
@@ -70,11 +73,13 @@ async function buildDaLiveOps(
     /** Handed on to the shared storefront teardown, which reads it per call. */
     tokenProvider: TokenProvider;
 } | null> {
-    const tokenProvider = await firstUsableDaLiveToken({
-        daLiveSession: () => getDaLiveAuthService(ctx.context),
-        imsTokenManager: () => ServiceLocator.getAuthenticationService().getTokenManager(),
-    });
-    if (!tokenProvider) return null;
+    let tokenProvider: TokenProvider;
+    try {
+        tokenProvider = createDaLiveServiceTokenProvider(getDaLiveAuthService(ctx.context));
+        if (!(await tokenProvider.getAccessToken())) return null;
+    } catch {
+        return null; // No session to read: the agent is handed the sign-in, not a failure.
+    }
     return {
         tokenProvider,
         org: new DaLiveOrgOperations(tokenProvider, ctx.logger),
@@ -97,7 +102,10 @@ export function registerCloudResourceTools(
         {
             needsAuth: ['github'],
             annotations: { readOnlyHint: true, destructiveHint: false },
-            description: 'List GitHub repositories you can push to (paginated summary)',
+            description:
+                'List the GitHub repositories you can push to, as seen by the GitHub account Demo Builder ' +
+                'is signed in to (the one that creates and pushes storefront repos). Use this instead of ' +
+                'the gh CLI, which can be signed in to a different account. Most recently updated first, paginated.',
             inputSchema: {
                 offset: z.number().int().min(0).optional().describe('Start index for pagination (default 0)'),
                 limit: z.number().int().min(1).max(100).optional().describe('Max repos to return (default 30)'),
@@ -127,10 +135,10 @@ export function registerCloudResourceTools(
             needsAuth: ['github'],
             annotations: { readOnlyHint: false, destructiveHint: false },
             description:
-                'Create a GitHub repo from a template (the EDS storefront path). Returns the repo and whether its content has finished materialising.',
+                'Create a GitHub repo from a source repository (the EDS storefront path): generated when the source is a GitHub template, otherwise created empty and reset onto the source, as the wizard does. Returns the repo and whether its content has finished materialising.',
             inputSchema: {
-                templateOwner: z.string().describe('Owner of the template repository'),
-                templateRepo: z.string().describe('Name of the template repository'),
+                templateOwner: z.string().describe('Owner of the source repository (a GitHub template or not)'),
+                templateRepo: z.string().describe('Name of the source repository'),
                 name: z.string().describe('Name for the new repository'),
                 targetOwner: z
                     .string()
@@ -161,15 +169,28 @@ export function registerCloudResourceTools(
                 return asText(NEEDS_GITHUB);
             }
 
-            const { repoLifecycle } = getGitHubServices(ctx.context.secrets);
+            const github = getGitHubServices(ctx.context.secrets);
+            const { repoLifecycle } = github;
             let repo;
             try {
-                repo = await repoLifecycle.createFromTemplate(
+                // The wizard's own creation (PL-104 fix 13): a GitHub template is generated;
+                // any other source becomes an empty repository reset onto it. Whether the
+                // source is a template is read live, since an agent cannot know.
+                repo = await createRepoFromSource(
+                    {
+                        repoOps: github.repoOperations,
+                        repoLifecycle,
+                        templateSync: new TemplateSyncService(github, ctx.logger, ServiceLocator.getCommandExecutor()),
+                    },
+                    {
+                        newRepoName: name,
+                        isPrivate: args?.isPrivate === true,
+                        namespace: args?.targetOwner ? String(args.targetOwner).trim() : undefined,
+                        fromAddedDemo: true,
+                    },
                     templateOwner,
                     templateRepo,
-                    name,
-                    args?.isPrivate === true,
-                    args?.targetOwner ? String(args.targetOwner).trim() : undefined,
+                    ctx.logger,
                 );
             } catch (err) {
                 return asText({
@@ -361,7 +382,7 @@ export function registerCloudResourceTools(
                     tearDownStorefront(
                         { daLiveOrg: org, daLiveSite: site, githubRepo: args?.githubRepo },
                         {
-                            tokenProvider: ops.tokenProvider,
+                            daLiveSession: ops.tokenProvider,
                             logger: ctx.logger,
                             initKeyStore: () =>
                                 HelixService.initKeyStore(

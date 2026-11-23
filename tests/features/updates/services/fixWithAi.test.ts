@@ -1,6 +1,6 @@
 /**
  * Fix with AI — the prompt the SC's AI gets for a kept clash, and the request that opens it
- * (EDS-57 step 4). Run on a real kept clash (JustRite's header, in miniature), so the diffs
+ * (EDS-57 step 4). Run on a real kept clash (Tailspin's header, in miniature), so the diffs
  * in the prompt are what git reads from the local copy.
  */
 
@@ -47,7 +47,7 @@ describe('openFixWithAi', () => {
     it('tells the AI to finish through the tool for that project, and never to push itself', async () => {
         const { prompt } = await keptOpen();
 
-        expect(prompt).toContain('finish_storefront_update with project "justrite"');
+        expect(prompt).toContain('finish_storefront_update with project "tailspin"');
         expect(prompt).toContain('Do not commit, push, or run any git command that changes the repository');
         expect(prompt).toContain('Change only the files named below');
     }, REAL_GIT_TIMEOUT_MS);
@@ -67,7 +67,7 @@ describe('buildClashPrompt', () => {
         projectName,
         clash: {
             track: 'template' as const,
-            source: { owner: 'kmanns', repo: 'justrite' },
+            source: { owner: 'org-e', repo: 'tailspin' },
             base: 'a'.repeat(40),
             target: 'b'.repeat(40),
             files: ['blocks/header/header.js'],
@@ -79,7 +79,7 @@ describe('buildClashPrompt', () => {
     });
 
     it('names no AI engine: the SC chose one and the prompt works in either', () => {
-        const prompt = buildClashPrompt([item('justrite')]);
+        const prompt = buildClashPrompt([item('tailspin')]);
 
         expect(prompt).not.toMatch(/copilot|claude/i);
         // Control: the same matcher finds a word that is there.
@@ -87,14 +87,14 @@ describe('buildClashPrompt', () => {
     });
 
     it("words a colleague's update by its repository", () => {
-        expect(buildClashPrompt([item('justrite')])).toContain('the changes from kmanns/justrite (aaaaaaa to bbbbbbb)');
+        expect(buildClashPrompt([item('tailspin')])).toContain('the changes from org-e/tailspin (aaaaaaa to bbbbbbb)');
     });
 
     it('covers several projects in one chat, each finished by its own name', () => {
-        const prompt = buildClashPrompt([item('justrite'), item('bodea')]);
+        const prompt = buildClashPrompt([item('tailspin'), item('bodea')]);
 
         expect(prompt).toContain('fix the clashes below');
-        expect(prompt).toContain('finish_storefront_update with project "justrite"');
+        expect(prompt).toContain('finish_storefront_update with project "tailspin"');
         expect(prompt).toContain('finish_storefront_update with project "bodea"');
     });
 

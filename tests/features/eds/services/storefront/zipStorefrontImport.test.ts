@@ -10,8 +10,8 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import {
-    cardFromZip,
     classifyZipStorefront,
+    contentSourceOfZip,
     createRepositoryFromZip,
     readStorefrontZip,
     setupForCard,
@@ -53,7 +53,7 @@ const STOREFRONT = {
     'scripts/scripts.js': 'export {};',
     'scripts/delayed.js': 'export {};',
     'head.html': '<meta>',
-    'fstab.yaml': 'mountpoints:\n  /: https://content.da.live/jen/summit/\n',
+    'fstab.yaml': 'mountpoints:\n  /: https://content.da.live/robin/summit/\n',
     '.gitignore': GITIGNORE,
     'fonts/roboto.woff2': PNG,
 };
@@ -212,7 +212,7 @@ describe('suggestRepoName', () => {
     });
 });
 
-describe('createRepositoryFromZip, cardFromZip and setupForCard', () => {
+describe('createRepositoryFromZip and setupForCard', () => {
     const logger = createMockLogger();
     const CREATED = {
         owner: 'steve',
@@ -253,7 +253,7 @@ describe('createRepositoryFromZip, cardFromZip and setupForCard', () => {
 
         // Each step the dialog's spinner names, in order (owner, 2026-09-14).
         expect(onProgress.mock.calls).toStrictEqual([
-            ['Creating the repository', 'summit · 2 files'],
+            ['Creating the repository', 'summit, 2 files'],
             ['Pushing files', '2 of 2'],
             ['Finishing up', 'Marking it as a template'],
         ]);
@@ -268,43 +268,37 @@ describe('createRepositoryFromZip, cardFromZip and setupForCard', () => {
             'head'
         );
         expect(repoOps.setTemplateFlag).toHaveBeenCalledWith('steve', 'summit', true);
-        expect(created).toEqual(CREATED);
+        // The pushed commit comes back: an imported project records it to reset to (EDS-72).
+        expect(created).toEqual({ ...CREATED, commit: 'c1' });
     });
 
-    it('builds the card from the description file, pointed at the new repository and recorded as made from the zip, and none without one', () => {
-        const files = new Map([
-            [
-                'demo.demo-builder.json',
-                Buffer.from(
-                    '{"kind":"demo","version":1,"name":"Bodea","configFlags":{"commerce-b2b-enabled":true}}'
-                ),
-            ],
-        ]);
-        expect(cardFromZip(files, CREATED)).toEqual({
-            kind: 'demo',
-            version: 1,
-            name: 'Bodea',
-            configFlags: { 'commerce-b2b-enabled': true },
-            source: { owner: 'steve', repo: 'summit', branch: 'main' },
-            storefrontKind: 'eds',
-            createdFromZip: true,
-        });
-        expect(cardFromZip(new Map(), CREATED)).toBeUndefined();
-        expect(
-            cardFromZip(new Map([['demo.demo-builder.json', Buffer.from('nope')]]), CREATED)
-        ).toBeUndefined();
-    });
+    // EDS-72: Import from File makes the PROJECT's own repository from a bundle, so it is
+    // created in the namespace the project uses and is not flagged a template.
+    it('creates a project repository in a namespace, unflagged, when asked', async () => {
+        const repoOps = {
+            createEmptyRepository: jest.fn().mockResolvedValue({ fullName: 'acme/summit', name: 'summit', defaultBranch: 'main' }),
+            waitForContent: jest.fn().mockResolvedValue(true),
+            setTemplateFlag: jest.fn().mockResolvedValue(undefined),
+        };
+        const fileOps = {
+            getBranchInfo: jest.fn().mockResolvedValue({ commitSha: 'head', treeSha: 't0' }),
+            createBlob: jest.fn(),
+            createTree: jest.fn().mockResolvedValue('tree-1'),
+            createCommit: jest.fn().mockResolvedValue('c9'),
+            updateBranchRef: jest.fn().mockResolvedValue(undefined),
+        };
+        const onProgress = jest.fn();
 
-    it("records the boilerplate the zip's package.json names on the card (EDS-13f decision 4)", () => {
-        const files = new Map([
-            ['demo.demo-builder.json', Buffer.from('{"kind":"demo","version":1,"name":"Bodea"}')],
-            ['package.json', Buffer.from('{"name":"@adobe/aem-boilerplate-commerce","version":"6.0.0"}')],
-        ]);
+        const created = await createRepositoryFromZip(
+            { repoOps, fileOps, logger, onProgress },
+            new Map([['head.html', Buffer.from('<meta>')]]),
+            { repoName: 'summit', isPrivate: false, namespace: 'acme', template: false },
+        );
 
-        expect(cardFromZip(files, CREATED)?.boilerplate).toEqual({
-            name: '@adobe/aem-boilerplate-commerce',
-            version: '6.0.0',
-        });
+        expect(repoOps.createEmptyRepository).toHaveBeenCalledWith('summit', false, 'acme');
+        expect(repoOps.setTemplateFlag).not.toHaveBeenCalled();
+        expect(onProgress.mock.calls.map(([message]) => message)).not.toContain('Finishing up');
+        expect(created).toMatchObject({ owner: 'acme', repo: 'summit', commit: 'c9' });
     });
 
     it("makes the setup the colleague's own: the wizard starts on the card, and the sender's storefront stays provenance", () => {
@@ -323,5 +317,23 @@ describe('createRepositoryFromZip, cardFromZip and setupForCard', () => {
         // Provenance, never a setting: the wizard seeds no storefront from it.
         expect(own.source.storefront).toEqual(setup.source.storefront);
         expect(own).not.toHaveProperty('edsConfig');
+    });
+});
+
+// EDS-72: a project made from a bundle copies its pages from the sender's published site, which
+// the bundle names (Export writes it into the description file) or its fstab.yaml mounts.
+describe('contentSourceOfZip', () => {
+    it("reads the description file's content site, index path included", () => {
+        const files = new Map([
+            ['demo.demo-builder.json', Buffer.from('{"kind":"demo","version":2,"name":"Bodea","contentSource":{"org":"sender","site":"kukla-bodea","indexPath":"/query-index.json"}}')],
+            ['fstab.yaml', Buffer.from('mountpoints:\n  /: https://content.da.live/other/site/\n')],
+        ]);
+        expect(contentSourceOfZip(files)).toStrictEqual({ org: 'sender', site: 'kukla-bodea', indexPath: '/query-index.json' });
+    });
+
+    it("falls back to the site fstab.yaml mounts, at the usual index, and to nothing without either", () => {
+        const fstab = new Map([['fstab.yaml', Buffer.from('mountpoints:\n  /: https://content.da.live/sender/kukla-bodea/\n')]]);
+        expect(contentSourceOfZip(fstab)).toStrictEqual({ org: 'sender', site: 'kukla-bodea', indexPath: '/full-index.json' });
+        expect(contentSourceOfZip(new Map())).toBeUndefined();
     });
 });

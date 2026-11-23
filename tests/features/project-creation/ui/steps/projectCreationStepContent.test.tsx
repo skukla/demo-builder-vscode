@@ -35,6 +35,7 @@ jest.mock('@/features/eds/ui/components/GitHubAppInstallDialog', () => ({
 
 // Below the mock on purpose: `jest.mock` hoists above this file's imports only.
 import { StepContentArea } from '@/features/project-creation/ui/steps/projectCreationStepContent';
+import { plain } from '@/core/utils/plainText';
 
 const BASE = {
     phase: 'creating' as const,
@@ -126,14 +127,14 @@ describe('StepContentArea', () => {
                 isActive: true,
                 progress: progressOf({
                     currentOperation: 'Installing components',
-                    message: 'Running npm install for each',
+                    message: 'Installing dependencies',
                     position: { index: 4, total: 9 },
                     startedAt,
                 }),
             });
 
             expect(screen.getByText('Installing components (4 of 9)')).toBeInTheDocument();
-            expect(screen.getByText('Running npm install for each')).toBeInTheDocument();
+            expect(screen.getByText('Installing dependencies')).toBeInTheDocument();
             expect(screen.getByText('Usually under a minute · 1 minute, 5 seconds')).toBeInTheDocument();
         });
 
@@ -172,34 +173,56 @@ describe('StepContentArea', () => {
         it('shows the success view', () => {
             renderContent({ isCompleted: true, progress: progressOf({ currentOperation: 'Project Created' }) });
 
-            expect(screen.getByText('Project Created Successfully')).toBeInTheDocument();
-            expect(screen.getByText('Click below to view your projects')).toBeInTheDocument();
+            expect(screen.getByText('Project Created')).toBeInTheDocument();
+            expect(screen.queryByText('Click below to view your projects')).not.toBeInTheDocument();
         });
 
-        it('shows the finishing update\'s one line under the heading (EDS-64)', () => {
-            const note = '2 links in the copied content go to missing pages. Diagnostics lists them.';
-            renderContent({ isCompleted: true, progress: progressOf({ currentOperation: 'Project Created', note }) });
+        // PL-101: what the run left to finish, in the owner's words, under the title.
+        it.each([
+            [2, '2 steps remaining'],
+            [1, '1 step remaining'],
+        ])('says %i left to finish as "%s" under Project Created', (stepsRemaining, line) => {
+            renderContent({
+                isCompleted: true,
+                progress: progressOf({ currentOperation: 'Project Created', stepsRemaining }),
+            });
 
-            expect(screen.getByText(note)).toBeInTheDocument();
+            expect(screen.getByText('Project Created')).toBeInTheDocument();
+            expect(screen.getByText(line)).toBeInTheDocument();
+        });
+
+        it('shows the title alone when no step is left', () => {
+            renderContent({
+                isCompleted: true,
+                progress: progressOf({ currentOperation: 'Project Created', stepsRemaining: 0 }),
+            });
+
+            expect(screen.queryByText(/remaining/)).not.toBeInTheDocument();
+        });
+
+        it('says it is opening the project while Finish Setup takes the SC to it', () => {
+            renderContent({ isCompleted: true, isOpeningProject: true, opensDashboard: true });
+
+            expect(screen.getByText('Opening your project')).toBeInTheDocument();
         });
 
         it('shows the loading transition while the project is being opened', () => {
             renderContent({ isCompleted: true, isOpeningProject: true });
 
             expect(screen.getByText('Loading your projects')).toBeInTheDocument();
-            expect(screen.queryByText('Project Created Successfully')).not.toBeInTheDocument();
+            expect(screen.queryByText('Project Created')).not.toBeInTheDocument();
         });
 
         it('gives way to the error view when the finished progress carries an error', () => {
             renderContent({
                 isCompleted: true,
                 showGenericError: true,
-                progress: progressOf({ error: 'boom' }),
+                progress: progressOf({ error: plain('boom') }),
             });
 
             expect(screen.getByText('Project Creation Failed')).toBeInTheDocument();
             expect(screen.getByText('boom')).toBeInTheDocument();
-            expect(screen.queryByText('Project Created Successfully')).not.toBeInTheDocument();
+            expect(screen.queryByText('Project Created')).not.toBeInTheDocument();
         });
 
         it('says "Changes Saved" for an Edit, not "Project Created" (PL-75)', () => {
@@ -210,7 +233,7 @@ describe('StepContentArea', () => {
             });
 
             expect(screen.getByText('Changes Saved')).toBeInTheDocument();
-            expect(screen.queryByText('Project Created Successfully')).not.toBeInTheDocument();
+            expect(screen.queryByText('Project Created')).not.toBeInTheDocument();
         });
 
         it('names a failed Edit as saving changes', () => {
@@ -218,7 +241,7 @@ describe('StepContentArea', () => {
                 isEdit: true,
                 isCompleted: true,
                 showGenericError: true,
-                progress: progressOf({ error: 'boom' }),
+                progress: progressOf({ error: plain('boom') }),
             });
 
             expect(screen.getByText('Saving Changes Failed')).toBeInTheDocument();
@@ -229,7 +252,7 @@ describe('StepContentArea', () => {
         it('shows the failure with its reason as a detail line', () => {
             const { container } = renderContent({
                 showGenericError: true,
-                progress: progressOf({ error: 'npm ERR! network timeout' }),
+                progress: progressOf({ error: plain('npm ERR! network timeout') }),
             });
 
             expect(screen.getByText('Project Creation Failed')).toBeInTheDocument();

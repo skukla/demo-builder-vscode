@@ -4,12 +4,12 @@ kind: fix
 area: eds
 needs: []
 value: med
-status: built
+status: shipped
 ---
 
 # Republish says "No publishable pages found" when the DA.live sign-in has expired
 
-Filed 2026-10-05 from the first EDS-24 run on Justrite. Republish (`sync_content`) answered
+Filed 2026-10-05 from the first EDS-24 run on Tailspin. Republish (`sync_content`) answered
 "No publishable pages found. Ensure the site has content in DA.live." The site had content;
 the DA.live sign-in had expired. The Debug Logs show the truth one line above the error:
 
@@ -39,3 +39,4 @@ should have stopped the run with the sign-in message before any publish.
 - 2026-10-05  docs(backlog): EDS-29 and EDS-30 — an expired DA.live sign-in reads as no content, and as signed in (`f2e68a8e1`)
 - 2026-10-19  fix(eds): an expired DA.live sign-in no longer reads as "no publishable pages" (`3c0fe2c6f`)
 - 2026-10-19  The grant-step half (a 401 during the access grant, logged and passed over) is its own item now, EDS-54
+- 2026-11-20  Released in v1.0.0-beta.153

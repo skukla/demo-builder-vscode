@@ -128,7 +128,7 @@ describe("syncBoilerplate: a colleague's storefront gets Adobe's labels at the t
         templateHasCheckoutAt(TESTED_SHA);
 
         const result = await service().syncBoilerplate(
-            edsProject({ templateOwner: 'kmanns', templateRepo: 'justrite' }),
+            edsProject({ templateOwner: 'org-e', templateRepo: 'tailspin' }),
             { base: BASE, tested: TESTED_SHA },
         );
 

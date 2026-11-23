@@ -114,7 +114,7 @@ describe('AdobeConsoleWorkspaceOps.createWorkspace — where it is created', () 
 
     // 2026-10-15: an ERP add on a project with no Adobe project passed
     // `{ orgId, projectId: undefined }`, and the missing half came from the cache:
-    // Justrite's project, which the SC had open earlier. A told target is used whole
+    // Tailspin's project, which the SC had open earlier. A told target is used whole
     // or not at all.
     it('refuses a target missing its project rather than borrowing the cached one', async () => {
         const createWorkspace = jest.fn();

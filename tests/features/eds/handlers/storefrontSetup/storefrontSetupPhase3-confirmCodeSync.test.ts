@@ -90,6 +90,17 @@ const appRequiredPayload = (context: HandlerContext): { message: string; isTeamO
 
 const messages = progressMessages;
 
+/**
+ * The pass is said by its own push: progress moves to 48 with no words of its own, after the
+ * "Verifying AEM Code Sync" push at 48 (the owner's 2026-11-19 wording: no past-tense line).
+ */
+function passPushed(context: HandlerContext): boolean {
+    const pushes = (context.sendMessage as unknown as jest.Mock).mock.calls
+        .filter((c) => c[0] === 'storefront-setup-progress')
+        .map((c) => c[1] as { phase: string; message?: string; progress: number });
+    return pushes.some((p) => p.phase === 'site-config' && p.progress === 48 && p.message === undefined);
+}
+
 const progressPayloads = (context: HandlerContext): unknown[] =>
     (context.sendMessage as unknown as jest.Mock).mock.calls
         .filter((c) => c[0] === 'storefront-setup-progress')
@@ -144,7 +155,7 @@ describe('saying so when it passes', () => {
         const result = await run(context, makeServices());
 
         expect(result).toBeNull();
-        expect(messages(context)).toMatch(/AEM Code Sync verified/i);
+        expect(passPushed(context)).toBe(true);
     });
 });
 
@@ -158,8 +169,8 @@ describe('the one measurement that earns a pause', () => {
         // The pause polled the App itself and found it, so the phase finished.
         expect(services.githubAppService.isAppInstalled).toHaveBeenCalled();
         expect(result).toBeNull();
-        expect(messages(context)).toMatch(/resuming setup/i);
-        expect(messages(context)).toMatch(/Site configuration complete/i);
+        expect(messages(context)).toMatch(/^Resuming$/m);
+        expect(messages(context)).toMatch(/Publishing code/i);
     });
 
     it('ends the run when it is cancelled while waiting for the App', async () => {
@@ -276,7 +287,7 @@ describe('who can actually fix it', () => {
  * nothing about whether the call was well formed.
  */
 describe('what the phase reports and calls', () => {
-    // Line 2 under 'Publishing code, settings' (progress vocabulary, owner 2026-10-16):
+    // Line 2 under 'Publishing code and settings' (progress vocabulary, owner 2026-10-16):
     // the jobs in the vocabulary's words; the repository was named on the step before.
     it('reports each step in order, each job in the vocabulary', async () => {
         const context = makeContext();
@@ -286,7 +297,7 @@ describe('what the phase reports and calls', () => {
         expect(progressPayloads(context)).toEqual([
             {
                 phase: 'code-sync',
-                message: expect.stringContaining('Verifying code synchronization'),
+                message: expect.stringContaining('Verifying code sync'),
                 progress: 40,
             },
             {
@@ -311,12 +322,11 @@ describe('what the phase reports and calls', () => {
             },
             {
                 phase: 'site-config',
-                message: expect.stringContaining('AEM Code Sync verified'),
                 progress: 48,
             },
             {
                 phase: 'site-config',
-                message: expect.stringContaining('Site configuration complete'),
+                message: expect.stringContaining('Publishing code'),
                 progress: 49,
             },
         ]);
@@ -352,7 +362,7 @@ describe('what the phase reports and calls', () => {
         });
         expect(messages(context)).toMatch(/Code not published to the CDN: helix 503/);
         expect(messages(context)).not.toMatch(/Code synchronized/);
-        expect(messages(context)).not.toMatch(/Site configuration complete/);
+        expect(messages(context)).not.toMatch(/Publishing code/);
     });
 });
 
@@ -486,7 +496,7 @@ describe('the App-required payload', () => {
 /**
  * EDS-23 — the code endpoint decides, because `/status` cannot.
  *
- * On skukla/kukla-justrite `/status` answered an inner 400 while the App did NOT
+ * On skukla/kukla-tailspin `/status` answered an inner 400 while the App did NOT
  * cover the repository, and again after it did. The code POST this phase already
  * makes said which: `x-error: [admin] github bot not installed on repository.`
  * That answer earns the same pause as an inner 404 (EDS-20), and the pause ends
@@ -512,7 +522,7 @@ describe('the code endpoint says the App is not on the repository', () => {
             message: expect.stringContaining('skukla/kukla-bodea'),
         });
         expect(result).toBeNull();
-        expect(messages(context)).toMatch(/resuming setup/i);
+        expect(messages(context)).toMatch(/^Resuming$/m);
     });
 
     it('ends the wait by publishing the code again — the same call, the same arguments', async () => {
@@ -559,7 +569,7 @@ describe('the code endpoint says the App is not on the repository', () => {
 
         expect(services.helixService.previewCode).toHaveBeenCalledTimes(2);
         expect(result).toMatchObject({ success: false, error: expect.stringContaining('helix 503') });
-        expect(messages(context)).not.toMatch(/Site configuration complete/);
+        expect(messages(context)).not.toMatch(/Publishing code/);
     });
 
     it('fails honestly when the App never covers the repository within the wait', async () => {
@@ -583,7 +593,7 @@ describe('an inner 400 from /status', () => {
         const result = await run(context, makeServices());
 
         expect(result).toBeNull();
-        expect(messages(context)).toMatch(/AEM Code Sync verified/);
+        expect(passPushed(context)).toBe(true);
         expect(sentTypes(context)).not.toContain('storefront-setup-github-app-required');
     });
 

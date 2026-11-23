@@ -56,7 +56,7 @@ function setup(overrides: Partial<Project> = {}) {
 }
 
 const toBodea: ProjectCreationConfig = {
-    projectName: 'justrite',
+    projectName: 'tailspin',
     selectedStack: 'eds-accs',
     selectedPackage: 'bodea',
     selectedAddons: ['live-search'],
@@ -111,11 +111,12 @@ describe('applyPackageChange', () => {
         expect(resetEdsProjectWithUI).toHaveBeenCalledWith(
             expect.objectContaining({
                 project,
-                includeBlockLibrary: true,
-                verifyCdn: true,
                 withinEdit: { report: expect.any(Function) },
             }),
         );
+        // The block library and the CDN check are the reset's to decide, not the Edit's (PL-104 fix 1).
+        const handed = (resetEdsProjectWithUI as jest.Mock).mock.calls[0][0];
+        expect('includeBlockLibrary' in handed || 'verifyCdn' in handed).toBe(false);
         expect(order).toStrictEqual(['env', 'reset']);
         expect(generateAIContextFiles).toHaveBeenCalledWith(project.path, project, context.context.extensionPath);
     });
@@ -163,5 +164,29 @@ describe('applyPackageChange', () => {
 
         expect(project.selectedPackage).toBe('citisignal');
         expect(resetEdsProjectWithUI).not.toHaveBeenCalled();
+    });
+
+    // Owner 2026-11-14 (item 3): what the reset finished around reaches the Edit. Content kept on
+    // purpose is a note, as the batch reset words it (owner walk Q6); what it failed to do is a warning.
+    it("hands back content kept as a note, and what the reset failed to do as a warning", async () => {
+        const { project, context, progress } = setup();
+        (resetEdsProjectWithUI as jest.Mock).mockResolvedValueOnce({
+            success: true,
+            contentKept: "Content kept: the demo's pages can't be reached.",
+            codeNotPublished: 'The code was not published.',
+        });
+
+        await expect(applyPackageChange(context, project, toBodea, { resets: true }, progress)).resolves.toStrictEqual({
+            warnings: ['The code was not published.'],
+            notes: ["Content kept: the demo's pages can't be reached."],
+        });
+    });
+
+    it('CONTROL: hands back nothing without a package change or a caveat', async () => {
+        const { project, context, progress } = setup();
+
+        const nothing = { warnings: [], notes: [] };
+        await expect(applyPackageChange(context, project, toBodea, { resets: false }, progress)).resolves.toStrictEqual(nothing);
+        await expect(applyPackageChange(context, project, toBodea, { resets: true }, progress)).resolves.toStrictEqual(nothing);
     });
 });

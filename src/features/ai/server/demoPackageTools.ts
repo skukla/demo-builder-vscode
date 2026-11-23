@@ -1,17 +1,18 @@
 /**
- * The agent's doors for the dashboard's Share dialog (step 09; one dialog since
- * 2026-10-22): its link form's three messages and its file form, on the same
- * handlers, minus the dialog.
+ * The agent's doors for the dashboard's Save as Package (EDS-72) and Share Demo
+ * dialogs: the link form's and Save as Package's three messages, and Share's file
+ * form, on the same handlers, minus the dialogs.
  *
  * - `get_demo_package_preview` — what the card would carry, the checks a
  *   project built from it will need, whether it is already on the SC's list,
  *   and the link. A read.
- * - `save_demo_package` — write the description file into the SC's own
- *   storefront repository, put the card on their Welcome step (unless
- *   `addToWelcome:false`, the dialog's unticked box), and answer the link. A
+ * - `save_demo_package` — Save as Package: write the description file into the
+ *   SC's own storefront repository, put the card on their Welcome step (unless
+ *   `addToWelcome:false`, Share Demo's Send a Link), and answer the link. The
+ *   tool always sends true or false; only the link form omits it. A
  *   write into the SC's GitHub, so `confirm:true`; the refusal says what it
  *   would write and where.
- * - `remove_demo_package` — take back what save_demo_package did. Destructive
+ * - `remove_demo_package` — Remove Package: take back what save_demo_package did. Destructive
  *   for colleagues holding the link, so `confirm:true` and the consent dialog.
  * - `export_demo_bundle` — Export's "Send a file": one bundle of the ticked parts
  *   (setup without credentials, the storefront with its description file),
@@ -74,7 +75,7 @@ export function registerDemoPackageTools(server: McpToolServer, ctxFactory: () =
             needsAuth: ['github'],
             annotations: { readOnlyHint: false, destructiveHint: false },
             description:
-                "Share the open project's storefront by link (the dashboard's Share dialog): write its description file (demo.demo-builder.json) into your own storefront repository and put the card on your Welcome step, so you and colleagues (from the link) can build new projects on it. addToWelcome:false writes the file only and keeps the card off your Welcome step. Never overwrites a file it did not write. Requires confirm:true; remove_demo_package undoes it.",
+                "Save as Package (the project dashboard's button): save the open project's storefront as a demo package, a description file (demo.demo-builder.json) in your own storefront repository plus a card on your own Welcome step, to build new projects from; answers the link colleagues add it from. addToWelcome:false is what Share Demo's Send a Link does: the file only, with the card kept off (or taken off) your Welcome step. Never overwrites a file it did not write. Requires confirm:true; remove_demo_package undoes it.",
             inputSchema: {
                 name: z.string().optional().describe('The name on the card; defaults to the brand or demo the project was built on'),
                 description: z.string().optional().describe('One or two sentences about the demo'),
@@ -122,7 +123,7 @@ export function registerDemoPackageTools(server: McpToolServer, ctxFactory: () =
             needsAuth: ['github'],
             annotations: { readOnlyHint: false, destructiveHint: true },
             description:
-                "Remove the open project's demo package: take the description file save_demo_package wrote out of your storefront repository, and take the card off your Welcome step. Colleagues who already added it keep it. Requires confirm:true.",
+                "Remove Package (in the dashboard's Save as Package window): remove the open project's demo package, taking the description file save_demo_package wrote out of your storefront repository and the card off your Welcome step. Colleagues who already added it keep it. Requires confirm:true.",
             inputSchema: {
                 confirm: z.boolean().optional().describe('Must be true — the description file is removed from your repository'),
             },

@@ -39,11 +39,14 @@
  */
 
 import { z } from 'zod';
-import { COMPANY_KIND, CUSTOMER_KIND, customerKey } from './b2bKeys';
+import { adoptFound } from './adoptedObjects';
+import { COMPANY_KIND, customerKey } from './b2bKeys';
 import { PUBLIC_CATALOG_TYPE, companyByName, customerByEmail, readCatalogs, sameText } from './b2bReads';
+import { customerImportRows, makeCustomersByImport } from './customerImport';
 import { deleteIfPresent, type KindContext, ownedId, parseRows, readOrNull, segment } from './kindContext';
 import { createOne } from './pendingCreates';
 import { tryRow } from './refusedRows';
+import { counted } from './rowCount';
 import type { CommerceCompany, CommerceCompanyHierarchyNode, CommerceCountryInfo, CommerceCustomer, CommerceGet, CommerceSend } from '@/types/commerceWire';
 
 export { COMPANY_KIND } from './b2bKeys';
@@ -82,7 +85,7 @@ const companyRows = z.array(
                     })
                     .passthrough(),
             }),
-            extension_attributes: z.record(z.unknown()).optional(),
+            extension_attributes: z.record(z.string(), z.unknown()).optional(),
             /** The company's status, as Commerce numbers it (0 pending, 1 active, 2 rejected, 3 blocked). */
             status: z.number().int().min(0).max(3).optional(),
         })
@@ -139,60 +142,73 @@ async function regionIdOf(get: CommerceGet, address: Address, regions: Regions =
     if (!regions.has(country)) regions.set(country, readOrNull<CommerceCountryInfo>(get, `directory/countries/${segment(country)}`));
     const listed = (await regions.get(country))?.available_regions ?? [];
     const found = listed.find((r) => code !== undefined && sameText(r.code, code)) ?? listed.find((r) => name !== undefined && sameText(r.name, name));
-    if (found === undefined) throw new Error(`The store has no region ${code ?? name} in ${country}.`);
+    if (found === undefined) throw new Error(`Commerce has no region ${code ?? name} in ${country}.`);
     return Number(found.id);
 }
 
-/** The admin's customer id: the website's own customer by that email, else one made and recorded. */
+/**
+ * The admin's customer id: the website's own customer by that email, else one made through the Import
+ * API and recorded (`customerImport.ts`: this store refuses `POST customers`).
+ *
+ * @throws Error when Commerce did not make the admin, so the company is skipped with it
+ */
 async function adminId(ctx: KindContext, admin: CompanyRow['variables']['input']['company_admin'], websiteId: number): Promise<number> {
     const existing = (await customerByEmail(ctx.get, admin.email, websiteId)) ?? (await customerByEmail(ctx.get, admin.email));
     if (existing?.id !== undefined) return existing.id;
-    const customer: CommerceCustomer = { email: admin.email, firstname: admin.firstname, lastname: admin.lastname, website_id: websiteId, store_id: ctx.session.storeId };
     const key = customerKey(admin.email);
-    const made = await createOne(ctx, { kind: CUSTOMER_KIND, key, find: { websiteId } }, async () => {
-        const id = Number(((await ctx.send('POST', 'customers', { customer })) as CommerceCustomer | null)?.id);
-        if (!Number.isInteger(id)) throw new Error(`Commerce did not answer the new company admin ${admin.email}'s id.`);
-        return { kind: CUSTOMER_KIND, id: String(id), key };
-    });
+    const made = (await makeCustomersByImport(ctx, [customerImportRows({ email: admin.email, firstname: admin.firstname, lastname: admin.lastname }, ctx)])).get(key);
+    if (made === undefined) throw new Error(`Commerce did not make the company admin ${admin.email}.`);
     ctx.log(`created customer ${key}, a company admin`);
-    return Number(made.id);
+    return made;
 }
 
 /** Make each company the store lacks, with its admin; record it by its name. */
 export async function installCompanies(ctx: KindContext, rows: CompanyRows): Promise<void> {
     const websiteId = ctx.session.websiteId;
-    if (websiteId === undefined) throw new Error("The install target names no website, so the pack's companies have no admin to sign in.");
+    if (websiteId === undefined) throw new Error("The install target names no website, so the datapack's companies have no admin to sign in.");
     const publicGroup = (await readCatalogs(ctx.get)).find((c) => c.type === PUBLIC_CATALOG_TYPE)?.customer_group_id;
     const regions: Regions = new Map();
-    for (const row of rows) {
-        const { company_name: name, company_email: email, company_admin: admin } = row.variables.input;
-        if (ownedId(ctx.session, COMPANY_KIND, name) !== undefined || ctx.recorder.byKey(COMPANY_KIND, name)) continue;
-        if (await companyByName(ctx.get, name, email)) {
-            ctx.log(`left company ${name} as it is: the store already has it`);
-            continue;
-        }
-        // Step 14 item 3: a row Commerce refuses, or that needs a row skipped, is skipped; the rest go on.
-        const made = await tryRow(ctx, { kind: COMPANY_KIND, key: name }, async () => {
-            // Before the admin, so a region the store lacks makes nothing.
-            const regionId = await regionIdOf(ctx.get, row.variables.input.legal_address, regions);
-            const superUserId = await adminId(ctx, admin, websiteId);
-            const ext = portableExt(row.extension_attributes);
-            const company: CommerceCompany = {
-                ...companyFields(row, regionId),
-                super_user_id: superUserId,
-                status: row.status ?? ACTIVE,
-                ...(publicGroup !== undefined ? { customer_group_id: publicGroup } : {}),
-                ...(ext ? { extension_attributes: ext } : {}),
-            };
-            return createOne(ctx, { kind: COMPANY_KIND, key: name, find: { email }, previous: { superUserId } }, async () => {
-                const id = Number(((await ctx.send('POST', 'company', { company })) as CommerceCompany | null)?.id);
-                if (!Number.isInteger(id)) throw new Error(`Commerce did not answer the new company ${name}'s id.`);
-                return { kind: COMPANY_KIND, id: String(id), key: name, previous: { superUserId } };
-            });
-        });
-        if (!made) continue;
-        ctx.log(`created company ${name}`);
+    const scope = { websiteId, publicGroup, regions };
+    for (const row of rows) await counted(ctx, COMPANY_KIND, row.variables.input.company_name, () => installCompany(ctx, row, scope));
+}
+
+/** What every company of one install shares: its website, the public catalog's group, the regions read. */
+interface CompanyScope {
+    websiteId: number;
+    publicGroup: number | undefined;
+    regions: Regions;
+}
+
+async function installCompany(ctx: KindContext, row: CompanyRows[number], { websiteId, publicGroup, regions }: CompanyScope): Promise<void> {
+    const { company_name: name, company_email: email, company_admin: admin } = row.variables.input;
+    if (ownedId(ctx.session, COMPANY_KIND, name) !== undefined || ctx.recorder.byKey(COMPANY_KIND, name)) return;
+    const found = await companyByName(ctx.get, name, email);
+    if (found) {
+        ctx.log(`left company ${name} as it is: the store already has it`);
+        // Walk F190: the store's own, on the record so a save follows it; no removal takes it.
+        await adoptFound(ctx.recorder, COMPANY_KIND, found.id, name);
+        return;
     }
+    // Step 14 item 3: a row Commerce refuses, or that needs a row skipped, is skipped; the rest go on.
+    const made = await tryRow(ctx, { kind: COMPANY_KIND, key: name }, async () => {
+        // Before the admin, so a region the store lacks makes nothing.
+        const regionId = await regionIdOf(ctx.get, row.variables.input.legal_address, regions);
+        const superUserId = await adminId(ctx, admin, websiteId);
+        const ext = portableExt(row.extension_attributes);
+        const company: CommerceCompany = {
+            ...companyFields(row, regionId),
+            super_user_id: superUserId,
+            status: row.status ?? ACTIVE,
+            ...(publicGroup !== undefined ? { customer_group_id: publicGroup } : {}),
+            ...(ext ? { extension_attributes: ext } : {}),
+        };
+        return createOne(ctx, { kind: COMPANY_KIND, key: name, find: { email }, previous: { superUserId } }, async () => {
+            const id = Number(((await ctx.send('POST', 'company', { company })) as CommerceCompany | null)?.id);
+            if (!Number.isInteger(id)) throw new Error(`Commerce did not return the new company ${name}'s id.`);
+            return { kind: COMPANY_KIND, id: String(id), key: name, previous: { superUserId } };
+        });
+    });
+    if (made) ctx.log(`created company ${name}`);
 }
 
 export async function removeCompany(send: CommerceSend, id: string): Promise<void> {

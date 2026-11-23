@@ -1,0 +1,164 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><style>
+body{margin:0;font-family:var(--font-sans);color:var(--foreground)}
+.v{margin:0 0 36px}
+.v h2{font-size:15px;margin:0 0 4px}
+.v p.why{margin:0 0 12px;color:var(--muted-foreground);font-size:13px;line-height:1.45;max-width:62ch}
+.row{display:flex;gap:14px;flex-wrap:wrap;align-items:flex-start}
+.cap{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted-foreground);margin:0 0 6px}
+.dlg{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;box-sizing:border-box;box-shadow:0 6px 20px rgba(0,0,0,.25)}
+.S{width:340px}.M{width:420px}.L{width:100%}
+.dlg h3{margin:0 0 12px;font-size:18px;font-weight:700}
+.dlg hr{border:0;border-top:1px solid var(--border);margin:0 0 16px}
+.lead{font-size:14px;line-height:1.5;margin:0 0 16px;max-width:60ch}
+.lead.s16{font-size:16px}
+.line{font-size:14px;line-height:1.5;margin:0 0 8px;max-width:60ch}
+.note{font-size:12px;color:var(--muted-foreground);margin:0 0 16px}
+.lbl{font-size:12px;color:var(--muted-foreground);margin:0 0 4px}
+.in{border:1px solid var(--border);border-radius:4px;padding:6px 8px;font-size:13px;margin:0 0 12px;background:var(--background)}
+.btns{display:flex;gap:8px;justify-content:flex-end;margin-top:20px;align-items:center}
+.btns .sp{flex:1}
+.b{border-radius:16px;padding:5px 14px;font-size:13px;font-weight:700;border:2px solid var(--border);background:transparent;color:var(--foreground)}
+.b.acc{background:var(--primary);border-color:var(--primary);color:var(--primary-foreground)}
+.b.neg{background:var(--destructive);border-color:var(--destructive);color:#fff}
+.b.out{border-color:var(--foreground)}
+.status{display:flex;gap:8px;align-items:flex-start;border-radius:6px;padding:8px 10px;font-size:13px;margin:0 0 12px}
+.status.err{background:var(--destructive-surface);color:var(--destructive-foreground,var(--foreground))}
+.status.warn{background:var(--warning-surface)}
+.status .i{font-weight:700}
+.spin{display:inline-block;width:14px;height:14px;border:2px solid var(--border);border-top-color:var(--primary);border-radius:50%;vertical-align:-2px;margin-right:8px}
+table{width:100%;border-collapse:collapse;font-size:13px;margin:0 0 12px}
+td,th{text-align:left;padding:6px 8px;border-bottom:1px solid var(--border)}
+th{color:var(--muted-foreground);font-weight:600;font-size:12px}
+.steps{display:flex;gap:6px;margin:0 0 16px;font-size:12px}
+.steps span{padding:3px 10px;border-radius:12px;border:1px solid var(--border);color:var(--muted-foreground)}
+.steps span.on{border-color:var(--primary);color:var(--foreground);font-weight:700}
+.steps span.done{color:var(--success)}
+.wr{display:flex;gap:10px;align-items:flex-start;padding:10px 0;border-bottom:1px solid var(--border)}
+.wr:last-child{border-bottom:0}
+.wr .d{width:18px;flex:none;text-align:center}
+.wr .t{font-weight:700;font-size:14px}
+.wr .s{font-size:12px;color:var(--muted-foreground)}
+.wr .a{margin-left:auto;display:flex;gap:6px}
+.wr .b{padding:3px 10px;font-size:12px;white-space:nowrap}
+.ok{color:var(--success)}.todo{color:var(--muted-foreground)}
+.fix>div{flex:1 1 0;min-width:0}
+.F{width:100%;height:430px;padding:16px;}display:flex;flex-direction:column}
+.F .body{flex:1;overflow:auto}
+.F .btns{margin-top:12px}
+.tag{display:inline-block;font-size:11px;padding:1px 8px;border-radius:10px;background:var(--secondary);margin-left:6px}
+</style></head><body>
+
+<section class="v">
+<h2>1. Form, sized by what it holds</h2>
+<p class="why">The window doesn't pick its size. A Form with fields stays medium. A Form that holds a table or list grows to large by itself. When there's nothing to submit, it shows Close only. Moves Clear Demo Data, Manage APIs, Assign Products and Share.</p>
+<div class="cap">Large: holds a table</div>
+<div class="dlg L">
+<h3>Clear Demo Data</h3><hr>
+<p class="lead">Choose the stores to clear. Demo Builder shows what goes before anything is removed.</p>
+<table><tr><th></th><th>Store</th><th>Website</th><th>Products</th></tr>
+<tr><td>☑</td><td>Main Store</td><td>Base</td><td>1,204</td></tr>
+<tr><td>☐</td><td>Wholesale</td><td>B2B</td><td>318</td></tr></table>
+<p class="note">Datapacks Demo Builder installed are left alone.</p>
+<div class="btns"><span class="b">Cancel</span><span class="b neg">Clear</span></div>
+</div>
+<div style="height:14px"></div>
+<div class="row"><div><div class="cap">Nothing to submit: Close only</div>
+<div class="dlg M"><h3>Share</h3><hr>
+<div class="lbl">Link</div><div class="in">github.com/acme/bodea-demo</div>
+<p class="note">Anyone with access to the repository can add it.</p>
+<div class="btns"><span class="b">Close</span></div></div></div></div>
+</section>
+
+<section class="v">
+<h2>2. Form that shows a failure</h2>
+<p class="why">When the save fails, the error shows inside the Form above the buttons, and what the SC typed stays. While it saves, Cancel becomes Run in Background. Moves Integration Settings, ERP Downtime and Edit Demo Package.</p>
+<div class="row">
+<div><div class="cap">Saving</div>
+<div class="dlg M"><h3>Integration Settings</h3><hr>
+<div class="lbl">Sales Organization</div><div class="in">1000</div>
+<p class="line"><span class="spin"></span>Saving and redeploying</p>
+<div class="btns"><span class="b">Run in Background</span><span class="b acc" style="opacity:.5">Save and Redeploy</span></div></div></div>
+<div><div class="cap">Failed: fields kept</div>
+<div class="dlg M"><h3>Integration Settings</h3><hr>
+<div class="status err"><span class="i">✕</span><span>Couldn't save the settings. The deploy didn't finish.</span></div>
+<div class="lbl">Sales Organization</div><div class="in">1000</div>
+<div class="btns"><span class="b">Cancel</span><span class="b acc">Save and Redeploy</span></div></div></div>
+</div>
+</section>
+
+<section class="v">
+<h2>3. Steps (new layout)</h2>
+<p class="why">One window for a flow with several stages. The SC chose Bodea, main on the Datapacks screen before this opened, so there is no choosing in here. The window is as tall as its largest stage, here the run list, and keeps that size from the form to the result. Only the middle scrolls, and the buttons stay at the bottom. Moves Create Datapack, Install Datapack, Add Demo, Add Integration, the projects batch and Updates.</p>
+<div class="row fix">
+<div><div class="cap">1. Form</div>
+<div class="dlg F"><h3>Install Bodea, main</h3><hr><div class="body">
+<div class="lbl">Website</div><div class="in">Main Website (default)</div>
+<div class="lbl">Data</div>
+<p class="line">☑ Products <span class="note">1,204 to add</span></p>
+<p class="line">☑ Categories <span class="note">86 to add</span></p>
+<p class="line">☑ Customers <span class="note">12 to add</span></p>
+<p class="line">☑ Store Configuration <span class="note">3 to change</span></p>
+</div>
+<div class="btns"><span class="b">Cancel</span><span class="b out">Dry Run</span><span class="b acc">Install</span></div></div></div>
+<div><div class="cap">2. Running</div>
+<div class="dlg F"><h3>Installing Bodea, main</h3><hr><div class="body">
+<div class="wr"><span class="d ok">✓</span><div><div class="t">Categories</div><div class="s">Installed</div></div></div>
+<div class="wr"><span class="d"><span class="spin"></span></span><div><div class="t">Products</div><div class="s">450 of 1,204 products</div></div></div>
+<div class="wr"><span class="d todo">○</span><div><div class="t">Customers</div><div class="s">Waiting</div></div></div>
+<div class="wr"><span class="d todo">○</span><div><div class="t">Store Configuration</div><div class="s">Waiting</div></div></div>
+<div class="wr"><span class="d todo">○</span><div><div class="t">Verify Installation</div><div class="s">Waiting</div></div></div>
+</div>
+<div class="btns"><span class="b">Run in Background</span></div></div></div>
+<div><div class="cap">3. Result</div>
+<div class="dlg F"><h3>Installed Bodea, main</h3><hr><div class="body">
+<p class="lead">1,202 products, 86 categories and 12 customers installed. 3 store configuration values changed.</p>
+<div class="status warn"><span class="i">⚠</span><span>2 rows skipped</span></div>
+<p class="line">BD-114: no option "XXL" on Size</p>
+<p class="line">BD-209: url key already used</p>
+</div>
+<div class="btns"><span class="b">Close</span></div></div></div>
+</div>
+</section>
+
+
+<section class="v">
+<h2>4. Guide with actions</h2>
+<p class="why">A Guide is still a list of steps, but each step can carry its own buttons (for example Open Admin or Check). At the bottom there's one window action beside Close. Moves Pack Setup, Setup Guide and AI Capabilities.</p>
+<div class="dlg L">
+<h3>Set Up the Store</h3><hr>
+<p class="lead">Three steps are done in the Admin. Check each one when it's set.</p>
+<div class="wr"><span class="d ok">✓</span><div><div class="t">Price Scope Set to Website</div><div class="s">Already set up in the store.</div></div></div>
+<div class="wr"><span class="d todo">○</span><div><div class="t">Confirmed in ERP Order Status</div><div class="s">One step in the Admin</div></div><div class="a"><span class="b">Open Admin</span><span class="b">Check</span></div></div>
+<div class="wr"><span class="d todo">○</span><div><div class="t">Shared Catalog per Company</div><div class="s">Not set up</div></div><div class="a"><span class="b">Open Admin</span><span class="b">Check</span></div></div>
+<div class="btns"><span class="b">Close</span><span class="b acc">Apply All</span></div>
+</div>
+</section>
+
+<section class="v">
+<h2>5. Confirm that reads first</h2>
+<p class="why">Confirm opens with a wait while it reads the store configuration. Then the question appears at the same size. If the read fails, the window shows Couldn't… with Retry. Moves Add and Apply for an integration.</p>
+<div class="row">
+<div><div class="cap">Reading</div>
+<div class="dlg M"><h3>Add ERP Integration</h3><hr>
+<p class="line"><span class="spin"></span>Reading configuration</p>
+<div class="btns"><span class="b">Cancel</span><span class="b acc" style="opacity:.5">Add and Apply</span></div></div></div>
+<div><div class="cap">Question, same size</div>
+<div class="dlg M"><h3>Add ERP Integration</h3><hr>
+<p class="lead">Adding it also changes this store configuration:</p>
+<p class="line">Catalog price scope: Global → Website</p>
+<p class="line">Payment on Account: Off → On</p>
+<div class="btns"><span class="b">Cancel</span><span class="b acc">Add and Apply</span></div></div></div>
+</div>
+</section>
+
+<section class="v">
+<h2>6. Result with its own actions <span class="tag">I missed this one</span></h2>
+<p class="why">A result can hold actions that belong to each line, each with its own wait. Close is the only window button. Moves Add from File, whose result offers to delete the store configuration the file brought in.</p>
+<div class="dlg M"><h3>Partly Loaded</h3><hr>
+<p class="line">Luma, main loaded into Data Installer (Shared Catalog).</p>
+<div class="wr"><span class="d">⚠</span><div><div class="t">Store Configuration</div><div class="s">Saved to your datapacks, not the catalog</div></div><div class="a"><span class="b">Delete Store Configuration</span></div></div>
+<div class="btns"><span class="b">Close</span></div></div>
+</section>
+
+</body></html>

@@ -15,6 +15,10 @@
  * shown unticked and locked, and `selectionsForIds` leaves it out even if its id comes
  * back.
  *
+ * A colleague's storefront whose source demo was reset since it was last taken also starts
+ * unticked, saying so: its "changes" are the reset, and applying it replaces the storefront
+ * (owner, 2026-11-03).
+ *
  * @module features/updates/services/pendingUpdateRows
  */
 
@@ -24,6 +28,8 @@ import { PROJECT_SELECTION_KINDS, type ProjectSelectionKind } from './updateSele
 import { getTemplateSource } from './updateSources';
 import { COMPONENT_IDS } from '@/core/constants';
 import { getProjectDisplayName } from '@/core/utils/projectDisplayName';
+import { extractEdsMetadata } from '@/features/eds/services/resourceCleanupHelpers';
+import { getBrandStackSummary } from '@/features/projects-dashboard/utils/componentSummaryUtils';
 import type { Project } from '@/types/base';
 import type {
     PendingUpdateGroup,
@@ -38,7 +44,7 @@ interface ExtensionUpdateSummary {
 }
 
 const EXTENSION_GROUP: PendingUpdateGroup = { key: 'extension', title: 'Demo Builder' };
-const FORKS_GROUP: PendingUpdateGroup = { key: 'forks', title: 'Template repositories' };
+const FORKS_GROUP: PendingUpdateGroup = { key: 'forks', title: 'Template Repositories' };
 const EXTENSION_ID = 'extension';
 const LOCKED_OTHER_ORG = `This project ${OTHER_ORG_NOTE}`;
 /**
@@ -46,46 +52,63 @@ const LOCKED_OTHER_ORG = `This project ${OTHER_ORG_NOTE}`;
  * is the developer's measure, and tells an SC nothing they would act on (owner, 2026-10-20).
  */
 const NEWER = 'Newer version';
+/** A pair's new versions. One release needs no name: the row's label already says what it is. */
+function pairVersions(releases?: Array<{ name: string; version: string }>): string | undefined {
+    if (!releases?.length) return undefined;
+    if (releases.length === 1) return `Version ${releases[0].version}`;
+    return releases.map((r) => `${r.name} ${r.version}`).join(', ');
+}
+
 /**
- * Said on every row whose apply commits to the storefront repository, which the live site
- * serves, as the integration row says it redeploys (owner, 2026-10-20). The Inspector SDK
- * row does not say it: its apply only records the new version.
+ * What a row with no version to name says: nothing, its name alone. "Newer version" tells the SC
+ * nothing (owner, 2026-10-20), and that it reaches the live site is the window's one sentence, not
+ * every row's (`updatesLiveSite`, owner, 2026-11-05).
  */
-const LIVE_SITE = 'updates the live site';
-/** "Newer version" dropped where it is said: it tells the SC nothing (owner, 2026-10-20). */
-const LIVE_SITE_DETAIL = 'Updates the live site';
+const NO_DETAIL = '';
+
+/** A colleague's demo that was reset since this storefront took from it. */
+export const SOURCE_RESET_DETAIL = 'Source was reset. Replaces this storefront.';
 
 /** `ticked: false` is a row that waits for the SC's tick; a locked row is never ticked. */
 type RowText = Pick<PendingUpdateRow, 'label' | 'detail'> & { lockedReason?: string; ticked?: false };
 
 /** Each project kind's words for one of its entries. */
 const PROJECT_KINDS: { [K in ProjectSelectionKind]: (entry: UpdateSelections[K][number]) => RowText } = {
-    template: (t) => ({ label: templateLabel(t.project), detail: LIVE_SITE_DETAIL }),
+    template: (t) =>
+        t.sourceReset
+            ? // Waits for the SC's tick, saying why (owner, 2026-11-03): a reset source replaces the storefront.
+              { label: templateLabel(t.project), detail: SOURCE_RESET_DETAIL, ticked: false }
+            : {
+                  label: templateLabel(t.project),
+                  detail: t.version ? `Version ${t.version}` : NO_DETAIL,
+              },
     // Adobe's half of a colleague's storefront, to the version our daily gate tested (EDS-56).
-    boilerplate: () => ({ label: 'Adobe boilerplate', detail: `Tested version, ${LIVE_SITE}` }),
+    boilerplate: () => ({ label: 'Adobe boilerplate', detail: 'Verified version' }),
     // A clash kept to fix with AI (EDS-57): applying it checks the fix and pushes it.
     finish: (f) => ({
         label: f.clash.track === 'boilerplate' ? 'Finish the Adobe boilerplate update' : `Finish: ${templateLabel(f.project)}`,
-        detail: `Kept to fix with AI, ${LIVE_SITE}`,
+        detail: 'Kept to fix with AI',
     }),
     component: (c) => ({
         label: c.project.componentInstances?.[c.componentId]?.name ?? c.componentId,
         detail: c.currentVersion
             ? `${c.currentVersion} → ${c.latestVersion}`
-            : `version ${c.latestVersion}`,
+            : `Version ${c.latestVersion}`,
     }),
     adobeMcp: (a) => ({
         label: 'Adobe MCP',
         detail: a.currentVersion
             ? `${a.currentVersion} → ${a.latestVersion}`
-            : `version ${a.latestVersion}`,
+            : `Version ${a.latestVersion}`,
     }),
-    blockLibrary: (b) => ({ label: b.library.name, detail: LIVE_SITE_DETAIL }),
-    blockLibraryInstall: (b) => ({ label: b.library.name, detail: `install, ${LIVE_SITE}` }),
-    inspector: () => ({ label: 'Demo Inspector SDK', detail: NEWER }),
+    blockLibrary: (b) => ({
+        label: b.library.name,
+        detail: b.version ? `Version ${b.version}` : NO_DETAIL,
+    }),
+    blockLibraryInstall: (b) => ({ label: b.library.name, detail: 'Install' }),
     integration: (p) => ({
         label: p.label,
-        detail: `${NEWER}, redeploys to Adobe`,
+        detail: `${pairVersions(p.releases) ?? NEWER}. Redeploys to Adobe`,
         ticked: false,
         ...(p.otherOrg ? { lockedReason: LOCKED_OTHER_ORG } : {}),
     }),
@@ -111,7 +134,7 @@ function colleagueSource(project: Project): string | undefined {
 
 /**
  * A storefront update named in a sentence, as its row names it: "Adobe boilerplate update",
- * "EDS template update", "update with changes from kmanns/justrite". For what is said after
+ * "EDS template update", "update with changes from org-e/tailspin". For what is said after
  * the row has gone, such as the notification when the SC's AI finishes a fix (EDS-56).
  *
  * @param project - the project the update is for
@@ -159,11 +182,17 @@ export function toPendingUpdateRows(
     return rows;
 }
 
+/** A project's heading: its name, and the line Reset Selected draws under it (F50). */
+function projectGroup(project: Project): PendingUpdateGroup {
+    const detail = extractEdsMetadata(project)?.githubRepo ?? getBrandStackSummary(project);
+    return { key: project.path, title: getProjectDisplayName(project), ...(detail ? { detail } : {}) };
+}
+
 function projectRows(selections: UpdateSelections): Array<PendingUpdateRow & { project: Project }> {
     return PROJECT_SELECTION_KINDS.flatMap((kind) =>
         (selections[kind] as Array<{ project: Project }>).map((entry, i) => {
             const words = (PROJECT_KINDS[kind] as (e: unknown) => RowText)(entry);
-            const group = { key: entry.project.path, title: getProjectDisplayName(entry.project) };
+            const group = projectGroup(entry.project);
             return { ...row(`${kind}:${i}`, kind, group, words), project: entry.project };
         }),
     );
@@ -224,7 +253,6 @@ export function selectionsForIds(
             adobeMcp: pick('adobeMcp', selections.adobeMcp),
             blockLibrary: pick('blockLibrary', selections.blockLibrary),
             blockLibraryInstall: pick('blockLibraryInstall', selections.blockLibraryInstall),
-            inspector: pick('inspector', selections.inspector),
             integration: pick('integration', selections.integration, (p) => !p.otherOrg),
         },
     };

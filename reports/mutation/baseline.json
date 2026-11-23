@@ -1044,7 +1044,7 @@
             "openGaps": 0,
             "recorded": "2026-10-09T22:54:40.069Z"
         },
-        "src/core/state/projectStateSync.ts": {
+        "src/core/state/frontendEnvDrift.ts": {
             "score": 100,
             "killed": 46,
             "survived": 0,
@@ -2929,7 +2929,7 @@
             "openGaps": 0,
             "recorded": "2026-10-10T20:50:56.232Z"
         },
-        "src/features/app-builder/services/appBuilderComponentMigration.ts": {
+        "src/features/app-builder/services/appBuilderComponentRelocation.ts": {
             "score": 94.57,
             "killed": 122,
             "survived": 7,
@@ -3706,7 +3706,7 @@
             "openGaps": 0,
             "recorded": "2026-10-10T01:31:37.447Z"
         },
-        "src/features/components/services/commerceSecretMigration.ts": {
+        "src/features/components/services/declaredSecretStore.ts": {
             "score": 91.84,
             "killed": 135,
             "survived": 9,
@@ -4823,21 +4823,6 @@
             "openGaps": 0,
             "recorded": "2026-10-09T23:59:43.196Z"
         },
-        "src/features/data-installer/services/dataInstallerWriteClient.ts": {
-            "score": 91.67,
-            "killed": 110,
-            "survived": 10,
-            "noCoverage": 0,
-            "timeout": 0,
-            "survivorCategories": {
-                "string": 9,
-                "block": 1
-            },
-            "uncoveredCategories": {},
-            "highValueSurvivors": 1,
-            "equivalent": 1,
-            "openGaps": 0
-        },
         "src/features/data-installer/services/datapackCatalog.ts": {
             "score": 100,
             "killed": 38,
@@ -5083,23 +5068,6 @@
             "openGaps": 0,
             "recorded": "2026-10-10T21:48:43.903Z"
         },
-        "src/features/dashboard/ui/hooks/useFieldSyncWithBackend.ts": {
-            "score": 90.74,
-            "killed": 49,
-            "survived": 4,
-            "noCoverage": 1,
-            "timeout": 0,
-            "survivorCategories": {
-                "branch": 3,
-                "other": 1
-            },
-            "uncoveredCategories": {
-                "string": 1
-            },
-            "highValueSurvivors": 3,
-            "equivalent": 4,
-            "openGaps": 0
-        },
         "src/features/dashboard/ui/hooks/useInlineRename.ts": {
             "score": 92.86,
             "killed": 13,
@@ -5188,7 +5156,7 @@
             "openGaps": 0,
             "recorded": "2026-10-10T01:19:36.333Z"
         },
-        "src/features/data-installer/services/sampleDataInstall.ts": {
+        "src/features/data-installer/services/projectDatapackInstall.ts": {
             "score": 92.79,
             "killed": 103,
             "survived": 7,
@@ -5204,7 +5172,7 @@
             "equivalent": 0,
             "openGaps": 0
         },
-        "src/features/data-installer/services/sampleDataInstallDeps.ts": {
+        "src/features/data-installer/services/projectDatapackInstallDeps.ts": {
             "score": 94.29,
             "killed": 66,
             "survived": 3,
@@ -5265,22 +5233,6 @@
             "equivalent": 0,
             "openGaps": 0,
             "recorded": "2026-10-10T01:29:48.516Z"
-        },
-        "src/features/data-installer/ui/components/ImportDatapackModal.tsx": {
-            "score": 92.05,
-            "killed": 139,
-            "survived": 12,
-            "noCoverage": 0,
-            "timeout": 0,
-            "survivorCategories": {
-                "other": 8,
-                "branch": 3,
-                "optionalChain": 1
-            },
-            "uncoveredCategories": {},
-            "highValueSurvivors": 3,
-            "equivalent": 12,
-            "openGaps": 0
         },
         "src/features/data-installer/ui/components/ViewSwitcher.tsx": {
             "score": 100,
@@ -5793,25 +5745,6 @@
             "highValueSurvivors": 7,
             "equivalent": 7,
             "openGaps": 0
-        },
-        "src/features/eds/services/cleanupService.ts": {
-            "score": 85.35,
-            "killed": 134,
-            "survived": 20,
-            "noCoverage": 3,
-            "timeout": 0,
-            "survivorCategories": {
-                "logPresentation": 14,
-                "branch": 4,
-                "string": 2
-            },
-            "uncoveredCategories": {
-                "block": 3
-            },
-            "highValueSurvivors": 4,
-            "equivalent": 7,
-            "openGaps": 0,
-            "recorded": "2026-10-09T23:39:46.258Z"
         },
         "src/features/eds/services/commerceStoreDiscovery.ts": {
             "score": 95.85,
@@ -8201,7 +8134,7 @@
             "openGaps": 0,
             "recorded": "2026-10-09T23:33:30.377Z"
         },
-        "src/features/project-creation/ui/components/ChoiceCard.tsx": {
+        "src/core/ui/components/selection/ChoiceCard.tsx": {
             "score": 94.44,
             "killed": 17,
             "survived": 1,
@@ -8548,7 +8481,7 @@
             "openGaps": 0,
             "recorded": "2026-10-09T23:15:07.545Z"
         },
-        "src/features/project-creation/ui/steps/SampleDataStep.tsx": {
+        "src/features/project-creation/ui/steps/DatapackStep.tsx": {
             "score": 95.87,
             "killed": 116,
             "survived": 3,
@@ -9167,7 +9100,7 @@
             "equivalent": 1,
             "openGaps": 0
         },
-        "src/features/updates/services/releaseTrack.ts": {
+        "src/core/releases/releaseTrack.ts": {
             "score": 98.72,
             "killed": 77,
             "survived": 1,
@@ -9394,7 +9327,7 @@
             "openGaps": 0,
             "recorded": "2026-10-10T01:45:21.848Z"
         },
-        "src/features/project-creation/handlers/executorSampleDataPhase.ts": {
+        "src/features/project-creation/handlers/executorDatapackPhase.ts": {
             "score": 97.3,
             "killed": 36,
             "survived": 1,
@@ -9732,21 +9665,6 @@
             "uncoveredCategories": {},
             "highValueSurvivors": 0,
             "equivalent": 0,
-            "openGaps": 0
-        },
-        "src/features/data-installer/services/dataInstallerExportClient.ts": {
-            "score": 97.37,
-            "killed": 111,
-            "survived": 0,
-            "noCoverage": 3,
-            "timeout": 0,
-            "survivorCategories": {},
-            "uncoveredCategories": {
-                "string": 2,
-                "other": 1
-            },
-            "highValueSurvivors": 0,
-            "equivalent": 1,
             "openGaps": 0
         },
         "src/features/data-installer/handlers/importJobWatch.ts": {
@@ -10100,20 +10018,6 @@
             "equivalent": 0,
             "openGaps": 0
         },
-        "src/features/eds/services/reset/edsResetNotifications.ts": {
-            "score": 98.61,
-            "killed": 71,
-            "survived": 1,
-            "noCoverage": 0,
-            "timeout": 0,
-            "survivorCategories": {
-                "string": 1
-            },
-            "uncoveredCategories": {},
-            "highValueSurvivors": 0,
-            "equivalent": 0,
-            "openGaps": 0
-        },
         "src/features/eds/services/reset/edsResetPreflight.ts": {
             "score": 84.71,
             "killed": 72,
@@ -10132,7 +10036,7 @@
             "equivalent": 5,
             "openGaps": 0
         },
-        "src/features/eds/services/reset/edsResetSampleData.ts": {
+        "src/features/eds/services/reset/edsResetDatapack.ts": {
             "score": 90,
             "killed": 54,
             "survived": 6,
@@ -10222,20 +10126,6 @@
             "uncoveredCategories": {},
             "highValueSurvivors": 0,
             "equivalent": 0,
-            "openGaps": 0
-        },
-        "src/features/dashboard/ui/configure/hooks/useProjectNameField.ts": {
-            "score": 90.91,
-            "killed": 10,
-            "survived": 1,
-            "noCoverage": 0,
-            "timeout": 0,
-            "survivorCategories": {
-                "other": 1
-            },
-            "uncoveredCategories": {},
-            "highValueSurvivors": 0,
-            "equivalent": 1,
             "openGaps": 0
         },
         "src/features/authentication/services/eventProviderBinding.ts": {
@@ -10490,23 +10380,6 @@
             "equivalent": 0,
             "openGaps": 0
         },
-        "src/features/projects-dashboard/services/deletionConfirmation.ts": {
-            "score": 77.61,
-            "killed": 100,
-            "survived": 30,
-            "noCoverage": 0,
-            "timeout": 4,
-            "survivorCategories": {
-                "string": 14,
-                "other": 2,
-                "branch": 8,
-                "optionalChain": 6
-            },
-            "uncoveredCategories": {},
-            "highValueSurvivors": 8,
-            "equivalent": 16,
-            "openGaps": 0
-        },
         "src/features/projects-dashboard/services/edsExternalCleanup.ts": {
             "score": 92.76,
             "killed": 141,
@@ -10537,18 +10410,6 @@
             "uncoveredCategories": {},
             "highValueSurvivors": 2,
             "equivalent": 5,
-            "openGaps": 0
-        },
-        "src/features/data-installer/ui/components/importModalView.ts": {
-            "score": 100,
-            "killed": 106,
-            "survived": 0,
-            "noCoverage": 0,
-            "timeout": 0,
-            "survivorCategories": {},
-            "uncoveredCategories": {},
-            "highValueSurvivors": 0,
-            "equivalent": 0,
             "openGaps": 0
         },
         "src/features/eds/services/storefront/storefrontContentRepublishService.ts": {

@@ -94,14 +94,14 @@ describe('dataInstallerErrors', () => {
         });
 
         it('does NOT call it unreachable just because the message says "fetch failed"', () => {
-            // A plain Error, not a TypeError — the type is half the signal.
+            // A plain Error, not a TypeError: the type is half the signal.
             expect(classifyTransportError(new Error('fetch failed'))).toBe('unknown');
         });
 
         it('does NOT reclassify an API error whose BODY text mentions timeout', () => {
             // This is the real collision: a 500 whose response body is prose.
             const err = new DataInstallerApiError(
-                'process-datapack: 500 Internal Server Error — upstream timeout contacting Commerce',
+                'process-datapack: 500 Internal Server Error: upstream timeout contacting Commerce',
                 500,
                 'process-datapack',
             );
@@ -113,12 +113,12 @@ describe('dataInstallerErrors', () => {
         it('folds action, status, statusText and body into one line', () => {
             expect(
                 describeApiFailure('find-datapacks', 401, 'Unauthorized', '{"error":"Authentication required"}'),
-            ).toBe('find-datapacks: 401 Unauthorized — {"error":"Authentication required"}');
+            ).toBe('find-datapacks: 401 Unauthorized: {"error":"Authentication required"}');
         });
 
         it('says so explicitly when the body is empty, rather than trailing a dash', () => {
             expect(describeApiFailure('logs', 500, 'Internal Server Error', '')).toBe(
-                'logs: 500 Internal Server Error — (empty body)',
+                'logs: 500 Internal Server Error: (empty body)',
             );
         });
 
@@ -135,7 +135,7 @@ describe('dataInstallerErrors', () => {
             const body = 'y'.repeat(500);
             const msg = describeApiFailure('logs', 500, 'Internal Server Error', body);
 
-            expect(msg).toBe(`logs: 500 Internal Server Error — ${body}`);
+            expect(msg).toBe(`logs: 500 Internal Server Error: ${body}`);
             expect(msg).not.toContain('truncated');
         });
 
@@ -151,7 +151,7 @@ describe('dataInstallerErrors', () => {
             // gap, and a body of pretty-printed JSON becomes a line of ragged
             // whitespace — the exact thing folding onto one line is meant to fix.
             expect(describeApiFailure('logs', 400, 'Bad Request', 'a\r\n\nb')).toBe(
-                'logs: 400 Bad Request — a b',
+                'logs: 400 Bad Request: a b',
             );
         });
 
@@ -160,7 +160,7 @@ describe('dataInstallerErrors', () => {
             // message ends in a dash and some spaces, which reads as a truncated
             // log line rather than as a service that said nothing.
             expect(describeApiFailure('logs', 502, 'Bad Gateway', '  \n  ')).toBe(
-                'logs: 502 Bad Gateway — (empty body)',
+                'logs: 502 Bad Gateway: (empty body)',
             );
         });
     });

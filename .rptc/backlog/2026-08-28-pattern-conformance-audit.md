@@ -5,6 +5,7 @@ area: platform
 needs: []
 value: med
 status: shipped
+plan: pattern-conformance-audit
 ---
 
 # Pattern-conformance audit — one architecture, or one per feature?
@@ -53,8 +54,9 @@ whole thesis: consistency holds where a mechanical check holds it.
 Not before the audit answers which patterns deserve one. Building a
 conformance scanner first manufactures violations for unadjudicated
 conventions. If the audit yields ≥3 ENFORCE verdicts with stable detectors,
-a `pattern-conformance-scan` skill in the release-cut family is the natural
-follow-on; the SOP scans and `architecture-duplication-scan` are siblings,
+a `pattern-conformance-scan` skill in the release-cut family would have been
+the natural next move (it was superseded by `tests/sop/architecture-rules.test.ts`,
+which enforces the ruling every jest run); the SOP scans and `architecture-duplication-scan` are siblings,
 not substitutes (they find duplicated JOBS; this measures divergent STYLES
 for the same job-shape).
 

@@ -161,7 +161,7 @@ describe('ProjectDashboardScreen - screen-owned wiring', () => {
         it('drops the separator when only one of package/stack is known', () => {
             renderDashboard({ stackName: 'Headless + PaaS' });
 
-            // `[undefined, stack].join(' · ')` would render " · Headless + PaaS";
+            // `[undefined, stack].join(', ')` would render ", Headless + PaaS";
             // the filter is what keeps the leading separator off.
             expect(screen.getByText('Headless + PaaS')).toBeInTheDocument();
         });

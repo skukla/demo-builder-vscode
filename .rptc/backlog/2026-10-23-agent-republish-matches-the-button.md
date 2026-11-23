@@ -4,12 +4,12 @@ kind: fix
 area: ai
 needs: []
 value: med
-status: active
+status: shipped
 ---
 
 # The agent's `republish` does what the dashboard's Republish does
 
-Filed 2026-10-23, from the JustRite reset walk.
+Filed 2026-10-23, from the Tailspin reset walk.
 
 ## What was wrong
 
@@ -21,7 +21,7 @@ Three names, two jobs:
 | Agent tool | `republish` | `republishStorefrontConfig` only: config.json to GitHub and the CDN |
 | Agent tool | `sync_content` | `republishStorefrontContent`: the button's job |
 
-Found when JustRite's reset left its site on old code and the fix was "Republish".
+Found when Tailspin's reset left its site on old code and the fix was "Republish".
 The agent tool by that name would have republished the settings file and nothing
 else, while reporting success. The button's job was reachable by an agent only under
 another name.
@@ -41,3 +41,4 @@ button's result. `sync_content` is removed (no soft deprecation): its job is now
 
 - 2026-10-23  Built, not committed: republish runs republishStorefrontContent (the button's publish); sync_content removed; four generated skills renamed, AI_CONTEXT_VERSION 44; docs, catalog and pins updated; full suite green
 - 2026-10-23  feat(eds): every known fix reaches every storefront; the report is a window (`c75b52793`)
+- 2026-11-21  Reconciled 2026-11-21: done. The republish tool (storefrontTools.ts) runs the button's job: settings, code, every page, category pages. c75b52793 is in v1.0.0-beta.153.

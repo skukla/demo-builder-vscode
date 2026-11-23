@@ -157,8 +157,8 @@ describe('fillErp', () => {
         expect(sites.find((s) => s.code === 'base')?.salesOrg).toBe('1000');
     });
 
-    // Justrite, 2026-10-22: on a shared Commerce the ERP took the FIRST website (base, "Main
-    // Website") as its sales organisation 1000's, though the project sells on justrite; the
+    // Tailspin, 2026-10-22: on a shared Commerce the ERP took the FIRST website (base, "Main
+    // Website") as its sales organisation 1000's, though the project sells on tailspin; the
     // mapping then named base, and the ERP called the other five websites unmapped. The
     // structure now names the project's website as home, plus only websites given a sales
     // organisation of their own.

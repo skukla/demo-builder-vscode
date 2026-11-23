@@ -268,7 +268,8 @@ describe('explainAdobeAccessFailure', () => {
 
         expect(message).toContain('not a developer on every product profile');
         expect(message).toContain('Admin Console');
-        expect(message).toMatch(/Details are in Debug Logs\.$/);
+        // No sentence sends a person to Debug Logs (owner, 2026-11-19, PL-102).
+        expect(message).not.toContain('Debug Logs');
     });
 
     it('recognises the refusal by its template alone', () => {

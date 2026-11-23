@@ -16,6 +16,7 @@ is the inventory plus the handful of behaviours the source will not tell you.
 | `useViewModePreference` | A list's cards/rows choice: `choose` switches and tells the extension (kept for the session), `adopt` takes a view the extension announced |
 | **State** | |
 | `useLoadingState` | Loading/error/data, plus `hasLoadedOnce` and `isRefreshing` |
+| `useRefreshPress` | Whether the read under way was a pressed Refresh, so its wait goes in the body (`FullScreenSurface`'s `waiting`) while a re-read nobody pressed keeps the content |
 | `useSelection` | Single-item selection with key extraction |
 | `useSelectionStep` | A whole wizard selection step (see below) |
 | `useAsyncData` | Async fetch wired to VS Code messages; auto-select-single |
@@ -39,7 +40,7 @@ is the inventory plus the handful of behaviours the source will not tell you.
 | `useSelectableDefault` | Select-all-on-focus for fields holding a replaceable default |
 | `useVerificationMessage` | Status value → formatted `info`/`success`/`warning`/`error` message |
 | `useElapsedStage` | Advance a sub-message as a wait drags, so a slow fetch does not read as frozen |
-| `useRunClock` | How long the whole run has been going, from the start the extension stamps — the progress modal's proof that a long wait is still alive; `tookLine` says how long it took at the end |
+| `useRunClock` | How long the whole run has been going, from the start the extension stamps — the progress modal's proof that a long wait is still alive; `tookValue` says how long it took, called once, by `feedback/RunFoot` ("Took …" under a run's rows) |
 | `useOperationRunner` | Which long operation a screen's progress modal is showing: start it, open on the first report (VS Code asks first), reopen the running one, Retry |
 | `useOperationProgress` | Follow one long operation's progress for its modal, asking where it is when reopened mid-run (PL-59) |
 | `useShowWhenStartedElsewhere` | Open a screen's progress modal for an operation something else started (Configure's Republish, from a save's prompt): on its first step, once per run |

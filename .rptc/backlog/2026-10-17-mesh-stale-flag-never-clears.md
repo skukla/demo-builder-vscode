@@ -4,7 +4,7 @@ kind: fix
 area: app-builder
 needs: []
 value: low
-status: built
+status: shipped
 ---
 
 # The mesh's "redeploy needed" flag only ever turns on
@@ -37,3 +37,4 @@ Not yet run; this is the predicted behaviour from the code, not an observed one.
 ## Shipped so far
 
 - 2026-10-19  fix(mesh): a setting put back to what the mesh was deployed with clears "redeploy needed" (`5e6530b65`)
+- 2026-11-20  Released in v1.0.0-beta.153

@@ -6,7 +6,7 @@ the `projectsList` bundle, auto-shown on activation when no project is current.
 ```
 projects-dashboard/
 ├── commands/showProjectsList.ts       the webview command
-├── handlers/projectsListHandlers.ts   28 keys — the source of truth for messages
+├── handlers/projectsListHandlers.ts   30 keys — the source of truth for messages
 └── ui/
     ├── ProjectsDashboard.tsx          container
     └── components/                    ProjectCard · ProjectsGrid · DashboardEmptyState
@@ -31,10 +31,26 @@ current?".
 `getProjectStatusDisplay` still serves `ProjectRow`, which shows exactly one line
 and therefore keeps the storefront in it.
 
-**Search is always available here.** `SearchHeader` defaults to showing search only
-past 5 items, but this surface passes `searchThreshold={0}`. That is not a tuning
-preference — the threshold changes the header's shape, deciding where the action
-buttons sit, so it is a layout decision rather than a knob.
+**Search is always available here,** as on every list with anything in it: `SearchHeader`
+has no setting to hide it on a short list (owner, 2026-11-02).
+
+## Reset Selected and Delete Selected
+
+Select Projects puts the list in selection mode (`useProjectSelection`); the batch window
+(`useProjectsBatch`, `ProjectsBatchModal`) asks once and then runs the projects, a row each, the
+Updates window's shape: deletes one at a time, resets side by side within an IMS org, up to three
+at once (owner, 2026-11-04). One project's run shows the progress window's three rows, centred,
+instead of a list of one (`OneRunning`, owner 2026-11-15). A card's or row's Reset or Delete opens the same window on that one
+project (`useListBatch`), its words naming it: "Reset Kukla Luma?", the button "Reset", "Resetting
+Kukla Luma", "Kukla Luma Reset" (`ui/batchWords.ts`; decisions J7-1, step-05 S2). The list sends no
+`resetProject` or `deleteProject` any more, and neither does the project dashboard (step-05 S4,
+owner 2026-11-13): its Reset and Delete open this window on the dashboard, its project the one row
+(`useDashboardResetDelete`). The dashboard stays while the window is open; only once its project is
+actually deleted does closing the window move to this list, and Cancel or a failed delete leaves the
+SC on the dashboard (owner, release test 2.7, 2026-11-16). The work is `services/projectsBatch.ts`,
+reusing the single delete (`runProjectDelete`) and each reset's answered run. Only the
+ticked projects the filter shows count. Rationale and decisions:
+`.rptc/research/projects-bulk-actions/research.md`.
 
 ## No workspace anchoring — the always-root home model
 
@@ -83,8 +99,10 @@ back. Two worth knowing:
 
 Rename is shared with the project dashboard: `renameProjectCore` does the folder
 rename, path updates, recent-projects fixup and save. Both surfaces rename **in
-place** through `InlineRenameField` — the card's hover pencil here, the title's
-pencil there. No menu items, no dialogs.
+place** through `InlineRenameField` — the menu's Rename here, the title's pencil there. No
+dialogs. A card and row carry no pencil: the name is where an SC aims to open the project, and the
+pencil sat 6px from it (owner, 2026-11-05). For the same reason the pin takes the smallest target
+allowed, 24px.
 
 ## Related
 

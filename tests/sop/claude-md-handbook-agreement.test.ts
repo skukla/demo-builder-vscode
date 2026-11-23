@@ -52,6 +52,12 @@ const HANDBOOK = flatten('docs/development/handbook.md');
  * the other.
  */
 const PAIRED: ReadonlyArray<{ rule: string; claudeMd: string; handbook: string }> = [
+    // Added 2026-11-02: the owner's call over Spectrum, which an agent would otherwise "correct".
+    {
+        rule: 'what names a thing is Title Case',
+        claudeMd: 'what names a thing is title case',
+        handbook: 'what names a thing is title case',
+    },
     // Added 2026-08-30. These three verification rules lived ONLY in CLAUDE.md, so an
     // agent saw them every session and a human reader never met them explained. The
     // first of them was violated the same day it was paired: a status summary reported

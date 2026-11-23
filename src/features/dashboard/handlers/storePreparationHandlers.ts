@@ -19,8 +19,8 @@ import { OPERATION_STAGES, type OperationStage } from '@/core/utils/operationSta
 import { narrateOutcomeToModal, progressSurfaceOf } from '@/core/vscode/operationProgress';
 import { withOperationProgress, type ReportStage } from '@/core/vscode/withOperationProgress';
 import { runSetupCheck } from '@/features/app-builder/services/setupChecks';
-import { SETTING_PATH, configFix } from '@/features/app-builder/services/storePreparation/configFix';
-import type { FixDeps } from '@/features/app-builder/services/storePreparation/fixContract';
+import { SETTING_PATH, configSetup } from '@/features/app-builder/services/storePreparation/configSetup';
+import type { SetupDeps } from '@/features/app-builder/services/storePreparation/setupContract';
 import {
     applyPreparation,
     previewPreparation,
@@ -32,7 +32,7 @@ import {
 import { erpNamesOf, setupCheckReader } from '@/features/dashboard/services/setupCheckReader';
 import { recordsAfterRun } from '@/features/dashboard/services/setupStepRecords';
 import { openCommerce, type CommerceClient } from '@/features/project-creation/services/erpAssignProducts';
-import type { SetupConfigFixItem } from '@/types/appBuilderComponents';
+import type { ConfigSetupItem } from '@/types/appBuilderComponents';
 import type { AppBuilderComponentState, Project, SetupStepRecord } from '@/types/base';
 import { ErrorCode } from '@/types/errorCodes';
 import type { HandlerContext, HandlerResponse, MessageHandler } from '@/types/handlers';
@@ -115,11 +115,11 @@ interface RunWords {
 }
 
 const APPLY_WORDS: RunWords = {
-    title: 'Applying the demo setup',
+    title: 'Applying the Demo Setup',
     stage: OPERATION_STAGES.preparingStore,
     nothing: 'Nothing changed: every step was already done in the store.',
 };
-const UNDO_WORDS: RunWords = { title: 'Undoing the demo setup', stage: OPERATION_STAGES.undoingStorePreparation };
+const UNDO_WORDS: RunWords = { title: 'Undoing the Demo Setup', stage: OPERATION_STAGES.undoingStorePreparation };
 
 /**
  * What the run changed, for the result screen (live release test, 2026-10-22: it said only
@@ -264,10 +264,10 @@ export const handleUndoCommerceStorePreparation: MessageHandler<UndoStorePrepara
 );
 
 /** The items as the tool must send them, or why not. */
-function validItems(items: unknown): SetupConfigFixItem[] | string {
+function validItems(items: unknown): ConfigSetupItem[] | string {
     if (!Array.isArray(items) || items.length === 0) return 'Give one or more items, each { path, value, scope }.';
-    const valid: SetupConfigFixItem[] = [];
-    for (const item of items as Array<Partial<SetupConfigFixItem>>) {
+    const valid: ConfigSetupItem[] = [];
+    for (const item of items as Array<Partial<ConfigSetupItem>>) {
         if (typeof item?.path !== 'string' || !SETTING_PATH.test(item.path)) return `"${String(item?.path)}" is not a setting path (section/group/field).`;
         if (typeof item.value !== 'string') return `${item.path}: value must be a string ("1" for Yes).`;
         if (item.scope !== 'default' && item.scope !== 'website') return `${item.path}: scope must be default or website.`;
@@ -281,8 +281,8 @@ function validItems(items: unknown): SetupConfigFixItem[] | string {
  * it. The fix names no items, so only the record's `wrote` says what was written (step 06), and a
  * setting changed since is kept (`kept`).
  */
-async function undoCommerceConfig(context: HandlerContext, project: Project, deps: FixDeps, record: ConfigStepRecord, confirm: boolean): Promise<HandlerResponse> {
-    const fix = configFix({ kind: 'config', items: [] });
+async function undoCommerceConfig(context: HandlerContext, project: Project, deps: SetupDeps, record: ConfigStepRecord, confirm: boolean): Promise<HandlerResponse> {
+    const fix = configSetup({ kind: 'config', items: [] });
     try {
         if (!confirm) return { success: true, data: { confirmed: false, ...(await fix.previewUndo(deps, record)) } };
         const refused = await guardOrBlock(context, project, () => undefined);
@@ -315,7 +315,7 @@ export const handleSetCommerceConfig: MessageHandler<SetCommerceConfigRequestPay
     const { scope } = await setupCheckReader(context, project);
     const deps = { commerce, websiteCode: scope.websiteCode, erpNames: [] };
     if (undo && record) return undoCommerceConfig(context, project, deps, { kind: 'config', previous: record.previous }, payload?.confirm === true);
-    const fix = configFix({ kind: 'config', items });
+    const fix = configSetup({ kind: 'config', items });
     try {
         if (payload?.confirm !== true) return { success: true, data: { confirmed: false, ...(await fix.preview(deps)) } };
         const refused = await guardOrBlock(context, project, () => undefined);

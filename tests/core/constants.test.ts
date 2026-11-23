@@ -146,11 +146,25 @@ describe('AI_CONTEXT_VERSION', () => {
     // v46: AGENTS.md says the smart-404 recovery script lives in 404.html, not delayed.js.
     // v47: import-datapack and diagnose-demo say a pack's root goes under the store's own root,
     // and only a shared root leaves the one Admin step (datapack-engine step 12).
-    // v48: import-datapack says an install skips (and names) a row Commerce refuses (step 14).
-    // v49: the scrape-products-to-aco skill, and the ACO credential is Demo Builder's (PL-60).
-    // v50: scrape-products-to-aco says which price book the catalog view must default to (PL-60).
-    it('is 50 (the ACO skill names the price book the view needs)', () => {
-        expect(AI_CONTEXT_VERSION).toBe(50);
+    // 49: import-datapack says an import installs what is ticked, and a removal takes the whole record.
+    // 50: a project that never chose an authoring experience now links Experience Workspace.
+    // 51: update-credentials no longer names the ACCS OAuth pair.
+    // 52: datapacks come from Demo Builder's datapack store first. 53: datapack Save and Save As.
+    // 54: import-datapack no longer offers a suggested Save As name.
+    // 55: import-datapack and diagnose-demo name dataInstaller.enabled.
+    // 56: import-datapack runs verify_datapack_install after a successful install.
+    // 57: an install checks itself; import-datapack reads its check.
+    // 58: import-datapack previews before installing a pack again.
+    // 60: a save from a pack takes everything the demo uses; import-datapack picks only what it does not use.
+    // 61: importing another pack or version over the project's removes that one first.
+    // 62: the datapack skills use the Datapacks screen's words, and offer no Data Installer copy (Phase 8).
+    // 63: datapacks sends wholeKinds for a whole data type and asks preview_datapack_changes for "added" (step-07 E1, E2).
+    // 64: datapacks gains update_datapack and restore_datapack's points (step-07 U1).
+    // 65: datapacks gives Keep Both, the exact undo of a load, and check.leftOutDeleted (step-07 F1, F2).
+    // 66: six datapack tools and the guide take the Datapacks screen's words (step-07 A3, Q5).
+    // 67: the ACO line's skill, credential tools and price-book note, brought onto develop (PL-60).
+    it('is 67 (the ACO line brought onto develop, PL-60)', () => {
+        expect(AI_CONTEXT_VERSION).toBe(67);
     });
 });
 

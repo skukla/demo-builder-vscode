@@ -51,7 +51,7 @@ describe('lifecycleHandlers - Cancellation', () => {
             const result = await handleCancelProjectCreation(mockContext);
 
             expect(result.success).toBe(true);
-            expect(result.data!.message).toBe('Project creation cancelled');
+            expect(result.data!.message).toBe('Stopping project creation after the current step');
             expect(abortSpy).toHaveBeenCalled();
             expect(mockContext.logger.debug).toHaveBeenCalledWith(
                 expect.stringContaining('[Project Creation] Cancellation requested by user')

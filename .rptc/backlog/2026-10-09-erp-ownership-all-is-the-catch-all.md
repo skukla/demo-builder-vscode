@@ -4,7 +4,7 @@ kind: fix
 area: app-builder
 needs: []
 value: high
-status: built
+status: shipped
 ---
 
 # ERP ownership: the ERP on "everything" is the catch-all
@@ -22,15 +22,15 @@ uses: the Add dialog's counts, the fill's product filter, the ownership pass (ow
 the unowned count, the status pass, the notes), and so `add_erp`, `load_erp_demo_data` and
 `set_erp_settings`.
 
-**Measured today, on Justrite.** Justrite ERP = all; Accuform ERP = `erp_owner=accuform`
-(96 tagged products; 43 tagged justrite; 182 untagged of 321). The add of Accuform was
-supposed to narrow Justrite to `erp_owner=justrite` (`existingRulesToChange`, computed in
+**Measured today, on Tailspin.** Tailspin ERP = all; Accuform ERP = `erp_owner=accuform`
+(96 tagged products; 43 tagged tailspin; 182 untagged of 321). The add of Accuform was
+supposed to narrow Tailspin to `erp_owner=tailspin` (`existingRulesToChange`, computed in
 `AddErpDialog.tsx` from the store options and sent as `existingOwns`), but the dialog's Add
 button did not wait for the options read, so a click before the store answered dropped the
-narrowing (Justrite stayed `all`), and the order was refused as claimed by both. Had it
+narrowing (Tailspin stayed `all`), and the order was refused as claimed by both. Had it
 worked, 182 untagged products would have belonged to nobody. Under the catch-all rule
 neither problem exists: adding by attribute changes no other rule, and the untagged 182
-stay with Justrite.
+stay with Tailspin.
 
 **What changed.**
 
@@ -61,3 +61,4 @@ the extension was proven by its suites only.
 ## Shipped so far
 
 - 2026-10-09  fix(erp): an ERP on everything is the catch-all for products no other ERP claims (`5d1a60d89`)
+- 2026-11-20  Released in v1.0.0-beta.153

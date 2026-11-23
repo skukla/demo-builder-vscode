@@ -4,7 +4,7 @@ kind: fix
 area: app-builder
 needs: []
 value: med
-status: active
+status: backlog
 ---
 
 # Undo leaves what changed since
@@ -22,10 +22,10 @@ never overwritten) is kept for files (ADR-013, `generatedFileWriter.ts`) and DA.
 | Undo | Checks for changes since? | What it can lose |
 |---|---|---|
 | Assign products (`erpAssignProducts.ts`) | Yes: reverts only products that still carry the value it wrote, and reports the rest | Nothing. The model to copy |
-| ERP attributes fix (`erpAttributesFix.ts`) | Partly: refuses while products carry an `erp_owner`; deletes only attributes it created | Fine in practice |
-| Settings fix (`configFix.ts`, `undo`) | No: restores the recorded value unless the setting already holds it | A value set in the Admin after the fix |
-| Shared catalogs fix (`sharedCatalogsFix.ts`, `undo`) | No: unassigns the company and deletes the catalog it made | Anything added to that catalog since |
-| Warehouse fix (`warehouseFix.ts`, `undo`) | No: unlinks, deletes the stock it made, switches sources off | Stock changes made since |
+| ERP attributes fix (`erpAttributesSetup.ts`) | Partly: refuses while products carry an `erp_owner`; deletes only attributes it created | Fine in practice |
+| Settings fix (`configSetup.ts`, `undo`) | No: restores the recorded value unless the setting already holds it | A value set in the Admin after the fix |
+| Shared catalogs fix (`sharedCatalogsSetup.ts`, `undo`) | No: unassigns the company and deletes the catalog it made | Anything added to that catalog since |
+| Warehouse fix (`warehouseSetup.ts`, `undo`) | No: unlinks, deletes the stock it made, switches sources off | Stock changes made since |
 | ERP detach (`erp/detach`, `commerce-erp-integration/src/lib/detach.js`) | No: writes back each ledger entry's `before` (`ledger.js` `revertOne`); the ledger keeps `after` too | An Admin edit to a field the ERP wrote, by design (below) |
 | ERP records wipe (`demo-erp`, `POST admin/wipe`) | Not applicable: empties the ERP's own database, not Commerce | Nothing in Commerce |
 
@@ -38,7 +38,7 @@ changed since, leaves it, and says so.
 ## The fix (decided by the owner, 2026-10-27)
 
 Use the shared "is this still as we left it?" rule DI-5 builds first
-(`.rptc/plans/datapack-engine/step-04-still-as-we-left-it.md`, in `src/core/utils/`). Nothing here writes a fourth copy. The rule answers "still as we left it, or
+(`.rptc/complete/datapack-engine/step-04-still-as-we-left-it.md`, in `src/core/utils/`). Nothing here writes a fourth copy. The rule answers "still as we left it, or
 changed?"; each undo decides what to do with a change, by who owns the thing:
 
 - **The ERP's detach puts everything back regardless**, as it does today: the ERP is transient
@@ -63,3 +63,6 @@ repo (detach). Closes when both have landed.
 ## Shipped so far
 
 - 2026-10-29  feat(app-builder): setup-guide undos keep what the SC changed since (datapack step 06) (`4cadd9184`)
+- 2026-11-02  feat(data-installer): Clear demo data leaves nothing only the chosen stores use (`c8556c19f`)
+- 2026-11-21  Reconciled 2026-11-21: the setup-guide undos shipped (4cadd9184). Left: the ERP detach half in commerce-erp-integration: revertOne in src/lib/ledger.js writes back before without comparing after, so fields edited since are overwritten silently.
+- 2026-11-22  Paused 2026-11-22: back to backlog, last work 2026-11-02. Where it stopped is the 2026-11-21 reconcile line above.

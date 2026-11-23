@@ -30,6 +30,7 @@ import {
 import type { UpdateContext } from '@/features/updates/services/updateCore';
 import type { UpdateSelections } from '@/features/updates/services/updateSelections';
 import type { Project } from '@/types/base';
+import type { OperationPosition } from '@/types/webviewPayloads';
 
 /**
  * Where a category reports: the step from the stage table, the same names the
@@ -37,7 +38,8 @@ import type { Project } from '@/types/base';
  * under it. Until slice 8 of the progress vocabulary (2026-10-16) each item was its
  * own long message ("Updating eds-storefront in My Demo").
  */
-export type OnProgress = (stage: string, item?: string) => void;
+/** The step, the line under it, and which part of a pair is in flight when there is one. */
+export type OnProgress = (stage: string, item?: string, position?: OperationPosition) => void;
 
 export type { TemplateConflictPolicy } from '@/features/updates/services/updateClash';
 
@@ -108,10 +110,12 @@ export async function applyTemplate(
     const succeededPaths = new Set<string>();
     if (items.length === 0) return { result, succeededPaths };
     const svc = new TemplateSyncService(getGitHubServices(ctx.secrets), ctx.logger, ctx.commandManager, resolveByomOverlayConfig);
-    for (const { project } of items) {
+    for (const { project, sourceReset } of items) {
         onProgress?.(S.updatingTemplate.label, project.name);
         try {
-            const outcome = await syncTemplateHeadless(svc, project, ctx, policy, questions);
+            const outcome: ClashOutcome = sourceReset
+                ? { kind: 'settled', result: await svc.syncWithTemplate(project, { strategy: 'reset' }) }
+                : await syncTemplateHeadless(svc, project, ctx, policy, questions);
             if (outcome.kind === 'clash') {
                 recordClash(result, outcome);
                 continue;

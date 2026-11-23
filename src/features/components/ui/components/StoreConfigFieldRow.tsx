@@ -41,7 +41,7 @@ export interface StoreConfigFieldRowProps {
     getWebsiteItems: () => StoreListItem[];
     getStoreGroupItems: (websiteCode: string) => StoreListItem[];
     getStoreViewItems: (storeGroupCode: string) => StoreListItem[];
-    /** Called when user clicks the Re-detect button to re-run store discovery */
+    /** Called when user clicks the Re-Detect button to re-run store discovery */
     onRefresh?: () => void;
     /**
      * Component-declared secrets the project holds, booleans only.
@@ -113,7 +113,7 @@ export function StoreConfigFieldRow({
     if (isWebsiteCodeField(field.key)) {
         /*
          * Store selection — one loading treatment, used for the INITIAL detect AND
-         * any Re-detect: a compact spinner+label row anchored directly under the
+         * any Re-Detect: a compact spinner+label row anchored directly under the
          * connection fields (NOT vertically centered in a tall band — centering
          * put the spinner at the fold and its label below it at short viewports).
          * On success the populated dropdowns ARE the result (no separate
@@ -122,7 +122,7 @@ export function StoreConfigFieldRow({
         if (fetchError) {
             return (
                 <div>
-                    <Text UNSAFE_className="text-red-700" marginBottom="size-200">
+                    <Text UNSAFE_className="text-negative" marginBottom="size-200">
                         {fetchError}
                     </Text>
                     <ConfigFieldRenderer {...fieldProps} />
@@ -133,7 +133,7 @@ export function StoreConfigFieldRow({
         if (isFetching || !hasStoreData) {
             return (
                 <Flex marginTop="size-300" marginBottom="size-300" justifyContent="center">
-                    <LoadingDisplay size="M" message="Detecting store structure" />
+                    <LoadingDisplay size="M" message="Loading business structure" />
                 </Flex>
             );
         }
@@ -160,7 +160,7 @@ export function StoreConfigFieldRow({
                             onPress={onRefresh}
                             UNSAFE_className="btn-standard text-base"
                         >
-                            Re-detect
+                            Re-Detect
                         </Button>
                     </Flex>
                 )}

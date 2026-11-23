@@ -145,7 +145,7 @@ describe('executePhaseGitHubRepo — which branch runs', () => {
         );
 
         expect(services.githubRepoLifecycle.createFromTemplate).toHaveBeenCalled();
-        expect(messages(context).filter((m) => m.startsWith('Using existing repository'))).toStrictEqual([]);
+        expect(messages(context).filter((m) => m?.startsWith('Using existing repository'))).toStrictEqual([]);
     });
 
     it('creates a new repo when the mode is existing but no repo was named', async () => {
@@ -198,7 +198,7 @@ describe('executePhaseGitHubRepo — which branch runs', () => {
         );
 
         expect(messages(context)).toContain('Using your new repository: skukla/made-by-the-wizard');
-        expect(messages(context).filter((m) => m.startsWith('Using existing repository'))).toStrictEqual([]);
+        expect(messages(context).filter((m) => m?.startsWith('Using existing repository'))).toStrictEqual([]);
     });
 });
 
@@ -217,8 +217,8 @@ describe('executePhaseGitHubRepo — the pre-created branch', () => {
 
         expect(messages(context)).toEqual([
             'Using skukla/made-by-the-wizard',
-            'Pinning to verified canonical state',
-            'Repository ready',
+            'Selecting template version',
+            undefined, // the ready push moves progress on and leaves line 2 as it is
         ]);
     });
 
@@ -238,12 +238,11 @@ describe('executePhaseGitHubRepo — the pre-created branch', () => {
         });
         expect(sent[1]).toEqual({
             phase: 'repository',
-            message: 'Pinning to verified canonical state',
+            message: 'Selecting template version',
             progress: 12,
         });
         expect(sent[2]).toMatchObject({
             phase: 'repository',
-            message: 'Repository ready',
             progress: 15,
             repoOwner: 'skukla',
             repoName: 'made-by-the-wizard',

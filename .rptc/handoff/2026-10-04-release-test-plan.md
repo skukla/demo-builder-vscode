@@ -15,9 +15,9 @@ matters most.
    and `loop/2026-10-04-day-b` (cleanup). Run `npm run compile` in that tree and reload the Demo
    Builder window.
 2. **Projects to use:**
-   - **Justrite**, which has both ERPs set up fresh today: Justrite ERP owns 43 products, Accuform
+   - **Tailspin**, which has both ERPs set up fresh today: Tailspin ERP owns 43 products, Accuform
      ERP owns 96, there are no orders yet, and today's cut-off-button fix is deployed.
-   - **A scratch project** for anything that creates or deletes. Never use Justrite for those.
+   - **A scratch project** for anything that creates or deletes. Never use Tailspin for those.
 3. **Window size:** run the ERP tests with the browser at **1280 pixels wide**. That's where the
    cut-off buttons were.
 
@@ -27,7 +27,7 @@ matters most.
 |---|---|---|---|
 | ★ | Sidebar → Chat → **Pick an earlier chat** | Claude Code opens its own list of past chats in a new tab [AI-4b] | pass (2026-10-06) |
 | ★ | With **AI Assistant → Engine** (`demoBuilder.ai.engine`) left at its default (Copilot in VS Code), Sidebar → **Chat**, ask "list my projects" | VS Code's chat panel opens in agent mode and answers from the demo-builder tools; no terminal opens [AI-12] | pass (2026-10-06) |
-| ★ | From the dashboard's **Prompts**, pick any prompt | It is sent in VS Code's chat panel and runs [AI-12] | Pass 2026-10-06: sent with the active-project preamble; 3 tool steps, answered "justrite (active)" |
+| ★ | From the dashboard's **Prompts**, pick any prompt | It is sent in VS Code's chat panel and runs [AI-12] | Pass 2026-10-06: sent with the active-project preamble; 3 tool steps, answered "tailspin (active)" |
 | | With Engine at Copilot in VS Code, look at the sidebar's **Chat**; then set Engine to Claude Code | A plain button (no menu) that opens the panel; with Claude Code it becomes the Continue / Pick earlier / New menu, without a reload [AI-12] |  |
 | | In a terminal at the projects root, run `copilot` yourself and type `/mcp` | demo-builder is listed (trust the folder when asked) — Copilot CLI is no Chat choice, but its tools still work [AI-12] |  |
 | | Set **AI Assistant → Permissions** to Auto, then Full access, and start Claude Code | The terminal's command line carries `--permission-mode auto` / `--dangerously-skip-permissions` [AI-12] |  |
@@ -40,9 +40,9 @@ matters most.
 | | Do this | Expect | Result |
 |---|---|---|---|
 | ★ | Look at Your Projects in grid view and list view | No header "New" button. A dashed **New project** card is last; it opens New / Copy from existing / Import from file. It hides while you filter [PL-62] | Pass 2026-10-06: dashed card last, menu offers all three, hidden while filtering |
-| ★ | **Export** Justrite | The file is named `justrite.project.demo-builder.json`. Open it: no passwords, keys or tokens anywhere [PL-56c] | Pass 2026-10-06: right name; only endpoints, store codes and Adobe ids — no secrets. Notice now names the path with Open File / Reveal in Finder |
+| ★ | **Export** Tailspin | The file is named `tailspin.project.demo-builder.json`. Open it: no passwords, keys or tokens anywhere [PL-56c] | Pass 2026-10-06: right name; only endpoints, store codes and Adobe ids — no secrets. Notice now names the path with Open File / Reveal in Finder |
 | ★ | **Import from file** using that export (into a new name) | It asks you to sign in to GitHub and DA.live like a new project does. It gets its own repository. Integrations, datapack, store setup and settings all come back [PL-56d] |  |
-| | **Copy from existing** on Justrite | The wizard opens with Justrite's choices, datapack and store structure, no credentials, and a new repository [PL-56e] |  |
+| | **Copy from existing** on Tailspin | The wizard opens with Tailspin's choices, datapack and store structure, no credentials, and a new repository [PL-56e] |  |
 | | **Edit** a project | Its own values are kept, and the datapack and store structure are filled in [PL-56e] |  |
 | | Delete the scratch copy | It's gone, and its stored secrets go with it [PL-64] |  |
 
@@ -54,7 +54,7 @@ matters most.
 | | Create a new repository in the Storefront area | The new repository becomes the selected one; the Code Sync notice sits centred [EDS-18, EDS-19] |  |
 | | Pick an **empty repository an organization made for you** | Setup writes a first commit, applies the template and finishes [EDS-17 — *built, not yet tried live*] |  |
 | | Trigger a GitHub organization refusal (single sign-on not authorized, or an org that hasn't approved the app) | A plain message saying what to do, not "Access denied" [EDS-17] |  |
-| ★ | **Add a demo** by link to a colleague's storefront (e.g. `sayurihanki/aistore`) | It shows "Built on Adobe's Commerce boilerplate …", warns if older than 6.0.0, and says whether you can read their DA.live site, and who must grant access if not [EDS-13, EDS-22] |  |
+| ★ | **Add a demo** by link to a colleague's storefront (e.g. `org-j/aistore`) | It shows "Built on Adobe's Commerce boilerplate …", warns if older than 6.0.0, and says whether you can read their DA.live site, and who must grant access if not [EDS-13, EDS-22] |  |
 | | Zip or share a storefront that has a `.env` file in it | The `.env` file is never in the zip, the shared bundle or the sync [security fix] |  |
 
 ## 4. The project dashboard
@@ -69,19 +69,19 @@ matters most.
 
 The category menu reads Commerce's category tree live; Demo Builder writes an editable page per
 "Include in Menu" category and never touches a page someone else made or edited. Use a scratch
-project from a shipped package unless the row says Justrite.
+project from a shipped package unless the row says Tailspin.
 
 | | Do this | Expect | Result |
 |---|---|---|---|
-| ★ | Create a storefront with **Demo Builder Blocks** ticked | The nav has the catalog menu. Each "Include in Menu" category has a page that lists its products. The summary names any category that already had a page [EDS-24 — *proven on Justrite, not yet at creation*] |  |
+| ★ | Create a storefront with **Demo Builder Blocks** ticked | The nav has the catalog menu. Each "Include in Menu" category has a page that lists its products. The summary names any category that already had a page [EDS-24 — *proven on Tailspin, not yet at creation*] |  |
 | | Before creating, hand-build a page for one category at another address (a product list block naming it) | No second page is written; the menu links to your page and the summary says so [EDS-24 — *not yet run live*] |  |
 | | Edit one Demo Builder category page in DA.live, then **Republish** | Your edit survives [EDS-24] |  |
 | | **Reset** the scratch project | The nav and the unedited category pages come back exactly; edited pages are left alone [EDS-24] |  |
-| ★ | On an existing storefront without the library, tick **Demo Builder Blocks** in Configure, then **Check for updates** | One item, "Demo Builder Blocks: install". Applying it is one commit to the storefront repository [EDS-28 — *proven on Justrite*] |  |
+| ★ | On an existing storefront without the library, tick **Demo Builder Blocks** in Configure, then **Check for updates** | One item, "Demo Builder Blocks: install". Applying it is one commit to the storefront repository [EDS-28 — *proven on Tailspin*] |  |
 | ★ | With the project open, add a category in Commerce Admin set to "Include in Menu" (wait a few minutes) | A notice names it and offers **Add pages** or **Always add for this project**. **Add pages** writes and publishes it [EDS-27 — *notice not yet seen live*] |  |
 | | Turn on `demoBuilder.categoryPages.autoAdd` and add another category | Its page is added and published without asking, then a notice says what was added, with **Stop for this project** [EDS-27 — *not yet seen live*] |  |
-| | Ask the agent "Are any categories missing pages? Add them." | It lists them, then asks before adding. It can't turn the automatic setting on [EDS-27 — *proven on Justrite*] |  |
-| ★ | **Reset** a storefront that has published product pages | The result says how many product pages were removed, then the current catalog's pages come back and answer [EDS-26 — *proven on Justrite*] |  |
+| | Ask the agent "Are any categories missing pages? Add them." | It lists them, then asks before adding. It can't turn the automatic setting on [EDS-27 — *proven on Tailspin*] |  |
+| ★ | **Reset** a storefront that has published product pages | The result says how many product pages were removed, then the current catalog's pages come back and answer [EDS-26 — *proven on Tailspin*] |  |
 | | **Delete** the scratch project | Its product pages are removed from the live site too; DA.live content is not touched by this step [EDS-26 — *not yet run live*] |  |
 | | Reset or delete a project whose storefront repository another project on this machine also uses | It refuses and names the other project [EDS-26] |  |
 | | Command palette → **Manage DA.live Sites**, delete a throwaway site | The confirmation says its pages come off the live site. Afterwards its aem.live pages answer 404; if any couldn't be unpublished, the message names the site [EDS-31 — *not yet run live*] |  |
@@ -99,7 +99,7 @@ project from a shipped package unless the row says Justrite.
 | | (If you can) use a project where you aren't a developer on the Commerce product profile | A plain explanation of who can fix it, not a raw Adobe error [AB-18] |  |
 | | After redeploying the ERP integration, ask the agent to list the workspace's Runtime triggers | No `erp-prices-hourly-timer` or other timer left from an earlier deploy [AB-58] |  |
 
-## 7. The ERP pair (scratch project, or Justrite after a reset)
+## 7. The ERP pair (scratch project, or Tailspin after a reset)
 
 | | Do this | Expect | Result |
 |---|---|---|---|
@@ -109,13 +109,13 @@ project from a shipped package unless the row says Justrite.
 | | **Reset ERPs** | Orders are closed off, Commerce's credit limits and blocks are undone, both ERPs are wiped and refilled, and it doesn't stop at 60 seconds [AB-16n, AB-61, AB-47] |  |
 | | In the ERP, open the **user menu → Appearance**, then **Settings** | Appearance has a live preview of theme, logo and navigation style; Settings is a form an ERP user edits [AB-59] |  |
 
-## 8. Running the demo — order to cash, on Justrite
+## 8. Running the demo — order to cash, on Tailspin
 
 Use the walkthrough in `commerce-erp-integration/docs/walkthrough.md` ("One order, two ERPs").
 
 | | Do this | Expect | Result |
 |---|---|---|---|
-| ★ | Place one order with a Justrite product and an Accuform product (buyer: Northgate) | It splits: each ERP gets only its lines. The checkout check answers quickly [AB-16, AB-55] |  |
+| ★ | Place one order with a Tailspin product and an Accuform product (buyer: Northgate) | It splits: each ERP gets only its lines. The checkout check answers quickly [AB-16, AB-55] |  |
 | ★ | In each ERP, confirm, ship and invoice its part | Commerce shows the shipments and invoices. Each ERP's on-hand stock drops by what it shipped [AB-26g, AB-63] |  |
 | | Ship or invoice from **Commerce Admin** instead | The change reaches the right ERP [AB-26g] |  |
 | | Order with a cart price rule | Each ERP line shows its discount, carried through the invoice, return and credit memo [AB-16l] |  |
@@ -132,8 +132,8 @@ Use the walkthrough in `commerce-erp-integration/docs/walkthrough.md` ("One orde
 | | Ask the agent | Expect | Result |
 |---|---|---|---|
 | ★ | "Edit the home page headline and publish it" | It asks before writing, and again before publishing [write_page] |  |
-| | "Copy the Justrite project as justrite-copy" | A new project with no credentials [PL-56f] |  |
-| | "Create a project for the Justrite website and store view" | The store scope is set, so the right products show [AI-11] |  |
+| | "Copy the Tailspin project as tailspin-copy" | A new project with no credentials [PL-56f] |  |
+| | "Create a project for the Tailspin website and store view" | The store scope is set, so the right products show [AI-11] |  |
 | ★ | "Add the ERP integration; call the ERP Brand B ERP" (scratch project) | The first ERP is named Brand B ERP. The agent asks you for the name first, because it can't change later [AB-67] |  |
 | | Give it a short catalog brief (scratch store) | It shows a plan before writing, works in a safe order, checks shoppers can see the result, and lists how to undo it [AI-10 — *first real run*] |  |
 | | "Why did the last deploy fail?" | It reads Runtime activations, including the App Management installer's runs [AB-31, AB-32] |  |
@@ -163,16 +163,16 @@ branch is the check; `gate` in the Result cell records that it ran (2026-10-05, 
 
 - One ERP heading ("Amount") is still cut at 1280 on an order line that has both a discount and
   quantity left to close. The button still shows. Fixing it needs a column removed (your call).
-- **Guest prices on Justrite show $0.00.** Signed-in company buyers see prices; guests and the
+- **Guest prices on Tailspin show $0.00.** Signed-in company buyers see prices; guests and the
   General group get none, while a request with no group gets list prices. Under investigation, not
   caused by the page work.
-- **Signed-out visitors can't open product pages on Justrite** (they land on Not Found). Commerce's
+- **Signed-out visitors can't open product pages on Tailspin** (they land on Not Found). Commerce's
   `products(skus:)` returns nothing for the guest group while search works — the same catalog bug as
   the $0.00 prices, reported to the product team. Signed-in buyers are fine.
 - An expired DA.live sign-in can read as "no publishable pages" on Republish, and as still signed
   in [EDS-29, EDS-30, filed].
 - Optimizer support (PL-60) and app-only projects (AB-1b) are designs only.
-- The card payment path (AB-26s card half) needs a card payment method on Justrite first.
+- The card payment path (AB-26s card half) needs a card payment method on Tailspin first.
 
 ## After testing
 

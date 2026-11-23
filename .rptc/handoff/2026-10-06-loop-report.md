@@ -34,7 +34,7 @@ waiting on you; two are ongoing cleanups. Everything is on
    - Live: adopt an empty org repo end to end; hit a single-sign-on refusal.
 3. **Look at** Your Projects (grid and list), the prompt library, and the integrations screen.
 4. **Save to GitHub**: one real save on a test app, check the repo, then undo. Keep it public-only? (recommend yes). No MCP tool yet — add one? (recommend yes, confirm-gated).
-5. **Demo-data skill**: in a scratch project, paste a brief and watch. Word the one-sentence SC prompt. Keep the Justrite load scripts out of this public repo (recommend).
+5. **Demo-data skill**: in a scratch project, paste a brief and watch. Word the one-sentence SC prompt. Keep the Tailspin load scripts out of this public repo (recommend).
 6. **Optimizer (P1–P5)**: offer it under Commerce → Catalog; ask only tenant id, region, environment, catalog view id, locale and delete the other credentials; data through Data Installer datapacks (delete the old ingestion tool); point the storefront at Optimizer only; per-customer ERP prices become their own item. Plan: `.rptc/plans/aco-support/overview.md`.
 7. **App-only project (3 decisions)**: a third option on the Backend step; app addresses shown on the integrations screen and via `get_project`; require an App Builder org. Plan: `.rptc/plans/app-only-project/overview.md`.
 8. **ERP events**: three live checks in `.rptc/research/event-payload-granularity/research.md`. New finding: the receiver rejects an event without both `sku` and `price` today.

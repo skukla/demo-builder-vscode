@@ -23,10 +23,10 @@ The company-saved event DID dispatch — runtime activation `company-commerce/sa
 FAILED, status 1, with `{"message":"the company event carries no company id","statusCode":400}`
 (read via read_runtime_activation). So this is a handler failure, not an eventing/cron gap.
 
-The handler (`src/commerce-extensibility-1/actions/company/commerce/saved/index.js:28-31`)
+The handler (`commerce-erp-integration/src/commerce-extensibility-1/actions/company/commerce/saved/index.js:28-31`)
 reads `params.data?.value?.id` and rejects when it is not a positive integer. The Commerce
 event subscription for `observer.company_save_commit_after`
-(`src/commerce-extensibility-1/.generated/app.commerce.manifest.json`) declares only
+(`commerce-erp-integration/src/commerce-extensibility-1/.generated/app.commerce.manifest.json`) declares only
 `fields: [{ name: "id" }]`. The B2B Company entity's primary key is `entity_id`, not `id`
 (the sales-document events in the same manifest — shipment, invoice — correctly use
 `entity_id`; only product uses `id`). So the payload's `id` is empty and every company update

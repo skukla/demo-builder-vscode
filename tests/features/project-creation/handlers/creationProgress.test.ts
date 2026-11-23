@@ -116,10 +116,10 @@ describe('creationReporter', () => {
         const progress = creationReporter(send, STARTED_AT);
         progress.numberFrom(creationSteps(edsConfig()));
 
-        progress.report(S.preparingProject.label, 5, 'Removing existing project data');
+        progress.report(S.preparingProject.label, 5, 'Removing previous files');
 
         expect(sent(send)[0].position).toBeUndefined();
-        expect(reportPhase).toHaveBeenCalledWith('Preparing the project — Removing existing project data');
+        expect(reportPhase).toHaveBeenCalledWith('Preparing the project — Removing previous files');
     });
 
     it('numbers nothing until the run knows its steps', () => {
@@ -161,5 +161,51 @@ describe('creationReporter', () => {
 
         expect(sent(send)[0].message).toBe(S.writingConfigFiles.detail);
         expect(reportPhase).toHaveBeenCalledWith(`${S.writingConfigFiles.label} — ${S.writingConfigFiles.detail}`);
+    });
+
+    // After Stop the screen says it is stopping (`creationRun.ts`); the step still
+    // finishing must not write over that (F274).
+    it('reports nothing once the run has been stopped', () => {
+        const send = jest.fn();
+        const stop = new AbortController();
+        const progress = creationReporter(send, STARTED_AT, stop.signal);
+
+        progress.report(S.downloadingComponents.label, 25, 'Cloning repositories');
+        stop.abort();
+        progress.report(S.installingComponents.label, 40, 'Running npm install');
+
+        expect(sent(send).map((payload) => payload.currentOperation)).toEqual([
+            S.downloadingComponents.label,
+        ]);
+        expect(reportPhase).toHaveBeenCalledTimes(1);
+    });
+
+    // A step can fail before it reports anything; the pause still names it, numbered,
+    // and keeps naming it once the SC answers (F307 live check, 2026-11-20).
+    it('pauses on the step that failed, not the one that last reported', () => {
+        const send = jest.fn();
+        const progress = creationReporter(send, STARTED_AT);
+        progress.numberFrom(creationSteps(edsConfig({ datapack: { name: 'Citisignal', version: '1.0.0' } })));
+        progress.report(S.publishingSettings.label, 90, 'Uploading settings');
+        const pause = { reason: 'The datapack could not be installed.', actions: ['Check Again'], canSkip: false };
+
+        progress.pause(pause, S.installingDatapack.label);
+        progress.pause(undefined);
+
+        const [, paused, resumed] = sent(send);
+        expect(paused).toMatchObject({ currentOperation: S.installingDatapack.label, pause });
+        expect(paused.position?.index).toBeGreaterThan(sent(send)[0].position?.index ?? 0);
+        expect(resumed.currentOperation).toBe(S.installingDatapack.label);
+        expect(resumed.pause).toBeUndefined();
+    });
+
+    it('pauses on the step last reported when it is that step', () => {
+        const send = jest.fn();
+        const progress = creationReporter(send, STARTED_AT);
+        progress.report(S.copyingContent.label, 80, '40 of 103 files');
+
+        progress.pause({ reason: 'No.', actions: ['Retry'], canSkip: false }, S.copyingContent.label);
+
+        expect(sent(send)[1]).toMatchObject({ currentOperation: S.copyingContent.label, message: '40 of 103 files' });
     });
 });

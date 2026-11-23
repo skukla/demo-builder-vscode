@@ -4,7 +4,7 @@ kind: feature
 area: ai
 needs: []
 value: high
-status: built
+status: shipped
 ---
 
 # Ownership reconcile: adding or removing an ERP leaves no products behind
@@ -14,13 +14,13 @@ Owner decisions, 2026-10-09 (chat): **by attribute is the default** ownership ru
 two ERPs, nothing resolves it, and per website tells every story it could); per website is
 kept, with the reconcile checking its rules against the store's websites as they stand now.
 
-**What is wrong today** (measured on the Justrite sandbox, 2026-10-09): adding "Kukla ERP"
+**What is wrong today** (measured on the Tailspin sandbox, 2026-10-09): adding "Kukla ERP"
 by attribute gave it zero products, because no Commerce product carries `erp_owner=kukla`,
-and nothing said so beyond the dialog's count. The add changed Justrite ERP's rule from
-everything to `erp_owner=justrite` (43 products) and said its products "change at its next
+and nothing said so beyond the dialog's count. The add changed Tailspin ERP's rule from
+everything to `erp_owner=tailspin` (43 products) and said its products "change at its next
 Reset ERPs or Load demo data", which is half true: a load adds and updates and never
-removes, so Justrite ERP kept all 321 products. Only a reset would have shrunk it. Removing
-an ERP changes no rule, so the remaining ERP keeps its attribute rule and the removed ERP's
+removes, so Tailspin ERP kept all 321 products. Only a reset would have shrunk it. Removing
+an ERP changes no rule, so the ERP left behind keeps its attribute rule and the removed ERP's
 products belong to nobody: no load adds them, no ERP event for them is applied back, and
 what the integration does with an order line nobody owns is untested.
 
@@ -80,24 +80,25 @@ owner-change handling, then the demo-erp status if the model needs it.
   change does not touch (pre-existing on `main`).
 
 Committed and deployed 2026-10-09 (owner: "Commit and deploy"): demo-erp `2e50537` and
-commerce-erp-integration `a53347e` pushed to their `main`; `update_integration` on Justrite
-redeployed Justrite ERP, Kukla ERP and the integration from those commits (05:05 to 05:11 UTC,
+commerce-erp-integration `a53347e` pushed to their `main`; `update_integration` on Tailspin
+redeployed Tailspin ERP, Kukla ERP and the integration from those commits (05:05 to 05:11 UTC,
 each component's checkout read back at the new commit). The extension change is in the
-release candidate (`cec5d466e`), which runs after the owner's next F5. **Live check 2026-10-09 13:28 UTC, passed (owner: "Check 2 and 3 are okay"):** on Justrite
-with two ERPs (Justrite ERP erp_owner=justrite, 43 tagged; Kukla ERP erp_owner=kukla, 0
-tagged), Load demo data on the integration ran the pass in 2.5 minutes. Justrite ERP's fill
+release candidate (`cec5d466e`), which runs after the owner's next F5. **Live check 2026-10-09 13:28 UTC, passed (owner: "Check 2 and 3 are okay"):** on Tailspin
+with two ERPs (Tailspin ERP erp_owner=tailspin, 43 tagged; Kukla ERP erp_owner=kukla, 0
+tagged), Load demo data on the integration ran the pass in 2.5 minutes. Tailspin ERP's fill
 took 43 products and skipped 278; Kukla ERP's took 0 and skipped 321; the answer's warning
 read exactly "Kukla ERP owns no products yet: tag products with erp_owner=kukla in Commerce,
-then Load demo data. 278 products belong to no ERP." Read back from Justrite ERP's own
+then Load demo data. 278 products belong to no ERP." Read back from Tailspin ERP's own
 product list (the first 78 of 321 the tool can show): 55 discontinued, 3 sellable, the rest
-configurable parents; the first sellable one is tagged justrite in Commerce. Not yet checked
+configurable parents; the first sellable one is tagged tailspin in Commerce. Not yet checked
 live: add and remove with the pass, and the integration's old-owner discontinue on a tag change.
 
 ## Shipped so far
 - 2026-10-09  feat(app-builder): ownership is applied across every ERP when it changes (`0d7e46e33`)
-- 2026-10-09  docs(backlog): AB-70 deployed to Justrite (`0ec353620`)
+- 2026-10-09  docs(backlog): AB-70 deployed to Tailspin (`0ec353620`)
 - 2026-10-09  fix(erp): ownership pass makes products an ERP owns again sellable again (`7c47869b9`)
-- 2026-10-09  docs(backlog): AB-70 passed its first live check on Justrite (`0a02fa8dd`)
-- 2026-10-09  Live remove of Kukla ERP (human surface) completed with 'Justrite ERP owns every product again', but the 278 products Justrite owned again stayed discontinued (an import never resets a status). Fixed both sides: extension pass restores sellable (7c47869b9); integration restores at the owner (commerce-erp-integration ad1f4c3 on feature/ownership-reconcile, not pushed or deployed yet). Owner-side next: F5, then Load demo data on Justrite to restore the 278.
-- 2026-10-09  Integration owner-side restore (commerce-erp-integration ad1f4c3, contract v21 51dc746) pushed to main and deployed to Justrite via update_integration. Justrite ERP redeployed at demo-erp 89a3ad0 (order page shows the next step; v21).
+- 2026-10-09  docs(backlog): AB-70 passed its first live check on Tailspin (`0a02fa8dd`)
+- 2026-10-09  Live remove of Kukla ERP (human surface) completed with 'Tailspin ERP owns every product again', but the 278 products Tailspin owned again stayed discontinued (an import never resets a status). Fixed both sides: extension pass restores sellable (7c47869b9); integration restores at the owner (commerce-erp-integration ad1f4c3 on feature/ownership-reconcile, not pushed or deployed yet). Owner-side next: F5, then Load demo data on Tailspin to restore the 278.
+- 2026-10-09  Integration owner-side restore (commerce-erp-integration ad1f4c3, contract v21 51dc746) pushed to main and deployed to Tailspin via update_integration. Tailspin ERP redeployed at demo-erp 89a3ad0 (order page shows what to do next; v21).
 - 2026-10-09  fix(integrations): removing an ERP takes it off its integration's systems list (`b000fd5b5`)
+- 2026-11-20  Released in v1.0.0-beta.153

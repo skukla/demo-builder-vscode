@@ -10,7 +10,7 @@ import {
     apply,
     applied,
     found,
-    justrite,
+    tailspin,
     mockApplyUpdatesHeadless,
     modal,
     resetModalMocks,
@@ -44,13 +44,13 @@ const BASE: BoilerplateBase = {
     found: 'first-commit',
 };
 
-/** JustRite's Adobe boilerplate update, its clash kept for the SC's AI. */
+/** Tailspin's Adobe boilerplate update, its clash kept for the SC's AI. */
 function boilerplateCheck(): ReturnType<typeof found> {
     const sel: UpdateSelections = {
         ...selections(),
         template: [],
         blockLibrary: [],
-        boilerplate: [{ project: justrite, base: BASE, tested: 'b'.repeat(40) }],
+        boilerplate: [{ project: tailspin, base: BASE, tested: 'b'.repeat(40) }],
     };
     return found({ selections: sel, count: 1 });
 }
@@ -59,7 +59,7 @@ const KEPT = applied({
     boilerplate: {
         ...emptyResult(),
         failCount: 1,
-        clashes: [{ project: 'JustRite', projectName: 'justrite', track: 'boilerplate', files: ['blocks/header/header.js'], keptIn: '/p/justrite/components/eds-storefront' }],
+        clashes: [{ project: 'Tailspin', projectName: 'tailspin', track: 'boilerplate', files: ['blocks/header/header.js'], keptIn: '/p/tailspin/components/eds-storefront' }],
     },
 });
 
@@ -79,11 +79,11 @@ describe('applyUpdates: a clash kept for the SC\'s AI', () => {
     it('flips the row the run left "working on it" when the AI finishes, by the id the screen knows', async () => {
         const { notice, ctx, rowId } = await runKept();
 
-        notice.tellFixEnded(justrite, 'boilerplate', 'finished', true);
+        notice.tellFixEnded(tailspin, 'boilerplate', 'finished', true);
 
         expect(statusesSent(ctx)).toEqual([
             { id: rowId, state: 'done', message: 'Updated by your AI.' },
-            { id: 'localCopy:/p/justrite', state: 'done' },
+            { id: 'localCopy:/p/tailspin', state: 'done' },
         ]);
     });
 
@@ -91,7 +91,7 @@ describe('applyUpdates: a clash kept for the SC\'s AI', () => {
         const { h, notice, ctx } = await runKept();
 
         h.presentUpdates(found());
-        notice.tellFixEnded(justrite, 'boilerplate', 'finished', true);
+        notice.tellFixEnded(tailspin, 'boilerplate', 'finished', true);
 
         expect(statusesSent(ctx)).toStrictEqual([]);
     });
@@ -102,7 +102,7 @@ describe('applyUpdates: a clash kept for the SC\'s AI', () => {
         mockApplyUpdatesHeadless.mockResolvedValue(applied());
         const rows = h.presentUpdates(found());
         await apply(h)(createMockHandlerContext(), modal([rows[0].id]));
-        notice.tellFixEnded(justrite, 'boilerplate', 'finished', true);
+        notice.tellFixEnded(tailspin, 'boilerplate', 'finished', true);
 
         expect(statusesSent(ctx)).toStrictEqual([]);
     });
@@ -118,7 +118,7 @@ describe('applyUpdates: a clash kept for the SC\'s AI', () => {
         await apply(h)(ctx, modal(rows.map((r) => r.id)));
         ctx.sendMessage.mockClear();
 
-        notice.tellFixEnded(justrite, 'boilerplate', 'finished', true);
+        notice.tellFixEnded(tailspin, 'boilerplate', 'finished', true);
 
         expect(statusesSent(ctx)).toStrictEqual([]);
     });

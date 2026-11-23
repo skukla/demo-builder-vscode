@@ -15,7 +15,7 @@
 
 import * as vscode from 'vscode';
 import { DaLiveOrgOperations } from '../services/daLive/daLiveOrgOperations';
-import { firstUsableDaLiveToken } from '../services/daLive/daLiveTokenChain';
+import { createDaLiveServiceTokenProvider } from '../services/daLive/daLiveTokenProviders';
 import { HelixService } from '../services/helix/helixService';
 import { getLinkedEdsProjects } from '../services/resourceCleanupHelpers';
 import { projectsSharingRepo } from '../services/storefront/sharedRepoProjects';
@@ -53,17 +53,13 @@ export async function cleanupDaLiveSitesCommand(context: vscode.ExtensionContext
             return; // User cancelled or no namespace available
         }
 
-        // Step 2: Check authentication and fetch sites from org. The DA.live
-        // session first: it is the only token the live-site unpublish accepts.
-        const tokenProvider = await firstUsableDaLiveToken({
-            daLiveSession: () => getDaLiveAuthService(context),
-            imsTokenManager: () => ServiceLocator.getAuthenticationService().getTokenManager(),
-        });
+        // Step 2: Check authentication and fetch sites from org. The DA.live session
+        // only: it is the one sign-in DA.live and the live-site unpublish accept, and the
+        // teardown refuses anything else (PL-104 fix 7, `storefrontTeardown`).
+        const tokenProvider = createDaLiveServiceTokenProvider(getDaLiveAuthService(context));
 
-        if (!tokenProvider) {
-            vscode.window.showErrorMessage(
-                'Not signed in to DA.live or Adobe. Sign in to DA.live first.',
-            );
+        if (!(await tokenProvider.getAccessToken())) {
+            vscode.window.showErrorMessage('Not signed in to DA.live. Sign in to DA.live first.');
             return;
         }
 
@@ -78,7 +74,7 @@ export async function cleanupDaLiveSitesCommand(context: vscode.ExtensionContext
         await vscode.window.withProgress(
             {
                 location: vscode.ProgressLocation.Notification,
-                title: 'Loading DA.live sites',
+                title: 'Loading DA.live Sites',
                 cancellable: false,
             },
             async () => {
@@ -115,8 +111,7 @@ export async function cleanupDaLiveSitesCommand(context: vscode.ExtensionContext
                 `Possible reasons:\n` +
                 `• Organization name is incorrect\n` +
                 `• No access to this organization\n` +
-                `• Organization has no DA.live sites\n\n` +
-                `Check Debug Logs for details.`;
+                `• Organization has no DA.live sites`;
 
             vscode.window.showWarningMessage(message, 'Open Debug Logs').then(selection => {
                 if (selection === 'Open Debug Logs') {
@@ -183,7 +178,7 @@ export async function cleanupDaLiveSitesCommand(context: vscode.ExtensionContext
         await vscode.window.withProgress(
             {
                 location: vscode.ProgressLocation.Notification,
-                title: 'Deleting DA.live sites',
+                title: 'Deleting DA.live Sites',
                 cancellable: false,
             },
             async (progress) => {
@@ -197,7 +192,7 @@ export async function cleanupDaLiveSitesCommand(context: vscode.ExtensionContext
                         }),
                     tearDown: (target) =>
                         tearDownStorefront(target, {
-                            tokenProvider,
+                            daLiveSession: tokenProvider,
                             logger,
                             initKeyStore: () => HelixService.initKeyStore(context.secrets, context.globalState),
                             // A site, not a project, is being acted on (EDS-26).
@@ -298,7 +293,7 @@ function showDeletionResult({ deleted, failed, stillLive }: SiteDeletionOutcome)
     const plural = (n: number) => `${n} site${n !== 1 ? 's' : ''}`;
     const stillLiveNote =
         stillLive.length > 0
-            ? ` Pages may still be live for ${stillLive.join(', ')}. See Debug Logs for why.`
+            ? ` Pages may still be live for ${stillLive.join(', ')}.`
             : '';
 
     if (deleted.length > 0 && failed.length === 0) {
@@ -357,7 +352,7 @@ async function pickNamespace(
 
     const picked = await vscode.window.showQuickPick(items, {
         title: 'Manage DA.live Sites',
-        placeHolder: 'Pick the DA.live namespace whose sites you want to manage',
+        placeHolder: 'Select the DA.live namespace whose sites you want to manage',
         ignoreFocusOut: true,
     });
 

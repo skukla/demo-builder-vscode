@@ -4,8 +4,7 @@
  * pick names each item by.
  *
  * The picks travel as the service's export `selections` (`{<kind>: {<field>: [ids]}}`,
- * `selectionFilter.js`), so the export screen and `start_datapack_export` send one shape with
- * either engine. The fields are the service's own `id_field`s (`config/data_processors_export.json`),
+ * `selectionFilter.js`), so the export screen and `create_datapack` send one shape. The fields are the service's own `id_field`s (`config/data_processors_export.json`),
  * but for an attribute, which Demo Builder's capture names by code.
  *
  * Each kind is one the capture already starts from (`capture.ts`): a picked product brings its
@@ -31,8 +30,11 @@ export const PICK_FIELDS = {
 
 export type PickableKind = keyof typeof PICK_FIELDS;
 
-/** Every pickable kind, in the screen's order. */
-export const PICKABLE_KINDS: readonly PickableKind[] = [
+/**
+ * Every pickable kind, in the screen's order: a non-empty tuple, so a closed list of them (an agent
+ * tool's `z.enum`) takes it as it is.
+ */
+export const PICKABLE_KINDS = [
     'products',
     'giftcards',
     'categories',
@@ -43,7 +45,15 @@ export const PICKABLE_KINDS: readonly PickableKind[] = [
     'b2b_shared_catalogs',
     'product_attributes',
     'attribute_sets',
-];
+] as const satisfies readonly [PickableKind, ...PickableKind[]];
+
+/**
+ * The kinds whose count is only a ceiling: Commerce counts the whole instance's, while the list keeps
+ * the website's (`storeItems.ts`). Above zero, the count says nothing until the list answers, so the
+ * picks read their lists at once and claim nothing before (owner walk, 2026-11-16: B2B Companies
+ * read "All selected", then "None available").
+ */
+export const CEILING_KINDS: readonly PickableKind[] = ['cart_rules', 'b2b_companies'];
 
 /** Each kind as a sentence counts it: one, and more than one. */
 export const KIND_NOUNS: Readonly<Record<PickableKind, readonly [string, string]>> = {
@@ -59,6 +69,18 @@ export const KIND_NOUNS: Readonly<Record<PickableKind, readonly [string, string]
     attribute_sets: ['attribute set', 'attribute sets'],
 };
 
+/**
+ * Data types in the order the pick list offers them, the rest after in name order: one order
+ * wherever a pack's types are listed, so a type is where the eye last saw it (owner, 2026-11-05).
+ */
+export function inPickOrder(kinds: readonly string[]): string[] {
+    const rank = (kind: string): number => {
+        const at = (PICKABLE_KINDS as readonly string[]).indexOf(kind);
+        return at === -1 ? PICKABLE_KINDS.length : at;
+    };
+    return [...kinds].sort((a, b) => rank(a) - rank(b) || a.localeCompare(b));
+}
+
 export const isPickableKind = (kind: string): kind is PickableKind => (PICKABLE_KINDS as readonly string[]).includes(kind);
 
 /**
@@ -66,6 +88,13 @@ export const isPickableKind = (kind: string): kind is PickableKind => (PICKABLE_
  * (groups, catalogs, attributes, sets) are the store's whole setup, which no demo holds all of.
  */
 export const LEFT_OUT_KINDS: readonly PickableKind[] = ['products', 'giftcards', 'categories', 'cart_rules', 'customers', 'b2b_companies'];
+
+/**
+ * The kinds Commerce keeps for the whole instance, so only some of each is a demo's: a save from a
+ * pack takes only what the demo uses of them (`demoUses.ts`, walk F85). The rest are a demo's
+ * website's, its root's or its customers', so a save from a pack takes all of them.
+ */
+export const INSTANCE_KINDS: readonly PickableKind[] = ['customer_groups', 'b2b_shared_catalogs', 'product_attributes', 'attribute_sets'];
 
 /** The ids picked, by kind. */
 export type StorePicks = Partial<Record<PickableKind, string[]>>;
@@ -102,6 +131,15 @@ export interface StoreItemPage {
     inPackCount: number;
 }
 
+/**
+ * How many of each kind the store has, as `count-datapack-export-items` answers. A kind whose read
+ * failed is absent, so absent never means none. Each count is a ceiling on what its list offers,
+ * and only zero is relied on: the list then leaves off what the pack being saved holds, and cart
+ * rules and companies are scoped in code after their read, so theirs count the whole store
+ * (`storeItems.ts`).
+ */
+export type StoreKindCounts = Partial<Record<PickableKind, number>>;
+
 /** The picks as `selections`, for the request. */
 export function selectionsOf(picks: StorePicks): Selections {
     const out: Selections = {};
@@ -124,6 +162,18 @@ export function picksOf(selections: unknown): { picks: StorePicks } | { error: s
         picks[kind] = ids.map(String);
     }
     return { picks };
+}
+
+/**
+ * `wholeKinds` read back (step-07 E2): the kinds ticked whole, each listed inside the save, or the
+ * sentence that says what is wrong with them. An agent sends it too, so every entry is checked.
+ */
+export function wholeKindsOf(wholeKinds: unknown): { kinds: PickableKind[] } | { error: string } {
+    if (wholeKinds === undefined) return { kinds: [] };
+    if (!Array.isArray(wholeKinds)) return { error: `wholeKinds is a list of data types: ${PICKABLE_KINDS.join(', ')}.` };
+    const unknown = wholeKinds.find((kind) => typeof kind !== 'string' || !isPickableKind(kind));
+    if (unknown !== undefined) return { error: `${String(unknown)} cannot be picked; these can: ${PICKABLE_KINDS.join(', ')}.` };
+    return { kinds: [...new Set(wholeKinds as PickableKind[])] };
 }
 
 /** How many items are picked, over every kind. */

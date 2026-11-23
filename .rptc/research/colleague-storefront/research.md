@@ -506,7 +506,7 @@ Option 1 (read from the repo) and the Welcome-step shape, settled:
   link." Rejected on the way: "Custom" (reads as make-it-yourself beside Starter; the
   mechanism, not the intent), "Shared" (two readings: collaborated on vs given to you),
   "Import" (already the wizard's settings-import mode), "Demo from GitHub" (technical).
-  Once added, a demo is an ordinary card named by its repo or by the SC ("Isle5 by Jen").
+  Once added, a demo is an ordinary card named by its repo or by the SC ("Isle5 by Robin").
   Settings list: "Added demos". Internally the type is still a storefront row, matching the
   catalog; the glossary records that the grid word is "demo" for the same reason the
   CitiSignal card is not called "CitiSignal storefront rows".
@@ -616,7 +616,7 @@ no code creates a fork; a vanished template repo today fails reset midway with g
 and silences the update check; GitHub allows one fork per repo per account. Decision:
 offer a fork into the SC's account or team org at add time, ticked by default; the fork is
 the demo's source for that SC (we can flag it as a template ourselves), projects generate
-from it, updates become "Pull Jen's changes", Forget offers to delete it. Content is not
+from it, updates become "Pull Robin's changes", Forget offers to delete it. Content is not
 forkable; a gone source site means reset offers to keep current content.
 
 For unforked demos (2026-09-11, owner): a dashboard notice, reset refusing up front with the

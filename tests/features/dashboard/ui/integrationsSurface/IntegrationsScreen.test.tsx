@@ -46,7 +46,7 @@ describe('IntegrationsScreen', () => {
         });
 
         // LIVE 2026-08-04: removing the last integration dropped the user onto a
-        // full-screen takeover with no title, no project · destination subtitle,
+        // full-screen takeover with no title, no project, destination subtitle,
         // and no Project Dashboard button — no context and no way back. The empty
         // state belongs INSIDE the page chrome, not instead of it.
         it('keeps the project context and the way back in the empty state', () => {
@@ -67,7 +67,7 @@ describe('IntegrationsScreen', () => {
             expect(screen.getByRole('button', { name: 'Project Dashboard' })).toBeInTheDocument();
             // Exactly ONE Add integration: the empty state's CTA. The band's copy
             // is withheld while empty rather than doubling it.
-            expect(screen.getAllByRole('button', { name: 'Add integration' })).toHaveLength(1);
+            expect(screen.getAllByRole('button', { name: 'Add Integration' })).toHaveLength(1);
         });
 
         it('opens the add modal from the empty state CTA', async () => {
@@ -76,7 +76,7 @@ describe('IntegrationsScreen', () => {
             render(<IntegrationsScreen hasAdobeContext appBuilderComponents={{}} />);
             settleStatus(handlers);
 
-            await user.click(screen.getByRole('button', { name: 'Add integration' }));
+            await user.click(screen.getByRole('button', { name: 'Add Integration' }));
 
             expect(screen.getByTestId('add-modal')).toBeInTheDocument();
         });
@@ -156,7 +156,7 @@ describe('IntegrationsScreen', () => {
              * The destination moved OUT of the header and INTO the band.
              *
              * It used to ride in the subtitle as a third crumb —
-             * "demo-builder-test · Kukla Mesh · Stage" — on the reasoning that
+             * "demo-builder-test, Kukla Mesh, Stage" — on the reasoning that
              * the band was "otherwise about acting on the list". The band's left
              * side is not actions: it holds the count, with most of its width
              * empty. It is context-left / actions-right, exactly like the project
@@ -230,7 +230,7 @@ describe('IntegrationsScreen', () => {
                 );
                 settleStatus(handlers);
 
-                expect(screen.getByTestId('page-destination')).toHaveTextContent(/deploys to/i);
+                expect(screen.getByTestId('page-destination')).toHaveTextContent('Adobe Project');
             });
 
             // 2026-10-15: with no Adobe project the row used to vanish, so an SC on a
@@ -307,12 +307,13 @@ describe('IntegrationsScreen', () => {
         it('asks the extension to re-authenticate when the grid says so', async () => {
             const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             const handlers = captureHandlers();
+            getClient().request.mockResolvedValue({ success: true });
             render(<IntegrationsScreen hasAdobeContext appBuilderComponents={{ a: DEPLOYED }} />);
             settleStatus(handlers);
 
             await user.click(screen.getByRole('button', { name: 'grid-reauth' }));
 
-            expect(getClient().postMessage).toHaveBeenCalledWith('reAuthenticate');
+            expect(getClient().request).toHaveBeenCalledWith('authenticate');
         });
     });
 

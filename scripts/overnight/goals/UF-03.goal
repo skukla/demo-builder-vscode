@@ -1,4 +1,4 @@
-Work `.rptc/plans/unmeasured-fifth/overview.md` STEP 2 — size the unmeasured fifth honestly.
+Work `.rptc/complete/unmeasured-fifth/overview.md` STEP 2 — size the unmeasured fifth honestly.
 
 The current estimate (~18,600 gaps over 160 modules) came from five modules chosen as the
 LARGEST, with a crude gap count. Both biases push it high. Replace it with a defensible
@@ -21,7 +21,7 @@ never ran, until proven otherwise — check for jest.mock and for injected doubl
 believing it.
 
 Report real openGaps per module, not survivors-minus-string-mutants. Write the result into
-`.rptc/plans/unmeasured-fifth/overview.md` as a table, and log the headline to PL-50. Delete
+`.rptc/complete/unmeasured-fifth/overview.md` as a table, and log the headline to PL-50. Delete
 any probe configs you create; leave the tree clean.
 
 RAILS (the standing unattended contract). Stay on the work branch; never checkout or merge

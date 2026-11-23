@@ -1,7 +1,7 @@
 # Returns and credit memos: the build (order-to-return loop, 2026-10-02)
 
 Implements `returns-design.md` r1 (approved 2026-09-28) to the point the owner's goal needs:
-one Justrite order split across Justrite ERP and Accuform ERP, invoiced, shipped, credited and
+one Tailspin order split across Tailspin ERP and Accuform ERP, invoiced, shipped, credited and
 returned, shown in every system. Live facts it rests on are in `returns-design.md` §6.1
 (R-T1 the return save event exists; R-T3 one credit memo per ERP refunds to company credit).
 
@@ -16,7 +16,7 @@ returned, shown in every system. Live facts it rests on are in `returns-design.m
 | E | integration | **Commerce return → each ERP.** Subscribe `observer.rma_save_commit_after`; on a new return, split its items by the order's parts record and send each ERP its piece (`POST returns`); record `order-returns-<id>`; unrouted lines recorded, never guessed | harness: a return over two ERPs' lines sends one piece to each, once |
 | F | integration | **ERP return received → Commerce.** `be-observer.rma_status_update` handler: a return comment naming the ERP and its return number; the return's item statuses moved when R-T2 shows the API allows it | harness test; R-T2 answered live |
 | G | demo-erp | **Screen.** Returns list + return document (Receive, Post credit memo); Credit memo on the invoice document (Post credit memo); the journal names both | headless screen check |
-| H | both | Version bump, deploy to Justrite (owner-authorized 2026-10-02), the live journey, then `docs/walkthrough.md` steps for every system | the owner's flow runs live end to end |
+| H | both | Version bump, deploy to Tailspin (owner-authorized 2026-10-02), the live journey, then `docs/walkthrough.md` steps for every system | the owner's flow runs live end to end |
 
 ## Decided unattended (each extends an established pattern; none changes the data model's meaning)
 

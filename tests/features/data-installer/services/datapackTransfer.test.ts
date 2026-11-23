@@ -13,10 +13,10 @@ import type { DatapackFile } from '@/features/data-installer/services/datapackZi
 import { BODEA_CUSTOMER_ROWS, TEST_PASSWORD } from '../../../helpers/commerceB2bFixtures';
 import type { DataItem, DatapackDetail } from '@/features/data-installer/types';
 
-const ID = { name: 'justrite', version: 'v1' };
+const ID = { name: 'tailspin', version: 'v1' };
 const DETAIL: DatapackDetail = {
     id: ID,
-    displayName: 'Justrite B2B',
+    displayName: 'Tailspin B2B',
     description: 'Signs',
     shared: true,
     dataTypes: ['categories', 'customer_groups'],
@@ -41,12 +41,9 @@ describe('readPackFromStore', () => {
     it('reads the detail, then each type the pack lists, and records where it came from', async () => {
         const c = client();
 
-        const pack = await readPackFromStore(
-            c,
-            ID,
-            'library',
-            () => new Date('2026-10-01T12:00:00Z')
-        );
+        const pack = await readPackFromStore(c, ID, 'library', {
+            now: () => new Date('2026-10-01T12:00:00Z'),
+        });
 
         expect(c.getDatapackDetail).toHaveBeenCalledWith(ID);
         expect(c.getDataItem.mock.calls).toEqual([
@@ -55,7 +52,7 @@ describe('readPackFromStore', () => {
         ]);
         expect(pack).toEqual({
             id: ID,
-            displayName: 'Justrite B2B',
+            displayName: 'Tailspin B2B',
             description: 'Signs',
             items: [
                 { dataType: 'categories', records: ROWS.categories },
@@ -72,6 +69,30 @@ describe('readPackFromStore', () => {
         ).rejects.toThrow(/holds no data yet/);
     });
 
+    it('reads only the named types, leaving the rest unasked', async () => {
+        const c = client();
+
+        const pack = await readPackFromStore(c, ID, 'installer', { dataTypes: ['customer_groups'] });
+
+        expect(c.getDataItem.mock.calls).toEqual([[ID, 'customer_groups']]);
+        expect(pack.items.map((i) => i.dataType)).toStrictEqual(['customer_groups']);
+    });
+
+    it('refuses a named type the pack does not hold, naming what it does hold', async () => {
+        const c = client();
+
+        await expect(
+            readPackFromStore(c, ID, 'installer', { dataTypes: ['customer_groups', 'product_export'] })
+        ).rejects.toThrow('holds no product_export. It holds categories, customer_groups.');
+        expect(c.getDataItem).not.toHaveBeenCalled();
+    });
+
+    it('refuses an empty list of types rather than saving an empty pack', async () => {
+        await expect(
+            readPackFromStore(client(), ID, 'installer', { dataTypes: [] })
+        ).rejects.toThrow(/Name at least one data type/);
+    });
+
     it('refuses a pack whose stored rows do not parse, naming the type', async () => {
         const c = client(DETAIL, {
             customer_groups: { dataType: 'customer_groups', rawData: '{bad' },
@@ -85,7 +106,7 @@ describe('readPackFromStore', () => {
 describe('writePackToStore', () => {
     const PACK: DatapackFile = {
         id: ID,
-        displayName: 'Justrite B2B',
+        displayName: 'Tailspin B2B',
         description: 'Signs',
         items: [
             { dataType: 'categories', records: ROWS.categories },
@@ -101,6 +122,26 @@ describe('writePackToStore', () => {
         };
     }
 
+    it('writes nothing when the store cannot take a type, naming it', async () => {
+        const writer = { createDatapack: jest.fn(), addDataItem: jest.fn(), oversized: jest.fn(() => ['products']) };
+
+        await expect(writePackToStore(writer, PACK)).rejects.toThrow(/products is too large to send to that store, so nothing was written/);
+
+        expect(writer.createDatapack).not.toHaveBeenCalled();
+        expect(writer.addDataItem).not.toHaveBeenCalled();
+    });
+
+    // Phase 2, step-02 slice 1: a save of a shared pack is written shared.
+    it('creates the pack shared when asked, and private otherwise', async () => {
+        const shared = writer();
+        await writePackToStore(shared, PACK, { shared: true });
+        expect(shared.createDatapack).toHaveBeenCalledWith(expect.objectContaining({ shared: true }));
+
+        const plain = writer();
+        await writePackToStore(plain, PACK);
+        expect(plain.createDatapack.mock.calls[0][0]).not.toHaveProperty('shared');
+    });
+
     it('creates the pack, then adds every type with its rows', async () => {
         const w = writer();
 
@@ -108,7 +149,7 @@ describe('writePackToStore', () => {
 
         expect(w.createDatapack).toHaveBeenCalledWith({
             id: ID,
-            displayName: 'Justrite B2B',
+            displayName: 'Tailspin B2B',
             description: 'Signs',
         });
         expect(w.addDataItem.mock.calls).toEqual([

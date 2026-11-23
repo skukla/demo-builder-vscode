@@ -1,6 +1,6 @@
 /**
  * One step's preparation record after it is applied AGAIN (AB-77): the store lost what Demo
- * Builder did, the fresh check said so, and the fix ran a second time. The first record is
+ * Builder did, the fresh check said so, and the setup ran a second time. The first record is
  * kept and the new one added to it, so an undo still puts back what was there before Demo
  * Builder first touched the step, and still removes everything either run created.
  *

@@ -54,7 +54,7 @@ export async function pickImportFile(context: HandlerContext): Promise<vscode.Ur
             'Demo Builder settings or bundle': ['json', 'zip'],
             'All Files': ['*'],
         },
-        title: 'Import a settings file or a demo bundle',
+        title: 'Import a Settings File or a Demo Bundle',
     });
     return fileUris?.[0];
 }
@@ -170,9 +170,7 @@ export async function copySettingsFromProject(context: HandlerContext): Promise<
         const projects: Project[] = [];
 
         for (const item of projectList) {
-            const project = await context.stateManager.loadProjectFromPath(item.path, undefined, {
-                persistAfterLoad: false,
-            });
+            const project = await context.stateManager.loadProjectFromPath(item.path);
             if (project) {
                 projects.push(project);
             }
@@ -269,6 +267,7 @@ async function announceExport(projectName: string, uri: vscode.Uri): Promise<voi
 export async function exportProjectSettings(
     context: HandlerContext,
     project: Project,
+    { announce = true }: { announce?: boolean } = {},
 ): Promise<HandlerResponse> {
     try {
         // Get extension version for metadata
@@ -306,7 +305,8 @@ export async function exportProjectSettings(
 
         // A plain message, not a progress bar with a sleep in it: nothing is in
         // progress, and the SC dismisses it when they have read it.
-        void announceExport(project.name, saveUri);
+        // A caller that shows the result itself (Share Demo's window, walk F236) passes announce: false.
+        if (announce) void announceExport(project.name, saveUri);
 
         return {
             success: true,

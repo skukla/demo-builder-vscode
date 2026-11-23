@@ -20,6 +20,7 @@ import {
 
 jest.mock('@/features/eds/handlers/edsHelpers', () => ({
     applyDaLiveOrgConfigSettings: jest.fn().mockResolvedValue(undefined),
+    resolveProjectAuthoringExperience: () => 'da-live-classic',
     publishLibraryPaths: jest.fn().mockResolvedValue(undefined),
     verifyLibraryPreviewed: jest.fn().mockResolvedValue(true),
 }));
@@ -111,7 +112,7 @@ describe('executeEdsPipeline - clearing content', () => {
 
             expect(progress[0]).toEqual({
                 operation: 'content-clear',
-                message: 'Clearing DA.live content',
+                message: 'Deleting DA.live content',
                 subMessage: 'test-org/test-site',
             });
         });
@@ -134,7 +135,7 @@ describe('executeEdsPipeline - clearing content', () => {
 
             expect(progress).toContainEqual({
                 operation: 'content-clear',
-                message: 'Clearing DA.live content: 7 files removed',
+                message: 'Deleting DA.live content: 7 files deleted',
                 subMessage: '/products/shoes.html',
             });
         });
@@ -148,7 +149,7 @@ describe('executeEdsPipeline - clearing content', () => {
 
             await executeEdsPipeline(params, services, onProgress);
 
-            expect(messages()).toContain('Clearing DA.live content: 12 files removed');
+            expect(messages()).toContain('Deleting DA.live content: 12 files deleted');
         });
 
         it('stops the whole pipeline when the clear fails', async () => {

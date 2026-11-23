@@ -7,6 +7,7 @@ needs: []
 value: low
 status: spiked
 layer: E
+plan: own-the-chat-surface
 ---
 # Own the chat surface — render Claude Code's stream in our own UI
 

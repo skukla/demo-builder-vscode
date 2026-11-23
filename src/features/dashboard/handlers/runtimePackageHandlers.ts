@@ -35,9 +35,7 @@ import type { HandlerContext, HandlerResponse, MessageHandler } from '@/types/ha
 import { toError } from '@/types/typeGuards';
 
 /** What a person reads when the namespace cannot be listed. */
-const LIST_FAILED =
-    "Could not list what is deployed in this project's Adobe Runtime namespace. " +
-    'See Debug Logs for the reason.';
+const LIST_FAILED = "Could not list what is deployed in this project's Adobe Runtime namespace.";
 
 /**
  * The namespace that was read, and what is in it: the packages, and the triggers (timers)

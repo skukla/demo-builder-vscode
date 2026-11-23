@@ -170,7 +170,7 @@ describe('handleListRuntimeActivations', () => {
 
         expect(result).toEqual({
             success: false,
-            error: "Could not read this project's Adobe Runtime namespace. See Debug Logs for the reason.",
+            error: "Could not read this project's Adobe Runtime namespace.",
         });
     });
 });
@@ -359,7 +359,7 @@ describe('handleInvokeRuntimeAction', () => {
         mockInvokeRuntimeAction.mockRejectedValue(new Error('An AUTH key must be specified'));
         expect(await handleInvokeRuntimeAction(contextWith(createMockProject()), { action: 'erp/refresh-job' })).toEqual({
             success: false,
-            error: "Could not read this project's Adobe Runtime namespace. See Debug Logs for the reason.",
+            error: "Could not read this project's Adobe Runtime namespace.",
         });
     });
 });

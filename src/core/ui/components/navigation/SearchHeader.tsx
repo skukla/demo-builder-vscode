@@ -5,22 +5,17 @@
  * Provides consistent UI patterns across selection views.
  *
  * Features:
- * - Search field (shown when items exceed threshold)
+ * - Search field (shown whenever there are items)
  * - Refresh button with loading state
  * - View mode toggle (cards/rows)
  * - Item count display ("Y items", and "X of Y items" while filtering)
  * - Configurable visibility and behavior
  *
- * `searchThreshold` IS NOT A TUNING KNOB — it changes the header's SHAPE.
- * `showSearch` (`totalCount > searchThreshold`) decides where the action buttons live:
- * with no search field they sit beside the count on the count row; with one they move up
- * into the search row and the count drops to its own line beneath. So a non-zero threshold
- * makes the header rearrange itself as the list grows past it — the same screen renders two
- * different layouts depending on how much data came back.
- *
- * Page-level surfaces therefore pass 0 (`ProjectsDashboard`, `IntegrationsActionBand`) so the
- * field is present from the first item and the layout never moves. Pick non-zero only for a
- * bounded in-page list where you have decided both layouts are acceptable.
+ * The search field shows on every list with anything in it, however short (owner, 2026-11-02). It
+ * used to hide below a threshold each screen chose, and that changed the header's SHAPE: with no
+ * field the action buttons sit beside the count on the count row; with one they move up into the
+ * search row and the count drops to its own line beneath. So one screen rendered two layouts
+ * depending on how much data came back.
  *
  * Typing in the field must not move anything either (owner, 2026-10-31). The count holds the
  * width of its longest form ("12 of 12 datapacks") from the start, and nothing on its row
@@ -54,12 +49,6 @@ export interface SearchHeaderProps {
     onSearchQueryChange: (query: string) => void;
     /** Placeholder text for search field */
     searchPlaceholder?: string;
-    /**
-     * Show search field when totalCount exceeds this (default: 5).
-     * Changes the header's LAYOUT, not just the field's visibility — see the module
-     * docstring. Page-level surfaces pass 0.
-     */
-    searchThreshold?: number;
 
     /** Total number of items (before filtering) */
     totalCount: number;
@@ -74,6 +63,11 @@ export interface SearchHeaderProps {
     onRefresh?: () => void;
     /** Whether currently refreshing */
     isRefreshing?: boolean;
+    /**
+     * The refresh's wait shows in the body (a pressed Refresh, `FullScreenSurface`'s `waiting`): the
+     * button stops taking presses and draws no spinner of its own, one spinner per wait (walk F214).
+     */
+    refreshWaitBelow?: boolean;
     /** Aria label for refresh button */
     refreshAriaLabel?: string;
 
@@ -84,8 +78,18 @@ export interface SearchHeaderProps {
 
     /** Whether data has loaded at least once (shows count when true) */
     hasLoadedOnce: boolean;
-    /** Always show count even below threshold (default: false) */
+    /** Show the count on an empty list too (default: false) */
     alwaysShowCount?: boolean;
+    /**
+     * Keep the filter box on an empty list too (default: false). For a list whose total changes with
+     * a choice on the header, where an empty view would otherwise move the rows around it.
+     */
+    alwaysShowSearch?: boolean;
+    /**
+     * Say no count at all: in a dialog, a count of what the SC can see is cut (dialog design
+     * rules). With no search field the row stays, since the action buttons live on it.
+     */
+    hideCount?: boolean;
 
     /** Optional action element to show inline (e.g., "+ New" button) */
     action?: React.ReactNode;
@@ -106,6 +110,13 @@ export interface SearchHeaderProps {
      * belongs near the list without spending a row of its own.
      */
     countTrailing?: React.ReactNode;
+
+    /**
+     * Takes the count's place at the START of the count row, filtering or not: a list in
+     * selection mode says what is selected there instead ("3 of 12 selected", with its
+     * Select All), as the projects list does (owner, 2026-11-04).
+     */
+    countLead?: React.ReactNode;
 }
 
 /** Render refresh button */
@@ -113,6 +124,7 @@ function renderRefreshButton(
     onRefresh: (() => void) | undefined,
     isRefreshing: boolean,
     refreshAriaLabel: string,
+    waitBelow = false,
 ): React.ReactNode {
     if (!onRefresh) return null;
     return (
@@ -120,9 +132,9 @@ function renderRefreshButton(
             isQuiet
             onPress={onRefresh}
             aria-label={refreshAriaLabel}
-            isDisabled={isRefreshing}
+            isDisabled={isRefreshing || waitBelow}
         >
-            {isRefreshing ? <Spinner size="S" /> : <Refresh />}
+            {isRefreshing && !waitBelow ? <Spinner size="S" /> : <Refresh />}
         </ActionButton>
     );
 }
@@ -139,25 +151,25 @@ function renderViewToggle(
                 <ActionButton
                     isQuiet
                     onPress={() => onViewModeChange('cards')}
-                    aria-label="Card view"
+                    aria-label="Card View"
                     aria-pressed={viewMode === 'cards'}
                     UNSAFE_className="search-header-toggle"
                 >
                     <ViewGrid />
                 </ActionButton>
-                <Tooltip>Card view</Tooltip>
+                <Tooltip>Card View</Tooltip>
             </TooltipTrigger>
             <TooltipTrigger delay={300}>
                 <ActionButton
                     isQuiet
                     onPress={() => onViewModeChange('rows')}
-                    aria-label="List view"
+                    aria-label="List View"
                     aria-pressed={viewMode === 'rows'}
                     UNSAFE_className="search-header-toggle"
                 >
                     <ViewList />
                 </ActionButton>
-                <Tooltip>List view</Tooltip>
+                <Tooltip>List View</Tooltip>
             </TooltipTrigger>
         </Flex>
     );
@@ -222,13 +234,12 @@ function renderActionButtons(
 
 /** Compute derived display values from props */
 function computeDisplayValues(props: SearchHeaderProps) {
-    const searchThreshold = props.searchThreshold ?? 5;
     const itemNoun = props.itemNoun ?? 'item';
     const alwaysShowCount = props.alwaysShowCount ?? false;
     const nounPlural = props.itemNounPlural || `${itemNoun}s`;
 
     return {
-        showSearch: props.totalCount > searchThreshold,
+        showSearch: (props.alwaysShowSearch ?? false) || props.totalCount > 0,
         showCount: props.hasLoadedOnce && (alwaysShowCount || props.totalCount > 0),
         nounPlural,
         displayNoun: props.totalCount === 1 ? itemNoun : nounPlural,
@@ -255,9 +266,25 @@ export function SearchHeader(props: SearchHeaderProps) {
     const { showSearch, showCount, nounPlural, displayNoun, isFiltering } =
         computeDisplayValues(props);
 
+    // With a search field the action buttons live on its row, so a hidden count leaves nothing here.
+    const showCountRow = showCount && !(props.hideCount && showSearch);
+
+    const countLine = props.hideCount ? <span /> : (
+        <span
+            className="search-header-count"
+            data-longest={longestCountText(totalCount, displayNoun, props.countText)}
+        >
+            <Text UNSAFE_className="text-sm text-gray-600">
+                {!isFiltering && props.countText
+                    ? props.countText
+                    : buildCountText(isFiltering, filteredCount, totalCount, displayNoun)}
+            </Text>
+        </span>
+    );
+
     const ActionButtons = renderActionButtons(
         renderViewToggle(viewMode, onViewModeChange),
-        renderRefreshButton(onRefresh, isRefreshing, refreshAriaLabel),
+        renderRefreshButton(onRefresh, isRefreshing, refreshAriaLabel, props.refreshWaitBelow),
         action,
     );
 
@@ -278,18 +305,10 @@ export function SearchHeader(props: SearchHeaderProps) {
                 </Flex>
             )}
 
-            {showCount && (
+            {showCountRow && (
                 <div className="search-header-count-row">
-                    <span
-                        className="search-header-count"
-                        data-longest={longestCountText(totalCount, displayNoun, props.countText)}
-                    >
-                        <Text UNSAFE_className="text-sm text-gray-600">
-                            {!isFiltering && props.countText
-                                ? props.countText
-                                : buildCountText(isFiltering, filteredCount, totalCount, displayNoun)}
-                        </Text>
-                    </span>
+                    {/* The row is space-between: an empty span keeps the actions at its end. */}
+                    {props.countLead ?? countLine}
                     {!showSearch && ActionButtons}
                     {countTrailing}
                 </div>

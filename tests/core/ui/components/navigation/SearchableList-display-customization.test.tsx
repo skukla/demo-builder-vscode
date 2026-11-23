@@ -61,7 +61,7 @@ describe('SearchableList - Display Customization', () => {
     describe('AutoFocus', () => {
         // A screen with a search filter focuses nothing on load (owner, 2026-10-01).
         it('never focuses the search on load', () => {
-            renderWithProviders(<SearchableList {...defaultProps} searchThreshold={3} />);
+            renderWithProviders(<SearchableList {...defaultProps} />);
 
             expect(screen.getByRole('searchbox')).not.toHaveFocus();
         });

@@ -30,7 +30,7 @@ function project(): Project {
                 name: 'EDS Storefront',
                 type: 'frontend',
                 status: 'ready',
-                metadata: { githubRepo: 'skukla/kukla-justrite' },
+                metadata: { githubRepo: 'skukla/kukla-tailspin' },
             },
         },
     });
@@ -43,7 +43,7 @@ function clients(pages: Map<string, string>, hasBlock = true) {
             dir === '/'
                 ? [...pages.keys()]
                       .filter((path) => path !== '/nav')
-                      .map((path) => ({ name: path, path: `/skukla/kukla-justrite${path}.html`, ext: 'html' }))
+                      .map((path) => ({ name: path, path: `/skukla/kukla-tailspin${path}.html`, ext: 'html' }))
                 : [],
         ),
         readSource: jest.fn(async (_o: string, _s: string, file: string) => {
@@ -90,9 +90,9 @@ function params(p: Project): EdsResetParams {
     return {
         project: p,
         repoOwner: 'skukla',
-        repoName: 'kukla-justrite',
+        repoName: 'kukla-tailspin',
         daLiveOrg: 'skukla',
-        daLiveSite: 'kukla-justrite',
+        daLiveSite: 'kukla-tailspin',
         byomOverlayUrl: 'https://example.adobeioruntime.net/api/v1/web/accs-discovery/render-pdp',
     } as EdsResetParams;
 }
@@ -117,7 +117,7 @@ describe('takeOutCatalogMenu', () => {
         // The sheet goes before the content is published again, so the overlay leaves every
         // category address alone until the put-back writes it first. The category pages stay
         // for the put-back to keep or take down.
-        expect(helix.unpublishPage).toHaveBeenCalledWith('skukla', 'kukla-justrite', '/authored-category-pages.json');
+        expect(helix.unpublishPage).toHaveBeenCalledWith('skukla', 'kukla-tailspin', '/authored-category-pages.json');
         expect(helix.unpublishPages).not.toHaveBeenCalled();
         expect(report).toHaveBeenCalledWith(
             RESET_STEP.clearingOldContent,
@@ -149,7 +149,7 @@ describe('putBackCatalogMenu', () => {
         expect(summary).toBeUndefined();
         expect(c.githubFileOps.getFileContent).toHaveBeenCalledWith(
             'skukla',
-            'kukla-justrite',
+            'kukla-tailspin',
             'blocks/catalog-menu/catalog-menu.js',
         );
         expect(report).not.toHaveBeenCalled();

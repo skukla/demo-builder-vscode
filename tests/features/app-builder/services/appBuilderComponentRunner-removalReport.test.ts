@@ -213,7 +213,7 @@ describe('the system removed after its integration', () => {
 
         expect(result.success).toBe(true);
         expect(result.warnings).toEqual([
-            'Nordwind was not removed: it stopped partway, and the Debug Logs say why. Remove it from its card.',
+            'Nordwind was not removed: it stopped partway. Remove it from its card.',
         ]);
         expect(project.appBuilderComponents).not.toHaveProperty('erp-integration');
     });

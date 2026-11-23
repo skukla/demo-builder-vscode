@@ -18,8 +18,8 @@
  * doing. What replaced them is one case for a reader that throws.
  */
 
-import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { AuthenticationErrorFormatter } from '@/features/authentication/services/authenticationErrorFormatter';
+import { RejectedTokens } from '@/features/authentication/services/rejectedTokens';
 import {
     TokenManager,
     type StoredTokenConfig,
@@ -29,19 +29,61 @@ import {
 const LONG_TOKEN = 'x'.repeat(150);
 const HOUR_MS = 60 * 60 * 1000;
 
-/**
- * A manager reading exactly what the test says the config store holds. The
- * fourth argument is the silent-refresh seam: `noRefresh` by default so an
- * expired fixture can NEVER reach the real aio-lib-ims (which would fire a
- * live IMS call from jest); refresh-path tests inject their own.
- */
-const noRefresh = async (): Promise<undefined> => undefined;
-function managerReading(
-    stored: StoredTokenConfig | undefined,
-    refresh: () => Promise<StoredTokenConfig | undefined> = noRefresh
-): TokenManager {
-    return new TokenManager(undefined, undefined, () => stored, refresh);
+/** A manager reading exactly what the test says the config store holds. */
+function managerReading(stored: StoredTokenConfig | undefined): TokenManager {
+    return new TokenManager(undefined, undefined, () => stored);
 }
+
+// Walk F247: Adobe turned the token away ("Oauth token is not valid") with hours left on it.
+// A check that trusted the expiry said signed in, and every action failed behind it.
+describe('TokenManager — a token Adobe turned away', () => {
+    it('answers signed out for a turned-away token, whatever its expiry', async () => {
+        const rejected = new RejectedTokens();
+        rejected.mark(LONG_TOKEN);
+        const manager = new TokenManager(undefined, undefined, () => ({ token: LONG_TOKEN, expiry: Date.now() + HOUR_MS }), rejected);
+
+        await expect(manager.isTokenValid()).resolves.toBe(false);
+    });
+
+    it('marks the stored token turned away when told Adobe refused it', async () => {
+        const rejected = new RejectedTokens();
+        const manager = new TokenManager(undefined, undefined, () => ({ token: LONG_TOKEN, expiry: Date.now() + HOUR_MS }), rejected);
+
+        manager.markStoredTokenRejected();
+
+        expect(rejected.has(LONG_TOKEN)).toBe(true);
+        await expect(manager.isTokenValid()).resolves.toBe(false);
+    });
+});
+
+// Walk F276: Sign In reads this to skip the plain login that would hand the refused token back.
+describe('TokenManager — isStoredTokenRejected', () => {
+    const stored = (): StoredTokenConfig => ({ token: LONG_TOKEN, expiry: Date.now() + HOUR_MS });
+
+    it('is true once Adobe refused the stored token', () => {
+        const rejected = new RejectedTokens();
+        rejected.mark(LONG_TOKEN);
+
+        expect(new TokenManager(undefined, undefined, stored, rejected).isStoredTokenRejected()).toBe(true);
+    });
+
+    it('is false for a stored token Adobe has not refused', () => {
+        const rejected = new RejectedTokens();
+        rejected.mark('y'.repeat(150));
+
+        expect(new TokenManager(undefined, undefined, stored, rejected).isStoredTokenRejected()).toBe(false);
+    });
+
+    it('is false when nothing is stored or the store cannot be read', () => {
+        const rejected = new RejectedTokens();
+        const unreadable = (): StoredTokenConfig => {
+            throw new Error('config locked');
+        };
+
+        expect(new TokenManager(undefined, undefined, () => undefined, rejected).isStoredTokenRejected()).toBe(false);
+        expect(new TokenManager(undefined, undefined, unreadable, rejected).isStoredTokenRejected()).toBe(false);
+    });
+});
 
 describe('TokenManager — inspectToken', () => {
     it('returns valid, with the token and a positive expiry', async () => {
@@ -108,6 +150,32 @@ describe('TokenManager — inspectToken', () => {
         expect(result.valid).toBe(false);
     });
 
+    /**
+     * The Adobe CLI treats a token with under ten minutes left as no token, and any `aio` command
+     * then signs in through the browser with no question asked (aio-lib-ims `getTokenIfValid`).
+     * Found on 2026-11-16: Scratch 1028 opened with two minutes left, the dashboard's mesh check
+     * ran `aio api-mesh describe`, and a browser sign-in opened unasked. "Signed in" here has to
+     * mean what it means to the CLI, so the usual prompt asks first.
+     */
+    it('returns invalid for a token inside the Adobe CLI\'s ten-minute margin', async () => {
+        const result = await managerReading({
+            token: LONG_TOKEN,
+            expiry: Date.now() + 5 * 60 * 1000,
+        }).inspectToken();
+
+        expect(result.valid).toBe(false);
+        expect(result.token).toBe(LONG_TOKEN);
+    });
+
+    it('returns valid for a token with more than the CLI\'s ten minutes left', async () => {
+        const result = await managerReading({
+            token: LONG_TOKEN,
+            expiry: Date.now() + 11 * 60 * 1000,
+        }).inspectToken();
+
+        expect(result.valid).toBe(true);
+    });
+
     it('reports expiresIn in minutes', async () => {
         const result = await managerReading({
             token: LONG_TOKEN,
@@ -117,59 +185,6 @@ describe('TokenManager — inspectToken', () => {
         expect(result.valid).toBe(true);
         expect(result.expiresIn).toBeGreaterThanOrEqual(119);
         expect(result.expiresIn).toBeLessThanOrEqual(121);
-    });
-
-    // ── Silent IMS refresh (2026-08-27) ─────────────────────────────────────
-    // An expired stored token is not "signed out": the aio CLI silently
-    // refreshes via the context's refresh token (measured live: 30-min-expired
-    // access token, 14-day refresh token, session restored in ~2s). The
-    // extension must ask the library before asking a human.
-
-    it('an EXPIRED stored token triggers the silent refresh and serves its result', async () => {
-        const fresh = { token: 'y'.repeat(150), expiry: Date.now() + 24 * HOUR_MS };
-        const refresh = jest.fn().mockResolvedValue(fresh);
-
-        const result = await managerReading(
-            { token: LONG_TOKEN, expiry: Date.now() - 30 * 60 * 1000 },
-            refresh
-        ).inspectToken();
-
-        expect(refresh).toHaveBeenCalledTimes(1);
-        expect(result.valid).toBe(true);
-        expect(result.token).toBe(fresh.token);
-    });
-
-    it('a VALID stored token never consults the refresh', async () => {
-        const refresh = jest.fn();
-
-        const result = await managerReading(
-            { token: LONG_TOKEN, expiry: Date.now() + HOUR_MS },
-            refresh
-        ).inspectToken();
-
-        expect(result.valid).toBe(true);
-        expect(refresh).not.toHaveBeenCalled();
-    });
-
-    it('a refresh that yields nothing leaves the ORIGINAL expired verdict', async () => {
-        const result = await managerReading(
-            { token: LONG_TOKEN, expiry: Date.now() - 30 * 60 * 1000 },
-            async () => undefined
-        ).inspectToken();
-
-        expect(result.valid).toBe(false);
-        expect(result.expiresIn).toBeLessThan(0);
-    });
-
-    it('a refresh that THROWS is contained — the expired verdict answers', async () => {
-        const result = await managerReading(
-            { token: LONG_TOKEN, expiry: Date.now() - 30 * 60 * 1000 },
-            async () => {
-                throw new Error('network down');
-            }
-        ).inspectToken();
-
-        expect(result.valid).toBe(false);
     });
 
     /**
@@ -330,69 +345,5 @@ describe('TokenManager — expiry arithmetic', () => {
         const result = await managerReading({ token: LONG_TOKEN, expiry: -1 }).inspectToken();
 
         expect(result).toEqual({ valid: false, expiresIn: 0, token: LONG_TOKEN });
-    });
-});
-
-/**
- * How the silent refresh is ORCHESTRATED around the stored verdict — when it is
- * consulted, how long it is given, and whose verdict wins.
- */
-describe('TokenManager — silent refresh orchestration', () => {
-    afterEach(() => {
-        jest.useRealTimers();
-    });
-
-    it('an unreadable config store is not signed in — no refresh is attempted', async () => {
-        const refresh = jest.fn();
-        const manager = new TokenManager(
-            undefined,
-            undefined,
-            () => {
-                throw new Error('config store unreadable');
-            },
-            refresh,
-        );
-
-        await manager.inspectToken();
-
-        expect(refresh).not.toHaveBeenCalled();
-    });
-
-    it('a refresh that yields a still-bad token serves the ORIGINAL verdict, token and all', async () => {
-        const result = await managerReading(
-            { token: LONG_TOKEN, expiry: Date.now() - 30 * 60 * 1000 },
-            async () => ({ token: 'short', expiry: Date.now() + HOUR_MS }),
-        ).inspectToken();
-
-        expect(result.valid).toBe(false);
-        expect(result.token).toBe(LONG_TOKEN);
-        expect(result.expiresIn).toBeLessThan(0);
-    });
-
-    it('a refresh that takes a moment is awaited, not cut off', async () => {
-        const fresh = { token: 'y'.repeat(150), expiry: Date.now() + 24 * HOUR_MS };
-        const slowRefresh = (): Promise<StoredTokenConfig> =>
-            new Promise((resolve) => setTimeout(() => resolve(fresh), 20));
-
-        const result = await managerReading(
-            { token: LONG_TOKEN, expiry: Date.now() - 30 * 60 * 1000 },
-            slowRefresh,
-        ).inspectToken();
-
-        expect(result.valid).toBe(true);
-        expect(result.token).toBe(fresh.token);
-    });
-
-    it('a refresh that never settles is timed out at TIMEOUTS.NORMAL; the stored verdict answers', async () => {
-        jest.useFakeTimers();
-        const never = (): Promise<StoredTokenConfig> => new Promise(() => undefined);
-        const manager = managerReading({ token: LONG_TOKEN, expiry: Date.now() - HOUR_MS }, never);
-
-        const pending = manager.inspectToken();
-        await jest.advanceTimersByTimeAsync(TIMEOUTS.NORMAL);
-        const result = await pending;
-
-        expect(result.valid).toBe(false);
-        expect(result.token).toBe(LONG_TOKEN);
     });
 });

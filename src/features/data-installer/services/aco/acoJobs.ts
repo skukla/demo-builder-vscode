@@ -32,15 +32,15 @@ export type AcoAccessSource = () => Promise<AcoAccess | { refusal: string }>;
 
 /** Said when the engine was built without ACO access at all. */
 export const NO_ACO =
-    'This project does not use Adobe Commerce Optimizer, so an ACO pack has nowhere to go. Turn ACO on for the project first.';
+    'This project does not use Adobe Commerce Optimizer, so an ACO datapack has nowhere to go. Turn ACO on for the project first.';
 
 /**
  * Said in every ACO outcome (owner, 2026-10-31: say it plainly rather than pretend). ACO's ingestion
  * API has deletes but no list or get.
  */
 export const NO_READ_BACK =
-    'ACO cannot be read back, so Demo Builder cannot tell whether anything this pack loaded was changed in ACO since, ' +
-    'or was already there before: installing again sends every row again, and removing the pack deletes exactly what ' +
+    'ACO cannot be read back, so Demo Builder cannot tell whether anything this datapack loaded was changed in ACO since, ' +
+    'or was already there before: installing again sends every row again, and removing the datapack deletes exactly what ' +
     'it loaded, by its own SKUs, slugs, codes and price book ids.';
 
 /**
@@ -49,11 +49,11 @@ export const NO_READ_BACK =
  */
 export const CONNECTOR_ON =
     "Adobe's connector feeds this ACO instance from the store, so Demo Builder does not write to its catalog. " +
-    'Load the pack into Commerce instead, and the connector carries it to ACO.';
+    'Load the datapack into Commerce instead, and the connector carries it to ACO.';
 
 /** Said when the shoppers' price books could not be worked out, so a pack from elsewhere may show no prices. */
 export const NO_BUYER_BOOKS =
-    "Demo Builder could not read this store's customer groups, so unless this pack came from this store, shoppers may see no prices.";
+    "Demo Builder could not read this store's customer groups, so unless this datapack came from this store, shoppers may see no prices.";
 
 /** Whether every kind asked for is ACO's: such a pack goes to ACO, not Commerce. */
 export function asksForAco(kinds: readonly string[]): boolean {
@@ -66,7 +66,7 @@ export function mixedKinds(kinds: readonly string[]): string | undefined {
     if (aco.length === 0 || aco.length === kinds.length) return undefined;
     const commerce = kinds.filter((kind) => !isAcoKind(kind));
     return (
-        `The pack asks for ACO kinds (${aco.join(', ')}) and Commerce kinds (${commerce.join(', ')}) together. ` +
+        `The datapack asks for ACO kinds (${aco.join(', ')}) and Commerce kinds (${commerce.join(', ')}) together. ` +
         'Demo Builder loads one or the other, so nothing was installed.'
     );
 }
@@ -119,7 +119,7 @@ export function acoRowsRefusal(items: AcoPackItems, verb: 'was' | 'would be'): s
 /** The outcome note's locale line: the storefront reads one locale, and the pack may load others. */
 function localeLine(locales: readonly string[], storefront: string): string | undefined {
     if (locales.length === 0 || locales.includes(storefront)) return undefined;
-    return `The storefront reads the locale ${storefront}, and this pack's rows are for ${locales.join(', ')}, so the storefront will not show them until the locale matches.`;
+    return `The storefront reads the locale ${storefront}, and this datapack's rows are for ${locales.join(', ')}, so the storefront will not show them until the locale matches.`;
 }
 
 /**

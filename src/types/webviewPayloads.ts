@@ -13,33 +13,41 @@
  * @module types/webviewPayloads
  */
 
-import type { AppBuilderComponentCatalogEntry, ComponentSettings } from './appBuilderComponents';
+import type {
+    AppBuilderComponentCatalogEntry,
+    ComponentSettings,
+    SetupChecklistItem,
+} from './appBuilderComponents';
 import type {
     AppBuilderComponentState,
-    AuthoringExperience,
+    AuthoringExperience, CommerceAdminExperience,
     Project,
     ProjectStatus,
 } from './base';
 import type { BlockLibrary, CustomBlockLibrary, InstalledBlockLibrary } from './blockLibraries';
 import type { CommerceStoreStructure } from './commerceStore';
 import type { EnvVarDefinition, TransformedComponentDefinition } from './components';
-import type { AddedDemo } from './projectFile';
+import type { AddedDemo, BundleImportResult } from './projectFile';
 import type { AddonOffer } from './stacks';
 import type { ViewMode } from './viewMode';
 import type { ComponentSelection, CreationProgress, ThemeMode, UnifiedProgress } from './webview';
 import type { EditProjectConfig, ProjectSeed, WizardStepDefinition } from './wizard';
+import type { PlainText } from '@/core/utils/plainText';
 import type { ProjectDisplayName } from '@/core/utils/projectDisplayName';
 
 /**
  * `ShowDataInstallerCommand.getInitialData` → the dataInstaller bundle.
  *
- * Deliberately thin and project-independent: the datapack catalog is global to
- * the service, so the panel opens with no project selected.
+ * One screen opened two ways (owner, 2026-11-07): the Datapack Library, from the sidebar and the
+ * palette, browses and manages packs and touches no store; a project's Datapacks, from its
+ * dashboard, names the project and holds Import, Save Changes and the store's other actions.
  */
 export interface DataInstallerInitialData {
     theme: ThemeMode;
     /** Project display name — `''` when no project is selected. */
     projectName: ProjectDisplayName;
+    /** `library`: no project, no store actions. `project`: the open project's Datapacks. */
+    mode: 'library' | 'project';
 }
 
 /**
@@ -128,16 +136,6 @@ export interface DashboardInitialData {
     initialEdsStorefrontStatus?: Project['edsStorefrontStatusSummary'];
     /** Whether the project has an Adobe org (drives the "Checking organization" telegraph) */
     hasAdobeContext: boolean;
-    /**
-     * Whether the Data Installer is switched on AND pointed at an API. Decided
-     * host-side (`isDataInstallerConfigured`) because both halves are settings.
-     */
-    dataInstallerAvailable: boolean;
-    /**
-     * This demo's own library pack, by the name the SC sees (step 07), for the Datapacks
-     * tile's line. Absent when the demo has none.
-     */
-    ownDatapackName?: string;
     /** Keyed appBuilderComponents map (drives the summary tile's count + dot). */
     appBuilderComponents?: Record<string, AppBuilderComponentState>;
     /**
@@ -148,6 +146,17 @@ export interface DashboardInitialData {
      * to update it.
      */
     demo?: Pick<AddedDemo, 'name' | 'source' | 'storefrontKind'> & { demoPackageName?: string };
+    /**
+     * Open the Finish Setup guide as the dashboard shows (PL-101): the creation end screen's
+     * Finish Setup asked for it. Present only then.
+     */
+    openFinishSetup?: true;
+}
+
+/** What `demoBuilder.showProjectDashboard` may be run with. */
+export interface DashboardOpenOptions {
+    /** Open the project's Finish Setup guide once the dashboard shows. */
+    openFinishSetup?: boolean;
 }
 
 /**
@@ -235,6 +244,8 @@ export interface ConfigureComponentsData {
  * is Edge Delivery.
  */
 export interface ConfigureBlockLibraryChoices {
+    /** Libraries every storefront gets: shown ticked and locked. */
+    included: BlockLibrary[];
     /** Libraries that came with the storefront: shown ticked and locked. */
     native: BlockLibrary[];
     /** Catalog libraries the SC may tick or untick. */
@@ -254,12 +265,14 @@ export interface ConfigureInitialData {
     acoOffer?: AddonOffer;
     /** Existing env values from component .env files. */
     existingEnvValues: Record<string, Record<string, string>>;
-    /** All project names — rename validation. */
-    existingProjectNames: string[];
-    /** Whether this is an EDS project — gates the Authoring Experience radio. */
+    /** Whether this is an EDS project — gates the Storefront section. */
     isEds: boolean;
     /** Resolved authoring experience seeding the radio (EDS only). */
     authoringExperience: AuthoringExperience;
+    /** A Cloud Service store with no Admin URL of its own — gates the Commerce Admin radio. */
+    hasAdminChoice: boolean;
+    /** Resolved Commerce Admin interface seeding the radio. */
+    commerceAdminExperience: CommerceAdminExperience;
     /** The block libraries this project can choose from (EDS only; else empty lists). */
     blockLibraryChoices: ConfigureBlockLibraryChoices;
     /**
@@ -373,6 +386,23 @@ export interface DashboardStatusUpdatePayload {
      * the Reset tile says "Needs reset". Present only when true.
      */
     storefrontNeedsReset?: true;
+    /** What a run left the SC to finish (PL-101). Present only when a run left a step. */
+    finishSetup?: FinishSetupStatus;
+}
+
+/**
+ * A project's Finish Setup steps as the dashboard shows them (PL-101, `finishSetupStatus`): the
+ * steps for the guide, how many are still to do for the "N steps remaining" line, and which tile's
+ * fix is due, for its amber dot. A finished or skipped step stays listed.
+ */
+export interface FinishSetupStatus {
+    items: SetupChecklistItem[];
+    /** Steps still to do (open); 0 when every step is done or skipped. */
+    remaining: number;
+    /** Republish the Code is still to do: the Republish tile wears its dot. */
+    republishDue?: true;
+    /** Set the Root Category is still to do: Manage Commerce wears its dot. */
+    adminDue?: true;
 }
 
 /** `meshStatusUpdate` — mesh-only status push (deploy flows). */
@@ -434,6 +464,23 @@ export interface OperationChange {
  * or a `note` when there is something to know and nothing to do (prices still being
  * published).
  */
+/**
+ * One part of a run, as a row of the run's window: its name, where it stands, and the line under it
+ * or the problem in its place (the import's rows, walk F62; a save's, walk F91).
+ */
+export interface OperationRow {
+    kind: string;
+    label: string;
+    /** As `StepStatusIcon` draws it. */
+    status: 'pending' | 'checking' | 'success' | 'error' | 'warning';
+    /** Where it stands: "Waiting", "Reading", "2,046 Products", "Done", "Not run". */
+    line?: string;
+    /** What is wrong with it: red when it failed, orange when it went in with a problem. */
+    problem?: { text: PlainText; failed: boolean };
+    /** Rows nested under it, small (`StepRows`): the data types under the import's Install step. */
+    types?: OperationRow[];
+}
+
 export interface OperationProgressPayload {
     id: string;
     state: 'running' | 'succeeded' | 'failed';
@@ -442,16 +489,18 @@ export interface OperationProgressPayload {
     position?: OperationPosition;
     step?: string;
     expectation?: string;
-    error?: string;
+    error?: PlainText;
     /** What a run that succeeded could not do, for the SC to read before the modal closes. */
-    warning?: string;
+    warning?: PlainText;
     /** What a run that succeeded leaves the SC to know; shown as a plain success, not a warning. */
-    note?: string;
+    note?: PlainText;
+    /** A success's own title, in place of the operation's `successTitle` ("No Changes to Save"). */
+    title?: string;
     /**
      * What a run that succeeded left to know, one line each, listed under its result (an
      * EDS reset's page notes). A run that carries them waits to be read.
      */
-    details?: string[];
+    details?: PlainText[];
     /**
      * The parts of a run that succeeded that changed something, one row each under its
      * result: the step, what it changed, what it leaves by hand. A run that carries them
@@ -470,13 +519,22 @@ export interface OperationProgressPayload {
     startedAt?: number;
     /** How long the whole run took, in ms, on its last push (succeeded or failed). */
     tookMs?: number;
+    /**
+     * The run's parts, a row each, on every push and its last: the window draws them in place of
+     * its one spinner, and keeps them when the run ends (a save, walk F91).
+     */
+    rows?: OperationRow[];
 }
 
 /**
  * A next step offered when a run succeeds: "Add another ERP" whose new ERP owns nothing yet
- * offers "Assign products" for it (AB-74). The screen turns it into the modal's button.
+ * offers "Assign products" for it (AB-74); a Clear that left payment-review orders or list settings
+ * offers Open Commerce Admin (step 06 C3). The screen turns it into the modal's button.
  */
-export interface OperationOffer {
+export type OperationOffer = AssignErpProductsOffer | { action: 'open-commerce-admin' };
+
+/** "Assign products" for an ERP that owns nothing yet (AB-74). */
+export interface AssignErpProductsOffer {
     action: 'assign-erp-products';
     /** The ERP integration. */
     id: string;
@@ -498,12 +556,21 @@ export interface OperationPrompt {
      * The heading: what the SC is asked to do ("Sign in to Adobe"). Every question
      * with buttons has its own; one generic heading over all of them, "Waiting for
      * you", said nothing the sentence under it did not (owner, 2026-10-23). A
-     * question with fields sits under the modal's title and needs none.
+     * question with fields sits under the modal's title and needs none, unless it is a
+     * task of its own (a sign-in): then its heading takes the window (owner, 2026-11-04).
      */
     title?: string;
     message: string;
+    /** How to get what the fields ask for, as numbered steps under the sentence. */
+    steps?: string[];
     /** The answers, the first being the one that continues the work. */
     actions: string[];
+    /** The first answer deletes or replaces something, so its button is red (owner, 2026-11-05). */
+    destructive?: boolean;
+    /** A routine step rather than a problem: no warning icon by the title (`Question.tone`). */
+    tone?: 'info';
+    /** The answer closing the window means ("Skip for Now"): the close button says it (`promptButtons.ts`). */
+    dismiss?: string;
     /**
      * What the SC has to type for the work to go on — a namespace, a pasted token.
      * The modal owns these rather than handing off to a VS Code input box, so one
@@ -572,7 +639,8 @@ export type CreationProgressPayload = CreationProgress;
 
 /** `creationFailed` — terminal failure detail (the progress sentinel's sibling). */
 export interface CreationFailedPayload {
-    error: string;
+    /** Why creation stopped, in plain words (PL-102). */
+    error: PlainText;
     isTimeout?: boolean;
     elapsed?: string;
     /** The one special-cased type; `useGitHubAppPreflight` opens the install dialog on it. */
@@ -831,7 +899,8 @@ export interface StorefrontSetupProgressPayload {
     stage?: string;
     /** The step's place in the run, "(4 of 7)". */
     position?: OperationPosition;
-    message: string;
+    /** Line 2. Left out, the screen keeps the line it shows (a push that only moves progress on). */
+    message?: string;
     subMessage?: string;
     /** When the run began, in ms since the epoch: the screen's clock counts from it. */
     startedAt?: number;
@@ -846,8 +915,9 @@ export interface StorefrontSetupProgressPayload {
 /**
  * A link in a storefront's copied content to a page the content site it was
  * copied from does not have either: a broken link in the source, carried over.
- * Recorded on the project (`metadata.brokenLinks`); a reset's last view says so, and
- * Diagnostics lists them. Never a pop-up: nothing was left out of the copy.
+ * Recorded on the project (`metadata.brokenLinks`); Diagnostics lists them and an agent's reset
+ * answers them. No screen says so (walk F209): nothing was left out of the copy, and a link only
+ * the block library's docs pages carry is not recorded.
  */
 export interface StorefrontBrokenLink {
     /** The address the link points at: "/fr". */
@@ -876,6 +946,10 @@ export interface StorefrontSetupCompletePayload {
     installedBlockLibraries?: InstalledBlockLibrary[];
     /** Whether the build step's fixes all landed; creation stamps the project with it. */
     storefrontBuildComplete?: boolean;
+    /** The code files the live site did not serve yet; creation saves them as the Republish the Code step (PL-101). */
+    codeNotServed?: string[];
+    /** What setup made from an imported bundle; creation records it on the project (EDS-72). */
+    bundleImport?: BundleImportResult;
 }
 
 /** `storefront-setup-error` — the pipeline failed; the wizard offers Retry. */

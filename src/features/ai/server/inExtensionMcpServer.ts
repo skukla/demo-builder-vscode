@@ -89,7 +89,7 @@ export function callRequestsConsent(toolName: string, args: unknown): boolean {
     // This used to fire on `confirm: true` alone, which aimed the one real
     // safety net at the wrong tools: `open_url` (opens a browser tab) raised a
     // modal while `remove_integration` (undeploys from Runtime) and
-    // `reset_datapack` ("cannot be undone") raised nothing — because the gate
+    // `uninstall_datapack` ("cannot be undone") raised nothing — because the gate
     // measured what the agent volunteered rather than what the call does.
     //
     // Membership now lives with the copy (`agentAlertCopy`), so a tool that

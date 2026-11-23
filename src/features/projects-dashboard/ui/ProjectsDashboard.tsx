@@ -16,6 +16,8 @@ import { DashboardEmptyState } from './components/DashboardEmptyState';
 import type { ProjectActions } from './components/ProjectActionsMenu';
 import { ProjectRowList } from './components/ProjectRowList';
 import { ProjectsGrid } from './components/ProjectsGrid';
+import { SelectionActions, SelectionCount, type ListBatch } from './components/SelectionActions';
+import { useProjectSelection } from './hooks/useProjectSelection';
 import { buildMenuItems } from './projectsDashboardHelpers';
 import { FullScreenLoading } from '@/core/ui/components/feedback/FullScreenLoading';
 import { FullScreenSurface } from '@/core/ui/components/layout/FullScreenSurface';
@@ -26,6 +28,9 @@ import { AddCard } from '@/core/ui/components/ui/AddCard';
 import { useFocusTrap } from '@/core/ui/hooks/useFocusTrap';
 import { matchesSearchFields } from '@/core/ui/hooks/useSearchFilter';
 import type { Project } from '@/types/base';
+
+/** The list's wait, the first load's and a pressed Refresh's alike (walk F214). */
+const PROJECTS_LOADING = 'Loading projects';
 
 export interface ProjectsDashboardProps {
     /** Array of all projects */
@@ -50,6 +55,8 @@ export interface ProjectsDashboardProps {
     isLoading?: boolean;
     /** Whether projects are refreshing (background refresh) */
     isRefreshing?: boolean;
+    /** The refresh under way was pressed for: it waits in the projects' place (walk F214) */
+    refreshPressed?: boolean;
     /** Callback to refresh projects list */
     onRefresh?: () => void;
     /** Whether data has loaded at least once */
@@ -58,6 +65,8 @@ export interface ProjectsDashboardProps {
     initialViewMode?: ViewMode;
     /** Callback when user overrides view mode (persists for session) */
     onViewModeOverride?: (mode: ViewMode) => void;
+    /** Reset Selected and Delete Selected; with none, the list offers no Select (owner, 2026-11-04). */
+    batch?: ListBatch;
 }
 
 /**
@@ -80,10 +89,12 @@ export function ProjectsDashboard({
     actions = {},
     isLoading = false,
     isRefreshing = false,
+    refreshPressed = false,
     onRefresh,
     hasLoadedOnce = true,
     initialViewMode = 'cards',
     onViewModeOverride,
+    batch,
 }: ProjectsDashboardProps) {
     const [searchQuery, setSearchQuery] = useState('');
     const [viewMode, setViewMode] = useState<ViewMode>(initialViewMode);
@@ -117,6 +128,9 @@ export function ProjectsDashboard({
         [projects, searchQuery],
     );
 
+    const selection = useProjectSelection(filteredProjects, !batch?.isOpen, batch?.runs ?? 0);
+    const listSelection = selection.selecting ? { selected: selection.selected, onToggle: selection.toggle } : undefined;
+
     const hasProjects = projects.length > 0;
     const isFiltering = searchQuery.trim().length > 0;
 
@@ -125,7 +139,7 @@ export function ProjectsDashboard({
     if (isLoading) {
         return (
             <div ref={containerRef}>
-                <FullScreenLoading message="Loading projects" backgroundColor="gray-50" />
+                <FullScreenLoading message={PROJECTS_LOADING} backgroundColor="gray-50" />
             </div>
         );
     }
@@ -155,9 +169,9 @@ export function ProjectsDashboard({
     // menu the header's New button used to: adding a project is a choice of three.
     // Hidden while a filter narrows the list — it is not a project and cannot match.
     const addCard = (cardClassName: string): React.ReactElement | null =>
-        isFiltering ? null : (
+        isFiltering || selection.selecting ? null : (
             <AddCard
-                name="New project"
+                name="New Project"
                 cardClassName={cardClassName}
                 testId="projects-add-card"
                 menu={
@@ -180,6 +194,7 @@ export function ProjectsDashboard({
                 {/* Sticky controls - search and view toggle. Adding is the card at the
                     grid's end (PL-62), not a header button. */}
                 <FullScreenSurface
+                    waiting={refreshPressed ? PROJECTS_LOADING : undefined}
                     header={
                         <Flex alignItems="start" gap="size-300">
                             <View flex>
@@ -187,17 +202,21 @@ export function ProjectsDashboard({
                                     searchQuery={searchQuery}
                                     onSearchQueryChange={setSearchQuery}
                                     searchPlaceholder="Filter projects"
-                                    searchThreshold={0}
                                     totalCount={projects.length}
                                     filteredCount={filteredProjects.length}
                                     itemNoun="project"
                                     onRefresh={onRefresh}
                                     isRefreshing={isRefreshing}
+                                    refreshWaitBelow={refreshPressed}
                                     refreshAriaLabel="Refresh projects"
                                     viewMode={viewMode}
                                     onViewModeChange={handleViewModeChange}
                                     hasLoadedOnce={hasLoadedOnce}
                                     alwaysShowCount={true}
+                                    countLead={selection.selecting ? <SelectionCount selection={selection} /> : undefined}
+                                    countTrailing={
+                                        batch ? <SelectionActions selection={selection} onBatch={batch.start} /> : undefined
+                                    }
                                 />
                             </View>
                         </Flex>
@@ -211,6 +230,7 @@ export function ProjectsDashboard({
                             onSelectProject={onSelectProject}
                             actions={actions}
                             addCard={addCard('project-card-spectrum')}
+                            selection={listSelection}
                         />
                     )}
                     {viewMode === 'rows' && (
@@ -220,6 +240,7 @@ export function ProjectsDashboard({
                             onSelectProject={onSelectProject}
                             actions={actions}
                             addCard={addCard('project-row')}
+                            selection={listSelection}
                         />
                     )}
 

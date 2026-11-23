@@ -26,7 +26,7 @@ import { narrateOutcomeToModal, progressSurfaceOf } from '@/core/vscode/operatio
 import { addAppBuilderComponent } from '@/features/app-builder/services/appBuilderAddRun';
 import { resolveDeployInputs, resolveDisplayName } from '@/features/app-builder/services/deployInputs';
 import { pairNameInputs } from '@/features/app-builder/services/pairNames';
-import { preparesStoreOnAdd } from '@/features/app-builder/services/storePreparation/fixReach';
+import { preparesStoreOnAdd } from '@/features/app-builder/services/storePreparation/setupReach';
 import {
     buildCustomIntegrationEntry,
     entryFitsProjectAxes,
@@ -303,7 +303,7 @@ function addLabel(project: Project, entry: AppBuilderComponentCatalogEntry): str
 
 /**
  * Name a PAIRED entry and the system it brings: the system from the name the SC
- * typed ("Justrite" → "Justrite ERP"), the integration by its catalog name ("ERP
+ * typed ("Tailspin" → "Tailspin ERP"), the integration by its catalog name ("ERP
  * Integration"; `pairNames`). Every add records both, so an untyped add is "ERP
  * Integration" and "Acme ERP" rather than whatever each default happens to be.
  *
@@ -452,7 +452,7 @@ async function previewPreparingAdd(
  * Record the destination the add's own steps chose, before anything is made. Only for a
  * project with none: the flow sends one only then, and an existing destination is changed
  * through Deploys to, never by an add. Without this the add ran with no Adobe project and
- * its workspace was made in the project cached from earlier (Justrite's, 2026-10-15).
+ * its workspace was made in the project cached from earlier (Tailspin's, 2026-10-15).
  */
 async function recordChosenDestination(
     context: HandlerContext,

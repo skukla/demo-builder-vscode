@@ -106,14 +106,15 @@ describe('useDataInstallerRequest', () => {
         expect(screen.getByTestId('value')).toHaveTextContent('none');
     });
 
-    it('turns a THROWN transport error into a failure with no code', async () => {
+    it('turns a THROWN transport error into a failure with no code, in plain words', async () => {
         mockRequest.mockRejectedValue(new Error('Request timeout: find-datapacks'));
 
         render(<Probe />);
 
         await waitFor(() =>
+            // Walk F221: plain words, never the transport's (and never a handler's type name).
             expect(screen.getByTestId('failure')).toHaveTextContent(
-                'Request timeout: find-datapacks'
+                'No answer came in time.'
             )
         );
         expect(screen.getByTestId('code')).toHaveTextContent('none');

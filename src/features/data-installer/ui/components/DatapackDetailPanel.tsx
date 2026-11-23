@@ -8,8 +8,8 @@
  * `db-drawer-body` of key/value rows.
  *
  * It borrows `.integration-panel-row*` for those rows. Those classes live in
- * `utilities.css`, so they reach every bundle — a feature-scoped class
- * would render raw here with no error anywhere. The name is a wart: they are a
+ * `integration-cards.css`, which this bundle's entry imports — a class from a sheet the
+ * entry does not import would render raw here with no error anywhere. The name is a wart: they are a
  * generic drawer row that predates Drawer's promotion. Renaming them to
  * `db-drawer-row*` is the right cleanup at a THIRD consumer, when the rename is
  * paid for by more than one caller.
@@ -28,20 +28,30 @@
 
 import { ActionButton } from '@adobe/react-spectrum';
 import Close from '@spectrum-icons/workflow/Close';
-import React from 'react';
-import type { DataItemInventory, DatapackDetail } from '../../types';
+import React, { useState } from 'react';
+import { datapackDate, shownVersion } from '../../packVersions';
+import { inPickOrder } from '../../pickableKinds';
+import type { DataItemInventory, DatapackDetail, PackDetailLayer } from '../../types';
 import { renderDataInstallerFailure } from '../dataInstallerFailure';
 import { dataTypeLabel } from '../dataTypeLabel';
 import type { DataInstallerFailure } from '../hooks/useDataInstallerRequest';
+import type { HeldFailure } from '../hooks/useProjectHolding';
+import type { HeldSaves } from '../installedPackProps';
 import { DatapackPanelTitle } from './DatapackPanelTitle';
+import { StatusHead } from './FailedHealthLine';
 import { PackActions } from './PackActions';
-import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
+import { StoreConfigurationRow } from './StoreConfigurationRow';
+import { StageWait } from '@/core/ui/components/feedback/StageWait';
 import { Drawer } from '@/core/ui/components/ui/Drawer';
+import { PanelRow } from '@/core/ui/components/ui/PanelRow';
+import { WAIT_STAGES } from '@/core/utils/waitStages';
 import type { DatapackId } from '@/types/datapack';
 
 export interface DatapackDetailPanelProps {
     /** The pack whose detail is showing; undefined closes the drawer. */
     selected?: DatapackId;
+    /** The name its card shows, so the title does not change when the detail arrives. */
+    selectedName?: string;
     /** Loaded detail, or null while loading or failed. */
     detail: DatapackDetail | null;
     /** Which declared types the service actually holds. */
@@ -61,18 +71,14 @@ export interface DatapackDetailPanelProps {
      * a child of the Drawer — a dialog inside a drawer, which no other surface in
      * this extension does. `IntegrationsScreen` mounts its flow modal beside the
      * list and keeps its detail flyout view-only; this now matches.
+     *
+     * Absent in the Datapack Library, which touches no store (owner, 2026-11-07).
      */
-    onImport: (id: DatapackId) => void;
+    onImport?: (id: DatapackId, opensOn?: 'run' | 'restore' | 'update') => void;
     /** A library pack the SC owned was removed. Stable — an effect depends on it. */
     onRemoved: () => void;
-    /**
-     * Whether a library pack can be installed where it is: true when Demo Builder's engine is
-     * chosen, which reads the library itself. The service installs only from its own catalog,
-     * so with it chosen a library pack offers Copy to the Data Installer instead (DI-5).
-     */
-    installsFromLibrary: boolean;
-    /** "Save store changes to this pack" (step 05), for the pack the project holds by Demo Builder's engine. */
-    onSaveStoreChanges?: (id: DatapackId) => void;
+    /** The Data Installer's address is set and switched on: a library pack offers Copy to it. */
+    installerOn: boolean;
     /** That pack's Admin step (step 12) as one line; its dialog is mounted beside the flyout (`usePackSetupStep`). */
     setupStep?: React.ReactNode;
     /**
@@ -84,26 +90,57 @@ export interface DatapackDetailPanelProps {
     sharedInFile?: string;
     /** The SC's own pack was shared or stopped being shared (owner, 2026-10-30). Stable. */
     onSharingChanged?: () => void;
+    /** The settings layer Import will apply after the pack's data (step 09). */
+    settingsLayer?: PackDetailLayer;
+    /** The save Undo Last Save goes back to, when the open pack offers it (`useDetailFlyout`). */
+    undoTo?: string;
+    /** Remove Data, on the version whose data is in this demo's store (walk F118). */
+    onRemoveData?: () => void;
+    /** That same version: its main button is Restore, not Install (Phase 5, J4-2). */
+    restores?: boolean;
+    /** Update in place of Restore while an update waits (J9-1). */
+    updates?: boolean;
+    /** Another datapack the demo holds, which Demo Builder installed: its main button is Switch to (J8-1). */
+    switches?: boolean;
+    /** That same version's install failed (step-04 S8): the label and reason under the title, and Retry. */
+    failed?: HeldFailure;
+    /** The installed version's saves, Update and Save As New (walk F219). */
+    saves?: HeldSaves;
 }
 
 export function DatapackDetailPanel({
     selected,
+    selectedName,
     detail,
     inventory,
-    loading,
+    loading: reading,
     failure,
     onClose,
     onRetry,
     onImport,
     onRemoved,
-    installsFromLibrary,
-    onSaveStoreChanges,
+    installerOn,
     setupStep,
     onRename,
     sharedInFile,
     onSharingChanged,
+    settingsLayer,
+    undoTo,
+    onRemoveData,
+    restores = false,
+    updates = false,
+    saves,
+    switches = false,
+    failed,
 }: DatapackDetailPanelProps): React.JSX.Element {
-    const title = detail?.displayName ?? selected?.name ?? 'Datapack';
+    const title = detail?.displayName ?? selectedName ?? selected?.name ?? 'Datapack';
+    // A read of the pack already on show (after Share, Stop Sharing or a rename) updates it in
+    // place: the rows stay and change when the answer lands. Swapping them for a wait moved the
+    // whole flyout for a second (owner, 2026-11-08). Another pack's read still waits, since the
+    // rows on show are the last pack's until it lands.
+    const loading = reading && !isOnShow(detail, selected);
+    // A menu row's work is running: the flyout waits as its load does (`PackActions`).
+    const [working, setWorking] = useState(false);
 
     // What you can import is what the service HOLDS, not what the pack declares:
     // a pack can declare a type it stores no item for, and offering an import of
@@ -116,27 +153,40 @@ export function DatapackDetailPanel({
         <Drawer isOpen={selected !== undefined} onClose={onClose} ariaLabel={`${title} details`}>
             {selected ? (
                 <>
-                    <div className="db-drawer-head">
+                    <StatusHead
+                        failed={failed}
+                        newer={updates}
+                        close={
+                            <ActionButton isQuiet aria-label="Close details" onPress={onClose}>
+                                <Close size="S" />
+                            </ActionButton>
+                        }
+                    >
                         <div className="datapack-panel-title">
-                            <DatapackPanelTitle title={title} detail={loading || failure ? null : detail} onRename={onRename} />
-                            <span className="datapack-panel-version">{selected.version}</span>
+                            <DatapackPanelTitle title={title} detail={loading || failure || working ? null : detail} onRename={onRename} />
+                            <span className="datapack-panel-version">{shownVersion(selected.version)}</span>
                         </div>
-                        <ActionButton isQuiet aria-label="Close details" onPress={onClose}>
-                            <Close size="S" />
-                        </ActionButton>
-                    </div>
+                    </StatusHead>
                     <div className="db-drawer-body">
-                        {renderPanelBody({ detail, inventory, loading, failure, onRetry })}
-                        {detail && !loading ? setupStep : null}
+                        {working ? null : renderPanelBody({ detail, inventory, loading, failure, onRetry, settingsLayer })}
+                        {detail && !loading && !working ? setupStep : null}
                         {canImport({ importable, loading, failure }) && detail ? (
                             <PackActions
                                 detail={detail}
                                 onImport={onImport}
                                 onRemoved={onRemoved}
-                                installsFromLibrary={installsFromLibrary}
-                                onSaveStoreChanges={onSaveStoreChanges}
+                                installerOn={installerOn}
                                 sharedInFile={sharedInFile}
                                 onSharingChanged={onSharingChanged}
+                                onWorking={setWorking}
+                                {...(undoTo ? { undoTo } : {})}
+                                {...(onRemoveData ? { onRemoveData } : {})}
+                                restores={restores}
+                                updates={updates}
+                                switches={switches}
+                                failed={failed}
+                                importable={importable}
+                                saves={saves}
                             />
                         ) : null}
                     </div>
@@ -144,6 +194,11 @@ export function DatapackDetailPanel({
             ) : null}
         </Drawer>
     );
+}
+
+/** Whether the detail on show is the selected pack's, at its version. */
+function isOnShow(detail: DatapackDetail | null, selected: DatapackId | undefined): boolean {
+    return detail !== null && selected !== undefined && detail.id.name === selected.name && detail.id.version === selected.version;
 }
 
 /**
@@ -180,8 +235,9 @@ function renderPanelBody(args: {
     loading: boolean;
     failure: DataInstallerFailure | null;
     onRetry: () => void;
+    settingsLayer?: PackDetailLayer;
 }): React.JSX.Element | null {
-    const { detail, inventory, loading, failure, onRetry } = args;
+    const { detail, inventory, loading, failure, onRetry, settingsLayer } = args;
 
     if (failure) {
         return renderDataInstallerFailure(failure, onRetry);
@@ -191,22 +247,25 @@ function renderPanelBody(args: {
         // its height is a fixed DimensionValue (no percentages — the same limit
         // IntegrationsScreen records), and this needs flex-fill of whatever space
         // the drawer body has. db-drawer-body is a flex column, so flex:1 centers.
+        // The house wait, its label alone (`StageWait` brief, walk F115): nothing else on the flyout is labelled.
         return (
             <div className="datapack-panel-loading">
-                <LoadingDisplay size="L" message="Loading datapack" />
+                <StageWait lines={WAIT_STAGES.readingPack} brief />
             </div>
         );
     }
-    return <DetailRows detail={detail} inventory={inventory} />;
+    return <DetailRows detail={detail} inventory={inventory} settingsLayer={settingsLayer} />;
 }
 
 /** The loaded detail, as key/value rows. */
 function DetailRows({
     detail,
     inventory,
+    settingsLayer,
 }: {
     detail: DatapackDetail;
     inventory: DataItemInventory | null;
+    settingsLayer?: PackDetailLayer;
 }): React.JSX.Element {
     // Present types come from the INVENTORY, not from `detail.dataTypes`: the
     // second is what the pack claims, the first is what is there to install.
@@ -219,13 +278,13 @@ function DetailRows({
                 <PanelRow label="Description">{detail.description}</PanelRow>
             ) : null}
             {ownerLabel(detail) ? <PanelRow label="Owner">{ownerLabel(detail)}</PanelRow> : null}
-            <PanelRow label="Visible to">{visibleTo(detail)}</PanelRow>
+            <PanelRow label="Visible To">{visibleTo(detail)}</PanelRow>
             {detail.updatedAt ? (
                 <PanelRow label="Updated">{formatDate(detail.updatedAt)}</PanelRow>
             ) : null}
-            <PanelRow label={`Data (${present.length})`}>
+            <PanelRow label="Data Types">
                 <span className="datapack-panel-types">
-                    {present.map((dataType) => (
+                    {inPickOrder(present).map((dataType) => (
                         <span key={dataType} className="datapack-panel-type">
                             {dataTypeLabel(dataType)}
                         </span>
@@ -233,9 +292,9 @@ function DetailRows({
                 </span>
             </PanelRow>
             {missing.length > 0 ? (
-                <PanelRow label="Declared, not stored">
+                <PanelRow label="Empty Data Types">
                     <span className="datapack-panel-types" data-testid="datapack-detail-missing">
-                        {missing.map((dataType) => (
+                        {inPickOrder(missing).map((dataType) => (
                             <span key={dataType} className="datapack-panel-type is-missing">
                                 {dataTypeLabel(dataType)}
                             </span>
@@ -243,6 +302,7 @@ function DetailRows({
                     </span>
                 </PanelRow>
             ) : null}
+            {settingsLayer && settingsLayer.settings.length > 0 ? <StoreConfigurationRow layer={settingsLayer} /> : null}
         </>
     );
 }
@@ -260,33 +320,17 @@ function ownerLabel(detail: DatapackDetail): string | undefined {
 /** Who can see it. In the library, "shared" means every SC sees it; otherwise only its owner. */
 function visibleTo(detail: DatapackDetail): string {
     if (detail.store === 'library' && !detail.shared) return 'Only you';
-    return detail.shared ? 'Everyone' : 'Everyone (community)';
-}
-
-/** One key/value detail row. */
-function PanelRow({
-    label,
-    children,
-}: {
-    label: string;
-    children: React.ReactNode;
-}): React.JSX.Element {
-    return (
-        <div className="integration-panel-row">
-            <span className="integration-panel-row-key">{label}</span>
-            <span className="integration-panel-row-value">{children}</span>
-        </div>
-    );
+    return 'Everyone';
 }
 
 /**
- * Render an ISO timestamp as a plain date.
+ * Render an ISO timestamp in the one datapack format (`datapackDate`, J8-2), or as it arrived when
+ * it cannot be read.
  *
- * Locale-formatted rather than sliced: these cross the webview boundary as ISO
+ * Formatted in local time rather than sliced: these cross the webview boundary as ISO
  * strings (see `types.ts`), and a `slice(0, 10)` would show a UTC date that is
  * wrong by a day for anyone west of Greenwich in the evening.
  */
 function formatDate(iso: string): string {
-    const parsed = new Date(iso);
-    return Number.isNaN(parsed.getTime()) ? iso : parsed.toLocaleDateString();
+    return datapackDate(iso) || iso;
 }

@@ -33,11 +33,12 @@ jest.mock('@adobe/react-spectrum', () => ({
 
 
 
-// The real Modal, reduced to what these assertions read: its title, its buttons and
-// its dismiss affordance. Buttons carry their label, which is what a guard supplies.
+// The real Modal, reduced to what these assertions read: its title and the title's status,
+// its buttons and its dismiss affordance. Buttons carry their label, which is what a guard
+// supplies.
 jest.mock('@/core/ui/components/ui/Modal', () => ({
-    Modal: ({ title, actionButtons = [], closeLabel, onClose, children }: any) => (
-        <div role="dialog" aria-label={title}>
+    Modal: ({ title, status, size, actionButtons = [], closeLabel, onClose, children }: any) => (
+        <div role="dialog" aria-label={title} data-status={status} data-size={size}>
             {children}
             <button onClick={onClose}>{closeLabel}</button>
             {actionButtons.map((button: any) => (
@@ -53,15 +54,6 @@ jest.mock('@/core/ui/components/feedback/LoadingDisplay', () => ({
     LoadingDisplay: ({ message }: { message: string }) => <div data-testid="loading">{message}</div>,
 }));
 
-jest.mock('@/core/ui/components/feedback/StatusDisplay', () => ({
-    StatusDisplay: ({ variant, title, message, centerMessage }: any) => (
-        <div data-testid="status" data-variant={variant} data-centred={String(Boolean(centerMessage))}>
-            <span>{title}</span>
-            <span>{message}</span>
-        </div>
-    ),
-}));
-
 const mockPostMessage = jest.fn();
 jest.mock('@/core/ui/utils/WebviewClient', () => ({
     webviewClient: { postMessage: (...args: unknown[]) => mockPostMessage(...args) },
@@ -74,12 +66,14 @@ jest.mock('@/core/ui/hooks/useOperationProgress', () => ({
 
 // The mocks hoist above this import; the component must bind to them, not the real ones.
 import { OperationProgressModal } from '@/core/ui/components/feedback/OperationProgressModal';
+import { plain } from '@/core/utils/plainText';
 
 const OPERATION = {
     id: 'republish:bodea',
     title: 'Republishing Bodea',
-    failureTitle: "Couldn't republish Bodea",
-    successTitle: 'Bodea republished',
+    failureTitle: "Couldn't Republish Bodea",
+    successTitle: 'Bodea Republished',
+    thing: 'Bodea',
     run: 1,
     resume: false,
 };
@@ -99,7 +93,8 @@ beforeEach(() => {
     progress = null;
 });
 
-it('shows the question in place of the spinner', () => {
+// A question with buttons is the dialog's title, amber (dialog design rules, 2026-10-31).
+it('asks the question as the title, in place of the spinner', () => {
     progress = {
         id: OPERATION.id,
         state: 'running',
@@ -109,8 +104,7 @@ it('shows the question in place of the spinner', () => {
 
     renderModal();
 
-    expect(screen.getByTestId('status')).toHaveAttribute('data-variant', 'warning');
-    expect(screen.getByText('Your DA.live session has expired.')).toBeInTheDocument();
+    expect(screen.getByRole('dialog', { name: 'Your DA.live session has expired.' })).toHaveAttribute('data-status', 'warning');
     expect(screen.queryByTestId('loading')).not.toBeInTheDocument();
 });
 
@@ -133,6 +127,19 @@ it('offers each answer, the one that continues the work first', () => {
     );
 });
 
+// A delete's question: its main answer is red, as the batch window's Delete (owner, 2026-11-05).
+it('draws a destructive question\'s main answer red', () => {
+    progress = {
+        id: OPERATION.id,
+        state: 'running',
+        prompt: { title: 'Delete Bodea?', message: 'Project files are removed from this machine.', actions: ['Delete'], destructive: true },
+    };
+
+    renderModal();
+
+    expect(screen.getByRole('button', { name: 'Delete' })).toHaveAttribute('data-variant', 'negative');
+});
+
 // The Adobe sign-in guard asks "Sign In" / "Cancel", and the modal's own dismiss
 // already says Cancel: the reset showed both, side by side (2026-10-23).
 it('shows one Cancel when the question offers its own', () => {
@@ -146,6 +153,19 @@ it('shows one Cancel when the question offers its own', () => {
 
     expect(screen.getAllByRole('button', { name: 'Cancel' })).toHaveLength(1);
     expect(screen.getByRole('button', { name: 'Sign In' })).toBeInTheDocument();
+});
+
+it('draws the answer that continues the work last, as every main button is', () => {
+    progress = {
+        id: OPERATION.id,
+        state: 'running',
+        prompt: { message: 'Your DA.live session has expired.', actions: ['Sign In', 'Open DA.live'] },
+    };
+
+    renderModal();
+
+    const labels = screen.getAllByRole('button').map((button) => button.textContent);
+    expect(labels).toEqual(['Cancel', 'Open DA.live', 'Sign In']);
 });
 
 it('hands the chosen answer back to the work waiting on it', async () => {
@@ -191,46 +211,69 @@ it('cancels rather than backgrounding while it waits', async () => {
     expect(onClose).toHaveBeenCalled();
 });
 
-it('still offers Run in background when nothing is being asked', async () => {
+// Owner walk, 2026-11-16: Skip for Now closed the window and sent the run to the background. A
+// question's own dismiss answer is the close button, and pressing it answers and stays.
+it('makes a dismiss answer the close button, once, and answering it keeps the window', async () => {
+    progress = {
+        id: OPERATION.id,
+        state: 'running',
+        prompt: { title: 'One Step', message: 'Set it, then Save.', actions: ['Open Admin', 'Skip for Now'], dismiss: 'Skip for Now', tone: 'info' },
+    };
+    const { onClose } = renderModal();
+
+    expect(screen.getAllByRole('button', { name: 'Skip for Now' })).toHaveLength(1);
+    expect(screen.queryByRole('button', { name: 'Cancel' })).toBeNull();
+    await user().click(screen.getByRole('button', { name: 'Skip for Now' }));
+
+    expect(mockPostMessage).toHaveBeenCalledWith('answerOperationPrompt', { id: OPERATION.id, answer: 'Skip for Now', values: {} });
+    expect(onClose).not.toHaveBeenCalled();
+});
+
+it('still offers Run in Background when nothing is being asked', async () => {
     progress = { id: OPERATION.id, state: 'running', stage: 'Publishing pages' };
     renderModal();
 
-    await user().click(screen.getByRole('button', { name: 'Run in background' }));
+    await user().click(screen.getByRole('button', { name: 'Run in Background' }));
 
+    // It ends in the window's own result titles (rule 21).
     expect(mockPostMessage).toHaveBeenCalledWith('backgroundOperation', {
         id: OPERATION.id,
         title: OPERATION.title,
+        doneTitle: 'Bodea Republished',
+        failedTitle: "Couldn't Republish Bodea",
     });
 });
 
 // The target under a short title, not inside a long one that wrapped (2026-10-28).
 describe('an operation with a subject', () => {
-    const WITH_SUBJECT = { ...OPERATION, title: 'Changing destination', subject: 'Kukla Test App 2 · Production' };
+    const WITH_SUBJECT = { ...OPERATION, title: 'Changing Destination', subject: 'Kukla Test App 2, Production' };
 
     it('titles the modal short and shows the subject on its own line', () => {
         progress = { id: OPERATION.id, state: 'running', stage: 'Redeploying' };
         render(<OperationProgressModal operation={WITH_SUBJECT} onRetry={jest.fn()} onClose={jest.fn()} />);
 
-        expect(screen.getByRole('dialog', { name: 'Changing destination' })).toBeInTheDocument();
-        expect(screen.getByText('Kukla Test App 2 · Production')).toBeInTheDocument();
+        expect(screen.getByRole('dialog', { name: 'Changing Destination' })).toBeInTheDocument();
+        expect(screen.getByText('Kukla Test App 2, Production')).toBeInTheDocument();
     });
 
     it('names the subject in the background notification', async () => {
         progress = { id: OPERATION.id, state: 'running', stage: 'Redeploying' };
         render(<OperationProgressModal operation={WITH_SUBJECT} onRetry={jest.fn()} onClose={jest.fn()} />);
 
-        await user().click(screen.getByRole('button', { name: 'Run in background' }));
+        await user().click(screen.getByRole('button', { name: 'Run in Background' }));
 
         expect(mockPostMessage).toHaveBeenCalledWith('backgroundOperation', {
             id: OPERATION.id,
-            title: 'Changing destination: Kukla Test App 2 · Production',
+            title: 'Changing Destination: Kukla Test App 2, Production',
+            doneTitle: 'Bodea Republished',
+            failedTitle: "Couldn't Republish Bodea",
         });
     });
 });
 
 describe('a question that needs something typed', () => {
     const SIGN_IN = {
-        message: 'Sign in to DA.live.',
+        message: 'Sign In to DA.live.',
         actions: ['Sign In', 'Open DA.live'],
         fields: [
             { id: 'orgName', label: 'DA.live namespace', value: 'acme' },
@@ -238,12 +281,41 @@ describe('a question that needs something typed', () => {
         ],
     };
 
+    // A sign-in is a task of its own (owner, 2026-11-04): its heading takes the window, amber,
+    // and the how is numbered steps over the fields, not one long sentence.
+    it('gives a question with a heading the title, and draws its steps in order', () => {
+        progress = {
+            id: OPERATION.id,
+            state: 'running',
+            prompt: {
+                ...SIGN_IN,
+                title: 'Sign In to DA.live',
+                message: 'Your DA.live session has expired.',
+                steps: ['Open DA.live and run the bookmarklet.', 'Paste the token it copies.'],
+            },
+        };
+
+        renderModal();
+
+        const dialog = screen.getByRole('dialog', { name: 'Sign In to DA.live' });
+        expect(dialog).toHaveAttribute('data-status', 'warning');
+        expect(screen.getByText('Your DA.live session has expired.')).toBeInTheDocument();
+        // The sentence and its steps are one group; the fields another (owner, 2026-11-04: flat
+        // 16px gaps between every line read as noise).
+        const text = screen.getByText('Your DA.live session has expired.').parentElement as HTMLElement;
+        expect(text).toHaveClass('operation-question-text');
+        expect(text.querySelector('ol')).not.toBeNull();
+        const steps = screen.getAllByRole('listitem').map((item) => item.textContent);
+        expect(steps).toEqual(['Open DA.live and run the bookmarklet.', 'Paste the token it copies.']);
+        expect(screen.getByLabelText('Token')).toHaveAttribute('type', 'password');
+    });
+
     it('renders the fields, masking the credential', () => {
         progress = { id: OPERATION.id, state: 'running', prompt: SIGN_IN };
 
         renderModal();
 
-        expect(screen.getByText('Sign in to DA.live.')).toBeInTheDocument();
+        expect(screen.getByText('Sign In to DA.live.')).toBeInTheDocument();
         expect(screen.getByLabelText('DA.live namespace')).toHaveValue('acme');
         expect(screen.getByLabelText('Token')).toHaveAttribute('type', 'password');
         expect(screen.getByTestId('Token-description')).toHaveTextContent('That token was refused.');
@@ -282,59 +354,82 @@ describe('a question that needs something typed', () => {
 describe('the end of a run', () => {
     // It used to vanish the instant the run succeeded, so an operation the SC had
     // watched ended by saying nothing (owner, 2026-09-20).
-    it('shows the success, then closes itself once it has been read', async () => {
+    // Walk F195 (owner, 2026-11-17): every result waits for Close.
+    // Walk F222 (owner, 2026-11-17): the title names the thing, with no icon; the outcome is under
+    // the large mark in the body.
+    it('shows the success and waits for Close', async () => {
         progress = { id: OPERATION.id, state: 'succeeded' };
         const { onClose } = renderModal();
 
-        const status = screen.getByTestId('status');
-        expect(status).toHaveAttribute('data-variant', 'success');
-        expect(screen.getByText('Bodea republished')).toBeInTheDocument();
+        expect(screen.getByRole('dialog', { name: 'Bodea' })).not.toHaveAttribute('data-status');
+        expect(document.querySelector('.result-mark')).toHaveAttribute('data-status', 'success');
+        expect(screen.getByText('Republished')).toHaveClass('result-outcome');
         expect(onClose).not.toHaveBeenCalled();
 
         await act(async () => {
-            jest.advanceTimersByTime(TIMEOUTS.UI.RESULT_GLANCE);
+            jest.advanceTimersByTime(TIMEOUTS.UI.RESULT_GLANCE * 3);
         });
 
-        expect(onClose).toHaveBeenCalled();
+        expect(onClose).not.toHaveBeenCalled();
     });
 
-    // Centred under the centred tick and title (owner, 2026-10-16); a failure's reason
-    // can run to several lines, so it stays left-aligned.
-    it('centres the success message', () => {
-        progress = { id: OPERATION.id, state: 'succeeded', note: 'Added Demo Team Block Collection (9 blocks).' };
+    // An ending's outcome sits under the mark, and the sentence under it (walk F222).
+    it("shows a success's note as the sentence under its outcome", () => {
+        progress = { id: OPERATION.id, state: 'succeeded', note: plain('Added Demo Team Block Collection (9 blocks).') };
         renderModal();
 
-        expect(screen.getByTestId('status')).toHaveAttribute('data-centred', 'true');
+        expect(document.querySelector('.result-mark')).toHaveAttribute('data-status', 'success');
+        expect(screen.getByTestId('operation-end')).toHaveTextContent('Added Demo Team Block Collection (9 blocks).');
     });
 
-    it("leaves a failure's reason left-aligned — control", () => {
-        progress = { id: OPERATION.id, state: 'failed', error: 'Adobe refused this.' };
+    it("marks a failure red, with its reason under it", () => {
+        progress = { id: OPERATION.id, state: 'failed', error: plain('Adobe refused this.') };
         renderModal();
 
-        expect(screen.getByTestId('status')).toHaveAttribute('data-centred', 'false');
+        expect(screen.getByRole('dialog', { name: 'Bodea' })).not.toHaveAttribute('data-status');
+        expect(document.querySelector('.result-mark')).toHaveAttribute('data-status', 'error');
+        expect(screen.getByText("Couldn't Republish")).toHaveClass('result-outcome');
+        expect(screen.getByTestId('operation-end')).toHaveTextContent('Adobe refused this.');
     });
 
     // A failure has a reason to read and a Retry to press, so it waits.
     it('leaves a failure on screen', async () => {
-        progress = { id: OPERATION.id, state: 'failed', error: 'Adobe refused this.' };
+        progress = { id: OPERATION.id, state: 'failed', error: plain('Adobe refused this.') };
         const { onClose } = renderModal();
 
         await act(async () => {
             jest.advanceTimersByTime(TIMEOUTS.UI.RESULT_GLANCE * 3);
         });
 
-        expect(screen.getByText("Couldn't republish Bodea")).toBeInTheDocument();
+        expect(screen.getByRole('dialog', { name: 'Bodea' })).toBeInTheDocument();
+        expect(onClose).not.toHaveBeenCalled();
+    });
+
+    // Plan step-03 S1: a row with a problem keeps the window open, warning or not.
+    it('waits to be read when a row ended with a problem and the run sent no warning', async () => {
+        progress = {
+            id: OPERATION.id,
+            state: 'succeeded',
+            rows: [{ kind: 'products', label: 'Products', status: 'warning', problem: { text: plain('3 products had no price'), failed: false } }],
+        };
+        const { onClose } = renderModal();
+
+        await act(async () => {
+            jest.advanceTimersByTime(TIMEOUTS.UI.RESULT_GLANCE * 3);
+        });
+
+        expect(screen.getByText('3 products had no price')).toBeInTheDocument();
         expect(onClose).not.toHaveBeenCalled();
     });
 
     // Neither ending has anything left to narrate, so neither offers the background.
-    it('offers Close rather than Run in background once it has ended', () => {
+    it('offers Close rather than Run in Background once it has ended', () => {
         progress = { id: OPERATION.id, state: 'succeeded' };
         renderModal();
 
         expect(screen.getByRole('button', { name: 'Close' })).toBeInTheDocument();
         expect(
-            screen.queryByRole('button', { name: 'Run in background' }),
+            screen.queryByRole('button', { name: 'Run in Background' }),
         ).not.toBeInTheDocument();
     });
 });
@@ -342,7 +437,7 @@ describe('the end of a run', () => {
 // A success with something left to do (AB-26x: an install that leaves demo setup steps)
 // says what is left and offers it, and waits for the SC rather than closing by itself.
 describe('a next step on success', () => {
-    const NEXT = { message: 'Next: 2 setup steps in Commerce for the demo.', action: 'Open demo setup' };
+    const NEXT = { message: 'Next: 2 setup steps in Commerce for the demo.', action: 'Open Demo Setup' };
 
     function renderWithNext(): { onClose: jest.Mock; onPress: jest.Mock } {
         const onClose = jest.fn();
@@ -358,13 +453,13 @@ describe('a next step on success', () => {
         return { onClose, onPress };
     }
 
-    it('says what is left under the success title, and offers it', () => {
+    it('says what is left under the success outcome, and offers it', () => {
         progress = { id: OPERATION.id, state: 'succeeded' };
         renderWithNext();
 
-        expect(screen.getByText('Bodea republished')).toBeInTheDocument();
+        expect(screen.getByRole('dialog', { name: 'Bodea' })).toBeInTheDocument();
         expect(screen.getByText(NEXT.message)).toBeInTheDocument();
-        expect(screen.getByRole('button', { name: 'Open demo setup' })).toHaveAttribute('data-variant', 'accent');
+        expect(screen.getByRole('button', { name: 'Open Demo Setup' })).toHaveAttribute('data-variant', 'accent');
     });
 
     it('waits for the SC instead of closing by itself', async () => {
@@ -382,7 +477,7 @@ describe('a next step on success', () => {
         progress = { id: OPERATION.id, state: 'succeeded' };
         const { onClose, onPress } = renderWithNext();
 
-        await user().click(screen.getByRole('button', { name: 'Open demo setup' }));
+        await user().click(screen.getByRole('button', { name: 'Open Demo Setup' }));
 
         expect(onClose).toHaveBeenCalledTimes(1);
         expect(onPress).toHaveBeenCalledTimes(1);
@@ -392,7 +487,7 @@ describe('a next step on success', () => {
         progress = { id: OPERATION.id, state: 'running', stage: 'Deploying' };
         renderWithNext();
 
-        expect(screen.queryByRole('button', { name: 'Open demo setup' })).not.toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: 'Open Demo Setup' })).not.toBeInTheDocument();
     });
 });
 
@@ -404,20 +499,64 @@ describe('a next step the run offered', () => {
         id: 'erp-integration',
         erp: 'demo-erp-2',
         name: 'Accuform ERP',
-        message: 'Next: Accuform ERP owns no products yet. Assign products to it.',
+        message: 'Next: Accuform ERP owns no products yet. Assign Products to it.',
     };
 
     it("shows the screen's button for it on success, and starts it after closing", async () => {
         progress = { id: OPERATION.id, state: 'succeeded', offer: OFFER };
         const onClose = jest.fn();
         const onPress = jest.fn();
-        const offerStep = jest.fn(() => ({ message: OFFER.message, action: 'Assign products', onPress }));
+        const offerStep = jest.fn(() => ({ message: OFFER.message, action: 'Assign Products', onPress }));
         render(<OperationProgressModal operation={OPERATION} onRetry={jest.fn()} onClose={onClose} offerStep={offerStep} />);
 
         expect(offerStep).toHaveBeenCalledWith(OFFER);
         expect(screen.getByText(OFFER.message)).toBeInTheDocument();
-        await user().click(screen.getByRole('button', { name: 'Assign products' }));
+        await user().click(screen.getByRole('button', { name: 'Assign Products' }));
         expect(onClose).toHaveBeenCalledTimes(1);
         expect(onPress).toHaveBeenCalledTimes(1);
+    });
+});
+
+// Owner, 2026-11-20, over walk F222's "a result keeps the run's size": a clean success, with no rows
+// to keep and no list of changes, is a small window of its own; a result with a list to read, or a
+// failure, keeps the run's window.
+describe('how big its result is', () => {
+    const size = (): string | null => screen.getByRole('dialog').getAttribute('data-size');
+
+    it('ends a clean success small', () => {
+        progress = { id: OPERATION.id, state: 'succeeded' };
+
+        renderModal();
+
+        expect(size()).toBe('S');
+        expect(screen.getByText('Republished')).toHaveClass('result-outcome');
+    });
+
+    it('runs at the size of a list', () => {
+        progress = { id: OPERATION.id, state: 'running', stage: 'Publishing pages' };
+
+        renderModal();
+
+        expect(size()).toBe('M');
+    });
+
+    it("CONTROL: keeps the run's window for a success whose rows have a problem to read", () => {
+        progress = {
+            id: OPERATION.id,
+            state: 'succeeded',
+            rows: [{ kind: 'pages', label: 'Pages', status: 'warning', problem: { text: plain('3 pages not published.'), failed: false } }],
+        };
+
+        renderModal();
+
+        expect(size()).toBe('M');
+    });
+
+    it("CONTROL: keeps the run's window for a failure", () => {
+        progress = { id: OPERATION.id, state: 'failed', error: plain('The publish failed.') };
+
+        renderModal();
+
+        expect(size()).toBe('M');
     });
 });

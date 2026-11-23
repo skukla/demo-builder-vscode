@@ -64,9 +64,9 @@ const request = webviewClient.request as jest.Mock;
 // Two rows, and the one under test is deliberately SECOND: a lookup that ignores its
 // predicate returns the first row, which is then visibly the wrong demo.
 const OTHER = makeAddedDemo({ name: 'Bodea by Kai', source: { owner: 'kai', repo: 'bodea-demo' } });
-const JEN = makeAddedDemo();
-const BOTH = [OTHER, JEN];
-const JEN_ID = addedDemoId(JEN);
+const ROBIN = makeAddedDemo();
+const BOTH = [OTHER, ROBIN];
+const ROBIN_ID = addedDemoId(ROBIN);
 
 const CATALOG: RenderWelcomeOptions = { packages: PACKAGES, stacks: STACKS };
 
@@ -101,12 +101,12 @@ describe('WelcomeStep — forgetting an added demo', () => {
     it('asks the host about the demo whose card was used, not the first one added', async () => {
         renderWelcome({ ...CATALOG, addedDemos: BOTH });
 
-        await forget(JEN_ID);
+        await forget(ROBIN_ID);
 
         expect(request.mock.calls).toStrictEqual([
             [
                 'forget-added-demo',
-                { name: 'Isle5 by Jen', source: { owner: 'jen', repo: 'isle5-demo' } },
+                { name: 'Isle5 by Robin', source: { owner: 'robin', repo: 'isle5-demo' } },
             ],
         ]);
     });
@@ -123,11 +123,11 @@ describe('WelcomeStep — forgetting an added demo', () => {
         const { updateState } = renderWelcome({
             ...CATALOG,
             addedDemos: BOTH,
-            state: { selectedPackage: JEN_ID, demo: JEN },
+            state: { selectedPackage: ROBIN_ID, demo: ROBIN },
         });
         updateState.mockClear();
 
-        await forget(JEN_ID);
+        await forget(ROBIN_ID);
 
         // Read off the call, key by key: `toHaveBeenCalledWith({ a: undefined })`
         // is satisfied by `{}`, which would leave the selection in place.
@@ -146,7 +146,7 @@ describe('WelcomeStep — forgetting an added demo', () => {
         });
         updateState.mockClear();
 
-        await forget(JEN_ID);
+        await forget(ROBIN_ID);
 
         expect(request).toHaveBeenCalledTimes(1);
         expect(updateState).not.toHaveBeenCalled();
@@ -156,11 +156,11 @@ describe('WelcomeStep — forgetting an added demo', () => {
         const { rerender } = renderWelcome({ ...CATALOG, addedDemos: [] });
         rerender({ ...CATALOG, addedDemos: BOTH });
 
-        await forget(JEN_ID);
+        await forget(ROBIN_ID);
 
         expect(request).toHaveBeenCalledWith(
             'forget-added-demo',
-            expect.objectContaining({ name: 'Isle5 by Jen' })
+            expect.objectContaining({ name: 'Isle5 by Robin' })
         );
     });
 });
@@ -170,18 +170,18 @@ describe('WelcomeStep — editing an added demo', () => {
         renderWelcome({ ...CATALOG, addedDemos: BOTH });
         expect(editModal().demo).toBeUndefined();
 
-        act(() => gallery().onEditDemo?.(JEN_ID));
+        act(() => gallery().onEditDemo?.(ROBIN_ID));
 
-        expect(editModal().demo).toBe(JEN);
+        expect(editModal().demo).toBe(ROBIN);
     });
 
     it('opens the Edit dialog on a demo that was added after the step first rendered', () => {
         const { rerender } = renderWelcome({ ...CATALOG, addedDemos: [] });
         rerender({ ...CATALOG, addedDemos: BOTH });
 
-        act(() => gallery().onEditDemo?.(JEN_ID));
+        act(() => gallery().onEditDemo?.(ROBIN_ID));
 
-        expect(editModal().demo).toBe(JEN);
+        expect(editModal().demo).toBe(ROBIN);
     });
 
     it('does not move the selected row when the edited demo is not the selection', () => {
@@ -192,15 +192,15 @@ describe('WelcomeStep — editing an added demo', () => {
         });
         updateState.mockClear();
 
-        act(() => editModal().onSaved({ ...JEN, name: 'Isle5 luxury' }));
+        act(() => editModal().onSaved({ ...ROBIN, name: 'Isle5 luxury' }));
 
         expect(updateState).not.toHaveBeenCalled();
     });
 
     it('moves the selected row to the saved edit when the demo was selected after first render', () => {
-        const edited = { ...JEN, name: 'Isle5 luxury' };
+        const edited = { ...ROBIN, name: 'Isle5 luxury' };
         const { updateState, rerender } = renderWelcome({ ...CATALOG, addedDemos: BOTH });
-        rerender({ ...CATALOG, addedDemos: BOTH, state: { selectedPackage: JEN_ID, demo: JEN } });
+        rerender({ ...CATALOG, addedDemos: BOTH, state: { selectedPackage: ROBIN_ID, demo: ROBIN } });
         updateState.mockClear();
 
         act(() => editModal().onSaved(edited));
@@ -225,10 +225,10 @@ describe('WelcomeStep — the Add a demo package dialog', () => {
         const { updateState } = renderWelcome(CATALOG);
         updateState.mockClear();
 
-        expect(() => act(() => addModal().onDemoAdded(JEN))).not.toThrow();
+        expect(() => act(() => addModal().onDemoAdded(ROBIN))).not.toThrow();
 
         expect(updateState).toHaveBeenCalledWith(
-            expect.objectContaining({ selectedPackage: JEN_ID, demo: JEN })
+            expect.objectContaining({ selectedPackage: ROBIN_ID, demo: ROBIN })
         );
     });
 
@@ -237,8 +237,8 @@ describe('WelcomeStep — the Add a demo package dialog', () => {
         const { rerender } = renderWelcome(CATALOG);
         rerender({ ...CATALOG, onDemoAdded });
 
-        act(() => addModal().onDemoAdded(JEN));
+        act(() => addModal().onDemoAdded(ROBIN));
 
-        expect(onDemoAdded.mock.calls).toStrictEqual([[JEN]]);
+        expect(onDemoAdded.mock.calls).toStrictEqual([[ROBIN]]);
     });
 });

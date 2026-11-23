@@ -23,6 +23,7 @@ const catalogKey: UniqueField = {
 };
 
 const GROUPS: ServiceGroup[] = [
+    { id: 'api-mesh', label: 'API Mesh', fields: [] },
     { id: 'catalog-service', label: 'Catalog Service', fields: [catalogKey] },
 ];
 
@@ -39,20 +40,18 @@ function render(overrides: Partial<UseConfigureSectionsProps> = {}) {
         isStoredSecret: noneStored,
         isFieldComplete: complete,
         isEds: false,
-        hasBlockLibraryChoices: false,
-        projectNameError: undefined,
         ...overrides,
     };
     return renderHook(() => useConfigureSections(props));
 }
 
 describe('useConfigureSections', () => {
-    it('opens on the Project section with every other section reachable', () => {
+    it('opens on the first section', () => {
         const { result } = render();
 
-        expect(result.current.activeSection.id).toBe('project-info');
+        expect(result.current.activeSection?.id).toBe('api-mesh');
         expect(result.current.railTabs).toStrictEqual([
-            { id: 'project-info', title: 'Project', status: 'current', hasError: false },
+            { id: 'api-mesh', title: 'API Mesh', status: 'current', hasError: false },
             { id: 'catalog-service', title: 'Catalog Service', status: 'done', hasError: false },
         ]);
     });
@@ -67,7 +66,7 @@ describe('useConfigureSections', () => {
     it('blocks Save for an error in a section that is not on screen, and marks its tab', () => {
         const { result } = render({ getValueFromConfigs: empty });
 
-        expect(result.current.activeSection.id).toBe('project-info');
+        expect(result.current.activeSection?.id).toBe('api-mesh');
         expect(result.current.validationErrors).toStrictEqual({
             ADOBE_CATALOG_API_KEY: 'Catalog API Key is required',
         });
@@ -84,11 +83,12 @@ describe('useConfigureSections', () => {
         expect(result.current.canSave).toBe(true);
     });
 
-    it('blocks Save and marks the Project tab for a project-name error', () => {
-        const { result } = render({ projectNameError: 'A project with this name already exists' });
+    it('has no section, and nothing to save, for a project with nothing to configure', () => {
+        const { result } = render({ serviceGroups: [] });
 
+        expect(result.current.activeSection).toBeUndefined();
+        expect(result.current.railTabs).toStrictEqual([]);
         expect(result.current.canSave).toBe(false);
-        expect(result.current.railTabs[0]).toMatchObject({ id: 'project-info', hasError: true });
     });
 
     it('switches the active section and the rail together', () => {
@@ -96,7 +96,7 @@ describe('useConfigureSections', () => {
 
         act(() => result.current.setActiveSectionId('catalog-service'));
 
-        expect(result.current.activeSection.id).toBe('catalog-service');
+        expect(result.current.activeSection?.id).toBe('catalog-service');
         expect(result.current.railTabs.map((tab) => tab.status)).toStrictEqual(['done', 'current']);
     });
 
@@ -105,27 +105,16 @@ describe('useConfigureSections', () => {
 
         act(() => result.current.setActiveSectionId('gone'));
 
-        expect(result.current.activeSection.id).toBe('project-info');
+        expect(result.current.activeSection?.id).toBe('api-mesh');
     });
 
-    it('adds Block Libraries before Authoring when the project has libraries to choose', () => {
-        const { result } = render({ isEds: true, hasBlockLibraryChoices: true });
-
-        expect(result.current.railTabs.map((tab) => tab.id)).toStrictEqual([
-            'project-info',
-            'catalog-service',
-            'block-libraries',
-            'authoring-experience',
-        ]);
-    });
-
-    it('adds the Authoring section for an EDS project', () => {
+    it('adds the Storefront section for an EDS project', () => {
         const { result } = render({ isEds: true });
 
         expect(result.current.railTabs.map((tab) => tab.id)).toStrictEqual([
-            'project-info',
+            'api-mesh',
             'catalog-service',
-            'authoring-experience',
+            'storefront',
         ]);
     });
 });

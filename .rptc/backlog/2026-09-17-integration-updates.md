@@ -5,7 +5,8 @@ area: app-builder
 parent: AB-9
 needs: []
 value: high
-status: built
+status: shipped
+plan: integration-updates
 ---
 
 # An installed integration takes an update: new code, then Commerce brought to it
@@ -16,7 +17,7 @@ deploy whatever is in the clone (neither fetches), the updates feature stops at 
 with `@adobe/aio-commerce-lib-app` 1.x an installed app answers "already installed", so a new
 event or a changed webhook never reaches Commerce.
 
-The design and steps are in `.rptc/plans/integration-updates/overview.md`: the integration moves
+The design and steps are in `.rptc/complete/integration-updates/overview.md`: the integration moves
 to lib-app 2.x (which upgrades an installed app when `metadata.version` changes), Demo Builder
 fetches the newer code on Update, reports what the install pass did and records the installed
 version, offers a confirmed reinstall when Commerce refuses to upgrade in place, and shows when
@@ -38,3 +39,4 @@ Filed 2026-09-17.
 - 2026-09-18  fix(integrations): an update shows each card's own state, and redeploys what failed (`860123220`)
 - 2026-09-18  fix(integrations): a pair update also redeploys a member whose last deploy failed (`86d2ba451`)
 - 2026-09-28  2026-09-28 status tidy (owner: yes): built. All five plan steps built 09-17/18; an upgrade removing a deleted webhook measured live (integration 977e5f9). Left: release.
+- 2026-11-20  Released in v1.0.0-beta.153

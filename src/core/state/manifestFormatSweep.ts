@@ -7,9 +7,9 @@
  * not stamped with the current MANIFEST_FORMAT_VERSION is loaded (running the
  * converters) and saved back (which stamps it and drops the legacy shapes).
  *
- * Deliberately NOT relying on the incidental persistAfterLoad side effect of
- * the other upkeep sweeps' loadAllProjects — that side effect is a documented
- * wart that may be removed; migration must not silently stop with it.
+ * Deliberately saves each migrated project itself: loading is a read and saves
+ * nothing (the other sweeps' loads once saved as a side effect, removed in walk
+ * F206), so migration cannot rely on a load to write it back.
  *
  * UI-free and dependency-injected (same pattern as sweepCommerceSecrets /
  * renewPublishKeys) so it is testable without vscode. Runs on the SEQUENCED

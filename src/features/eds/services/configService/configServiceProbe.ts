@@ -69,7 +69,7 @@ export interface ConfigServiceProbeResult {
      *
      * Its own refusal is a finding, not a gap: a roster you cannot read means no
      * admin is visible to ask, which leaves the GitHub user who installed Code
-     * Sync, or Adobe (observed on `leahrayard`, 2026-08-14).
+     * Sync, or Adobe (observed on `avery`, 2026-08-14).
      */
     orgAdmins?: { status: 'ok' | 'not_authorized' | 'failed'; emails?: string[] };
     /**

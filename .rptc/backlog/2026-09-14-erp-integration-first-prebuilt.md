@@ -5,7 +5,9 @@ area: app-builder
 parent: AB-1
 needs: []
 value: high
-status: active
+status: gated
+plan: erp-integration
+waiting-on: the owner's live acceptance (step-06-acceptance.md), or the owner's word that the Tailspin release-walk rows count
 ---
 
 # ERP integration: the first pre-built integration in the catalog
@@ -18,8 +20,8 @@ entries are the starter-kit seed and the blank shell); this is its first tile.
 Use the Commerce integration starter kit to create an integration with an ERP modeled on
 SAP. It ships two things: the ERP clone and the App Builder integration to it, so the SC can
 demonstrate both the SAP side and the Commerce integration. Bidirectional. Works whatever
-data the Commerce instance holds. Every ERP record resettable. Nishant Kapoor's private
-`agilent-erp-mock` is the reference.
+data the Commerce instance holds. Every ERP record resettable. Person A's private
+`client-a-erp-mock` is the reference.
 
 ## The shape (plan: `.rptc/plans/erp-integration/`, thirteen-plus decisions in its ledger)
 
@@ -43,7 +45,7 @@ the flyout, the agent tools · 06 live acceptance on Bodea and docs.
 ## Rules the owner set
 
 - Build both apps with our tooling to Adobe's standards (the starter-kit skills, the App
-  Builder patterns); Nishant Kapoor's code is used where it meets that bar, assessed rather than trusted.
+  Builder patterns); Person A's code is used where it meets that bar, assessed rather than trusted.
 - The scratch workspace for the spike is created and deleted by the agent through the
   proven SDK path; no owner action needed.
 - The ERP's display name is an input of the integration's configuration, default "Acme ERP".
@@ -73,3 +75,4 @@ the flyout, the agent tools · 06 live acceptance on Bodea and docs.
 - 2026-09-17  feat(integrations): the ERP is a card of its own, and removal cleans up before it undeploys (`2365f948c`)
 - 2026-09-17  docs(plan): decision 24 — the ERP's offline switch is removed, not kept (`bc15c7a7f`)
 - 2026-09-24  docs(plan): the ERP programme — every piece of ERP research and planning in one order of work (`99c0539da`)
+- 2026-11-21  Reconciled 2026-11-21: steps 01-05 built and the ERP pair in use. Left: step 06, the live acceptance (step-06-acceptance.md), or the owner decides the Tailspin release-walk rows count instead.

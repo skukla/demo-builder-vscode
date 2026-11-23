@@ -277,7 +277,7 @@ const MARKED_EDITS: ReadonlyArray<{ ours: string; theirs: string }> = [
 /**
  * `scripts/scripts.js` with Demo Builder's three marked Quick Edit edits taken out: the
  * inverse of {@link buildQuickEditScriptsJs}, so an update can apply Adobe's change to Adobe's
- * own lines and the wiring is put back after it (JustRite, 2026-10-30: Adobe changed the
+ * own lines and the wiring is put back after it (Tailspin, 2026-10-30: Adobe changed the
  * `loadHeader` line the Sidekick listener sits above, and every update stopped there).
  *
  * Only an edit that is in the file exactly as written here, exactly once, comes out; one

@@ -10,14 +10,15 @@
  * @module features/project-creation/handlers/creationNameCheck
  */
 
+import { notYetPlain, plainLine, plainName, type PlainText } from '@/core/utils/plainText';
 import { validateProjectNameSecurity } from '@/core/validation/validators/ProjectNameValidator';
 import type { StateManager } from '@/types/state';
 import type { ProjectCreationConfig } from '@/types/webviewRequests';
 
 /** Why a name was refused: the short line, and the line that says what to do. */
 interface NameProblem {
-    summary: string;
-    detail: string;
+    summary: PlainText;
+    detail: PlainText;
     /** The validator's error, when the name itself is unsafe. */
     invalid?: Error;
     /** The project that already has the name, when it is taken. */
@@ -41,7 +42,8 @@ export async function projectNameProblem(
         validateProjectNameSecurity(config.projectName);
     } catch (error) {
         const invalid = error instanceof Error ? error : new Error(String(error));
-        const summary = `Invalid project name: ${invalid.message}`;
+        // The validator's sentence is this extension's own, not yet typed at its source (PL-102).
+        const summary = plainLine`Invalid project name: ${notYetPlain(invalid.message)}`;
         return { summary, detail: summary, invalid };
     }
     const taken = (await stateManager.getAllProjects()).find(
@@ -50,9 +52,7 @@ export async function projectNameProblem(
     if (!taken) return undefined;
     return {
         takenBy: taken.path,
-        summary: `Project "${config.projectName}" already exists`,
-        detail:
-            `Project "${config.projectName}" already exists. ` +
-            'Please choose a different name or delete the existing project first.',
+        summary: plainLine`Project "${plainName(config.projectName)}" already exists`,
+        detail: plainLine`Project "${plainName(config.projectName)}" already exists. Please choose a different name or delete the existing project first.`,
     };
 }

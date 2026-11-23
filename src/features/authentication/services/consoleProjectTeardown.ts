@@ -19,8 +19,15 @@
  * - Of Adobe's THREE documented delete blockers only the event one is
  *   pre-emptable from here; the other two are named in the failure message
  *   instead (see UNPREEMPTED_DELETE_BLOCKERS).
- * - `shouldClearConsoleSelection` signals the HANDLER to clear the aio
- *   console selection; this module never touches local state itself.
+ * - It clears the aio Console selection itself once the project is gone, through
+ *   `deps.clearConsoleSelectionIfCurrent`, and refuses ids that are not Adobe
+ *   resource ids before any call. Both were the door's job until PL-104 fix 8: the
+ *   result carried `shouldClearConsoleSelection` for the handler to act on, the
+ *   button did, and the agent's `delete_adobe_project` did neither.
+ * - It refuses a project the signed-in person did not create, through
+ *   `deps.isProjectOwner`, before any call. The button checked that and the agent's
+ *   `delete_adobe_project` did not (walk F270); the button still asks the same dep before
+ *   its confirm dialog, so nobody confirms a delete that will be refused.
  *
  * Step-3 internals (access recovery, discovery, escalation, per-workspace
  * deletion) live in `consoleProjectTeardownEvents.ts`.
@@ -30,9 +37,11 @@ import { explainMissingDeveloperAccess } from './authenticationErrorFormatter';
 import { errorMessage, teardownEventEntities } from './consoleProjectTeardownEvents';
 import type { IoEventsClient } from './ioEventsClient';
 import type { EventsAuth } from './ioEventsTransport';
+import { NOT_PROJECT_OWNER_MESSAGE } from './projectOwnership';
 import type { WorkspaceS2SCredentialIds } from './types';
 import { getLogger } from '@/core/logging/debugLogger';
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
+import { validateOrgId, validateProjectId } from '@/core/validation/validators/AdobeResourceValidator';
 
 /** Progress steps reported to `onProgress`. */
 const TOTAL_STEPS = 4;
@@ -77,6 +86,16 @@ export interface TeardownDeps {
     /** Subscribe the credential to the baseline I/O Management API. */
     subscribeManagementApi(orgId: string, idIntegration: string): Promise<void>;
     deleteConsoleProject(orgId: string, projectId: string): Promise<void>;
+    /**
+     * Clear the aio Console selection when it points at this project. Called once the
+     * project is deleted; best-effort, so a failure never flips the result.
+     */
+    clearConsoleSelectionIfCurrent(projectId: string): Promise<void>;
+    /**
+     * Whether the signed-in person created the project (`verifyProjectOwnership`): only
+     * the creator may delete it. Any unknown answers false.
+     */
+    isProjectOwner(target: { orgId: string; projectId: string }): Promise<boolean>;
     /** IMS access token; throws when unavailable. */
     getAccessToken(): Promise<string>;
     /** Factory seam so tests can observe/mint per-credential clients. */
@@ -112,11 +131,6 @@ export interface ConsoleProjectTeardownResult {
     success: boolean;
     projectDeleted: boolean;
     items: TeardownItem[];
-    /**
-     * True when the caller should clear the aio console selection (project
-     * deleted) — the HANDLER decides and performs the conditional clear.
-     */
-    shouldClearConsoleSelection: boolean;
 }
 
 /** Shared state threaded through the teardown phases (internal). */
@@ -138,9 +152,37 @@ function buildResult(items: TeardownItem[], projectDeleted: boolean): ConsolePro
     return {
         success: projectDeleted,
         projectDeleted,
-        shouldClearConsoleSelection: projectDeleted,
         items,
     };
+}
+
+/**
+ * Refuse ids that are not Adobe resource ids: they flow into Console and Events API
+ * paths. Returns the failed item's error, or undefined when both are valid.
+ */
+function invalidTargetError(target: TeardownTarget): string | undefined {
+    try {
+        validateOrgId(target.orgId);
+        validateProjectId(target.projectId);
+        return undefined;
+    } catch (error) {
+        return `Invalid Adobe resource ID: ${errorMessage(error)}`;
+    }
+}
+
+/** Refuse a project the signed-in person did not create; undefined when they did. */
+async function notOwnerError(deps: TeardownDeps, target: TeardownTarget): Promise<string | undefined> {
+    const owned = await deps.isProjectOwner({ orgId: target.orgId, projectId: target.projectId });
+    return owned ? undefined : NOT_PROJECT_OWNER_MESSAGE;
+}
+
+/** Clear the Console selection for a deleted project; a failure is logged and never thrown. */
+async function clearSelection(deps: TeardownDeps, projectId: string): Promise<void> {
+    try {
+        await deps.clearConsoleSelectionIfCurrent(projectId);
+    } catch (error) {
+        getLogger().debug(`[Teardown] Post-delete selection clear failed: ${errorMessage(error)}`);
+    }
 }
 
 /**
@@ -294,6 +336,12 @@ export async function teardownConsoleProject(
         onProgress?.({ step, totalSteps: TOTAL_STEPS, message });
     };
 
+    const refused = invalidTargetError(target) ?? (await notOwnerError(deps, target));
+    if (refused) {
+        items.push({ kind: 'project', id: target.projectId, label: target.projectTitle, outcome: 'failed', error: refused });
+        return buildResult(items, false);
+    }
+
     report(1, OPERATION_STAGES.findingWorkspaces.label);
     const prep = await prepareTeardown(deps, target, items);
     if (!prep) {
@@ -333,6 +381,7 @@ export async function teardownConsoleProject(
     }
     report(4, OPERATION_STAGES.deletingAdobeProject.label);
     const result = await deleteProject(deps, target, items);
+    if (result.projectDeleted) await clearSelection(deps, target.projectId);
     debugLogger.debug(
         `[Teardown] done — projectDeleted=${result.projectDeleted}, ${result.items.length} item(s)`,
     );

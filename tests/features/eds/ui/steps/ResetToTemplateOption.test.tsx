@@ -23,17 +23,17 @@ describe('ResetToTemplateOption — the label', () => {
         const { unmount } = render(
             <ResetToTemplateOption resetToTemplate={false} onResetToTemplateChange={jest.fn()} />,
         );
-        expect(screen.getByText('Reset to template (replaces all content)')).toBeInTheDocument();
+        expect(screen.getByText('Reset to Template (Replaces All Content)')).toBeInTheDocument();
         unmount();
 
         render(
             <ResetToTemplateOption
                 resetToTemplate={false}
                 onResetToTemplateChange={jest.fn()}
-                templateName="Isle5 by Jen"
+                templateName="Isle5 by Robin"
             />,
         );
-        expect(screen.getByText('Reset to Isle5 by Jen (replaces all content)')).toBeInTheDocument();
+        expect(screen.getByText('Reset to Isle5 by Robin (Replaces All Content)')).toBeInTheDocument();
     });
 });
 
@@ -70,7 +70,7 @@ describe('ResetToTemplateOption — the tick', () => {
         expect(screen.getByRole('checkbox')).toBeDisabled();
     });
 
-    it('shows an empty repository as ticked and locked, with an info line', () => {
+    it('shows an empty repository as ticked and locked, with a blue banner', () => {
         render(
             <TestWrapper>
                 <ResetToTemplateOption
@@ -83,13 +83,10 @@ describe('ResetToTemplateOption — the tick', () => {
 
         expect(screen.getByRole('checkbox')).toBeChecked();
         expect(screen.getByRole('checkbox')).toBeDisabled();
-        const line = screen.getByText(/This repository is empty/);
-        expect(line).toHaveClass('text-blue-600');
-        expect(line.parentElement).toHaveClass('reset-warning-visible');
-        expect(line.parentElement?.querySelector('svg')).toHaveClass(
-            'text-blue-500',
-            'flex-shrink-0',
-        );
+        const banner = screen.getByText('This repository is empty.').closest('.inline-notice');
+        expect(banner).toHaveClass('inline-notice--info');
+        expect(banner).toHaveTextContent('It will be set up from the template.');
+        expect(banner?.parentElement).toHaveClass('reset-warning-visible');
     });
 
     it('keeps the notice row rendered but hidden when there is nothing to say', () => {
@@ -105,9 +102,10 @@ describe('ResetToTemplateOption — the tick', () => {
 
         expect(container.querySelector('.reset-warning-hidden')).toBeInTheDocument();
         expect(container.querySelector('.reset-warning-visible')).not.toBeInTheDocument();
+        expect(container.querySelector('.inline-notice')).toBeNull();
     });
 
-    it('warns in orange when a reset will destroy content', () => {
+    it('warns with an amber banner when a reset will destroy content', () => {
         render(
             <TestWrapper>
                 <ResetToTemplateOption
@@ -118,12 +116,12 @@ describe('ResetToTemplateOption — the tick', () => {
             </TestWrapper>,
         );
 
-        const line = screen.getByText(/delete and recreate the repository/);
-        expect(line).toHaveClass('text-orange-600');
-        expect(line.parentElement?.querySelector('svg')).toHaveClass(
-            'text-orange-500',
-            'flex-shrink-0',
-        );
+        const banner = screen
+            .getByText('Everything in this repository will be replaced.')
+            .closest('.inline-notice');
+        expect(banner).toBeInTheDocument();
+        expect(banner).not.toHaveClass('inline-notice--info');
+        expect(banner).toHaveTextContent('It is deleted and made again from the template.');
     });
 });
 
@@ -140,7 +138,7 @@ describe('ResetToTemplateOption — one message at a time', () => {
             </TestWrapper>,
         );
 
-        expect(screen.queryByText(/Setup cannot complete without a reset/i)).not.toBeInTheDocument();
+        expect(screen.queryByText(/isn't a storefront/i)).not.toBeInTheDocument();
         expect(screen.queryByText(/head\.html/i)).not.toBeInTheDocument();
     });
 
@@ -155,6 +153,7 @@ describe('ResetToTemplateOption — one message at a time', () => {
             </TestWrapper>,
         );
 
-        expect(screen.getByText(/Setup cannot complete without a reset/i)).toBeInTheDocument();
+        expect(screen.getByText("This repository isn't a storefront.")).toBeInTheDocument();
+        expect(screen.getByText(/It is missing head\.html\. Tick Reset/)).toBeInTheDocument();
     });
 });

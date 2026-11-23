@@ -11,11 +11,12 @@ import React, { useEffect } from 'react';
 import { InlineNotice } from '@/core/ui/components/feedback/InlineNotice';
 import type { DatapackGroup } from '@/features/data-installer/services/datapackCatalog';
 import { useDataInstallerRequest } from '@/features/data-installer/ui/hooks/useDataInstallerRequest';
-import { type ProjectDatapack, type RecordedPackCheck, storeOf } from '@/types/datapack';
+import type { ProjectDatapack, RecordedPackCheck } from '@/types/datapack';
 
 /** Is this card the pack named (by store and name)? */
 export function isPack(group: DatapackGroup, pack: ProjectDatapack | undefined): boolean {
-    return pack !== undefined && pack.name === group.name && storeOf(pack) === group.store;
+    // By name: the one list shows a pack once, as the datapack store's, whichever store the project recorded.
+    return pack !== undefined && pack.name === group.name;
 }
 
 /** Does the catalog list this pack, at this version? */

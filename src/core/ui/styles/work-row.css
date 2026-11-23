@@ -1,13 +1,12 @@
 /**
- * .work-row — one item in a list of work (`feedback/WorkRow`): a status icon, the name
- * and a quieter detail beside it, and what to read under it.
+ * .work-row — one item in a list of work (`feedback/WorkRow`): a status icon, the name, and
+ * under it where it stands (a quieter detail, a note, or why it failed).
  *
  * REACHES ONLY THE BUNDLES THAT IMPORT IT (ADR-017 §6): `projectsList` (the Updates modal's
  * run), `integrations` (the demo setup's confirms), and every bundle that draws the progress
  * modal, for its rows of what a run changed: those two, `dashboard` and `configure`. A
  * new host bundle imports it in its entry, or the rows render unstyled with no error. The
- * name and detail are `.checkbox-row-label` and `-detail`, so the host imports
- * `checkbox-row.css` too.
+ * name is `.checkbox-row-label`, so the host imports `checkbox-row.css` too.
  *
  * Moved unchanged on 2026-10-26 from the projects list's updates-modal.css
  * (.updates-run-icon/-row/-text/-why/-note), in the same layer.
@@ -24,7 +23,31 @@
     .work-row {
         display: flex;
         align-items: flex-start;
-        padding: 3px 0;
+        padding: 8px 0;
+    }
+
+    /* A hairline between rows, as the integration flyout draws its rows (owner, 2026-11-04):
+       between, so nothing follows the last row and nothing sits over the first, whatever comes
+       after the list. The dialog rules' "one rule" names this exception. */
+    .work-row + .work-row,
+    .work-row-list > li + li > .work-row {
+        border-top: 1px solid var(--spectrum-global-color-gray-200);
+    }
+
+    /* How long a row has taken, right after its name, in the row's quiet grey (owner, 2026-11-04:
+       at the dialog's far edge it floated away from the name it times). Nothing follows it on
+       that line, so the clock ticking moves nothing. */
+    .work-row-time {
+        margin-left: 8px;
+        font-size: 12px;
+        color: var(--spectrum-global-color-gray-600);
+        font-variant-numeric: tabular-nums;
+        white-space: nowrap;
+    }
+
+    /* A finished row steps back: its name in the grey of its line, so what is left leads. */
+    .work-row[data-state='done'] .checkbox-row-label {
+        color: var(--spectrum-global-color-gray-600);
     }
 
     .work-row .work-row-icon {
@@ -36,6 +59,26 @@
         line-height: 20px;
     }
 
+    /* What the SC can do about a row, at its right (`WorkRow`'s action): the text takes the room
+       between, so the button keeps its place whatever the row says. */
+    .work-row-text:has(+ .work-row-action) {
+        flex: 1;
+    }
+
+    .work-row-action {
+        flex: none;
+        margin-left: 12px;
+    }
+
+    /* Where the row stands, under its name (owner, 2026-11-04): the label's grey and size, so the
+       name leads and every row is the same two lines. */
+    .work-row-detail {
+        font-size: 12px;
+        line-height: 16px;
+        margin: 2px 0 0;
+        color: var(--spectrum-global-color-gray-600);
+    }
+
     /* Something to read under the name: why it did not apply, or what to know. */
     .work-row-why,
     .work-row-note {
@@ -45,11 +88,29 @@
     }
 
     .work-row-why {
-        color: var(--spectrum-global-color-red-600);
+        color: var(--spectrum-semantic-negative-color-text-small);
     }
 
     .work-row-note {
         color: var(--spectrum-global-color-gray-700);
+    }
+
+    /* A run's row as it ended with a problem (`WorkRow` `problem`): in the room its progress line
+       held, and one line, so the window keeps one height from first frame to last (decisions
+       Phase 1b, J1-3d growth, owner 2026-11-11: a wrapped line grew it 19px). Cut short, its whole
+       text on hover. A small nested row's problem too (step-07 P6, C7-a); it used to wrap (walk
+       F135). */
+    .work-row .work-row-problem {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    /* Once the run has ended, whole: nothing can grow the window after the end, and the reason is
+       what the SC has to read (owner walk, 2026-11-16, finding F184). */
+    .work-row .work-row-problem.work-row-problem--whole {
+        white-space: normal;
+        overflow: visible;
     }
 
     /* A list of rows, without the browser's bullets and indent. */
@@ -64,5 +125,119 @@
     .work-row-result {
         align-self: stretch;
         text-align: left;
+    }
+
+    /* Small rows nested under a step (`WorkRow` dense, the import's data types under Install):
+       tighter, a small name and a small icon, and no hairline, since the step above has its own
+       (owner, 2026-11-10, walk F132). */
+    .work-row--dense {
+        padding: 2px 0;
+    }
+
+    .work-row--dense + .work-row--dense {
+        border-top: none;
+    }
+
+    .work-row--dense .work-row-icon {
+        width: 20px;
+        min-height: 18px;
+    }
+
+    /* The status icons drawn smaller. A transform, because Spectrum sizes its icons outside the
+       layers, where a width set here would lose. */
+    .work-row--dense .work-row-icon > * {
+        transform: scale(0.7);
+        transform-origin: left center;
+    }
+
+    .work-row--dense .work-row-text {
+        line-height: 18px;
+        white-space: nowrap;
+    }
+
+    .work-row--dense .checkbox-row-label {
+        font-size: 12px;
+    }
+
+    /* A dense row's note (orange or red) wraps, and adds nothing to its column's width: the name
+       and the second line set the width, the note fills it (walk F135 review, 2026-11-10). */
+    .work-row--dense .work-row-why,
+    .work-row--dense .work-row-note,
+    .work-row--dense .dialog-problem:not(.work-row-problem) {
+        white-space: normal;
+        contain: inline-size;
+    }
+
+    /* A dense row's problem stays on one line (`.work-row-problem` above) and, like the note, adds
+       nothing to its column's width, so a long one is cut short rather than widening the column. */
+    .work-row--dense .work-row-problem {
+        contain: inline-size;
+    }
+
+    /* The working row's second line: what it is doing and how far, "Installing 1,200 of 2,046"
+       (walk F133). Its height is the room every dense column holds below. */
+    .work-row-doing {
+        font-size: 11px;
+        line-height: 16px;
+        color: var(--spectrum-global-color-gray-600);
+        font-variant-numeric: tabular-nums;
+        white-space: nowrap;
+    }
+
+    /* A run's parts down each column in turn (`WorkRowColumns`): the import's window and a run
+       the progress modal shows as rows (walk F91). Moved from the import's own sheet. */
+    .work-row-columns {
+        display: grid;
+        grid-auto-flow: column;
+        grid-auto-columns: minmax(0, 1fr);
+        column-gap: 24px;
+        align-self: stretch;
+        text-align: left;
+    }
+
+    /* Dense columns are never narrower than their longest line, so nothing is cut short or wraps
+       (owner, 2026-11-10, walk F135); the window's width is chosen so they fit. */
+    .work-row-columns--dense {
+        grid-auto-columns: minmax(max-content, 1fr);
+    }
+
+    /* Room for the working row's second line, held in every column so the list keeps one height
+       whichever row is working (walk F133). The working row's own column has it in the row. */
+    .work-row-columns--dense > .work-row-column {
+        padding-bottom: 16px;
+    }
+
+    .work-row-columns--dense > .work-row-column--working {
+        padding-bottom: 0;
+    }
+
+    /* A run's steps (`StepRows`, in `.step-rows`): the import's window and a save's in the progress
+       modal. Moved from data-installer.css (step-04 S4), so every bundle drawing steps reaches them.
+       Scoped to the steps themselves (`.step-rows > .work-row`), so the rows nested under a step
+       keep their own look. A step's line stays on one line, so the window keeps its height (walk
+       F116). The same space between every step, nested rows included (walk F132). */
+    .step-rows > .work-row {
+        padding: 12px 0;
+    }
+
+    .step-rows > .work-row > .work-row-text {
+        flex: 1;
+    }
+
+    /* A step's title, bold (walk F132). */
+    .step-rows > .work-row > .work-row-text > .checkbox-row-label {
+        font-weight: 700;
+    }
+
+    /* Its status line, smaller and muted. Never cut short: the lines are kept short instead. */
+    .step-rows > .work-row > .work-row-text > .work-row-detail {
+        font-size: 12px;
+        color: var(--spectrum-global-color-gray-600);
+    }
+
+    /* A step's nested rows, under its line: Install's data types, a save's under Export from
+       Commerce. */
+    .step-rows-nested {
+        margin-top: 8px;
     }
 }

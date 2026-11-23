@@ -64,6 +64,8 @@ export interface ConfigureRepublishOutcome extends OperationOutcome {
     published: RepublishResult;
     /** After a store change: the one sentence on the new store's pages. */
     storePages?: string;
+    /** The same, one line each, which the success window lists (walk F212). */
+    storePageLines?: string[];
     /** One line per block library added or removed, in the order they ran. */
     libraryLines: BlockLibraryWorkLine[];
 }
@@ -84,15 +86,15 @@ export function cdnLagWarning(cdnError: string): string {
 function lastWord(
     published: RepublishResult,
     libraryLines: BlockLibraryWorkLine[],
-    storePages: string | undefined,
-): Pick<OperationOutcome, 'warning' | 'note'> {
+    storePageLines: readonly string[],
+): Pick<OperationOutcome, 'warning' | 'details'> {
     const problems = libraryLines.filter((line) => line.level !== 'info').map((line) => line.text);
     if (published.success && published.cdnError) problems.push(cdnLagWarning(published.cdnError));
-    const done = libraryLines.filter((line) => line.level === 'info').map((line) => line.text);
-    if (storePages) done.push(storePages);
+    // What it did, one line each: a list, not a paragraph (walk F212).
+    const done = [...libraryLines.filter((line) => line.level === 'info').map((line) => line.text), ...storePageLines];
     return {
         ...(problems.length > 0 ? { warning: problems.join(' ') } : {}),
-        ...(done.length > 0 ? { note: done.join(' ') } : {}),
+        ...(done.length > 0 ? { details: done } : {}),
     };
 }
 
@@ -102,7 +104,7 @@ async function replacePagesAfterStoreChange(
     parts: BlockLibraryWorkParts,
     published: RepublishResult,
     report: ReportStage,
-): Promise<string | undefined> {
+): Promise<{ sentence: string; lines: string[] } | undefined> {
     if (!published.success || published.cdnError || !hasCatalogPagesPending(project)) return undefined;
     // The storefront the config was just published to, read the same way.
     const target = extractRepublishParams(project);
@@ -124,8 +126,8 @@ async function replacePagesAfterStoreChange(
         persist: (p) => stateManager.saveProject(p),
         logger,
     });
-    const { sentence } = await replaceStoreScopePages(project, deps, report);
-    return sentence;
+    const { sentence, lines } = await replaceStoreScopePages(project, deps, report);
+    return { sentence, lines };
 }
 
 /**
@@ -163,8 +165,8 @@ export async function republishFromConfigure(
         success: published.success,
         ...(published.error ? { error: published.error } : {}),
         published,
-        ...(storePages ? { storePages } : {}),
+        ...(storePages ? { storePages: storePages.sentence, storePageLines: storePages.lines } : {}),
         libraryLines,
-        ...lastWord(published, libraryLines, storePages),
+        ...lastWord(published, libraryLines, storePages?.lines ?? []),
     };
 }

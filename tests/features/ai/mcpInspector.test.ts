@@ -99,7 +99,7 @@ describe('inspectAllServers', () => {
         });
     });
 
-    // Regression: Leah's first AI-verify showed "mcp demo-builder: timeout —
+    // Regression: Avery's first AI-verify showed "mcp demo-builder: timeout —
     // Exceeded 15000ms budget". The inspector spawned the stdio→UDS proxy and
     // ran a full SDK handshake that loops back into the same extension host;
     // under first-run contention (playwright + commerce-extensibility spawning
@@ -122,7 +122,7 @@ describe('inspectAllServers', () => {
         }
 
         // The pin lives in a file on disk and cannot heal itself. When the socket
-        // it names is gone, probing it anyway reports `demo-builder · error` on
+        // it names is gone, probing it anyway reports `demo-builder, error` on
         // the AI badge while a live server sits in the discovery sweep. Resolution
         // is delegated to resolveProxyTarget so this path and the proxy's cannot
         // disagree about which socket is current.

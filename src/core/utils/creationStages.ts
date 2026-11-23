@@ -1,8 +1,8 @@
 /**
  * Project creation's own steps, in the one stage table (`operationStages.ts`, which
  * spreads them into `OPERATION_STAGES`), with an Edit's and a headless project reset's. Kept in their own file so the
- * table stays under the util size limit. The same rules hold: a label of at most 25
- * characters, an expectation and a detail.
+ * table stays under the util size limit. The same rules hold: a label that fits beside
+ * its operation's title, a verb from the one list, an expectation and a detail.
  *
  * Creation shows the SAME step where the work is the same as elsewhere: the mesh deploy
  * is 'Deploying the mesh', config.json is 'Publishing the settings', the product pages
@@ -22,74 +22,81 @@ export const CREATION_STAGES = {
     preparingProject: {
         label: 'Preparing the project',
         expectation: 'Usually a few seconds',
-        detail: 'Clearing anything left from before',
+        detail: 'Removing previous files',
     },
     settingUpProject: {
         label: 'Setting up the project',
         expectation: 'Usually a few seconds',
-        detail: 'Its folders and its settings',
+        detail: 'Creating folders',
     },
     loadingComponents: {
         label: 'Loading the components',
         expectation: 'Usually a few seconds',
-        detail: 'What this stack is made of',
+        detail: 'Reading components',
     },
     // A headless project's reset, before it downloads them again (`projectResetService`);
     // its other steps are creation's. FIRST ESTIMATE, NOT MEASURED: no reset of a
     // headless project is in the logs. It deletes one folder per component.
     removingComponents: {
-        label: 'Removing components',
+        label: 'Deleting components',
         expectation: 'Usually a few seconds',
-        detail: 'Integrations stay where they are',
+        detail: 'Removing component folders',
     },
     downloadingComponents: {
         label: 'Downloading components',
         expectation: 'Usually a few seconds',
-        detail: 'Cloning them from GitHub',
+        detail: 'Downloading from GitHub',
     },
     // One component in every measured run; components install side by side.
     installingComponents: {
         label: 'Installing components',
         expectation: 'Usually under a minute',
-        detail: 'Running npm install for each',
+        detail: 'Installing dependencies',
     },
     // One step however many integrations: each one's own steps show under it, by name
     // (owner, 2026-10-16: "Fold"). FIRST ESTIMATE, NOT MEASURED in a creation.
     deployingIntegrations: {
         label: 'Deploying integrations',
         expectation: 'Usually 1–2 minutes each',
-        detail: 'Onto Adobe I/O Runtime',
+        detail: 'Deploying to Adobe I/O Runtime',
     },
     // An Edit that unticks integrations, the same way. FIRST ESTIMATE from one removal
     // (3 minutes, 39 seconds on 2026-09-21, `operationStages.ts`).
     removingIntegrations: {
-        label: 'Removing integrations',
+        label: 'Undeploying integrations',
         expectation: 'A few minutes each',
-        detail: 'Off Adobe I/O Runtime and Commerce',
+        detail: 'Removing from Adobe I/O Runtime',
     },
     writingConfigFiles: {
-        label: 'Writing config files',
+        label: 'Writing configuration files',
         expectation: 'Usually a few seconds',
-        detail: "Each component's .env and config.json",
+        detail: 'Writing component settings',
     },
     installingDatapack: {
         label: 'Installing the datapack',
-        expectation: 'Minutes; varies by pack',
-        detail: 'Into your Commerce instance',
+        expectation: 'Usually a few minutes',
+        detail: 'Checking for conflicts',
     },
     removingDatapack: {
-        label: 'Removing the sample data',
-        expectation: 'Minutes; varies by pack',
-        detail: 'From your Commerce instance',
+        label: 'Uninstalling the datapack',
+        expectation: 'Usually a few minutes',
+        detail: 'Removing data from Commerce',
     },
     applyingChanges: {
         label: 'Applying the changes',
         expectation: 'Usually under a minute',
-        detail: 'Swapping what the edit changed',
+        detail: 'Replacing changed components',
+    },
+    // After Stop or the time limit: the step that was running finishes, then the run's
+    // cleanup deletes what it made (F274).
+    stoppingCreation: {
+        label: 'Stopping after this step',
+        expectation: 'Until this step finishes',
+        detail: 'Waiting for the current step',
     },
     finishingProject: {
         label: 'Finishing the project',
         expectation: 'Usually a few seconds',
-        detail: 'Saving it so the dashboard can open it',
+        detail: 'Saving project',
     },
 } as const satisfies Record<string, { label: string; expectation: string; detail: string }>;

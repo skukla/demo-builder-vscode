@@ -8,7 +8,12 @@
  * (`storefrontCodeBlocks.ts`), which every install path runs after this.
  */
 
-import { generateInspectorTreeEntries, installInspectorTagging } from '@/features/eds/services/inspectorHelpers';
+import * as vscode from 'vscode';
+import {
+    generateInspectorTreeEntries,
+    installInspectorTagging,
+    SDK_SOURCE,
+} from '@/features/eds/services/inspectorHelpers';
 import { createMockGithub } from '../../../helpers/githubFake';
 import { createMockLogger } from '../../../helpers/loggerFake';
 
@@ -27,7 +32,37 @@ function github(files: Record<string, string>) {
     );
 }
 
+// SDK_SOURCE is a repository the builder owns, so vendoring it asks GitHub for its newest release.
+function releasesListed(...tags: string[]): void {
+    const releases = tags.map((tag_name) => ({ tag_name }));
+    global.fetch = jest.fn().mockResolvedValue({ ok: true, status: 200, json: async () => releases });
+}
+
+beforeEach(() => {
+    (vscode.workspace.getConfiguration as jest.Mock).mockReturnValue({ get: jest.fn(() => 'stable') });
+    releasesListed('v1.0.0');
+});
+
 describe('generateInspectorTreeEntries', () => {
+    it('vendors the SDK at its newest release', async () => {
+        releasesListed('v1.2.0');
+        const gh = github({});
+
+        await generateInspectorTreeEntries(gh, 'me', 'store', undefined, createMockLogger());
+
+        expect(gh.listRepoFiles).toHaveBeenCalledWith(SDK_SOURCE.owner, SDK_SOURCE.repo, 'v1.2.0');
+    });
+
+    it('refuses when its release cannot be read, and never reads its branch', async () => {
+        releasesListed();
+        const gh = github({});
+
+        await expect(
+            generateInspectorTreeEntries(gh, 'me', 'store', undefined, createMockLogger()),
+        ).rejects.toThrow(`Could not read the newest release of ${SDK_SOURCE.owner}/${SDK_SOURCE.repo}`);
+        expect(gh.listRepoFiles).not.toHaveBeenCalled();
+    });
+
     it('vendors the SDK and writes the init script, and never reads or writes delayed.js', async () => {
         const gh = github({ 'scripts/delayed.js': '// add delayed functionality here\n', '.eslintignore': '' });
 

@@ -4,7 +4,7 @@ kind: fix
 area: eds
 needs: []
 value: low
-status: active
+status: shipped
 ---
 
 # Deleting a storefront leaves its code on aem.live
@@ -46,3 +46,4 @@ reports it on the GitHub row.
 
 - 2026-10-28  fix(eds): a storefront delete removes the site's code, and stops when DA.live is signed out (`a2072e04f`)
 - 2026-10-28  docs(backlog): EDS-67, deleting a storefront leaves its code on aem.live (`bd14299c3`)
+- 2026-11-21  Reconciled 2026-11-21: done. storefrontCodeRemoval.ts deletes the site's code from the code bus after checking the DA.live sign-in, and keeps the repository when it fails; every door goes through deleteStorefrontRepository. a2072e04f is in v1.0.0-beta.153.

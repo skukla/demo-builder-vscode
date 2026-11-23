@@ -1,6 +1,6 @@
 /**
  * storefrontJobs: one name per storefront job, and the two ways a progress line
- * carries what the job is doing (`.rptc/plans/progress-vocabulary/overview.md`).
+ * carries what the job is doing (`.rptc/complete/progress-vocabulary/overview.md`).
  */
 
 import { STOREFRONT_JOBS, countLine, itemCount, jobLine } from '@/core/utils/storefrontJobs';

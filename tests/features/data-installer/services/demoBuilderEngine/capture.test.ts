@@ -16,7 +16,7 @@ import { capturePack } from '@/features/data-installer/services/demoBuilderEngin
 import type { CreatedObject } from '@/features/data-installer/services/demoBuilderEngine/installRecord';
 import type { StoreAttribute, StoreCategory } from '@/features/data-installer/services/demoBuilderEngine/productLookups';
 import type { CommerceProduct, CommerceSetAttribute } from '@/types/commerceWire';
-import { configListPath } from '@/features/app-builder/services/storePreparation/configFix';
+import { configListPath } from '@/features/app-builder/services/storePreparation/configSetup';
 import { fakeContext, page } from './demoBuilderEngine.testUtils';
 
 const CAPTURED = JSON.parse(
@@ -123,6 +123,22 @@ describe('capturePack', () => {
 
         const products = result.items.products as Array<{ product: CommerceProduct }>;
         expect(products.map((r) => [r.product.sku, r.product.name])).toEqual([['DigiWristQuantum', 'DigiWrist Quantum']]);
+    });
+
+    // F140: the store answers a swatch as a select with no colours, so the save keeps the installed
+    // version's swatch type and each option's colour by label.
+    it("keeps an installed swatch's type and colours, which the store cannot answer", async () => {
+        const installed = {
+            product_attributes: [
+                { attribute: { attribute_code: 'band_type', frontend_input: 'swatch_visual', options: [{ label: 'Sport', value: '#ff0000' }] } },
+            ],
+        };
+
+        const { result } = await capture(RECORD, installed);
+
+        expect(result.items.product_attributes).toEqual([
+            { attribute: expect.objectContaining({ attribute_code: 'band_type', frontend_input: 'swatch_visual', options: [{ label: 'Sport', value: '#ff0000' }] }) },
+        ]);
     });
 
     it('counts what it captured, by kind', async () => {

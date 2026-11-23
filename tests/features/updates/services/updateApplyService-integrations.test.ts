@@ -31,15 +31,15 @@ function deployed(overrides: Partial<AppBuilderComponentState> = {}): AppBuilder
 
 function pairProject(): Project {
     return edsProject({
-        name: 'Justrite',
-        path: '/p/justrite',
+        name: 'Tailspin',
+        path: '/p/tailspin',
         appBuilderComponents: {
             'erp-integration': deployed({ systems: ['demo-erp'] }),
-            'demo-erp': deployed({ kind: 'system', name: 'Justrite ERP', usedBy: 'erp-integration', updateAvailable: NEWER }),
+            'demo-erp': deployed({ kind: 'system', name: 'Tailspin ERP', usedBy: 'erp-integration', updateAvailable: NEWER }),
         },
         componentInstances: {
             'erp-integration': { id: 'erp-integration', name: 'ERP Integration', status: 'ready', path: '/p/erp' },
-            'demo-erp': { id: 'demo-erp', name: 'Justrite ERP', status: 'ready', path: '/p/erp-system' },
+            'demo-erp': { id: 'demo-erp', name: 'Tailspin ERP', status: 'ready', path: '/p/erp-system' },
         },
     });
 }
@@ -61,7 +61,7 @@ describe('computeProjectUpdateSelections — integrations', () => {
                 project,
                 componentId: 'demo-erp',
                 members: ['demo-erp'],
-                label: 'ERP Integration and Justrite ERP',
+                label: 'ERP Integration and Tailspin ERP',
                 otherOrg: false,
             },
         ]);
@@ -97,7 +97,7 @@ describe('applyUpdatesHeadless — integrations', () => {
         const project = pairProject();
         const sel = {
             ...emptySelections(),
-            integration: [{ project, componentId: 'demo-erp', members: ['demo-erp'], label: 'ERP Integration and Justrite ERP', otherOrg: false }],
+            integration: [{ project, componentId: 'demo-erp', members: ['demo-erp'], label: 'ERP Integration and Tailspin ERP', otherOrg: false }],
         };
         const onProgress = jest.fn();
 
@@ -106,19 +106,19 @@ describe('applyUpdatesHeadless — integrations', () => {
         expect(ctx.updateIntegrationPair).toHaveBeenCalledWith(project, 'demo-erp', expect.any(Function));
         expect(res.integration).toEqual({ successCount: 1, failCount: 0, errors: [], applied: ['Updated from a to b.'] });
         expect(res.totalApplied).toBe(1);
-        expect(onProgress).toHaveBeenCalledWith(S.updatingIntegrations.label, 'ERP Integration and Justrite ERP in Justrite');
+        expect(onProgress).toHaveBeenCalledWith(S.updatingIntegrations.label, 'ERP Integration and Tailspin ERP in Tailspin');
     });
 
     it('a failed pair counts as failed, in words', async () => {
         const ctx = { ...makeCtx(), updateIntegrationPair: jest.fn(async () => ({ success: false, error: 'npm ERR! ERESOLVE' })) };
         const sel = {
             ...emptySelections(),
-            integration: [{ project: pairProject(), componentId: 'demo-erp', members: ['demo-erp'], label: 'ERP Integration and Justrite ERP', otherOrg: false }],
+            integration: [{ project: pairProject(), componentId: 'demo-erp', members: ['demo-erp'], label: 'ERP Integration and Tailspin ERP', otherOrg: false }],
         };
 
         const res = await applyUpdatesHeadless(sel, ctx);
 
-        expect(res.integration.errors).toEqual(['ERP Integration and Justrite ERP in Justrite did not update: npm ERR! ERESOLVE']);
+        expect(res.integration.errors).toEqual(['ERP Integration and Tailspin ERP in Tailspin did not update: npm ERR! ERESOLVE']);
         expect(res.totalFailed).toBe(1);
     });
 });

@@ -15,13 +15,16 @@
 
 import { sleep } from '@/core/utils/sleep';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import type { CommerceBulkAccepted, CommerceBulkStatus, CommerceGet, CommerceSend } from '@/types/commerceWire';
+import type {
+    CommerceBulkAccepted,
+    CommerceBulkStatus,
+    CommerceGet,
+    CommerceSend,
+} from '@/types/commerceWire';
 import type { CommerceBulkOutcome } from '@/types/erpAssign';
-
 
 const COMPLETE = 1;
 const OPEN = 4;
-
 
 /**
  * Send one bulk call.
@@ -38,8 +41,11 @@ export async function startBulk(
     path: string,
     bodies: readonly unknown[],
 ): Promise<string> {
-    const accepted = (await send(method, path, bodies, { bulk: true })) as CommerceBulkAccepted | null;
-    if (!accepted?.bulk_uuid) throw new Error('Commerce did not accept the bulk write (no bulk id came back).');
+    const accepted = (await send(method, path, bodies, {
+        bulk: true,
+    })) as CommerceBulkAccepted | null;
+    if (!accepted?.bulk_uuid)
+        throw new Error('Commerce did not accept the bulk write (no bulk id came back).');
     return accepted.bulk_uuid;
 }
 
@@ -68,7 +74,11 @@ export function productBulkFollow(onProgress: (step: string) => void): BulkFollo
 }
 
 /** One status read, as counts. */
-function outcomeOf(uuid: string, status: CommerceBulkStatus, expected: number): CommerceBulkOutcome {
+function outcomeOf(
+    uuid: string,
+    status: CommerceBulkStatus,
+    expected: number,
+): CommerceBulkOutcome {
     const operations = status.operations_list ?? [];
     const total = Math.max(expected, Number(status.operation_count ?? operations.length));
     const failed = operations
@@ -78,6 +88,87 @@ function outcomeOf(uuid: string, status: CommerceBulkStatus, expected: number): 
     // An operation not listed yet is still queued.
     const open = total - complete - failed.length;
     return { uuid, total, complete, failed, open, timedOut: false };
+}
+
+/** How many times a bulk's status is read before a failed read stops the caller. */
+const STATUS_READ_ATTEMPTS = 3;
+
+/**
+ * A bulk's status, read again (up to `STATUS_READ_ATTEMPTS` in all) when a read fails. Reading changes
+ * nothing, and a single 401 on a status read stopped a 7-minute Luma install while the same read
+ * answered normally a minute later (live, 2026-11-06). A read that keeps failing still stops it.
+ */
+async function readStatus(
+    get: CommerceGet,
+    uuid: string,
+    pause: Pick<BulkFollowDeps, 'sleep' | 'intervalMs'>,
+): Promise<CommerceBulkStatus> {
+    for (let attempt = 1; ; attempt += 1) {
+        try {
+            return ((await get(`bulk/${uuid}/status`)) ?? {}) as CommerceBulkStatus;
+        } catch (error) {
+            if (attempt >= STATUS_READ_ATTEMPTS) throw error;
+            await pause.sleep(pause.intervalMs);
+        }
+    }
+}
+
+/** How one request in a bulk ended: made, refused for good, worth sending again, or not run yet. */
+export type BulkRowState = 'done' | 'refused' | 'retry' | 'open';
+
+/** One request's end, by its index in the call, with Commerce's words. */
+export interface BulkRow {
+    index: number;
+    state: BulkRowState;
+    message: string;
+}
+
+const STATE_OF: Record<number, BulkRowState> = {
+    1: 'done',
+    2: 'retry',
+    3: 'refused',
+    4: 'open',
+    5: 'refused',
+};
+
+/** What a request's state says when Commerce gave no words of its own. */
+const UNSAID: Record<BulkRowState, string> = {
+    done: 'made',
+    retry: 'failed, worth trying again',
+    refused: 'refused',
+    open: 'still queued',
+};
+
+/**
+ * Each request's end, by its index in the call. An operation's `id` is that index: a live status
+ * from the Tailspin ACCS store (2026-10-09) numbers a three-product call 0, 1, 2
+ * (tests/fixtures/commerce-rest/bulk-status-products.json). A request not listed yet is open.
+ *
+ * @param get - the signed Commerce GET
+ * @param uuid - the bulk's uuid
+ * @param count - how many requests the call carried
+ */
+export async function readBulkRows(
+    get: CommerceGet,
+    uuid: string,
+    count: number,
+    pause: Pick<BulkFollowDeps, 'sleep' | 'intervalMs'> = { sleep, intervalMs: TIMEOUTS.COMMERCE_BULK_POLL_INTERVAL },
+): Promise<BulkRow[]> {
+    const status = await readStatus(get, uuid, pause);
+    const rows: BulkRow[] = Array.from({ length: count }, (_, index) => ({
+        index,
+        state: 'open',
+        message: UNSAID.open,
+    }));
+    for (const op of status.operations_list ?? []) {
+        if (!Number.isInteger(op.id) || op.id < 0 || op.id >= count) continue;
+        rows[op.id] = {
+            index: op.id,
+            state: STATE_OF[op.status] ?? 'refused',
+            message: op.result_message || UNSAID[STATE_OF[op.status] ?? 'refused'],
+        };
+    }
+    return rows;
 }
 
 /**
@@ -96,8 +187,8 @@ export async function followBulk(
 ): Promise<CommerceBulkOutcome> {
     const started = deps.now();
     for (;;) {
-        const status = (await get(`bulk/${uuid}/status`)) as CommerceBulkStatus;
-        const outcome = outcomeOf(uuid, status ?? {}, expected);
+        const status = await readStatus(get, uuid, deps);
+        const outcome = outcomeOf(uuid, status, expected);
         deps.onProgress?.(outcome.complete + outcome.failed.length, outcome.total);
         if (outcome.open <= 0) return outcome;
         if (deps.now() - started >= deps.deadlineMs) return { ...outcome, timedOut: true };

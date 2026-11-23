@@ -227,7 +227,7 @@ describe("Adobe's boilerplate update that clashes", () => {
     it("says on Leave when the edit came with the colleague's demo, naming no file", async () => {
         mockSyncBoilerplate.mockResolvedValue({
             ...CONFLICTED,
-            edits: [{ file: 'blocks/hero/hero.js', whose: 'copied-demo', from: 'kmanns/justrite' }],
+            edits: [{ file: 'blocks/hero/hero.js', whose: 'copied-demo', from: 'org-e/tailspin' }],
         });
         const onItem = jest.fn();
         const item = { project: edsProject(), base: BASE, tested: 'b'.repeat(40) };
@@ -239,7 +239,7 @@ describe("Adobe's boilerplate update that clashes", () => {
 
         expect(onItem.mock.calls.at(-1)?.[2]).toEqual({
             state: 'skipped',
-            message: 'Not updated. It clashes with an edit that came with kmanns/justrite, which was left as it is. Nothing was changed.',
+            message: 'Not updated. It clashes with an edit that came with org-e/tailspin, which was left as it is. Nothing was changed.',
         });
     });
 });

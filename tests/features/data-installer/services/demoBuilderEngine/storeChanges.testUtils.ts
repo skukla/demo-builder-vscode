@@ -15,7 +15,32 @@ import { NOW, PACK, PROJECT, fakeContext, memoryFiles, noneUnder, page } from '.
 /** The demo's own pack a save writes into (step 07). */
 export const SAVE_AS = { id: { name: 'acme-demo-1a2b3c', version: '20261029-183000' }, displayName: 'Acme Demo' };
 
+/** One filter group, as the engine's searches write it. */
+const group = (at: number, field: string, value: string | number, condition: string): string => {
+    const f = `&searchCriteria[filterGroups][${at}][filters][0]`;
+    return `${f}[field]=${field}${f}[value]=${value}${f}[conditionType]=${condition}`;
+};
+
+const NONE = { items: [], total_count: 0 };
+
+/**
+ * The lists a save from a pack reads to find what else the demo uses (`demoUses.ts`, walk F85),
+ * each answering none on the website: the store holds nothing the pack did not make.
+ */
+export const nothingElse = (website: number): Record<string, unknown> => ({
+    // The website's products read whole once (walk F90): what the demo uses, and capture's products.
+    [page('products', group(0, 'website_id', website, 'eq'))]: NONE,
+    [page('products', `${group(0, 'website_id', website, 'eq')}${group(1, 'type_id', 'giftcard', 'neq')}&fields=total_count,items[sku,name]`)]: NONE,
+    [page('products', `${group(0, 'website_id', website, 'eq')}${group(1, 'type_id', 'giftcard', 'eq')}&fields=total_count,items[sku,name]`)]: NONE,
+    [page('categories/list')]: NONE,
+    [page('salesRules/search')]: NONE,
+    [page('customers/search', group(0, 'website_id', website, 'eq'))]: NONE,
+    [page('customerGroups/search')]: NONE,
+    [page('products/attributes')]: NONE,
+});
+
 export const STORE: Record<string, unknown> = {
+    ...nothingElse(1),
     'store/websites': [{ id: 1, code: 'base', name: 'Main Website', default_group_id: 1 }],
     'store/storeGroups': [{ id: 1, root_category_id: 2 }],
     'store/storeViews': [{ id: 1, code: 'default', website_id: 1, store_group_id: 1 }],

@@ -12,7 +12,7 @@ Related: [ADR-005 BYOM PDP Routing](005-byom-pdp-routing.md), [ADR-006 Thin-Laye
 
 ### What broke
 
-On the JustRite storefront, every product whose SKU contains an underscore
+On the Tailspin storefront, every product whose SKU contains an underscore
 showed the loading spinner and then "Page Not Found". Measured 2026-10-06,
 read-only, across the whole catalog: 39 of 39 products with plain SKUs
 (letters, digits, hyphens) had a live page; 10 of 10 with `_` returned 404.
@@ -94,13 +94,13 @@ the URL fallback was the only source, and the fallback is lossy.
 
 ## Evidence
 
-- 2026-10-06, `main--kukla-justrite--skukla.aem.live`: 39/39 plain SKUs 200,
+- 2026-10-06, `main--kukla-tailspin--skukla.aem.live`: 39/39 plain SKUs 200,
   10/10 `_` SKUs 404; `…/rre-805-5fwhite-5fon-5fcharcoalgray` 200 rendering
   "Page not found".
 - `productSearch(phrase:"", filter:[{attribute:"url_key", eq:…}])` resolves the
-  exact SKU on the JustRite ACCS catalog; a URL key that does not exist returns an
+  exact SKU on the Tailspin ACCS catalog; a URL key that does not exist returns an
   empty list.
-- The new lookup, run read-only against JustRite's served `config.json`: 49 of 49
+- The new lookup, run read-only against Tailspin's served `config.json`: 49 of 49
   products resolve to their real SKU at their canonical path.
 - aem.live BYOM documentation: page metadata can be provided by `meta` tags in
   the HTML head.
@@ -113,7 +113,7 @@ the URL fallback was the only source, and the fallback is lossy.
   storefront reset restores canonical `commerce.js` and its links point straight
   at the canonical path.
 - **Added demos keep their source's code.** A demo built on someone else's
-  repository (JustRite, from `kmanns/justrite`) resets to THAT repository's
+  repository (Tailspin, from `org-e/tailspin`) resets to THAT repository's
   `commerce.js`, encoder included — the reset restores the source faithfully and
   no patch runs over it. Its `_HH` links keep landing through the smart-404
   redirect until the source repository drops the encoder; plain SKUs are

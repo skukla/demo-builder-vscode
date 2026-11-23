@@ -23,20 +23,20 @@ describe('ComponentUpdater - Extended Coverage', () => {
     let updater: ComponentUpdater;
     let mockLogger: jest.Mocked<Logger>;
     let mockProject: Project;
-    let mockExecutor: Record<string, jest.Mock>;
+    let moveToRelease: jest.Mock;
 
     beforeEach(() => {
         ({
             updater,
             logger: mockLogger,
-            executor: mockExecutor,
             project: mockProject,
+            moveToRelease,
         } = setupUpdater());
     });
 
     describe('.env file preservation', () => {
-        it('should backup .env files before removing component', async () => {
-            const downloadUrl = 'https://github.com/test/repo/archive/v1.0.0.zip';
+        it('should read the .env files before the move', async () => {
+            const tag = 'v1.0.0';
             const newVersion = '1.0.0';
 
             // Reset mock to track calls properly
@@ -46,14 +46,14 @@ describe('ComponentUpdater - Extended Coverage', () => {
                 .mockResolvedValueOnce('LOCAL_VAR=local') // .env.local
                 .mockResolvedValue('{"name": "test"}'); // package.json
 
-            await updater.updateComponent(mockProject, 'test-component', downloadUrl, newVersion);
+            await updater.updateComponent(mockProject, 'test-component', tag, newVersion);
 
             // Verify .env was read (first calls should be for .env files)
             expect(fs.readFile).toHaveBeenCalledWith(expect.stringContaining('.env'), 'utf-8');
         });
 
         it('should restore .env unchanged when no .env.example exists', async () => {
-            const downloadUrl = 'https://github.com/test/repo/archive/v1.0.0.zip';
+            const tag = 'v1.0.0';
             const newVersion = '1.0.0';
             const oldEnvContent = 'USER_VAR=user_value\nANOTHER=test';
 
@@ -72,7 +72,7 @@ describe('ComponentUpdater - Extended Coverage', () => {
                 return '{"name": "test"}';
             });
 
-            await updater.updateComponent(mockProject, 'test-component', downloadUrl, newVersion);
+            await updater.updateComponent(mockProject, 'test-component', tag, newVersion);
 
             // Old content should be written back
             expect(fs.writeFile).toHaveBeenCalledWith(
@@ -83,7 +83,7 @@ describe('ComponentUpdater - Extended Coverage', () => {
         });
 
         it('should merge .env preserving user values and adding new defaults', async () => {
-            const downloadUrl = 'https://github.com/test/repo/archive/v1.0.0.zip';
+            const tag = 'v1.0.0';
             const newVersion = '1.0.0';
 
             // Old .env has USER_VAR, new template has USER_VAR and NEW_VAR
@@ -101,7 +101,7 @@ describe('ComponentUpdater - Extended Coverage', () => {
                 return '{"name": "test"}';
             });
 
-            await updater.updateComponent(mockProject, 'test-component', downloadUrl, newVersion);
+            await updater.updateComponent(mockProject, 'test-component', tag, newVersion);
 
             // Find the writeFile call for .env
             const writeFileCalls = (fs.writeFile as jest.Mock).mock.calls;
@@ -118,7 +118,7 @@ describe('ComponentUpdater - Extended Coverage', () => {
         });
 
         it('should register programmatic writes before .env operations', async () => {
-            const downloadUrl = 'https://github.com/test/repo/archive/v1.0.0.zip';
+            const tag = 'v1.0.0';
             const newVersion = '1.0.0';
 
             (fs.readFile as jest.Mock).mockReset();
@@ -132,7 +132,7 @@ describe('ComponentUpdater - Extended Coverage', () => {
                 return '{"name": "test"}';
             });
 
-            await updater.updateComponent(mockProject, 'test-component', downloadUrl, newVersion);
+            await updater.updateComponent(mockProject, 'test-component', tag, newVersion);
 
             expect(vscode.commands.executeCommand).toHaveBeenCalledWith(
                 'demoBuilder._internal.registerProgrammaticWrites',
@@ -143,10 +143,10 @@ describe('ComponentUpdater - Extended Coverage', () => {
 
     describe('Version tracking', () => {
         it('should update version after successful verification', async () => {
-            const downloadUrl = 'https://github.com/test/repo/archive/v1.0.0.zip';
+            const tag = 'v1.0.0';
             const newVersion = '1.0.0';
 
-            await updater.updateComponent(mockProject, 'test-component', downloadUrl, newVersion);
+            await updater.updateComponent(mockProject, 'test-component', tag, newVersion);
 
             expect(mockProject.componentVersions).toBeDefined();
             expect(mockProject.componentVersions?.['test-component']).toEqual({
@@ -156,9 +156,9 @@ describe('ComponentUpdater - Extended Coverage', () => {
         });
 
         it('keeps the INSTALLED component in step with the version record', async () => {
-            const downloadUrl = 'https://github.com/test/repo/archive/v1.0.0.zip';
+            const tag = 'v1.0.0';
 
-            await updater.updateComponent(mockProject, 'test-component', downloadUrl, '1.0.0');
+            await updater.updateComponent(mockProject, 'test-component', tag, '1.0.0');
 
             // Two places record a version and the project loader PREFERS this one. If it
             // is not moved, a successful update leaves the dashboard showing the old
@@ -167,12 +167,12 @@ describe('ComponentUpdater - Extended Coverage', () => {
         });
 
         it('updates a project that has no version record yet', async () => {
-            const downloadUrl = 'https://github.com/test/repo/archive/v1.0.0.zip';
+            const tag = 'v1.0.0';
             // Older projects predate the field entirely. The default fixture already has
             // an empty one, so the branch that CREATES it was never taken.
             delete (mockProject as { componentVersions?: unknown }).componentVersions;
 
-            await updater.updateComponent(mockProject, 'test-component', downloadUrl, '1.0.0');
+            await updater.updateComponent(mockProject, 'test-component', tag, '1.0.0');
 
             expect(mockProject.componentVersions?.['test-component']).toMatchObject({
                 version: '1.0.0',
@@ -180,15 +180,17 @@ describe('ComponentUpdater - Extended Coverage', () => {
         });
 
         it('should NOT update version when verification fails', async () => {
-            const downloadUrl = 'https://github.com/test/repo/archive/v1.0.0.zip';
+            const tag = 'v1.0.0';
             const newVersion = '1.0.0';
 
-            // Make verification fail by having package.json access fail
-            (fs.access as jest.Mock).mockRejectedValueOnce(new Error('ENOENT'));
+            // Only package.json: the folder itself must still pass the guard before the snapshot.
+            (fs.access as jest.Mock).mockImplementation(async (p: string) => {
+                if (p.endsWith('/package.json')) throw new Error('ENOENT');
+            });
 
             await expect(
-                updater.updateComponent(mockProject, 'test-component', downloadUrl, newVersion)
-            ).rejects.toThrow();
+                updater.updateComponent(mockProject, 'test-component', tag, newVersion)
+            ).rejects.toThrow('The new version is incomplete');
 
             // Version should not be set
             expect(mockProject.componentVersions?.['test-component']).toBeUndefined();
@@ -201,12 +203,10 @@ describe('ComponentUpdater - Extended Coverage', () => {
         // update — successful rollback included — surfaced as "Update failed AND
         // rollback failed. Manual recovery required." These tests used to find the
         // friendly text inside that CRITICAL log line, which is how the bug hid.
-        const DOWNLOAD = 'https://github.com/test/repo/archive/v1.0.0.zip';
-
         async function failedUpdate(): Promise<string> {
             let message = '';
             await updater
-                .updateComponent(mockProject, 'test-component', DOWNLOAD, '1.0.0')
+                .updateComponent(mockProject, 'test-component', 'v1.0.0', '1.0.0')
                 .catch((e: Error) => { message = e.message; });
             expect(message).not.toBe('');
             expect(mockLogger.error).not.toHaveBeenCalledWith(
@@ -217,7 +217,7 @@ describe('ComponentUpdater - Extended Coverage', () => {
         }
 
         it('network failure', async () => {
-            (global.fetch as jest.Mock).mockRejectedValueOnce(new Error('fetch failed'));
+            moveToRelease.mockRejectedValueOnce(new Error('fetch failed'));
 
             expect(await failedUpdate()).toBe(
                 'Update failed: No internet connection. Please check your network and try again.'
@@ -229,55 +229,29 @@ describe('ComponentUpdater - Extended Coverage', () => {
         });
 
         it('timeout', async () => {
-            (global.fetch as jest.Mock).mockRejectedValueOnce(new Error('operation timed out'));
+            moveToRelease.mockRejectedValueOnce(new Error('Command timed out after 60000ms'));
 
             expect(await failedUpdate()).toBe(
-                'Update failed: Download timed out. Please try again with a better connection.'
-            );
-        });
-
-        it('HTTP 404', async () => {
-            (global.fetch as jest.Mock).mockResolvedValueOnce({ ok: false, status: 404 });
-
-            expect(await failedUpdate()).toBe(
-                'Update failed: Release not found on GitHub. The version may have been removed.'
-            );
-        });
-
-        it('HTTP 403', async () => {
-            (global.fetch as jest.Mock).mockResolvedValueOnce({ ok: false, status: 403 });
-
-            expect(await failedUpdate()).toBe(
-                'Update failed: Access denied. GitHub rate limit may be exceeded.'
-            );
-        });
-
-        it('any other HTTP status', async () => {
-            (global.fetch as jest.Mock).mockResolvedValueOnce({ ok: false, status: 500 });
-
-            expect(await failedUpdate()).toBe(
-                'Update failed: Server error (Download failed: HTTP 500). Please try again later.'
+                'Update failed: GitHub timed out. Please try again with a better connection.'
             );
         });
 
         it('anything else: the original reason, after a rollback', async () => {
-            mockExecutor.execute.mockResolvedValueOnce({
-                stdout: '', stderr: 'unzip: cannot open file', code: 1, duration: 1,
-            });
+            moveToRelease.mockRejectedValueOnce(new Error('Could not fetch refs/tags/v1.0.0 from GitHub: bad object.'));
 
             expect(await failedUpdate()).toBe(
                 'Update failed and was rolled back: '
-                + 'Extraction failed (exit code 1): unzip: cannot open file'
+                + 'Could not fetch refs/tags/v1.0.0 from GitHub: bad object.'
             );
         });
     });
 
     describe('Verification edge cases', () => {
-        it('should verify package.json exists after extraction', async () => {
-            const downloadUrl = 'https://github.com/test/repo/archive/v1.0.0.zip';
+        it('should verify package.json exists after the move', async () => {
+            const tag = 'v1.0.0';
             const newVersion = '1.0.0';
 
-            await updater.updateComponent(mockProject, 'test-component', downloadUrl, newVersion);
+            await updater.updateComponent(mockProject, 'test-component', tag, newVersion);
 
             expect(fs.access).toHaveBeenCalledWith(expect.stringContaining('package.json'));
         });
@@ -287,30 +261,28 @@ describe('ComponentUpdater - Extended Coverage', () => {
                 updater.updateComponent(
                     mockProject,
                     'non-existent-component',
-                    'https://github.com/test/repo/archive/v1.0.0.zip',
+                    'v1.0.0',
                     '1.0.0'
                 )
             ).rejects.toThrow('Component non-existent-component not found');
         });
 
         it('should throw critical error when rollback fails', async () => {
-            const downloadUrl = 'https://github.com/test/repo/archive/v1.0.0.zip';
+            const tag = 'v1.0.0';
             const newVersion = '1.0.0';
 
-            // Make extraction fail
-            mockExecutor.execute.mockRejectedValueOnce(new Error('Extraction failed'));
+            moveToRelease.mockRejectedValueOnce(new Error('Could not fetch refs/tags/v1.0.0 from GitHub: bad object.'));
 
-            // Make rollback also fail by having both rm and rename fail
-            (fs.rm as jest.Mock).mockRejectedValueOnce(new Error('Permission denied'));
+            // Make rollback also fail: the snapshot cannot be put back.
             (fs.rename as jest.Mock).mockRejectedValueOnce(new Error('Cannot rename'));
 
             await expect(
-                updater.updateComponent(mockProject, 'test-component', downloadUrl, newVersion)
+                updater.updateComponent(mockProject, 'test-component', tag, newVersion)
             ).rejects.toThrow(/Manual recovery required/);
         });
 
         it('should validate package.json is valid JSON', async () => {
-            const downloadUrl = 'https://github.com/test/repo/archive/v1.0.0.zip';
+            const tag = 'v1.0.0';
             const newVersion = '1.0.0';
 
             (fs.access as jest.Mock).mockResolvedValue(undefined);
@@ -327,9 +299,9 @@ describe('ComponentUpdater - Extended Coverage', () => {
             });
 
             await expect(
-                updater.updateComponent(mockProject, 'test-component', downloadUrl, newVersion)
+                updater.updateComponent(mockProject, 'test-component', tag, newVersion)
             ).rejects.toThrow(
-                'Update failed: Downloaded component is incomplete or corrupted. Please try again.'
+                'Update failed: The new version is incomplete. Please try again.'
             );
 
             expect(mockLogger.error).toHaveBeenCalledWith(
@@ -343,7 +315,7 @@ describe('ComponentUpdater - Extended Coverage', () => {
 
     describe('parseEnvFile edge cases (tested via .env merge)', () => {
         it('should skip comments and empty lines when parsing .env', async () => {
-            const downloadUrl = 'https://github.com/test/repo/archive/v1.0.0.zip';
+            const tag = 'v1.0.0';
             const newVersion = '1.0.0';
 
             const envWithComments =
@@ -363,7 +335,7 @@ describe('ComponentUpdater - Extended Coverage', () => {
                 return '{"name": "test"}';
             });
 
-            await updater.updateComponent(mockProject, 'test-component', downloadUrl, newVersion);
+            await updater.updateComponent(mockProject, 'test-component', tag, newVersion);
 
             const writeFileCalls = (fs.writeFile as jest.Mock).mock.calls;
             const envWriteCall = writeFileCalls.find(
@@ -378,7 +350,7 @@ describe('ComponentUpdater - Extended Coverage', () => {
         });
 
         it('should preserve values containing equals signs', async () => {
-            const downloadUrl = 'https://github.com/test/repo/archive/v1.0.0.zip';
+            const tag = 'v1.0.0';
             const newVersion = '1.0.0';
 
             const envWithEquals = 'API_URL=https://example.com?param=value&other=123';
@@ -397,7 +369,7 @@ describe('ComponentUpdater - Extended Coverage', () => {
                 return '{"name": "test"}';
             });
 
-            await updater.updateComponent(mockProject, 'test-component', downloadUrl, newVersion);
+            await updater.updateComponent(mockProject, 'test-component', tag, newVersion);
 
             const writeFileCalls = (fs.writeFile as jest.Mock).mock.calls;
             const envWriteCall = writeFileCalls.find(

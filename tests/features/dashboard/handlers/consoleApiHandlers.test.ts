@@ -56,6 +56,29 @@ describe('handleListConsoleApis', () => {
         expect(data.apis.find((a) => a.code === 'FireflyAPISDK')?.managed).not.toBe(true);
     });
 
+    it("answers one code's access rows and product profiles with profilesOf", async () => {
+        (createApiSubscriberClient as jest.Mock).mockReturnValueOnce({
+            getServicesForOrg: jest.fn().mockResolvedValue([
+                { code: 'ACO-Ingestion', type: 'entp', enabled: false, disabledReasons: ['Requires selection of a product'], properties: { licenseConfigs: [{ name: 'ACO Sandbox', description: 'Default' }] } },
+            ]),
+        });
+
+        const result = await handleListConsoleApis(consoleApiContext(consoleApiProject()), { profilesOf: 'ACO-Ingestion' });
+
+        expect(result).toEqual({
+            success: true,
+            data: { code: 'ACO-Ingestion', rows: [{ type: 'entp', enabled: false, disabledReasons: ['Requires selection of a product'], profiles: [{ name: 'ACO Sandbox', description: 'Default' }] }] },
+        });
+    });
+
+    it('answers a failed profilesOf read as the list does, never by throwing', async () => {
+        (createApiSubscriberClient as jest.Mock).mockReturnValueOnce({ getServicesForOrg: jest.fn().mockRejectedValue(new Error('Adobe answered 403')) });
+
+        const result = await handleListConsoleApis(consoleApiContext(consoleApiProject()), { profilesOf: 'ACO-Ingestion' });
+
+        expect(result).toEqual({ success: false, error: 'Could not list Adobe APIs: Adobe answered 403' });
+    });
+
     it('fails without a project', async () => {
         const result = await handleListConsoleApis(consoleApiContext(null), undefined);
         expect(result.success).toBe(false);

@@ -21,7 +21,7 @@ import {
 import { DaLiveAuthError } from '@/features/eds/services/types';
 import { createMockLogger } from '../../../../helpers/loggerFake';
 
-const TARGET = { repoOwner: 'skukla', repoName: 'kukla-justrite' };
+const TARGET = { repoOwner: 'skukla', repoName: 'kukla-tailspin' };
 
 const PUBLISHED = [
     '/products/drum-cabinet/dc-100',
@@ -61,7 +61,7 @@ describe('removeProductPages', () => {
 
         await removeProductPages(TARGET, deps);
 
-        expect(listPublishedPaths).toHaveBeenCalledWith('skukla', 'kukla-justrite', 'main', '/products/*');
+        expect(listPublishedPaths).toHaveBeenCalledWith('skukla', 'kukla-tailspin', 'main', '/products/*');
     });
 
     it('hands the remover only generated product pages: nothing outside /products/, no authored page', async () => {
@@ -70,12 +70,12 @@ describe('removeProductPages', () => {
         const result = await removeProductPages(TARGET, deps);
 
         expect(unpublishPages).toHaveBeenCalledTimes(1);
-        expect(unpublishPages).toHaveBeenCalledWith('skukla', 'kukla-justrite', 'main', [
+        expect(unpublishPages).toHaveBeenCalledWith('skukla', 'kukla-tailspin', 'main', [
             '/products/drum-cabinet/dc-100',
             '/products/exit-sign/es_2f20',
         ]);
         expect(result).toMatchObject({ status: 'removed', found: 2, liveRemoved: 2, previewRemoved: 2 });
-        expect(result.summary).toBe('Removed 2 product pages from skukla/kukla-justrite, live and preview.');
+        expect(result.summary).toBe('Removed 2 product pages from skukla/kukla-tailspin, live and preview.');
     });
 
     it('never hands over the product template, even when DA.live does not list it', async () => {
@@ -90,7 +90,7 @@ describe('removeProductPages', () => {
 
     it('refuses, and calls Helix for nothing, when another project publishes to the same repository', async () => {
         const { deps, listPublishedPaths, unpublishPages } = setUp({
-            otherProjectsOnRepo: jest.fn().mockResolvedValue(['Justrite B2B']),
+            otherProjectsOnRepo: jest.fn().mockResolvedValue(['Tailspin B2B']),
         });
 
         const result = await removeProductPages(TARGET, deps);
@@ -99,8 +99,8 @@ describe('removeProductPages', () => {
         expect(unpublishPages).not.toHaveBeenCalled();
         expect(result.status).toBe('refused');
         expect(result.summary).toBe(
-            'Product pages were left published: the project "Justrite B2B" also publishes to ' +
-                'skukla/kukla-justrite, and removing them would take its product pages down too.',
+            'Product pages were left published: the project "Tailspin B2B" also publishes to ' +
+                'skukla/kukla-tailspin, and removing them would take its product pages down too.',
         );
     });
 
@@ -109,7 +109,7 @@ describe('removeProductPages', () => {
 
         const result = await removeProductPages(TARGET, deps);
 
-        expect(result.summary).toContain('the projects "A" and "B" also publish to skukla/kukla-justrite');
+        expect(result.summary).toContain('the projects "A" and "B" also publish to skukla/kukla-tailspin');
     });
 
     it('removes nothing when it cannot tell whether another project shares the repository', async () => {
@@ -133,7 +133,7 @@ describe('removeProductPages', () => {
         expect(unpublishPages).not.toHaveBeenCalled();
         expect(result.status).toBe('failed');
         expect(result.summary).toBe(
-            "Couldn't list the product pages published on skukla/kukla-justrite (401 Unauthorized), " +
+            "Couldn't list the product pages published on skukla/kukla-tailspin (401 Unauthorized), " +
                 'so none were removed. They may still be live.',
         );
     });
@@ -145,7 +145,7 @@ describe('removeProductPages', () => {
         const result = await removeProductPages(TARGET, deps);
 
         expect(result.summary).toBe(
-            "Couldn't list the product pages published on skukla/kukla-justrite (Could not connect to the " +
+            "Couldn't list the product pages published on skukla/kukla-tailspin (Could not connect to the " +
                 'Helix service. Please check your internet connection), so none were removed. They may still be live.',
         );
         expect(result.summary).not.toContain('ECONNREFUSED');
@@ -170,7 +170,7 @@ describe('removeProductPages', () => {
 
         expect(unpublishPages).not.toHaveBeenCalled();
         expect(result).toMatchObject({ status: 'nothing', found: 0 });
-        expect(result.summary).toBe('Helix lists no product pages published on skukla/kukla-justrite.');
+        expect(result.summary).toBe('Helix lists no product pages published on skukla/kukla-tailspin.');
     });
 
     it('live-only fallback: says the preview copies remain when Helix refuses to remove them', async () => {
@@ -180,7 +180,7 @@ describe('removeProductPages', () => {
 
         expect(result).toMatchObject({ status: 'live-only', found: 2, liveRemoved: 2, previewRemoved: 0 });
         expect(result.summary).toBe(
-            'Removed 2 product pages from the live site of skukla/kukla-justrite. Helix refused to remove ' +
+            'Removed 2 product pages from the live site of skukla/kukla-tailspin. Helix refused to remove ' +
                 'the preview copy of 2 of them, so those preview copies remain.',
         );
     });
@@ -192,7 +192,7 @@ describe('removeProductPages', () => {
 
         expect(result.status).toBe('incomplete');
         expect(result.summary).toBe(
-            'Removed 1 of 2 product pages from the live site of skukla/kukla-justrite; 1 could not be ' +
+            'Removed 1 of 2 product pages from the live site of skukla/kukla-tailspin; 1 could not be ' +
                 'removed and may still be live. Helix refused to remove the preview copy of 1 of them, so ' +
                 'those preview copies remain.',
         );

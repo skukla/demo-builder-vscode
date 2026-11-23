@@ -65,7 +65,7 @@ destination the integrations deploy to.
 | The mesh, demo stopped | Redeploy mesh to apply changes | Redeploys the mesh |
 | The mesh, demo running | Redeploy mesh and restart demo | Redeploys the mesh, then restarts the demo |
 | Neither, demo running | Restart the demo to apply changes | Restarts the demo |
-| Nothing that needs a follow-up | Configuration saved successfully | — |
+| Nothing that needs a follow-up | Configuration saved | — |
 
 Every prompt has Later. Later on a mesh or storefront prompt is recorded on the project,
 so the dashboard shows the update as declined. Each prompt is offered once per change:
@@ -83,7 +83,7 @@ replaced with the new store's." The buttons are the same (Republish, Later). The
 mesh and storefront prompt says it too.
 
 Republish then runs in the house progress notification (`withOperationProgress`), one
-stage per step: Publishing the settings, Removing product pages, Updating the catalog
+stage per step: Publishing the settings, Unpublishing product pages, Updating the catalog
 menu, Warming product pages (counted). It ends with one sentence, for example "Now on
 CitiSignal: 11 category pages and 39 product pages published. 30 old product pages
 removed." A category page the SC edited is kept and named ("Kept "/phones": you edited

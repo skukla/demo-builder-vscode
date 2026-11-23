@@ -66,8 +66,12 @@ describe("ensureHomeAiContext — the home's Playwright tool and the skills that
         const skillsDir = path.join(PROJECTS_ROOT, '.claude', 'skills');
         for (const skill of PLAYWRIGHT_SKILLS) {
             expect(wasWritten(path.join('.claude', 'skills', skill, 'SKILL.md'))).toBe(false);
-            expect(fsPromises.rm).toHaveBeenCalledWith(path.join(skillsDir, skill), { recursive: true, force: true });
+            // Only the file Demo Builder wrote, then the folder if it is empty: never recursive,
+            // so a file the SC put beside it stays.
+            expect(fsPromises.rm).toHaveBeenCalledWith(path.join(skillsDir, skill, 'SKILL.md'), { force: true });
+            expect(fsPromises.rmdir).toHaveBeenCalledWith(path.join(skillsDir, skill));
         }
+        expect(fsPromises.rm).not.toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ recursive: true }));
         expect(wasWritten(path.join('.claude', 'skills', 'sync-changes', 'SKILL.md'))).toBe(true);
     });
 

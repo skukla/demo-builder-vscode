@@ -176,7 +176,7 @@ consumer's suite gets measured at all — 165 modules the runner used to refuse.
 matters and is not a preference: keying everything on the graph multiplies a sweep's work
 24.5x (4.8 hours to ~76) and bought no accuracy on the two modules run under both rules.
 Only 15 modules are still refused, and for those nothing imports them either. Reasoning and
-the four Stryker runs behind it: `.rptc/plans/unmeasured-fifth/attribution-design.md`.
+the four Stryker runs behind it: `.rptc/complete/unmeasured-fifth/attribution-design.md`.
 
 **When the mirror finds a suite that leaves mutants UNCOVERED, widen — once, on evidence.**
 

@@ -327,7 +327,7 @@ export function partnersFrom(
 }
 
 /**
- * The websites the ERP's structure names (Justrite, 2026-10-22). The ERP reads the first
+ * The websites the ERP's structure names (Tailspin, 2026-10-22). The ERP reads the first
  * website on its default sales organisation as that organisation's home, so on a shared
  * Commerce, where the first is another demo's (`base`), it named the wrong website and called
  * every other one "unmapped". With the project's website known and in Commerce: it, first,

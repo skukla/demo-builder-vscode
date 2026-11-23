@@ -31,6 +31,9 @@ export interface UseRepoCreationOptions extends Pick<BaseStepProps, 'state' | 'u
     hasCreatedRepo: boolean;
 }
 
+/** Why Create makes nothing for an imported project: setup makes its repository from the bundle (EDS-72). */
+const FROM_THE_IMPORT = 'An imported project gets its repository from the imported demo when the storefront is set up.';
+
 /** What the picker renders and wires. */
 export interface UseRepoCreationResult {
     repoNameError: string | undefined;
@@ -104,6 +107,10 @@ export function useRepoCreation({
     const handleCreateRepository = useCallback(async () => {
         const templateOwner = edsConfig?.templateOwner;
         const templateRepo = edsConfig?.templateRepo;
+        if (state.importedFrom) {
+            setRepoCreationState({ isCreating: false, isCreated: false, error: FROM_THE_IMPORT });
+            return;
+        }
 
         if (!templateOwner || !templateRepo) {
             setRepoCreationState({
@@ -190,7 +197,7 @@ export function useRepoCreation({
                 error: (err as Error).message,
             });
         }
-    }, [repoName, edsConfig, state.githubReposCache, state.demo, updateState]);
+    }, [repoName, edsConfig, state.githubReposCache, state.demo, state.importedFrom, updateState]);
 
     return {
         repoNameError,

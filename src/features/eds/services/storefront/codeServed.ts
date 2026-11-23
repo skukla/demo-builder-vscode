@@ -3,7 +3,7 @@
  * publish again any file it does not.
  *
  * A code publish (`previewCode('/*')`) is a job AEM runs from its own copy of the
- * repository, and that copy lags a push by seconds. On 2026-10-23 a reset of JustRite
+ * repository, and that copy lags a push by seconds. On 2026-10-23 a reset of Tailspin
  * committed three fixes in the last five seconds before its publish; the publish
  * reported success, the site kept the files from before the fixes, and the product
  * links stayed broken while the card said the storefront was current. Nothing had
@@ -47,7 +47,7 @@ const CONCURRENCY = 8;
  * mrajkovich/bodea (2026-10-27, EDS-66) AEM accepted the publish of `/*` and never brought
  * the template's files: the site served no styles and no scripts, and nothing looked.
  */
-const TEMPLATE_PROBES = ['scripts/aem.js', 'styles/styles.css'];
+export const TEMPLATE_PROBES: readonly string[] = ['scripts/aem.js', 'styles/styles.css'];
 
 /** What the check reads and does; built by {@link codeServedDeps}, faked in tests. */
 export interface CodeServedDeps {
@@ -66,7 +66,7 @@ export interface CodeServedDeps {
  * An HTML file as AEM serves it: AEM moves a `<meta … move-to-http-header="true">` into a
  * response header and gives every `nonce="aem"` a fresh value per request, so the served
  * copy never equals the committed one byte for byte. Both are undone, and whitespace
- * folded, before comparing. Measured 2026-10-23 on JustRite's 404.html and head.html.
+ * folded, before comparing. Measured 2026-10-23 on Tailspin's 404.html and head.html.
  */
 function asServedHtml(text: string): string {
     return text
@@ -76,14 +76,41 @@ function asServedHtml(text: string): string {
         .trim();
 }
 
+/** A sheet's rows: AEM's served shape (`:type` "sheet", rows in `data`), or a file wrapping one in `data`. */
+function sheetRows(value: unknown): unknown {
+    if (typeof value !== 'object' || value === null) return undefined;
+    const sheet = value as { ':type'?: unknown; data?: unknown };
+    if (sheet[':type'] === 'sheet') return sheet.data;
+    const inner = sheet.data as { data?: unknown } | undefined;
+    return typeof inner === 'object' && inner !== null && Array.isArray(inner.data) ? inner.data : undefined;
+}
+
+/**
+ * A JSON file as AEM serves it: a sheet-shaped file comes back unwrapped from `data` and tagged
+ * `":type": "sheet"`, so it never equals the committed one byte for byte, and its rows are
+ * compared instead. Measured 2026-11-17 on placeholders/company-switcher.json (walk F204).
+ */
+function sameJson(repo: string, served: string): boolean {
+    try {
+        const committed: unknown = JSON.parse(repo);
+        const live: unknown = JSON.parse(served);
+        const rows = sheetRows(committed);
+        if (rows !== undefined) return JSON.stringify(rows) === JSON.stringify(sheetRows(live));
+        return JSON.stringify(committed) === JSON.stringify(live);
+    } catch {
+        return false;
+    }
+}
+
 /** The two copies say the same thing, as far as what AEM changes on the way out allows. */
 function same(path: string, repo: string, served: string): boolean {
     if (/\.html$/i.test(path)) return asServedHtml(repo) === asServedHtml(served);
-    return repo.replace(/\r\n/g, '\n') === served.replace(/\r\n/g, '\n');
+    if (repo.replace(/\r\n/g, '\n') === served.replace(/\r\n/g, '\n')) return true;
+    return /\.json$/i.test(path) && sameJson(repo, served);
 }
 
-/** The files among `paths` the site does not serve as the repository has them. */
-async function notServed(paths: readonly string[], deps: CodeServedDeps): Promise<string[]> {
+/** The files among `paths` the site does not serve as the repository has them. Reads only. */
+async function notServed(paths: readonly string[], deps: Pick<CodeServedDeps, 'repoText' | 'servedText'>): Promise<string[]> {
     const verdicts = await runInBatches([...paths], CONCURRENCY, async (path) => {
         const [repo, served] = await Promise.all([
             deps.repoText(path).catch(() => undefined),
@@ -174,6 +201,47 @@ export function codeNotServedSentence(stale: readonly string[]): string | undefi
     );
 }
 
+/** The real reads of both copies of a file: the repository's at `head`, and the live site's. */
+function readers(
+    githubFileOps: Pick<GitHubFileOperations, 'getFileContent'>,
+    site: { owner: string; repo: string },
+    head: string,
+): Pick<CodeServedDeps, 'repoText' | 'servedText'> {
+    const base = aemLiveBaseUrl(site.owner, site.repo);
+    return {
+        repoText: async (path) =>
+            (await githubFileOps.getFileContent(site.owner, site.repo, path, head))?.content,
+        servedText: async (path) => {
+            const response = await fetch(`${base}/${path}?served=${Date.now()}`, {
+                cache: 'no-store',
+                signal: AbortSignal.timeout(TIMEOUTS.NORMAL),
+            });
+            return response.ok ? response.text() : undefined;
+        },
+    };
+}
+
+/**
+ * Which of the given files the live site does not serve as the repository has them at its
+ * head, now. Reads only: unlike {@link confirmStorefrontCodeServed} it publishes nothing, so
+ * the project's Finish Setup step (PL-101) can check its files without changing the site.
+ *
+ * @param githubFileOps - reads the repository
+ * @param site - the storefront's repository
+ * @param files - repository paths (`scripts/commerce.js`)
+ * @returns the files the site still does not serve as committed; empty when all match
+ * @throws Error when the repository's head cannot be read, so a caller cannot read "served"
+ */
+export async function codeServedNow(
+    githubFileOps: Pick<GitHubFileOperations, 'getFileContent' | 'getLatestCommitSha'>,
+    site: { owner: string; repo: string },
+    files: readonly string[],
+): Promise<string[]> {
+    const head = await githubFileOps.getLatestCommitSha(site.owner, site.repo);
+    if (!head) throw new Error(`Could not read the head of ${site.owner}/${site.repo}.`);
+    return notServed(files, readers(githubFileOps, site, head));
+}
+
 /**
  * The real reads and publish for one storefront.
  *
@@ -190,21 +258,19 @@ export function codeServedDeps(
     head: string,
     logger: Logger,
 ): CodeServedDeps {
-    const base = aemLiveBaseUrl(site.owner, site.repo);
     return {
-        repoText: async (path) =>
-            (await githubFileOps.getFileContent(site.owner, site.repo, path, head))?.content,
-        servedText: async (path) => {
-            const response = await fetch(`${base}/${path}?served=${Date.now()}`, {
-                cache: 'no-store',
-                signal: AbortSignal.timeout(TIMEOUTS.NORMAL),
-            });
-            return response.ok ? response.text() : undefined;
-        },
+        ...readers(githubFileOps, site, head),
         publish: (path) => helix.previewCode(site.owner, site.repo, `/${path}`),
         pause: sleep,
         logger,
     };
+}
+
+/** What the whole check found: the files the site still does not serve, and the SC's sentence about them. */
+export interface CodeServedResult {
+    files: string[];
+    /** Present exactly when `files` is not empty. */
+    sentence?: string;
 }
 
 /** The repository reads the whole check needs. */
@@ -226,7 +292,9 @@ type StorefrontRepoReads = Pick<GitHubFileOperations, 'getFileContent' | 'getLat
  * @param site - the storefront's repository
  * @param since - the commit to check from; undefined for the template's own commit
  * @param logger - for the check's lines
- * @returns a sentence for the SC when some code did not reach the site, else undefined
+ * @returns the files the site still does not serve (the template's probe files when its code
+ *   never arrived), and a sentence for the SC when there are any; no files when all arrived or
+ *   the check could not run
  */
 export async function confirmStorefrontCodeServed(
     githubFileOps: StorefrontRepoReads,
@@ -234,11 +302,11 @@ export async function confirmStorefrontCodeServed(
     site: { owner: string; repo: string },
     since: string | undefined,
     logger: Logger,
-): Promise<string | undefined> {
+): Promise<CodeServedResult> {
     try {
         const head = await githubFileOps.getLatestCommitSha(site.owner, site.repo);
         const base = since ?? (await githubFileOps.treeCommits.earliestRecentCommitSha(site.owner, site.repo));
-        if (!head || !base || head === base) return undefined;
+        if (!head || !base || head === base) return { files: [] };
         // What the storefront tells AEM never to serve is not "missing" (Bodea's `_*.json`).
         const hlxignore = (await githubFileOps.getFileContent(site.owner, site.repo, '.hlxignore', head))?.content;
         const rules = parseHlxIgnore(hlxignore ?? '');
@@ -247,10 +315,12 @@ export async function confirmStorefrontCodeServed(
         );
         const deps = codeServedDeps(githubFileOps, helix, site, head, logger);
         const missing = await confirmTemplateServed(deps);
-        if (missing.length > 0) return templateNotServedSentence(missing);
-        return codeNotServedSentence(await confirmCodeServed(changed, deps));
+        if (missing.length > 0) return { files: missing, sentence: templateNotServedSentence(missing) };
+        const stale = await confirmCodeServed(changed, deps);
+        const sentence = codeNotServedSentence(stale);
+        return sentence ? { files: stale, sentence } : { files: [] };
     } catch (error) {
         logger.warn(`[Code Served] Could not check the code the site serves: ${(error as Error).message}`);
-        return undefined;
+        return { files: [] };
     }
 }

@@ -5,7 +5,7 @@
  * `aio app deploy` publishes an app's extension points on its workspace in Adobe's
  * registry — the Admin UI SDK registration behind a Commerce grid column — and `aio app
  * undeploy` is what unpublishes them, exit 0 either way. Two deployments of the ERP
- * integration in one Adobe project showed its columns twice on the Justrite sandbox. So
+ * integration in one Adobe project showed its columns twice on the Tailspin sandbox. So
  * after the undeploy the removal lists what the workspace still publishes, unpublishes
  * what the app declared, and reads again; a point still there stops the removal with
  * the card, folder and workspace kept, and the workspace must not take it.

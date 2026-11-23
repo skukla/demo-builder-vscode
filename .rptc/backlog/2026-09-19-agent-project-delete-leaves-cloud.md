@@ -4,7 +4,7 @@ kind: question
 area: ai
 needs: []
 value: med
-status: built
+status: shipped
 ---
 
 # Should an agent's project delete also clean up the cloud, as a person's does?
@@ -79,3 +79,4 @@ teardown so both surfaces do it.
 - 2026-09-20  Answered: mirror the button's checklist as two args on delete_project; the CDN unpublish gap is a defect to fix (merge 7f69e91cc)
 - 2026-09-20  feat(delete): the project delete narrates, and an agent can finish the job (`41fe0fc86`)
 - 2026-10-12  fix(ai): an agent's project delete takes the storefront's pages down (`0d0dbfd13`)
+- 2026-11-20  Released in v1.0.0-beta.153

@@ -61,7 +61,7 @@ beforeEach(() => {
 
 describe('a project with no Adobe project', () => {
     // 2026-10-15: a storefront-only project records the org alone. An ERP add then
-    // made its workspace in the project cached from earlier — Justrite's.
+    // made its workspace in the project cached from earlier — Tailspin's.
     it('makes nothing, and says where to choose one', async () => {
         const project = createMockProject({ adobe: { organization: 'org-1' }, appBuilderComponents: {} });
         const maker = makerThatCreates();
@@ -320,7 +320,7 @@ describe('the workspace a component is deployed into', () => {
     });
 
     it('is shared, for the cleanup after a deploy, only with partners in that same workspace', () => {
-        // Justrite on 2026-10-14: a second ERP is the integration's partner but has a
+        // Tailspin on 2026-10-14: a second ERP is the integration's partner but has a
         // workspace of its own. Passed to the left-behind check, its package was listed
         // in the integration's namespace, 404'd, and the whole check gave up.
         const project = projectWith({
@@ -328,14 +328,14 @@ describe('the workspace a component is deployed into', () => {
                 kind: 'integration',
                 status: 'deployed',
                 source: { owner: 'skukla', repo: 'commerce-erp-integration' },
-                workspace: { id: 'ws-pair', name: 'JustriteERP1' },
+                workspace: { id: 'ws-pair', name: 'TailspinERP1' },
             },
             'demo-erp': {
                 kind: 'system',
                 status: 'deployed',
                 source: { owner: 'skukla', repo: 'demo-erp' },
                 usedBy: 'erp-integration',
-                workspace: { id: 'ws-pair', name: 'JustriteERP1' },
+                workspace: { id: 'ws-pair', name: 'TailspinERP1' },
             },
             'demo-erp-2': {
                 kind: 'system',

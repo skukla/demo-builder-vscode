@@ -76,6 +76,38 @@ function updateDeps(fetched: SourceUpdateResult, overrides: Record<string, unkno
     });
 }
 
+describe('updateAppBuilderComponent, moving to a release', () => {
+    const RELEASED: SourceUpdateResult = { ...UPDATED, version: '1.2.0' };
+
+    it('records the version once it is deployed', async () => {
+        const project = installedProject();
+
+        await updateAppBuilderComponent(project, ENTRY.id, updateDeps(RELEASED));
+
+        expect(project.componentVersions?.[ENTRY.id]?.version).toBe('1.2.0');
+        expect(project.componentInstances?.[ENTRY.id]?.version).toBe('1.2.0');
+    });
+
+    it('records nothing when the deploy fails, so the update is still offered', async () => {
+        const project = installedProject();
+        const deps = updateDeps(RELEASED, {
+            deployApp: jest.fn().mockResolvedValue({ success: false, error: 'no' }),
+        });
+
+        await updateAppBuilderComponent(project, ENTRY.id, deps);
+
+        expect(project.componentVersions?.[ENTRY.id]).toBeUndefined();
+    });
+
+    it('records no version for a repository that follows its branch', async () => {
+        const project = installedProject();
+
+        await updateAppBuilderComponent(project, ENTRY.id, updateDeps(UPDATED));
+
+        expect(project.componentVersions?.[ENTRY.id]).toBeUndefined();
+    });
+});
+
 describe('updateAppBuilderComponent', () => {
     it("fetches the entry's branch, installs dependencies with the entry's Node, then redeploys and installs", async () => {
         const deps = updateDeps(UPDATED);
@@ -84,7 +116,7 @@ describe('updateAppBuilderComponent', () => {
         const result = await updateAppBuilderComponent(project, ENTRY.id, deps);
 
         expect(result).toEqual({ success: true, detail: UPDATED.detail });
-        expect(deps.fetchComponentSource).toHaveBeenCalledWith(PATH, 'main');
+        expect(deps.fetchComponentSource).toHaveBeenCalledWith(PATH, 'main', undefined);
         expect(deps.installComponentDependencies).toHaveBeenCalledWith(
             PATH,
             expect.objectContaining({
@@ -130,7 +162,7 @@ describe('updateAppBuilderComponent', () => {
     it('stops at a refused fetch with its reason, deploying nothing', async () => {
         const refused: SourceUpdateResult = {
             status: 'refused',
-            detail: 'The integration folder has changes of its own (a.js). Commit or undo them, then update again.',
+            detail: 'The folder has changes of its own (a.js). Commit or undo them, then update again.',
         };
         const deps = updateDeps(refused);
         const project = installedProject();
@@ -336,7 +368,7 @@ describe('updateAppBuilderComponent', () => {
 
         await updateAppBuilderComponent(project, ENTRY.id, deps);
 
-        expect(deps.fetchComponentSource).toHaveBeenCalledWith(PATH, 'main');
+        expect(deps.fetchComponentSource).toHaveBeenCalledWith(PATH, 'main', undefined);
     });
 
     it('refuses an unknown integration, and a caller that wired no update', async () => {

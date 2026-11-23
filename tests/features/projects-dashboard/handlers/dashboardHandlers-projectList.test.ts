@@ -65,13 +65,10 @@ describe('handleGetProjects — loading', () => {
 
         await handleGetProjects(context);
 
-        // persistAfterLoad: false — merely rendering the list must not move the
-        // pointer to whichever project happened to be last in the scan.
-        expect(context.stateManager.loadProjectFromPath).toHaveBeenCalledWith(
-            project.path,
-            undefined,
-            { persistAfterLoad: false },
-        );
+        // A read — merely rendering the list must not move the pointer to whichever
+        // project happened to be last in the scan.
+        expect(context.stateManager.loadProjectFromPath).toHaveBeenCalledWith(project.path);
+        expect(context.stateManager.openProject).not.toHaveBeenCalled();
     });
 
     it('skips a listed project that will not load rather than emitting a hole', async () => {

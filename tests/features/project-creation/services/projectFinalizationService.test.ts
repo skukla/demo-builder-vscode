@@ -7,6 +7,7 @@
 import {
     generateEnvironmentFiles,
     finalizeProject,
+    reportProjectCreated,
     type FinalizationContext,
 } from '@/features/project-creation/services/projectFinalizationService';
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
@@ -268,6 +269,31 @@ describe('projectFinalizationService', () => {
             expect(mockProgressTracker).toHaveBeenCalledWith(OPERATION_STAGES.writingConfigFiles.label, 85);
         });
 
+        // PL-101: the end screen says "N steps remaining" from a typed count, not parsed text.
+        it('tells the end screen how many Finish Setup steps the run left still to do', async () => {
+            mockProject.finishSetup = { 'republish-code': { files: ['scripts/commerce.js'] } };
+
+            await reportProjectCreated(mockProgressTracker, mockProject, createMockLogger(), 'Project creation complete');
+
+            expect(mockProgressTracker).toHaveBeenLastCalledWith(
+                'Project Created',
+                100,
+                'Project creation complete',
+                undefined,
+                1,
+            );
+        });
+
+        it('counts no finished or skipped step as remaining', async () => {
+            mockProject.finishSetup = {
+                'republish-code': { files: ['scripts/commerce.js'], state: 'dismissed' },
+            };
+
+            await reportProjectCreated(mockProgressTracker, mockProject, createMockLogger(), 'Project creation complete');
+
+            expect(mockProgressTracker).toHaveBeenLastCalledWith('Project Created', 100, 'Project creation complete');
+        });
+
         it('should log debug messages', async () => {
             const context: FinalizationContext = {
                 setupContext: mockSetupContext,
@@ -486,37 +512,20 @@ describe('projectFinalizationService', () => {
             await finalizeProject(context);
 
             expect(mockProgressTracker).toHaveBeenCalledWith(OPERATION_STAGES.finishingProject.label, 95);
-            // No broken links recorded: no line for the success screen.
-            expect(mockProgressTracker).toHaveBeenCalledWith(
-                'Project Created',
-                100,
-                'Project creation complete',
-                undefined,
-                undefined,
-            );
+            // "Project Created" waits for the AI files: the run says it (`creationLastSteps.ts`, F307).
+            expect(mockProgressTracker).not.toHaveBeenCalledWith('Project Created', expect.anything(), expect.anything());
         });
 
-        it('hands the success screen one line when the copy carried broken links (EDS-64)', async () => {
+        // Walk F209 (owner, 2026-11-17): a line on a green screen naming nothing to fix was read by
+        // nobody. Broken links stay on the record, in Diagnostics and in the agent's answer.
+        it('says nothing of broken links on the success screen, though the copy carried some', async () => {
             const storefront = mockProject.componentInstances?.['eds-storefront'];
             if (!storefront) throw new Error('fixture lost its storefront');
             storefront.metadata = { ...storefront.metadata, brokenLinks: [{ link: '/fr', pages: ['/footer'] }] };
 
-            await finalizeProject({
-                setupContext: mockSetupContext,
-                projectPath: '/test/project',
-                componentDefinitions: mockComponentDefinitions,
-                progressTracker: mockProgressTracker,
-                saveProject: mockSaveProject,
-                sendMessage: mockSendMessage,
-            });
+            await reportProjectCreated(mockProgressTracker, mockProject, createMockLogger(), 'Project creation complete');
 
-            expect(mockProgressTracker).toHaveBeenCalledWith(
-                'Project Created',
-                100,
-                'Project creation complete',
-                undefined,
-                '1 link in the copied content goes to a missing page. Diagnostics lists them.',
-            );
+            expect(mockProgressTracker).toHaveBeenCalledWith('Project Created', 100, 'Project creation complete');
         });
 
         it('should log debug messages', async () => {

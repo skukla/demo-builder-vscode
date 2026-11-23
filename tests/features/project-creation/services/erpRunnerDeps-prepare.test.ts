@@ -14,7 +14,7 @@ import { erpRunnerDeps, type ErpRunnerContext } from '@/features/project-creatio
 import type { AppBuilderComponentCatalogEntry, SetupStep } from '@/types/appBuilderComponents';
 import { createMockProject } from '../../../helpers/projectFake';
 
-const FIX_STEP: SetupStep = { id: 'price-scope', title: 'Prices', why: 'w', where: 'Admin', fix: { kind: 'config', items: [] } };
+const FIX_STEP: SetupStep = { id: 'price-scope', title: 'Prices', why: 'w', where: 'Admin', setup: { kind: 'config', items: [] } };
 const ERP_ENTRY = { id: 'erp-integration', name: 'ERP Integration', kind: 'integration', fillsSystem: true, setupSteps: [FIX_STEP] } as AppBuilderComponentCatalogEntry;
 
 function ctx(): ErpRunnerContext {

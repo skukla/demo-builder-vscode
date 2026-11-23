@@ -460,7 +460,7 @@ describe('surfaceOverlayRegistrationFailure', () => {
     });
 
     it('names the authorization cause on a 403 instead of prescribing a reset', () => {
-        // Regression (2026-08-13, leah-b2b-demo): the registration failed with 403
+        // Regression (2026-08-13, avery-b2b-demo): the registration failed with 403
         // "[admin] not authorized" — an account-role problem — and the surfaced
         // message said "Reset the storefront to register it". A reset repeats the
         // same PUT with the same account and 403s again; the honest remedy is the

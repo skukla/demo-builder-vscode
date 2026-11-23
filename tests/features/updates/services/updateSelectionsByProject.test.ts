@@ -16,7 +16,6 @@ function check(): UpdateSelections {
         forkSync: [{ owner: 'me', repo: 'tpl', branch: 'main' }],
         template: [{ project: b }],
         component: [{ project: a, componentId: 'c', latestVersion: '2' }],
-        inspector: [{ project: b, latestCommit: 'x' }],
     };
 }
 
@@ -31,7 +30,6 @@ describe('selectionsWhere', () => {
         const only = selectionsWhere(check(), (p) => p.path === '/p/b');
 
         expect(only.template).toHaveLength(1);
-        expect(only.inspector).toHaveLength(1);
         expect(only.component).toStrictEqual([]);
         expect(only.forkSync).toHaveLength(1);
     });

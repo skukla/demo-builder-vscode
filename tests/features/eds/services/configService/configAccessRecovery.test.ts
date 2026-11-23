@@ -42,9 +42,9 @@ const logger: Logger = createMockLogger();
 const tokenProvider = { getAccessToken: jest.fn().mockResolvedValue('ims-token') };
 
 const SITE = {
-    owner: 'leahrayard',
-    repo: 'leah-b2b-demo',
-    contentSourceUrl: 'https://content.da.live/leahrayard/leah-b2b-demo/',
+    owner: 'avery',
+    repo: 'avery-b2b-demo',
+    contentSourceUrl: 'https://content.da.live/avery/avery-b2b-demo/',
     userEmail: 'teammate@example.test',
 };
 
@@ -128,7 +128,7 @@ describe('logConfigAccessState', () => {
 
         expect(state).toBe('granted');
         expect(logger.info).toHaveBeenCalledWith(
-            expect.stringContaining('leahrayard/leah-b2b-demo'),
+            expect.stringContaining('avery/avery-b2b-demo'),
         );
         expect(logger.info).toHaveBeenCalledWith(expect.stringMatching(/admin access confirmed/i));
     });
@@ -366,8 +366,8 @@ describe('pinSiteAdmin', () => {
         // wrong address is a silent no-op that every mock agrees with.
         expect(mockEnsureSiteAdmin).toHaveBeenCalledWith(
             tokenProvider,
-            'leahrayard',
-            'leah-b2b-demo',
+            'avery',
+            'avery-b2b-demo',
             'creator@example.test',
             logger,
         );

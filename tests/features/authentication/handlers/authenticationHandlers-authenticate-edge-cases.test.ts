@@ -58,7 +58,8 @@ describe('authenticationHandlers - handleAuthenticate - Edge Cases', () => {
 		});
 
 		it('should handle forced login with multiple orgs but none selected', async () => {
-			(mockContext.authManager!.login as jest.Mock).mockResolvedValue(true);
+			// A forced wizard sign-in is the org switch's (loginAndRestoreProjectContext, forced).
+			(mockContext.authManager!.loginAndRestoreProjectContext as jest.Mock).mockResolvedValue(true);
 			(mockContext.authManager!.getSdkClient().ensureInitialized as jest.Mock).mockResolvedValue(undefined);
 			(mockContext.authManager!.getOrganizations as jest.Mock).mockResolvedValue(mockOrgs);
 
@@ -114,7 +115,8 @@ describe('authenticationHandlers - handleAuthenticate - Edge Cases', () => {
 		});
 
 		it('should handle orgLacksAccess flag after forced login', async () => {
-			(mockContext.authManager!.login as jest.Mock).mockResolvedValue(true);
+			// A forced wizard sign-in is the org switch's (loginAndRestoreProjectContext, forced).
+			(mockContext.authManager!.loginAndRestoreProjectContext as jest.Mock).mockResolvedValue(true);
 			(mockContext.authManager!.getSdkClient().ensureInitialized as jest.Mock).mockResolvedValue(undefined);
 			(mockContext.authManager!.getOrganizations as jest.Mock).mockResolvedValue([]);
 

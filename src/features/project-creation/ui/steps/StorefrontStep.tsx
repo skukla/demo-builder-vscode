@@ -36,6 +36,7 @@ import { useCanProceedAll } from '@/core/ui/hooks/useCanProceed';
 import { vscode } from '@/core/ui/utils/vscode-api';
 import {
     getAvailableBlockLibraries,
+    getAlwaysIncludedBlockLibraries,
     getNativeBlockLibraries,
 } from '@/features/components/services/blockLibraryLoader';
 import { DaLiveServiceCard } from '@/features/eds/ui/components/DaLiveServiceCard';
@@ -43,6 +44,7 @@ import { GitHubServiceCard } from '@/features/eds/ui/components/GitHubServiceCar
 import { getBookmarkletSetupPageUrl } from '@/features/eds/ui/helpers/bookmarkletSetupPage';
 import { useDaLiveAuth } from '@/features/eds/ui/hooks/useDaLiveAuth';
 import { useGitHubAuth } from '@/features/eds/ui/hooks/useGitHubAuth';
+import { ImportedRepoName } from '@/features/eds/ui/steps/ImportedRepoName';
 import { RepoSelectionInline } from '@/features/eds/ui/steps/RepoSelectionInline';
 import type { BlockLibrary, CustomBlockLibrary } from '@/types/blockLibraries';
 import type { DemoPackage } from '@/types/demoPackages';
@@ -153,6 +155,10 @@ export function StorefrontStep({
         if (!pkg || !selectedStack || !isEdsStack) return EMPTY_LIBRARY_ARRAY;
         return getAvailableBlockLibraries(selectedStack, pkg.id);
     }, [pkg, selectedStack, isEdsStack]);
+    const includedBlockLibraries = useMemo(() => {
+        if (!pkg || !selectedStack || !isEdsStack) return EMPTY_LIBRARY_ARRAY;
+        return getAlwaysIncludedBlockLibraries(selectedStack, pkg.id);
+    }, [pkg, selectedStack, isEdsStack]);
     const nativeBlockLibraries = useMemo(() => {
         if (!pkg || !selectedStack || !isEdsStack) return EMPTY_LIBRARY_ARRAY;
         return getNativeBlockLibraries(selectedStack, pkg.id);
@@ -191,6 +197,10 @@ export function StorefrontStep({
     const subSteps = driver.subSteps(state);
     const activeStep = driver.active(state) as StorefrontSectionId;
     // Crossfade key: each sub-step remounts its body → fade.
+    const reportRepoValid = useCallback(
+        (valid: boolean) => updateState({ storefrontRepoValid: valid }),
+        [updateState],
+    );
     const viewKey = activeStep;
 
     // Accounts sub-step: GitHub + DA.live are independent, parallel sign-ins, so
@@ -231,6 +241,7 @@ export function StorefrontStep({
     const blockLibraries = isEdsStack ? (
         <>
             <BlockLibrariesStepContent
+                includedBlockLibraries={includedBlockLibraries}
                 nativeBlockLibraries={nativeBlockLibraries}
                 availableBlockLibraries={availableBlockLibraries}
                 selectedBlockLibraries={state.selectedBlockLibraries ?? EMPTY_STRING_ARRAY}
@@ -260,12 +271,11 @@ export function StorefrontStep({
                 accountsCards
             ) : activeStep === 'block-libraries' ? (
                 blockLibraries
+            ) : state.importedFrom ? (
+                // An imported demo bundle: the repository is made from it (EDS-72).
+                <ImportedRepoName state={state} updateState={updateState} onRepoValidChange={reportRepoValid} />
             ) : (
-                <RepoSelectionInline
-                    state={state}
-                    updateState={updateState}
-                    onRepoValidChange={v => updateState({ storefrontRepoValid: v })}
-                />
+                <RepoSelectionInline state={state} updateState={updateState} onRepoValidChange={reportRepoValid} />
             )}
         </StepAreaShell>
     );

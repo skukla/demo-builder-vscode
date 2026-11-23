@@ -38,7 +38,7 @@ import type { HandlerContext } from '@/types/handlers';
 async function projectNamed(ctx: HandlerContext, name: string): Promise<Project | undefined> {
     const entry = (await ctx.stateManager.getAllProjects()).find((p) => p.name === name);
     if (!entry) return undefined;
-    return (await ctx.stateManager.loadProjectFromPath(entry.path, undefined, { persistAfterLoad: false })) ?? undefined;
+    return (await ctx.stateManager.loadProjectFromPath(entry.path)) ?? undefined;
 }
 
 function updateContextOf(ctx: HandlerContext): UpdateContext {

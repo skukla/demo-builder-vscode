@@ -225,7 +225,7 @@ describe('consent in the chat', () => {
  */
 
 /** A tool with authored consent copy that names its target from the args. */
-const TOOL = 'start_datapack_import';
+const TOOL = 'install_datapack';
 const ARGS = { datapackName: 'citisignal', version: '1.2.0' };
 
 /** The per-call handle, with `sendRequest` answering `action`. */

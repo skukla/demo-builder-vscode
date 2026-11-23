@@ -28,7 +28,7 @@ afterEach(() => {
     global.fetch = originalFetch;
 });
 
-const SOURCE = { owner: 'skukla', repo: 'eds-demo-patches' };
+const SOURCE = { owner: 'patch-owner', repo: 'patches' };
 const VALID_SHA = 'a1b2c3d4e5f6789012345678901234567890abcd';
 
 // ==========================================================================
@@ -69,7 +69,7 @@ describe('readLkgSha — happy path', () => {
         const calledUrl = fetchMock.mock.calls
             .map((c) => String(c[0]))
             .find((u) => u.includes('raw.githubusercontent'));
-        expect(calledUrl).toBe('https://raw.githubusercontent.com/skukla/eds-demo-patches/main/last-known-good');
+        expect(calledUrl).toBe('https://raw.githubusercontent.com/patch-owner/patches/main/last-known-good');
     });
 
     it('honors lkgFile when set — for multi-canonical patches repos (e.g., b2b)', async () => {
@@ -80,14 +80,14 @@ describe('readLkgSha — happy path', () => {
         global.fetch = fetchMock;
 
         await readLkgSha(
-            { owner: 'skukla', repo: 'eds-demo-patches', lkgFile: 'b2b/last-known-good' },
+            { owner: 'patch-owner', repo: 'patches', lkgFile: 'b2b/last-known-good' },
             mockLogger,
         );
 
         const calledUrl = fetchMock.mock.calls
             .map((c) => String(c[0]))
             .find((u) => u.includes('raw.githubusercontent'));
-        expect(calledUrl).toBe('https://raw.githubusercontent.com/skukla/eds-demo-patches/main/b2b/last-known-good');
+        expect(calledUrl).toBe('https://raw.githubusercontent.com/patch-owner/patches/main/b2b/last-known-good');
     });
 
     it('bounds the content fetch with an abort signal — a hung raw.githubusercontent stalls setup otherwise', async () => {
@@ -243,8 +243,30 @@ describe('readLkgSha — release-ref consistency', () => {
             .map((c) => String(c[0]))
             .filter((u) => u.includes('raw.githubusercontent'));
         expect(rawUrls).toEqual([
-            'https://raw.githubusercontent.com/skukla/eds-demo-patches/v1.2.3/last-known-good',
+            'https://raw.githubusercontent.com/patch-owner/patches/v1.2.3/last-known-good',
         ]);
+    });
+
+    // A push to a repository the builder owns reaches nobody until it is released, so a failed
+    // lookup is "cannot tell", never an unreleased pointer from main.
+    it('never reads main of a repository the builder owns', async () => {
+        global.fetch = jest.fn().mockImplementation((url: string) => {
+            if (String(url).includes('api.github.com')) {
+                return Promise.resolve({ ok: false, status: 403, json: () => Promise.resolve({}) });
+            }
+            if (String(url).startsWith('https://github.com/')) {
+                return Promise.resolve({ status: 200, headers: { get: () => null } });
+            }
+            return Promise.resolve({ ok: true, text: () => Promise.resolve(VALID_SHA) });
+        });
+
+        const sha = await readLkgSha({ owner: 'skukla', repo: 'eds-demo-patches' }, mockLogger);
+
+        expect(sha).toBeUndefined();
+        const rawUrls = (global.fetch as jest.Mock).mock.calls
+            .map((c) => String(c[0]))
+            .filter((u) => u.includes('raw.githubusercontent'));
+        expect(rawUrls).toStrictEqual([]);
     });
 
     it('falls back to main when no release exists (matching the ledger fetch)', async () => {
@@ -262,7 +284,7 @@ describe('readLkgSha — release-ref consistency', () => {
             .map((c) => String(c[0]))
             .filter((u) => u.includes('raw.githubusercontent'));
         expect(rawUrls).toEqual([
-            'https://raw.githubusercontent.com/skukla/eds-demo-patches/main/last-known-good',
+            'https://raw.githubusercontent.com/patch-owner/patches/main/last-known-good',
         ]);
     });
 });

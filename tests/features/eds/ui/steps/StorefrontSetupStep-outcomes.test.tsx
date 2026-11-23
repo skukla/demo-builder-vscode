@@ -61,6 +61,16 @@ describe('StorefrontSetupStep — completion', () => {
         });
     });
 
+    // EDS-72: creation records the import's commit on the project, for Reset.
+    it("hands the wizard what setup made from an imported bundle", () => {
+        const { updateState } = renderStep();
+        const bundleImport = { commit: 'import-commit', contentSource: { org: 'sender', site: 'kukla-bodea', indexPath: '/query-index.json' } };
+
+        pushComplete({ message: 'Storefront setup completed successfully!', bundleImport });
+
+        expect(updateState).toHaveBeenCalledWith({ edsConfig: expect.objectContaining({ bundleImport, preflightComplete: true }) });
+    });
+
     it('calls the updateState the wizard holds now, not the one it mounted with', () => {
         const mounted = jest.fn();
         const current = jest.fn();
@@ -111,7 +121,7 @@ describe('StorefrontSetupStep — completion', () => {
             ],
         });
 
-        expect(screen.getByText('Storefront Published, with warnings')).toBeInTheDocument();
+        expect(screen.getByText('Storefront Published, with Warnings')).toBeInTheDocument();
         expect(screen.queryByText('Storefront Published')).not.toBeInTheDocument();
         expect(
             screen.getByText(

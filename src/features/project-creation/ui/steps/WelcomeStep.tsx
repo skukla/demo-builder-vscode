@@ -3,6 +3,7 @@ import React, { useEffect, useCallback, useState } from 'react';
 import { AddDemoModal } from '../components/add-demo/AddDemoModal';
 import { EditDemoPackageModal } from '../components/add-demo/EditDemoPackageModal';
 import { BrandGallery } from '../components/BrandGallery';
+import { ImportedDemoGallery } from '../components/ImportedDemoGallery';
 import { projectNameDescription } from './editLocks';
 import { buildEdsConfigFromStorefront } from './edsConfigFromStorefront';
 import { SingleColumnLayout } from '@/core/ui/components/layout/SingleColumnLayout';
@@ -79,9 +80,8 @@ export function WelcomeStep({
         return error ? 'invalid' : 'valid';
     };
 
-    // Set the default project name on mount. Nothing takes focus: this step has the
-    // package filter, and a screen with a search filter focuses nothing on load
-    // (owner, 2026-10-01).
+    // Set the default project name on mount. Nothing takes focus: this step has the package
+    // filter, and a screen with a search filter focuses nothing on load (owner, 2026-10-01).
     useEffect(() => {
         if (!state.projectName) {
             updateState({ projectTitle: defaultProjectTitle, projectName: normalizeProjectName(defaultProjectTitle) });
@@ -303,8 +303,11 @@ export function WelcomeStep({
         </div>
     );
 
-    // Package mode: Expandable cards with architecture selection built-in
-    // When importing, package/stack are pre-selected in state - gallery handles display
+    // An imported demo bundle: that demo alone, chosen and fixed (EDS-72 decision 2).
+    if (state.importedFrom && hasPackages && hasStacks) {
+        return <ImportedDemoGallery importedFrom={state.importedFrom} packages={packages} stacks={stacks} state={state} headerContent={projectNameField} />;
+    }
+    // Package mode: expandable cards; on an import, package/stack arrive pre-selected.
     if (hasPackages && hasStacks) {
         return (
             <>

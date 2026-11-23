@@ -168,7 +168,7 @@ async function unlistFirst(
     options: RemoveOptions,
 ): Promise<string | undefined> {
     if (!deps.unlistSystem) return undefined;
-    deps.onProgress?.(OPERATION_STAGES.removing.label, "Taking it off the integration's list");
+    deps.onProgress?.(OPERATION_STAGES.removing.label, "Removing it from the integration's list");
     const reason = await deps.unlistSystem(project, integrationId, id);
     if (!reason) return undefined;
     const name = shownNameOf(project, id, state);
@@ -348,7 +348,7 @@ async function removeBoundSystemsAfter(
             deps.logger.warn(
                 `[AppBuilderComponent Runner] ${systemId} removal threw: ${toError(error).message}`,
             );
-            return { success: false, error: 'it stopped partway, and the Debug Logs say why' };
+            return { success: false, error: 'it stopped partway' };
         });
         if (!result.success) {
             deps.logger.warn(

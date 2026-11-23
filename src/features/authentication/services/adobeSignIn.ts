@@ -14,6 +14,7 @@ import type { AuthCacheManager } from './authCacheManager';
 import { AuthenticationErrorFormatter } from './authenticationErrorFormatter';
 import { isValidTokenResponse } from './authPredicates';
 import { withTiming } from './performanceTracker';
+import type { RejectedTokens } from './rejectedTokens';
 import { beginSignIn, signInLinkIn } from '@/core/auth/signInSession';
 import type { DebugLogger } from '@/core/logging/debugLogger';
 import type { StepLogger } from '@/core/logging/stepLogger';
@@ -37,6 +38,17 @@ export interface AdobeSignInDeps {
      * back to. Optional: nothing is watched without one.
      */
     watchForcedSignIn?: ForcedSignInWatch;
+    /**
+     * The tokens Adobe refused this session (walk F247). A plain sign-in reuses the stored token
+     * while it has time left, so one that hands back a refused token is run again, forced.
+     */
+    rejected?: RejectedTokens;
+    /**
+     * Whether Adobe already refused the STORED token as the sign-in starts (walk F276). A plain
+     * sign-in would only hand it back, so the sign-in runs forced from the start: one run, not
+     * a plain one followed by the forced retry.
+     */
+    storedTokenRefused?: () => boolean;
 }
 
 /**
@@ -114,9 +126,17 @@ async function runLoginCommand(deps: AdobeSignInDeps, loginCommand: string): Pro
     }
 }
 
+/** A plain sign-in over a stored token Adobe already refused: run it forced instead. */
+function startsRefused(deps: AdobeSignInDeps): boolean {
+    if (!deps.storedTokenRefused?.()) return false;
+    deps.debugLogger.debug('[Auth] Adobe already refused the stored sign-in; signing in fresh');
+    return true;
+}
+
 /** One sign-in: open the browser and wait for it. Callers go through `login`. */
-export async function runAdobeLogin(deps: AdobeSignInDeps, force: boolean): Promise<boolean> {
+export async function runAdobeLogin(deps: AdobeSignInDeps, requestedForce: boolean): Promise<boolean> {
     const { cacheManager, sdkClient, debugLogger } = deps;
+    const force = requestedForce || startsRefused(deps);
     return withTiming('login', async () => {
         try {
             const stepLogger = await deps.stepLogger();
@@ -158,7 +178,9 @@ export async function runAdobeLogin(deps: AdobeSignInDeps, force: boolean): Prom
                 debugLogger.debug('[Auth] Login command completed successfully');
                 const token = result.stdout?.trim();
 
-                if (isValidTokenResponse(token)) {
+                const refused = Boolean(token && deps.rejected?.has(token));
+                if (refused) debugLogger.debug('[Auth] The sign-in handed back the token Adobe refused');
+                if (isValidTokenResponse(token) && !refused) {
                     debugLogger.debug('[Auth] Adobe CLI login successful (exit code 0)');
                     stepLogger.logTemplate('adobe-auth', 'statuses.authentication-complete', {});
 

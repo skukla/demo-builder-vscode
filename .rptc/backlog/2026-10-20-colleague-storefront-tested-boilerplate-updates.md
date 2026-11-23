@@ -5,7 +5,9 @@ area: eds
 parent: EDS-13
 needs: []
 value: high
-status: active
+status: gated
+plan: colleague-storefront-tested-boilerplate-updates
+waiting-on: the owner's live Apply onto a throwaway storefront (release row 1.18)
 ---
 
 # A colleague's storefront gets the tested boilerplate updates too, when it qualifies
@@ -26,7 +28,7 @@ tested version, never to Adobe's untested main (`templateUpdateChecker.ts`
 A storefront added from a colleague's repository does not. Its project records the
 colleague's repository as its template and no LKG source, so its updates follow that
 repository's main (`checkForkedUpdates`) and the daily gate never reaches it. Seen on
-2026-10-20 with JustRite (`kmanns/justrite`, boilerplate 6.0.0, no LKG source) beside
+2026-10-20 with Tailspin (`org-e/tailspin`, boilerplate 6.0.0, no LKG source) beside
 Bodea and patch-canary-b2b, which follow the pointer.
 
 ## Why it is possible
@@ -48,7 +50,7 @@ Bodea and patch-canary-b2b, which follow the pointer.
 3. Its own edits do not collide with Adobe's change. Checked when Apply runs; a collision
    stops the update and names the files, never overwrites.
 
-JustRite does not qualify today: it records the boilerplate version, not the commit.
+Tailspin does not qualify today: it records the boilerplate version, not the commit.
 
 ## Recommendation (owner-approved for planning, 2026-10-20)
 
@@ -86,3 +88,4 @@ storefronts that are not forks but meet the requirements above.
 - 2026-10-30  feat(updates): tell the SC when their AI finishes or drops a storefront fix (`d0917eba2`)
 - 2026-10-30  fix(updates): say when a fix with AI goes live by the approvals setting (`ab697244e`)
 - 2026-10-30  Merge parity/g6-update-own-pieces: an update never clashes with Demo Builder's own pieces, and a stop changes nothing (`403a18d08`)
+- 2026-11-21  Reconciled 2026-11-21: all 13 commits are in v1.0.0-beta.153 and plan steps 01-07 are built. Left: release row 1.18, a live Apply onto a real throwaway storefront (a cloud write the owner runs).

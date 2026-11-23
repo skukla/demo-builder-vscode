@@ -16,6 +16,7 @@
 const fileOps = {
     listRepoFiles: jest.fn(),
     getBranchInfo: jest.fn(),
+    getRefCommit: jest.fn(),
     getBlobContent: jest.fn(),
     getFileContent: jest.fn(),
     commitTreeToBranch: jest.fn(),
@@ -39,6 +40,7 @@ jest.mock('@/features/updates/services/githubApiClient', () => ({
     getLatestBranchCommit: (...a: unknown[]) => mockGetLatestBranchCommit(...a),
 }));
 
+import * as vscode from 'vscode';
 import blockLibraries from '@/features/components/config/block-libraries.json';
 import {
     applyBlockLibraryInstall,
@@ -115,8 +117,17 @@ function repos(dest: string[], source: string[]): void {
     });
 }
 
+/** The catalog library's repository is one the builder owns, so installing it asks for its release. */
+function releasesListed(...tags: string[]): void {
+    const releases = tags.map((tag_name) => ({ tag_name }));
+    global.fetch = jest.fn().mockResolvedValue({ ok: true, status: 200, json: async () => releases });
+}
+
 beforeEach(() => {
     jest.clearAllMocks();
+    (vscode.workspace.getConfiguration as jest.Mock).mockReturnValue({ get: jest.fn(() => 'stable') });
+    releasesListed('v0.1.0');
+    fileOps.getRefCommit.mockResolvedValue('release-commit');
     fileOps.getBranchInfo.mockResolvedValue({ commitSha: 'src-commit-1', treeSha: 't' });
     fileOps.getBlobContent.mockImplementation(async (_o, _r, sha: string) => `content of ${sha}`);
     fileOps.getFileContent.mockResolvedValue(null);
@@ -206,7 +217,7 @@ describe('applyBlockLibraryInstall', () => {
 
         expect(GitHubFileOperationsCtor).toHaveBeenCalledWith(tokenService, ctx.logger);
         expect(fileOps.listRepoFiles).toHaveBeenCalledWith('me', 'demo-storefront', 'main');
-        expect(fileOps.listRepoFiles).toHaveBeenCalledWith(SRC.owner, SRC.repo, SRC.branch);
+        expect(fileOps.listRepoFiles).toHaveBeenCalledWith(SRC.owner, SRC.repo, 'v0.1.0');
         expect(fileOps.commitTreeToBranch).toHaveBeenCalledTimes(1);
         expect(fileOps.commitTreeToBranch).toHaveBeenCalledWith(
             'me',
@@ -244,7 +255,8 @@ describe('applyBlockLibraryInstall', () => {
             {
                 name: LIBRARY.name,
                 source: SRC,
-                commitSha: 'src-commit-1',
+                commitSha: 'release-commit',
+                version: '0.1.0',
                 blockIds: ['commerce-nav'],
                 installedAt: expect.stringMatching(/^\d{4}-\d{2}-\d{2}T/),
             },
@@ -278,13 +290,71 @@ describe('applyBlockLibraryInstall', () => {
 
         expect(fileOps.commitTreeToBranch).not.toHaveBeenCalled();
         expect(mockGetLatestBranchCommit).toHaveBeenCalledWith(
-            ctx.secrets, SRC.owner, SRC.repo, SRC.branch,
+            ctx.secrets, SRC.owner, SRC.repo, 'v0.1.0',
         );
         expect(outcome).toEqual({ name: LIBRARY.name, blockIds: [] });
         expect(project.installedBlockLibraries).toEqual([
             expect.objectContaining({ name: LIBRARY.name, commitSha: 'src-commit-head', blockIds: [] }),
         ]);
         expect(findUninstalledBlockLibraries(project)).toStrictEqual([]);
+    });
+
+    describe('a library whose repository has a release', () => {
+        beforeEach(() => releasesListed('v0.2.0'));
+
+        it('reads its blocks at the release and records the commit the release names', async () => {
+            repos([], ['blocks/commerce-nav/commerce-nav.js']);
+            const project = edsProject();
+
+            await applyBlockLibraryInstall({ project, library: LIBRARY }, makeCtx());
+
+            expect(fileOps.listRepoFiles).toHaveBeenCalledWith(SRC.owner, SRC.repo, 'v0.2.0');
+            expect(fileOps.getRefCommit).toHaveBeenCalledWith(SRC.owner, SRC.repo, 'v0.2.0');
+            expect(project.installedBlockLibraries?.[0].commitSha).toBe('release-commit');
+        });
+
+        it('records which release it installed', async () => {
+            repos([], ['blocks/commerce-nav/commerce-nav.js']);
+            const project = edsProject();
+
+            await applyBlockLibraryInstall({ project, library: LIBRARY }, makeCtx());
+
+            expect(project.installedBlockLibraries?.[0].version).toBe('0.2.0');
+        });
+
+        it('reads its authoring files at that release too, so entries match the blocks', async () => {
+            repos([], ['blocks/commerce-nav/commerce-nav.js']);
+
+            await applyBlockLibraryInstall({ project: edsProject(), library: LIBRARY }, makeCtx());
+
+            expect(fileOps.getFileContent).toHaveBeenCalledWith(
+                SRC.owner, SRC.repo, 'component-definition.json', 'v0.2.0',
+            );
+        });
+
+        it('records the release, not the branch, when it had no block to add', async () => {
+            repos(['blocks/commerce-nav/commerce-nav.js'], ['blocks/commerce-nav/commerce-nav.js']);
+            const ctx = makeCtx();
+
+            await applyBlockLibraryInstall({ project: edsProject(), library: LIBRARY }, ctx);
+
+            expect(mockGetLatestBranchCommit).toHaveBeenCalledWith(ctx.secrets, SRC.owner, SRC.repo, 'v0.2.0');
+        });
+    });
+
+    it('refuses when the release cannot be read, and writes and records nothing', async () => {
+        releasesListed();
+        repos([], ['blocks/commerce-nav/commerce-nav.js']);
+        const project = edsProject();
+        const ctx = makeCtx();
+
+        await expect(applyBlockLibraryInstall({ project, library: LIBRARY }, ctx)).rejects.toThrow(
+            `Could not read the newest release of ${SRC.owner}/${SRC.repo}`,
+        );
+
+        expect(fileOps.commitTreeToBranch).not.toHaveBeenCalled();
+        expect(project.installedBlockLibraries).toBeUndefined();
+        expect(ctx.stateManager.saveProject).not.toHaveBeenCalled();
     });
 
     it('fails without recording when the library has no blocks at all', async () => {
@@ -328,14 +398,14 @@ describe('applyBlockLibraryInstall', () => {
 describe('the wording both surfaces share', () => {
     it('reads as an install before, and as one short sentence after', () => {
         expect(describePendingInstall(LIBRARY)).toBe('Demo Builder Blocks: install');
-        expect(describeInstallOutcome({ name: 'Demo Builder Blocks', blockIds: ['commerce-nav'] }, 'justrite')).toBe(
-            'Added 1 block from Demo Builder Blocks to justrite.',
+        expect(describeInstallOutcome({ name: 'Demo Builder Blocks', blockIds: ['commerce-nav'] }, 'tailspin')).toBe(
+            'Added 1 block from Demo Builder Blocks to tailspin.',
         );
-        expect(describeInstallOutcome({ name: 'Demo Builder Blocks', blockIds: ['a', 'b'] }, 'justrite')).toBe(
-            'Added 2 blocks from Demo Builder Blocks to justrite.',
+        expect(describeInstallOutcome({ name: 'Demo Builder Blocks', blockIds: ['a', 'b'] }, 'tailspin')).toBe(
+            'Added 2 blocks from Demo Builder Blocks to tailspin.',
         );
-        expect(describeInstallOutcome({ name: 'Demo Builder Blocks', blockIds: [] }, 'justrite')).toBe(
-            'Demo Builder Blocks is already in justrite.',
+        expect(describeInstallOutcome({ name: 'Demo Builder Blocks', blockIds: [] }, 'tailspin')).toBe(
+            'Demo Builder Blocks is already in tailspin.',
         );
     });
 });

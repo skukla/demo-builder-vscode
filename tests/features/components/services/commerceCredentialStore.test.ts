@@ -18,7 +18,6 @@
 
 import {
     commerceSecretKey,
-    resolveAccsOAuthPair,
     resolvePaasAdminPair,
 } from '@/features/components/services/commerceCredentialStore';
 
@@ -32,10 +31,15 @@ function secretStore(entries: Record<string, string> = {}) {
     };
 }
 
+const FROM_CONFIG = 'secret-from-config';
+const FROM_STORAGE = 'secret-from-storage';
+const ADMIN_FROM_STORAGE = 'password-from-storage';
+const BOTH_STORED = 'ssecret';
+
 const accsConfigs = {
-    'adobe-commerce-accs': {
-        ACCS_OAUTH_CLIENT_ID: 'id-from-config',
-        ACCS_OAUTH_CLIENT_SECRET: 'secret-from-config',
+    'adobe-commerce-paas': {
+        ADOBE_COMMERCE_ADMIN_USERNAME: 'id-from-config',
+        ADOBE_COMMERCE_ADMIN_PASSWORD: FROM_CONFIG,
     },
 };
 
@@ -48,8 +52,8 @@ const paasConfigs = {
 
 describe('the key scheme', () => {
     it('is per-project and per-component, so two projects never collide', () => {
-        const a = commerceSecretKey('/p/one', 'adobe-commerce-accs', 'ACCS_OAUTH_CLIENT_SECRET');
-        const b = commerceSecretKey('/p/two', 'adobe-commerce-accs', 'ACCS_OAUTH_CLIENT_SECRET');
+        const a = commerceSecretKey('/p/one', 'adobe-commerce-paas', 'ADOBE_COMMERCE_ADMIN_PASSWORD');
+        const b = commerceSecretKey('/p/two', 'adobe-commerce-paas', 'ADOBE_COMMERCE_ADMIN_PASSWORD');
 
         expect(a).not.toBe(b);
     });
@@ -63,9 +67,9 @@ describe('the key scheme', () => {
 
 describe('falling back to componentConfigs (today, every read)', () => {
     it('reads the ACCS pair from config when SecretStorage is absent', async () => {
-        const pair = await resolveAccsOAuthPair({}, accsConfigs);
+        const pair = await resolvePaasAdminPair({}, accsConfigs);
 
-        expect(pair).toEqual({ clientId: 'id-from-config', clientSecret: 'secret-from-config' });
+        expect(pair).toEqual({ username: 'id-from-config', password: FROM_CONFIG });
     });
 
     it('reads the PaaS pair from config when SecretStorage is absent', async () => {
@@ -77,16 +81,16 @@ describe('falling back to componentConfigs (today, every read)', () => {
     it('falls through when SecretStorage holds nothing — the state shipping today', async () => {
         const secrets = secretStore();
 
-        const pair = await resolveAccsOAuthPair({ secrets, projectId: PROJECT_ID }, accsConfigs);
+        const pair = await resolvePaasAdminPair({ secrets, projectId: PROJECT_ID }, accsConfigs);
 
         expect(secrets.get).toHaveBeenCalled(); // it really looked
-        expect(pair).toEqual({ clientId: 'id-from-config', clientSecret: 'secret-from-config' });
+        expect(pair).toEqual({ username: 'id-from-config', password: FROM_CONFIG });
     });
 
     it('never consults the store without a projectId — there would be no key', async () => {
         const secrets = secretStore();
 
-        await resolveAccsOAuthPair({ secrets }, accsConfigs);
+        await resolvePaasAdminPair({ secrets }, accsConfigs);
 
         expect(secrets.get).not.toHaveBeenCalled();
     });
@@ -95,15 +99,15 @@ describe('falling back to componentConfigs (today, every read)', () => {
 describe('SecretStorage wins (phase 2, unreachable in production today)', () => {
     it('prefers the stored ACCS secret over the config copy', async () => {
         const secrets = secretStore({
-            [commerceSecretKey(PROJECT_ID, 'adobe-commerce-accs', 'ACCS_OAUTH_CLIENT_SECRET')]:
+            [commerceSecretKey(PROJECT_ID, 'adobe-commerce-paas', 'ADOBE_COMMERCE_ADMIN_PASSWORD')]:
                 'secret-from-storage',
         });
 
-        const pair = await resolveAccsOAuthPair({ secrets, projectId: PROJECT_ID }, accsConfigs);
+        const pair = await resolvePaasAdminPair({ secrets, projectId: PROJECT_ID }, accsConfigs);
 
         // The id still comes from config — a half-migrated project is the NORMAL
         // state during phase 2's write-through, not an edge case.
-        expect(pair).toEqual({ clientId: 'id-from-config', clientSecret: 'secret-from-storage' });
+        expect(pair).toEqual({ username: 'id-from-config', password: FROM_STORAGE });
     });
 
     it('prefers the stored PaaS password over the config copy', async () => {
@@ -114,28 +118,28 @@ describe('SecretStorage wins (phase 2, unreachable in production today)', () => 
 
         const pair = await resolvePaasAdminPair({ secrets, projectId: PROJECT_ID }, paasConfigs);
 
-        expect(pair).toEqual({ username: 'admin', password: 'password-from-storage' });
+        expect(pair).toEqual({ username: 'admin', password: ADMIN_FROM_STORAGE });
     });
 
     it('resolves a pair that lives ENTIRELY in storage, with no config at all', async () => {
         // The end state phase 3 converges on. If this fails, the migration has
         // nowhere to land.
         const secrets = secretStore({
-            [commerceSecretKey(PROJECT_ID, 'adobe-commerce-accs', 'ACCS_OAUTH_CLIENT_ID')]: 'sid',
-            [commerceSecretKey(PROJECT_ID, 'adobe-commerce-accs', 'ACCS_OAUTH_CLIENT_SECRET')]:
+            [commerceSecretKey(PROJECT_ID, 'adobe-commerce-paas', 'ADOBE_COMMERCE_ADMIN_USERNAME')]: 'sid',
+            [commerceSecretKey(PROJECT_ID, 'adobe-commerce-paas', 'ADOBE_COMMERCE_ADMIN_PASSWORD')]:
                 'ssecret',
         });
 
-        const pair = await resolveAccsOAuthPair({ secrets, projectId: PROJECT_ID }, {});
+        const pair = await resolvePaasAdminPair({ secrets, projectId: PROJECT_ID }, {});
 
-        expect(pair).toEqual({ clientId: 'sid', clientSecret: 'ssecret' });
+        expect(pair).toEqual({ username: 'sid', password: BOTH_STORED });
     });
 });
 
 describe('both halves or nothing', () => {
     it('returns undefined when only the ACCS id is present', async () => {
-        const pair = await resolveAccsOAuthPair({}, {
-            'adobe-commerce-accs': { ACCS_OAUTH_CLIENT_ID: 'lonely' },
+        const pair = await resolvePaasAdminPair({}, {
+            'adobe-commerce-paas': { ADOBE_COMMERCE_ADMIN_USERNAME: 'lonely' },
         });
 
         expect(pair).toBeUndefined();
@@ -153,30 +157,30 @@ describe('both halves or nothing', () => {
         // id in storage, secret nowhere. Reporting this as configured would send a
         // blank secret to the service, whose 401 reads as "wrong credential".
         const secrets = secretStore({
-            [commerceSecretKey(PROJECT_ID, 'adobe-commerce-accs', 'ACCS_OAUTH_CLIENT_ID')]: 'sid',
+            [commerceSecretKey(PROJECT_ID, 'adobe-commerce-paas', 'ADOBE_COMMERCE_ADMIN_USERNAME')]: 'sid',
         });
 
-        const pair = await resolveAccsOAuthPair({ secrets, projectId: PROJECT_ID }, {});
+        const pair = await resolvePaasAdminPair({ secrets, projectId: PROJECT_ID }, {});
 
         expect(pair).toBeUndefined();
     });
 
     it('treats an empty stored value as absent, not as a credential', async () => {
         const secrets = secretStore({
-            [commerceSecretKey(PROJECT_ID, 'adobe-commerce-accs', 'ACCS_OAUTH_CLIENT_SECRET')]: '',
+            [commerceSecretKey(PROJECT_ID, 'adobe-commerce-paas', 'ADOBE_COMMERCE_ADMIN_PASSWORD')]: '',
         });
 
-        const pair = await resolveAccsOAuthPair({ secrets, projectId: PROJECT_ID }, accsConfigs);
+        const pair = await resolvePaasAdminPair({ secrets, projectId: PROJECT_ID }, accsConfigs);
 
         // Empty falls through to config rather than winning as ''.
-        expect(pair?.clientSecret).toBe('secret-from-config');
+        expect(pair?.password).toBe('secret-from-config');
     });
 });
 
 describe('no credential anywhere', () => {
     it('returns undefined rather than a partial object', async () => {
-        expect(await resolveAccsOAuthPair({}, {})).toBeUndefined();
         expect(await resolvePaasAdminPair({}, {})).toBeUndefined();
-        expect(await resolveAccsOAuthPair({}, undefined)).toBeUndefined();
+        expect(await resolvePaasAdminPair({}, {})).toBeUndefined();
+        expect(await resolvePaasAdminPair({}, undefined)).toBeUndefined();
     });
 });

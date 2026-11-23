@@ -1,3 +1,4 @@
+import type { PlainText } from '@/core/utils/plainText';
 /**
  * The Updates modal's wire shapes (PL-80): what Check for Updates found, as rows the
  * projects list draws, and what the SC asked to apply.
@@ -24,7 +25,6 @@ export type PendingUpdateKind =
     | 'adobeMcp'
     | 'blockLibrary'
     | 'blockLibraryInstall'
-    | 'inspector'
     | 'integration';
 
 /** One update the SC can tick. */
@@ -50,6 +50,11 @@ export interface PendingUpdateGroup {
     key: string;
     /** "Demo Builder", the project's display name, "Template repositories". */
     title: string;
+    /**
+     * A project's line under its name: its storefront's repository ("skukla/bodea"), else its card's
+     * line, as Reset Selected draws a project (F50, 2026-11-07). Absent for the other groups.
+     */
+    detail?: string;
 }
 
 /** `showUpdates` — pushed to a projects list already open: the rows to show. */
@@ -77,8 +82,10 @@ export type UpdateRowState = 'waiting' | 'running' | 'done' | 'failed' | 'skippe
 export interface UpdateRowStatus {
     id: string;
     state: UpdateRowState;
-    /** Done: what to know, when there is something. Failed or skipped: why. */
-    message?: string;
+    /** Done: what to know, when there is something. Failed or skipped: why. Plain words (PL-102). */
+    message?: PlainText;
+    /** Failed: whether a retry can help (nothing answered, a busy server); else Fix with AI at once. */
+    retryable?: boolean;
 }
 
 /**
@@ -105,6 +112,22 @@ export interface ApplyUpdatesResponse {
      * then offers "Back to updates". A ticked row that did not apply is not counted.
      */
     remaining?: number;
+}
+
+/** `fixUpdateWithAi` — open the SC's AI on an update the run could not apply, by its row id. */
+export interface FixUpdateWithAiRequest {
+    id: string;
+}
+
+/** `checkUpdateRows` — Check Again: whether these rows' updates are still waiting. */
+export interface CheckUpdateRowsRequest {
+    ids: string[];
+}
+
+/** `checkUpdateRows`'s answer: the ids still waiting; every other row was told done. */
+export interface CheckUpdateRowsResponse {
+    success: true;
+    data: { waiting: string[] };
 }
 
 /** `recheckUpdates` — the rows of a fresh Check for Updates; empty when nothing waits. */

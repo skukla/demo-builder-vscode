@@ -21,7 +21,7 @@
  * rows) and the published DA.live content (72 rows), and aem.page and aem.live both
  * serve the 72-row CONTENT sheet, with and without `?sheet=data`. So a published
  * content sheet wins over a repository file at the same path. On
- * skukla/kukla-justrite (the old single-sheet stub, no content sheet)
+ * skukla/kukla-tailspin (the old single-sheet stub, no content sheet)
  * `placeholders/checkout.json?sheet=data` answers 404: that is the case where the
  * checkout reads "undefined". A test on skukla/scratch-1022 the same day was void:
  * that site serves no code at all (`scripts/scripts.js` is 404), so it is evidence

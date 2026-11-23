@@ -1,107 +1,146 @@
 /**
- * "Clear demo data" (datapack-engine step 10), the parts with no React in them: which stores the
- * ticks name, what ticking a website does, and the check's answer as the lines the modal lists.
- *
- * A website's tick stands for all of its stores (owner, 2026-10-30); a store another local project
- * records as its own (`claimedBy`) is never ticked, so a website holding one can be only partly
- * chosen from here.
+ * "Clear Demo Data", the parts with no React in them: the window's title, its opening sentence naming
+ * the websites (J1's words, `mockups/flow/j1-windows.tsx`), the clear button's words, and the
+ * host's sentences about the datapack it uninstalls first. The rows themselves come from the check
+ * (`ClearCheck.rows`).
  *
  * @module features/data-installer/ui/clearDemoDataWords
  */
 
-import type { WipeChoiceWebsite, WipeKind, WipePreview, WipeStoreChoice } from '@/types/demoDataWipe';
+import { andList } from '@/core/utils/andList';
+import type { ClearCheck } from '@/types/demoDataWipe';
 
-/** One store's tick, by website and store code. */
-export const tickOf = (websiteCode: string, storeCode: string): string => `${websiteCode}/${storeCode}`;
+/** A count as the SC reads it: 1,284. */
+const digits = (count: number): string => count.toLocaleString('en-US');
 
-/** The stores the ticks name. Commerce codes hold letters, digits and underscores, never "/". */
-export function choicesOfTicks(ticks: ReadonlySet<string>): WipeStoreChoice[] {
-    return [...ticks].sort().map((tick) => {
-        const [websiteCode, storeCode] = tick.split('/');
-        return { websiteCode, storeCode };
-    });
+/** The window's title before the check has named the project. */
+export const CLEAR_DEMO_DATA = 'Clear Demo Data';
+
+/** "Clear Bodea Demo Data?": the question the window asks, naming the project. */
+export function clearTitle(project: string): string {
+    return `Clear ${project} Demo Data?`;
 }
 
-/** A website's row: the stores it can tick, and whether all or some are. */
-export function websiteTicks(site: WipeChoiceWebsite, ticks: ReadonlySet<string>): { open: string[]; all: boolean; some: boolean } {
-    const open = site.stores.filter((s) => !s.claimedBy).map((s) => tickOf(site.code, s.code));
-    const count = open.filter((t) => ticks.has(t)).length;
-    return { open, all: open.length > 0 && count === open.length, some: count > 0 && count < open.length };
+/** The opening sentence: "Clears Bodea, the website this demo uses. Anything another demo uses is kept." */
+export function clearLead(check: Pick<ClearCheck, 'websites'>): string {
+    const names = check.websites.map((w) => w.name || w.code);
+    const which = names.length === 1 ? 'the website' : 'the websites';
+    return `Clears ${andList(names)}, ${which} this demo uses. Anything another demo uses is kept.`;
 }
 
-/** Tick every store of the website it can, or untick them all when every one is ticked. */
-export function toggleWebsite(site: WipeChoiceWebsite, ticks: ReadonlySet<string>): Set<string> {
-    const { open, all } = websiteTicks(site, ticks);
-    const next = new Set(ticks);
-    for (const tick of open) {
-        if (all) next.delete(tick);
-        else next.add(tick);
-    }
-    return next;
+/**
+ * The clearing's result, when it uninstalled the project's datapack first (step 06, C3): its first
+ * sentence. A removal that left part in Commerce on purpose keeps that part on the install record,
+ * so the project still names the pack.
+ */
+export function uninstalledFirst(name: string, leftInStore: boolean): string {
+    if (leftInStore) return `Uninstalled the datapack ${name} first, leaving part of it in Commerce on purpose: the project still names it.`;
+    return `Uninstalled the datapack ${name} first.`;
 }
 
-/** Tick or untick one store. */
-export function toggleStore(tick: string, ticks: ReadonlySet<string>): Set<string> {
-    const next = new Set(ticks);
-    if (next.has(tick)) next.delete(tick);
-    else next.add(tick);
-    return next;
+/** Website settings the datapack's removal put back, then set to the default's value by the clearing. */
+export function settingsSetBack(count: number): string {
+    return count === 1
+        ? "1 website setting the datapack's uninstall had put back was then set to the default's value."
+        : `${count} website settings the datapack's uninstall had put back were then set to the default's value.`;
 }
 
-/** "Views: English, French", the views a store's row lists under its name. */
-export function viewsLine(views: readonly string[]): string {
-    if (views.length === 0) return 'No store views';
-    return `${views.length === 1 ? 'View' : 'Views'}: ${views.join(', ')}`;
+/** A pack the service installed, taken out whole by the wipe: the project stops naming it. */
+export function packForgotten(name: string): string {
+    return `Nothing of the datapack ${name} is left in Commerce, so the project no longer uses it.`;
 }
 
-const plural = (count: number, one: string, many: string): string => `${count} ${count === 1 ? one : many}`;
-
-/** Each kind's word for one of it. */
-const ONE: Record<WipeKind, string> = { products: 'product', categories: 'category', customers: 'customer', orders: 'order', 'cart rules': 'cart rule' };
-
-/** "3 to remove", or nothing for none. */
-function countOf(count: number, what: string): string {
-    return count > 0 ? `${count} ${what}` : '';
-}
-
-/** One labelled line of the list. */
-export interface PreviewLine {
-    label: string;
-    value: string;
-}
-
-/** "12 to cancel, 4 to refund, 1 to leave open with a note, 2 returns to close", or nothing. */
-function ordersValue(orders: WipePreview['orders']): string {
-    const parts = [
-        orders.cancel.count > 0 ? `${orders.cancel.count} to cancel` : '',
-        orders.refund.count > 0 ? `${orders.refund.count} to refund` : '',
-        orders.leftOpen.count > 0 ? `${orders.leftOpen.count} to leave open with a note` : '',
-        orders.returns.count > 0 ? `${plural(orders.returns.count, 'return', 'returns')} to close` : '',
-    ].filter(Boolean);
-    return parts.join(', ');
-}
-
-/** What the clearing would do, kind by kind, then what it leaves and what Demo Builder installed. */
-export function previewLines(preview: WipePreview): PreviewLine[] {
-    const { remove, takenOff, rulesTakenOff, orders, installed } = preview;
-    const products = [countOf(remove.products.count, 'to remove'), countOf(takenOff.count, 'taken off the chosen websites')].filter(Boolean).join(', ');
-    const rules = [countOf(remove.cartRules.count, 'to remove, with their coupons'), countOf(rulesTakenOff.count, 'taken off the chosen websites')].filter(Boolean).join(', ');
-    const lines: PreviewLine[] = [
-        { label: 'Products', value: products },
-        { label: 'Categories', value: remove.categories.count > 0 ? `${remove.categories.count} to remove` : '' },
-        { label: 'Customers', value: remove.customers.count > 0 ? `${remove.customers.count} to remove` : '' },
-        { label: 'Cart rules', value: rules },
-        { label: 'Orders', value: ordersValue(orders) },
-        // The orders an ERP integration closes, or why it leaves them: its own one line.
-        { label: 'ERP', value: preview.erp?.line ?? '' },
-        ...preview.left.map((l) => ({ label: 'Left', value: `${plural(l.count, ONE[l.kind], l.kind)}: ${l.why}` })),
-    ];
-    const made = Object.entries(installed).map(([kind, count]) => `${count} ${kind.replace(/_/gu, ' ')}`);
-    if (made.length > 0) lines.push({ label: 'Installed', value: `${made.join(', ')}, which removing its datapack takes` });
-    return lines.filter((l) => l.value !== '');
+/** A removal that did not finish: nothing was cleared, and why. */
+export function notUninstalled(name: string, why: string, partly: boolean): string {
+    const what = partly ? `Part of the datapack ${name} was uninstalled before it stopped` : `The datapack ${name} wasn't uninstalled`;
+    return `${what}, so nothing was cleared: ${why}`;
 }
 
 /** The clear button: how many things, or nothing to clear. */
 export function clearLabel(total: number): string {
-    return total === 1 ? 'Clear 1 thing' : `Clear ${total} things`;
+    if (total === 0) return 'Clear';
+    return total === 1 ? 'Clear 1 Item' : `Clear ${digits(total)} Items`;
+}
+
+/** Clear Commerce Instance's first window's title (C4). */
+export const CLEAR_INSTANCE = 'Clear Commerce Instance';
+
+/** "1 Website", "3 Websites": how many websites, as a title names them. */
+const websitesCount = (count: number): string => (count === 1 ? '1 Website' : `${count} Websites`);
+
+/** "Clear 2 Websites?": the second window's question. */
+export function instanceTitle(count: number): string {
+    return `Clear ${websitesCount(count)}?`;
+}
+
+/** "Clear 2 Websites": its red button. */
+export function instanceClearLabel(count: number): string {
+    return `Clear ${websitesCount(count)}`;
+}
+
+/** Two names, then how many more: "A and B", "A, B and 3 more" (J1's "Used by" line). */
+export function namesLine(names: readonly string[]): string {
+    if (names.length <= 2) return names.join(' and ');
+    return `${names.slice(0, 2).join(', ')} and ${names.length - 2} more`;
+}
+
+/** The picker's opening sentence. */
+export const INSTANCE_PICK_LEAD = 'Select the websites to clear. Everything on them is removed, whichever project put it there.';
+
+/** The summary's opening sentence, naming the websites chosen. */
+export function instanceLead(names: readonly string[]): string {
+    return `Clears everything on ${namesLine(names)}, whichever project put it there.`;
+}
+
+/**
+ * The warning over "I understand" (property 1, reversibility): what cannot be undone, and what can,
+ * each project's datapack, installed again from the library, its changes saved first.
+ */
+export function instanceWarning(projects: number): string {
+    const lose = projects === 1 ? '1 project loses its demo data.' : `${projects} projects lose their demo data.`;
+    const lead = projects === 0 ? 'Everything on these websites is removed.' : lose;
+    return `${lead} This can't be undone, except the datapacks: their changes are saved first, and each can be installed again from the library.`;
+}
+
+/** The box the red button waits for. */
+export const INSTANCE_UNDERSTOOD = 'I understand every project on these websites loses its data';
+
+/** The result's last sentence when datapacks were uninstalled first (property 1). */
+export const INSTANCE_REINSTALL = 'Each datapack can be installed again from the library.';
+
+/** The result's first sentence: the datapacks uninstalled first, and any left in part on purpose. */
+export function uninstalledEachFirst(names: readonly string[], leftInPart: readonly string[]): string {
+    const first = `Uninstalled the ${names.length === 1 ? 'datapack' : 'datapacks'} ${andList(names)} first.`;
+    if (leftInPart.length === 0) return first;
+    const still = leftInPart.length === 1 ? 'its project still names it' : 'their projects still name them';
+    return `${first} Part of ${andList(leftInPart)} was left in Commerce on purpose, so ${still}.`;
+}
+
+/** A project whose datapack is also on a website not chosen: it stays installed, and so does its data. */
+export function keptElsewhere(project: string, pack: string, elsewhere: readonly string[]): string {
+    const where = elsewhere.length === 1 ? `the website ${elsewhere[0]}` : `the websites ${andList(elsewhere)}`;
+    return `${project} keeps its datapack ${pack}, which is also on ${where}, and its data on these websites.`;
+}
+
+/** A project with a record of its datapack that names no website: nothing of it can safely go. */
+export function keptNowhere(project: string, pack: string): string {
+    return `${project} keeps its datapack ${pack} and its data on these websites: a record of it names no website.`;
+}
+
+/** A project whose Commerce instance cannot be matched to this one, on a website of the same code. */
+export function keptUnmatched(project: string): string {
+    return `${project} keeps its data on these websites: it may be on another Commerce instance with a website of the same code.`;
+}
+
+/** A project whose datapack is uninstalled, with older install records on these websites: what they list stays. */
+export function keptOlder(project: string, packs: readonly string[]): string {
+    const which = packs.length === 1 ? `the older datapack ${packs[0]}` : `the older datapacks ${andList(packs)}`;
+    return `${project} keeps what ${which} put on these websites: only its current datapack is uninstalled.`;
+}
+
+/** Packs the service installed, taken out with the websites: their projects stop naming them. */
+export function forgottenPacks(names: readonly string[]): string {
+    return names.length === 1
+        ? `${names[0]} no longer names a datapack: nothing of it is left on these websites.`
+        : `${andList(names)} no longer name a datapack: nothing of theirs is left on these websites.`;
 }

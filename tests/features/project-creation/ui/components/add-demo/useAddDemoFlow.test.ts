@@ -14,7 +14,7 @@ jest.mock('@/core/ui/utils/vscode-api', () => ({
 
 const READ: SharedDemoRead = {
     outcome: 'read',
-    fullName: 'jen/isle5-demo',
+    fullName: 'robin/isle5-demo',
     defaultBranch: 'main',
     isTemplate: false,
     kind: 'eds',
@@ -42,7 +42,7 @@ function setup() {
 
 async function walkToFound(hook: ReturnType<typeof setup>['hook'], answer: unknown): Promise<void> {
     mockRequest.mockResolvedValueOnce(answer);
-    act(() => hook.result.current.setSource({ owner: 'jen', repo: 'isle5-demo' }));
+    act(() => hook.result.current.setSource({ owner: 'robin', repo: 'isle5-demo' }));
     await act(async () => {
         hook.result.current.onContinue();
     });
@@ -59,7 +59,7 @@ async function continueWithZip(hook: ReturnType<typeof setup>['hook']): Promise<
 describe('useAddDemoFlow', () => {
     beforeEach(() => jest.clearAllMocks());
 
-    it('starts on "From a link"; picking the zip needs no link and relabels Continue as the picker', () => {
+    it('starts on "From a Link"; picking the zip needs no link and relabels Continue as the picker', () => {
         const { hook } = setup();
         expect(hook.result.current.way).toBe('link');
         expect(hook.result.current.continueLabel).toBe('Continue');
@@ -67,7 +67,7 @@ describe('useAddDemoFlow', () => {
         act(() => hook.result.current.setWay('zip'));
 
         expect(hook.result.current.canContinue).toBe(true);
-        expect(hook.result.current.continueLabel).toBe('Choose a zip file');
+        expect(hook.result.current.continueLabel).toBe('Choose a Zip File');
         expect(mockRequest).not.toHaveBeenCalled();
     });
 
@@ -75,7 +75,7 @@ describe('useAddDemoFlow', () => {
         const { hook } = setup();
         expect(hook.result.current.stage).toBe('link');
         expect(hook.result.current.canContinue).toBe(false);
-        act(() => hook.result.current.setSource({ owner: 'jen', repo: 'isle5-demo' }));
+        act(() => hook.result.current.setSource({ owner: 'robin', repo: 'isle5-demo' }));
         expect(hook.result.current.canContinue).toBe(true);
         expect(mockRequest).not.toHaveBeenCalled();
     });
@@ -84,19 +84,19 @@ describe('useAddDemoFlow', () => {
         const { hook } = setup();
         await walkToFound(hook, { success: true, result: READ });
 
-        expect(mockRequest).toHaveBeenCalledWith('probe-shared-demo', { owner: 'jen', repo: 'isle5-demo' });
+        expect(mockRequest).toHaveBeenCalledWith('probe-shared-demo', { owner: 'robin', repo: 'isle5-demo' });
         expect(hook.result.current.stage).toBe('found');
         expect(hook.result.current.probe).toEqual({ status: 'done', result: READ });
-        expect(hook.result.current.continueLabel).toBe('Add demo package');
+        expect(hook.result.current.continueLabel).toBe('Add Demo Package');
         expect(hook.result.current.canContinue).toBe(true);
     });
 
     it('carries the sign-in handoff on a failed probe, so the stage can say what to do', async () => {
         const { hook } = setup();
-        await walkToFound(hook, { success: false, error: 'Sign in to GitHub to read this demo.', needsAuth: 'github' });
+        await walkToFound(hook, { success: false, error: 'Sign In to GitHub to read this demo.', needsAuth: 'github' });
         expect(hook.result.current.probe).toEqual({
             status: 'failed',
-            error: 'Sign in to GitHub to read this demo.',
+            error: 'Sign In to GitHub to read this demo.',
             needsAuth: true,
         });
     });
@@ -161,7 +161,7 @@ describe('useAddDemoFlow', () => {
     it('commits through add-shared-demo with the row, then reports and closes', async () => {
         const { hook, onDemoAdded, onClose } = setup();
         await walkToFound(hook, { success: true, result: READ });
-        const remembered = { kind: 'demo', name: 'Isle5 Demo', source: { owner: 'jen', repo: 'isle5-demo' } };
+        const remembered = { kind: 'demo', name: 'Isle5 Demo', source: { owner: 'robin', repo: 'isle5-demo' } };
         mockRequest.mockResolvedValueOnce({ success: true, result: { demo: remembered } });
 
         await act(async () => {
@@ -169,7 +169,7 @@ describe('useAddDemoFlow', () => {
         });
 
         expect(mockRequest).toHaveBeenLastCalledWith('add-shared-demo', {
-            demo: expect.objectContaining({ name: 'Isle5 Demo', source: { owner: 'jen', repo: 'isle5-demo', branch: 'main' } }),
+            demo: expect.objectContaining({ name: 'Isle5 Demo', source: { owner: 'robin', repo: 'isle5-demo', branch: 'main' } }),
         });
         expect(mockRequest.mock.calls.at(-1)?.[1].demo).not.toHaveProperty('createdFromZip');
         expect(onDemoAdded).toHaveBeenCalledWith(remembered);
@@ -183,7 +183,7 @@ describe('useAddDemoFlow', () => {
 
     it('records the zip only for the repository the zip door created, not for one reached by Back and a link', async () => {
         const { hook } = setup();
-        mockRequest.mockResolvedValueOnce({ success: true, result: { owner: 'jen', repo: 'isle5-demo' } });
+        mockRequest.mockResolvedValueOnce({ success: true, result: { owner: 'robin', repo: 'isle5-demo' } });
         mockRequest.mockResolvedValueOnce({ success: true, result: READ });
         await continueWithZip(hook);
         act(() => hook.result.current.onBack());
@@ -232,6 +232,6 @@ describe('useAddDemoFlow', () => {
         act(() => hook.result.current.onBack());
         expect(hook.result.current.stage).toBe('link');
         expect(hook.result.current.probe).toEqual({ status: 'idle' });
-        expect(hook.result.current.draft.source).toEqual({ owner: 'jen', repo: 'isle5-demo' });
+        expect(hook.result.current.draft.source).toEqual({ owner: 'robin', repo: 'isle5-demo' });
     });
 });

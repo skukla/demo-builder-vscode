@@ -9,7 +9,7 @@
  * `CategoryInterface`, not a recorded answer.
  */
 
-import { productLookups } from '@/features/data-installer/services/demoBuilderEngine/productLookups';
+import { ambiguousKeysLine, productLookups } from '@/features/data-installer/services/demoBuilderEngine/productLookups';
 import { by, fakeContext, page } from './demoBuilderEngine.testUtils';
 
 const SETS = { [page('products/attribute-sets/sets/list')]: { items: [{ attribute_set_id: 4, attribute_set_name: 'Default' }, { attribute_set_id: 12, attribute_set_name: 'Bodea Racks' }], total_count: 2 } };
@@ -80,5 +80,88 @@ describe('productLookups, both directions', () => {
         });
 
         await expect(productLookups(ctx).productSku(7)).resolves.toBe('OutdoorPatchCable/6ft');
+    });
+});
+
+/**
+ * DI-9: a pack names a product's categories by url key alone, and Commerce lets a child reuse its
+ * parent's key. Bodea's "Servers and Racks" and its child "Racks" are both `racks` (measured on the
+ * shared library's pack, 2026-10-30). Everything linking the key goes into the first match; the
+ * install now says so instead of choosing in silence. Shapes: `categories/list` items are Magento's
+ * `CategoryInterface` (`id`, `name`, `path`), as `categoryUrlKey` above reads them.
+ */
+describe('a url key two categories share', () => {
+    const list = page('categories/list', by('url_key', 'racks'));
+    const SERVERS = { id: 40, name: 'Servers and Racks', path: '1/2/40' };
+    const RACKS = { id: 41, name: 'Racks', path: '1/2/40/41' };
+
+    it('takes the first match under the root, and records the key, both names and where it went', async () => {
+        const ctx = await fakeContext({ [list]: { items: [SERVERS, RACKS], total_count: 2 } });
+
+        await expect(productLookups(ctx).categoryId('racks')).resolves.toBe('40');
+        expect(ctx.session.ambiguousCategoryKeys?.get('racks')).toEqual({ chosen: 'Servers and Racks', names: ['Servers and Racks', 'Racks'] });
+    });
+
+    it('records nothing for a key one category holds — control', async () => {
+        const ctx = await fakeContext({ [list]: { items: [RACKS], total_count: 1 } });
+
+        await expect(productLookups(ctx).categoryId('racks')).resolves.toBe('41');
+        expect(ctx.session.ambiguousCategoryKeys).toBeUndefined();
+    });
+
+    it('counts only the matches under the root when some are elsewhere', async () => {
+        const elsewhere = { id: 90, name: 'Racks', path: '1/80/90' };
+        const ctx = await fakeContext({ [list]: { items: [elsewhere, RACKS], total_count: 2 } });
+
+        await expect(productLookups(ctx).categoryId('racks')).resolves.toBe('41');
+        expect(ctx.session.ambiguousCategoryKeys).toBeUndefined();
+    });
+
+    it('says it on the install result in one sentence a key', () => {
+        const keys = new Map([['racks', { chosen: 'Servers and Racks', names: ['Servers and Racks', 'Racks'] }]]);
+
+        expect(ambiguousKeysLine(keys)).toBe(
+            'The url key racks names 2 categories (Servers and Racks, Racks), so everything linking it went into Servers and Racks.',
+        );
+        expect(ambiguousKeysLine(new Map())).toBeUndefined();
+        expect(ambiguousKeysLine(undefined)).toBeUndefined();
+    });
+});
+
+// Walk F90: a save turns every product into a row at once, and each asks its set's name. Each used to
+// start its own read of the set list (2,048 at once on Luma; the rows took 88 s).
+describe('the set list, asked for by many products at once', () => {
+    it('is read once, and every one of them gets its name', async () => {
+        const ctx = await fakeContext({ [page('products/attribute-sets/sets/list')]: { items: [{ attribute_set_id: 16, attribute_set_name: 'Top' }], total_count: 1 } });
+        const answer = ctx.get;
+        let reads = 0;
+        ctx.get = (path) => {
+            if (path.startsWith('products/attribute-sets/sets/list')) reads += 1;
+            return answer(path);
+        };
+        const lk = productLookups(ctx);
+
+        const names = await Promise.all(Array.from({ length: 50 }, () => lk.setName(16)));
+
+        expect(reads).toBe(1);
+        expect(new Set(names)).toStrictEqual(new Set(['Top']));
+    });
+
+    it('is read again after a read that failed', async () => {
+        const ctx = await fakeContext({ [page('products/attribute-sets/sets/list')]: { items: [{ attribute_set_id: 16, attribute_set_name: 'Top' }], total_count: 1 } });
+        const answer = ctx.get;
+        let failOnce = true;
+        ctx.get = (path) => {
+            if (failOnce && path.startsWith('products/attribute-sets/sets/list')) {
+                failOnce = false;
+                return Promise.reject(new Error('Commerce did not answer'));
+            }
+            return answer(path);
+        };
+        const lk = productLookups(ctx);
+
+        await expect(lk.setName(16)).rejects.toThrow('Commerce did not answer');
+
+        await expect(lk.setName(16)).resolves.toBe('Top');
     });
 });

@@ -179,10 +179,11 @@ finds the count stuck at the one-job floor is DONE, and says so, rather than inv
 5. **The bookkeeping that moves with the code** — check each, every time:
    - `tests/sop/architecture-rules.exemptions.json`: `godFileCandidates` and `godFileCoupled`
      lowered by what was achieved, each `_note` prefixed with a dated sentence.
-   - `scripts/mutation-equivalents.ledger.json`: rows keyed by module and line; re-home them
-     (Python `json.dumps(indent=4)`, never Node's stringify).
-   - `tests/sop/user-facing-errors.ledger.json`, `tests/sop/progress-surface.ledger.json`,
-     `tests/sop/derived-fields` keys: `file:line`.
+   - `scripts/mutation-equivalents.ledger.json`, `tests/sop/user-facing-errors.ledger.json` and
+     `tests/sop/progress-surface.ledger.json`: re-key rows with the ledger tool (the toolbox's
+     `ledger`, or `npm run ledger -- move <mutation|errors|progress> ...`; `check` names what moved),
+     never by hand: it keeps each file's format, which a hand re-dump has broken.
+   - `tests/sop/derived-fields` keys: `file:line` (by hand; the ledger tool does not cover it).
    - `tests/core/utils/operationStages.test.ts` `STAGE_REPORTERS`; `test-family-setup`; the
      jscpd ceiling; `tests/templates/spine-chokepoints.test.ts` doors.
    - Hook proofs and probes that name an example oversized file (`49-god-file.proof.sh`,

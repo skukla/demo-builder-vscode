@@ -5,7 +5,7 @@ area: platform
 parent: PL-56
 needs: [PL-56d]
 value: low
-status: built
+status: shipped
 ---
 
 # A feature page for moving projects
@@ -19,3 +19,4 @@ name. Pinned by `cited-identifiers.test.ts` for every path and key it names.
 ## Shipped so far
 
 - 2026-10-04  2026-10-04 night3-a (staged, not committed): staleness - project-file-format.md (2026-09-12) already covered the file, what travels, credentials and v1 reading, so the gap was the doors; wrote docs/systems/moving-projects.md (Export, Import from File, Copy from Existing, Edit; their agent tools; one writer and one reader; what travels and never does; credentials; older files; where it is pinned), linked from docs/README.md; every path and identifier it names was checked against the tree (cited-identifiers.test.ts only checks settings and npm scripts).
+- 2026-11-20  Released in v1.0.0-beta.152 (361bbe56f, docs/systems/moving-projects.md); found at the beta.153 reconcile

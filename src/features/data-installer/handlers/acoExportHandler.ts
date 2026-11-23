@@ -1,11 +1,10 @@
 /**
- * "Make an ACO pack": the export screen's and `start_datapack_export`'s ACO choice
+ * "Make an ACO pack": the export screen's and `create_datapack`'s ACO choice
  * (`aco: true`), datapack-engine step 14 item 19 (PL-60). Reached through `start-datapack-export`
  * so the human and the agent export from the one place they already do.
  *
- * Unlike the Commerce export (the Data Installer service's, into the shared catalog), this runs
- * on Demo Builder's own reads of the project's store and writes into the SC's datapack LIBRARY,
- * private to them, whichever engine is chosen. Undone by deleting the pack from the library
+ * It runs on Demo Builder's own reads of the project's store and writes into the SC's datapack
+ * LIBRARY, private to them. Undone by deleting the pack from the library
  * (`delete-library-datapack`). Nothing is written to Commerce.
  *
  * It opens as every datapack write does (`resolveDatapackWriteAccess`), then checks the sign-in
@@ -45,10 +44,10 @@ export interface AcoExportPayload {
 }
 
 /**
- * Fields that belong to the other two exports: the service's Commerce export names the instance
- * it reads (`commerceInstance`), Demo Builder's save from the store sends its picks
- * (`selections`). An ACO pack reads this project's own store and picks nothing, so either one
- * sent with `aco` would be silently ignored; it is refused instead, with either engine.
+ * Fields that belong to other exports: the Data Installer service's own export named the instance
+ * it read (`commerceInstance`, deleted with it on 2026-11-06), and Demo Builder's save from the
+ * store sends its picks (`selections`). An ACO pack reads this project's own store and picks
+ * nothing, so either one sent with `aco` would be silently ignored; it is refused instead.
  */
 const OTHER_EXPORT_FIELDS = ['commerceInstance', 'selections'] as const;
 
@@ -57,7 +56,7 @@ function projectReads(context: HandlerContext, project: Project): AcoCommerce {
     const { authManager } = context;
     return async (storeView) => {
         if (!authManager)
-            return { refusal: "Adobe sign-in is required to read this project's store." };
+            return { refusal: "Adobe sign-in is required to read this project's Commerce instance." };
         const client = await commerceClientForProject(
             project,
             authManager,
@@ -94,7 +93,7 @@ export async function startAcoExport(
     if (stray.length > 0)
         return {
             success: false,
-            error: `An ACO pack is made from this project's own store, so ${stray.join(' and ')} cannot be sent with aco.`,
+            error: `An ACO datapack is made from this project's own store, so ${stray.join(' and ')} cannot be sent with aco.`,
             code: ErrorCode.INVALID_OPERATION,
         };
     const name = payload?.datapackName;
@@ -102,7 +101,7 @@ export async function startAcoExport(
     if (!name || !version)
         return {
             success: false,
-            error: 'An export needs a datapack name and a version — together they name what it writes.',
+            error: 'An export needs a datapack name and a version: together they name what it writes.',
         };
     const gate = await resolveDatapackWriteAccess(context, 'export');
     if ('response' in gate) return gate.response;
@@ -137,7 +136,7 @@ export async function startAcoExport(
         );
         return {
             success: false,
-            error: 'The ACO pack could not be made. Details are in Debug Logs.',
+            error: 'The ACO datapack could not be made.',
             code: ErrorCode.UNKNOWN,
         };
     }

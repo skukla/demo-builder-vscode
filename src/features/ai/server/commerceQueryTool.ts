@@ -226,7 +226,7 @@ export function registerCommerceQueryTool(
             inputSchema: {
                 query: z.string().describe('The GraphQL query. Read-only; mutations are refused.'),
                 variables: z
-                    .record(z.unknown())
+                    .record(z.string(), z.unknown())
                     .optional()
                     .describe('GraphQL variables, if the query takes any'),
                 endpoint: z

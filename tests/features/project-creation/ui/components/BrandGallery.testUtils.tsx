@@ -8,8 +8,7 @@
  * Two ordering choices are load-bearing:
  *  - `EDS_STACK` is the SECOND stack, so a lookup that ignores its predicate and takes
  *    the first entry names the wrong architecture rather than the right one by luck.
- *  - `PACKAGES` holds three entries, because SearchHeader only renders its search field
- *    above `searchThreshold` (2 here).
+ *  - `PACKAGES` holds three entries, so a filter has something to narrow.
  */
 
 import React from 'react';

@@ -37,9 +37,6 @@ import { CheckboxRow } from './CheckboxRow';
 import { andList } from '@/core/utils/andList';
 import type { CloudGrouping } from '@/types/adobeApis';
 
-/** Show the filter only once the list is big enough to warrant it (catalog parity). */
-const API_SEARCH_THRESHOLD = 5;
-
 /** One org Adobe service, as the wizard/dashboard API handlers report it. */
 export interface ApiAccessOption {
     /** The service's sdkCode (what subscriptions are keyed by). */
@@ -243,7 +240,6 @@ export function ApiAccessPicker({
                 filteredCount={searched.length}
                 itemNoun="API"
                 hasLoadedOnce
-                searchThreshold={API_SEARCH_THRESHOLD}
                 searchPlaceholder="Filter APIs"
             />
             {chips.length > 0 && (
@@ -265,7 +261,7 @@ export function ApiAccessPicker({
             {/* The row area is always its own element so a HOST can make it the
                 one scroll region (see .manage-apis-body). Unconstrained — as in
                 the wizard stage — it simply stacks and the page scrolls. */}
-            <div className="intflow-api-scroll">
+            <div className="intflow-api-scroll scroll-fade">
                 {list.length === 0 ? (
                     <div className="intflow-api-empty">No APIs match “{query}”.</div>
                 ) : (

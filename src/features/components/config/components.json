@@ -118,7 +118,7 @@
                     "ACCS_STORE_CODE",
                     "ACCS_STORE_VIEW_CODE"
                 ],
-                "optionalEnvVars": ["ACCS_OAUTH_CLIENT_ID", "ACCS_OAUTH_CLIENT_SECRET"]
+                "optionalEnvVars": []
             }
         }
     },
@@ -291,7 +291,7 @@
             }
         },
         "ACCS_WEBSITE_CODE": {
-            "label": "Website code",
+            "label": "Website Code",
             "type": "text",
             "required": true,
             "default": "citisignal",
@@ -300,7 +300,7 @@
             "group": "accs"
         },
         "ACCS_STORE_CODE": {
-            "label": "Store code",
+            "label": "Store Code",
             "type": "text",
             "required": true,
             "default": "citisignal_store",
@@ -309,29 +309,12 @@
             "group": "accs"
         },
         "ACCS_STORE_VIEW_CODE": {
-            "label": "Store view code",
+            "label": "Store View Code",
             "type": "text",
             "required": true,
             "default": "citisignal_us",
             "placeholder": "citisignal_us",
             "description": "The store view code for your ACCS instance",
-            "group": "accs"
-        },
-        "ACCS_OAUTH_CLIENT_ID": {
-            "label": "OAuth client ID",
-            "type": "text",
-            "required": false,
-            "placeholder": "your_oauth_client_id",
-            "description": "Optional override. Leave blank — Demo Builder fetches a shared credential from the discovery service when it imports a datapack. Fill this in only to use your own Adobe OAuth Server-to-Server credential instead.",
-            "group": "accs"
-        },
-        "ACCS_OAUTH_CLIENT_SECRET": {
-            "label": "OAuth client secret",
-            "type": "password",
-            "secret": true,
-            "required": false,
-            "placeholder": "your_oauth_client_secret",
-            "description": "Required only if you filled in the client ID above. Kept in the OS keychain, never in the project files.",
             "group": "accs"
         },
         "ACCS_CUSTOMER_GROUP": {
@@ -484,7 +467,7 @@
             "group": "adobe-commerce"
         },
         "ADOBE_COMMERCE_STORE_CODE": {
-            "label": "Store code",
+            "label": "Store Code",
             "type": "text",
             "required": true,
             "placeholder": "main_website_store",
@@ -492,7 +475,7 @@
             "group": "adobe-commerce"
         },
         "ADOBE_COMMERCE_STORE_VIEW_CODE": {
-            "label": "Store view code",
+            "label": "Store View Code",
             "type": "text",
             "required": true,
             "placeholder": "default",
@@ -516,7 +499,7 @@
             "group": "adobe-commerce"
         },
         "ADOBE_COMMERCE_WEBSITE_CODE": {
-            "label": "Website code",
+            "label": "Website Code",
             "type": "text",
             "required": true,
             "placeholder": "base",

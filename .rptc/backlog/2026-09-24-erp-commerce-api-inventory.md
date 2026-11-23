@@ -5,7 +5,7 @@ area: app-builder
 parent: AB-26
 needs: []
 value: high
-status: built
+status: shipped
 ---
 
 # Commerce API inventory and validation — every call the programme needs, proven to exist, captured as fixtures
@@ -31,3 +31,4 @@ A test in the integration that every fixture matches what the code sends and rea
 - 2026-09-27  docs(backlog): AB-26b is built (`afee12f2a`)
 - 2026-09-27  docs(backlog): AB-26b built, the live half and fixtures done (`d97764ad9`)
 - 2026-09-27  docs(plan): several ERPs, A1 live proofs done and A2 half-done (`4e4815fd2`)
+- 2026-11-20  Released in v1.0.0-beta.153

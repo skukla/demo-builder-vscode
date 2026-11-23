@@ -200,3 +200,19 @@ describe('CardActionsMenu — with a label', () => {
         expect(onAction).toHaveBeenCalledWith('remove');
     });
 });
+
+/**
+ * A labelled trigger with an icon: a quiet button among a header's quiet buttons (the Datapacks
+ * header's Save ▾, step-04 S1), led by its icon as they are.
+ */
+describe('CardActionsMenu — with a label and an icon', () => {
+    it('shows a quiet action button: the icon, then the label and its arrow', () => {
+        renderMenu({ label: 'Save', icon: <span data-testid="icon-save" /> });
+
+        const trigger = screen.getByRole('button', { name: 'More actions for ERP Sync' });
+        expect(trigger).not.toHaveAttribute('data-variant');
+        expect(trigger).toHaveTextContent('Save▾');
+        expect(trigger.firstElementChild).toHaveAttribute('data-testid', 'icon-save');
+        expect(screen.getByTestId('menu-trigger')).toHaveAttribute('data-direction', 'bottom');
+    });
+});

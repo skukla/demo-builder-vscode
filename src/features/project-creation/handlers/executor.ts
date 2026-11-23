@@ -9,7 +9,8 @@
  * - Phase 3 mesh — `executorMeshPhase`
  * - Phase 3b App Builder integrations — `executorAppBuilderPhase`
  * - EDS metadata / config sync / content — `executorEdsPhase`
- * - Phase 5c sample data — `executorSampleDataPhase`
+ * - Phase 5c sample data — `executorDatapackPhase`
+ * - The optional steps and the finish — `creationLastSteps`
  *
  * This file keeps `buildInitialProject` and `executeProjectCreation`, and
  * re-exports the phase modules' public functions so every existing
@@ -18,7 +19,10 @@
 
 import * as fsPromises from 'fs/promises';
 import * as path from 'path';
+import { runLastSteps } from './creationLastSteps';
+import { caught, stepRunner } from './creationPause';
 import { creationReporter, creationSteps } from './creationProgress';
+import { stepBoundary } from './creationStop';
 import { executeAcoCredentialPhase } from './executorAcoPhase';
 import {
     executeAppBuilderIntegrationsPhase,
@@ -26,6 +30,7 @@ import {
 } from './executorAppBuilderPhase';
 import { loadComponentDefinitions } from './executorComponentLoading';
 import { finishEditWithoutRebuild } from './executorEditApply';
+import { settleConnectionBeforeRebuild } from './executorEditConnection';
 import {
     carriedOverFromEdit,
     loadExistingProjectForEdit,
@@ -41,28 +46,23 @@ import {
     cleanupOrphanedDirectory,
     refuseSecondErpIntegration,
 } from './executorPreflight';
-import { executeSampleDataPhase } from './executorSampleDataPhase';
 import { ProgressTracker } from './shared';
 import { COMPONENT_IDS } from '@/core/constants';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { whileRunning } from '@/core/state/projectWorkRunning';
-import { OPERATION_STAGES } from '@/core/utils/operationStages';
+import { OPERATION_STAGES as S } from '@/core/utils/operationStages';
+import { RESET_STAGES } from '@/core/utils/resetStages';
 import { getAppBuilderComponentEntry } from '@/features/components/services/appBuilderComponentCatalogLoader';
-import { migrateDeclaredSecrets } from '@/features/components/services/commerceSecretMigration';
 import { componentRegistryFrom } from '@/features/components/services/componentRegistryAccess';
-import { generateAIContextFiles } from '@/features/project-creation/services/aiBundle/aiBundleService';
-import { executeCatalogMenuPhase } from '@/features/project-creation/services/catalogMenuPhase';
-import { executeCatalogPrewarmPhase } from '@/features/project-creation/services/catalogPrewarmPhase';
+import { migrateDeclaredSecrets } from '@/features/components/services/declaredSecretStore';
 import { cloneAllComponents, installAllComponents } from '@/features/project-creation/services/componentInstallationOrchestrator';
 import { fillCreationDefaults } from '@/features/project-creation/services/creationConfigDefaults';
-import { finalizeProject, generateEnvironmentFiles, sendCompletionAndCleanup } from '@/features/project-creation/services/projectFinalizationService';
+import { generateEnvironmentFiles } from '@/features/project-creation/services/projectFinalizationService';
 import { HandlerContext } from '@/types/handlers';
 import { isEdsStackId } from '@/types/typeGuards';
 import type { ProjectCreationConfig } from '@/types/webviewRequests';
 
-// ============================================================================
-// Helper Functions
-// ============================================================================
+// ===== Helper Functions =====
 
 // ProjectCreationConfig and FrontendSource live in @/types/webviewRequests —
 // ONE declaration shared with the wizard's buildProjectConfig and the MCP
@@ -174,35 +174,47 @@ export function buildInitialProject(
  *
  * Listed as running for as long as it runs, so the projects list can tell a project
  * being created from one whose creation never finished (PL-82).
+ *
+ * @param signal - the run's stop (`creationRun.ts`): checked before each step starts, so a
+ *   stopped creation lets its running step finish and starts no other (F274)
+ * @throws the cancelled error (`creationStop.ts`) when stopped, or a step's own error
  */
 export async function executeProjectCreation(
     context: HandlerContext,
     config: ProjectCreationConfig,
+    signal?: AbortSignal,
 ): Promise<void> {
-    await whileRunning(creationPath(config), 'creating', () => createOrRebuild(context, config));
+    const step = stepBoundary(signal);
+    await whileRunning(creationPath(config), 'creating', () =>
+        createOrRebuild(context, config, signal),
+    );
+    step();
     await renameAfterEdit(context, config); // a name changed in Edit, applied after it
 }
 
 async function createOrRebuild(
     context: HandlerContext,
     config: ProjectCreationConfig,
+    signal: AbortSignal | undefined,
 ): Promise<void> {
     const typedConfig = config;
+    const step = stepBoundary(signal); // before each step: a stopped run ends here (F274)
 
     context.logger.debug(
         `[Project Creation] Received config: selectedPackage=${typedConfig.selectedPackage}, selectedStack=${typedConfig.selectedStack}`,
     );
 
     // One reporter for the wizard's screen and an agent (`creationProgress.ts`).
-    const progress = creationReporter(context.sendMessage);
+    const progress = creationReporter(context.sendMessage, Date.now(), signal);
     const progressTracker: ProgressTracker = progress.report;
 
-    // ========================================================================
-    // PRE-FLIGHT CHECKS
-    // ========================================================================
+    // ===== PRE-FLIGHT CHECKS =====
 
+    step();
     // An Edit that changed nothing, or only integrations, is not a rebuild (PL-75).
-    if (await finishEditWithoutRebuild(context, typedConfig, progressTracker)) return;
+    // One runner for every step that can pause on its failure (F307).
+    const runStep = stepRunner({ context, reporter: progress, signal, projectName: typedConfig.projectName });
+    if (await finishEditWithoutRebuild(context, typedConfig, progressTracker, undefined, runStep)) return;
     await handlePortConflicts(context, typedConfig, progressTracker); // the port is free
     await refuseSecondErpIntegration(context, typedConfig); // one ERP integration per instance (AB-78)
 
@@ -215,17 +227,17 @@ async function createOrRebuild(
     let existingProject: import('@/types/base').Project | undefined;
     if (isEditMode) {
         existingProject = await loadExistingProjectForEdit(projectPath, context);
+        if (existingProject) await settleConnectionBeforeRebuild(context, typedConfig, existingProject); // asked first (D6)
     } else {
         await cleanupOrphanedDirectory(projectPath, context, progressTracker, fsPromises);
     }
     // From here the run's steps are known, so each shows "(n of N)".
     progress.numberFrom(creationSteps(typedConfig, existingProject));
+    step();
 
-    // ========================================================================
-    // PROJECT INITIALIZATION
-    // ========================================================================
+    // ===== PROJECT INITIALIZATION =====
 
-    progressTracker(OPERATION_STAGES.settingUpProject.label, 10, 'Creating project directory structure');
+    progressTracker(S.settingUpProject.label, 10, 'Creating folders');
 
     const componentsDir = path.join(projectPath, 'components');
     await fsPromises.mkdir(componentsDir, { recursive: true });
@@ -233,7 +245,7 @@ async function createOrRebuild(
 
     context.logger.debug(`[Project Creation] Created directory: ${projectPath}`);
 
-    progressTracker(OPERATION_STAGES.settingUpProject.label, 15, 'Initializing project configuration');
+    progressTracker(S.settingUpProject.label, 15, 'Writing settings');
 
     const project: import('@/types/base').Project = buildInitialProject(
         typedConfig,
@@ -269,9 +281,7 @@ async function createOrRebuild(
         '[Project Creation] Deferring project state save until after installation',
     );
 
-    // ========================================================================
-    // STACK TYPE DETECTION
-    // ========================================================================
+    // ===== STACK TYPE DETECTION =====
     // Detect EDS stacks for special metadata handling later.
     // EDS components are cloned via the standard flow, but need additional
     // metadata populated from runtime config (from preflight step).
@@ -279,11 +289,9 @@ async function createOrRebuild(
     const isEdsStack = isEdsStackId(typedConfig.selectedStack);
     const edsComponentPath = path.join(projectPath, 'components', COMPONENT_IDS.EDS_STOREFRONT);
 
-    // ========================================================================
-    // LOAD COMPONENT DEFINITIONS
-    // ========================================================================
+    // ===== LOAD COMPONENT DEFINITIONS =====
 
-    progressTracker(OPERATION_STAGES.loadingComponents.label, 20, 'Preparing component definitions');
+    progressTracker(S.loadingComponents.label, 20, 'Reading components');
 
     const registryManager = componentRegistryFrom(context);
     const registry = await registryManager.loadRegistry();
@@ -307,17 +315,16 @@ async function createOrRebuild(
         isEdsStack,
     );
 
-    // ========================================================================
     // RUNTIME READINESS (first Adobe step — provision a Runtime namespace on the
     // deploy workspace if it lacks one, BEFORE any deploy, so a selected/imported
     // Runtime-less workspace is healed rather than orphaning a mesh at app-deploy)
-    // ========================================================================
 
-    await ensureWorkspaceRuntimeReady(context, typedConfig);
+    // Before the code is on disk there is no project to keep: these steps cannot be
+    // skipped (F307). From the mesh on, the dashboard can run each one again.
+    step();
+    await runStep(S.makingWorkspace.label, caught(() => ensureWorkspaceRuntimeReady(context, typedConfig)), false);
 
-    // ========================================================================
-    // EDIT MODE: PREPARE ATOMIC COMPONENT SWAP
-    // ========================================================================
+    // ===== EDIT MODE: PREPARE ATOMIC COMPONENT SWAP =====
     // In edit mode, install components to a temp directory first.
     // Only swap to production after ALL components install successfully.
     // This preserves the original components if installation fails.
@@ -326,9 +333,7 @@ async function createOrRebuild(
         ? await prepareEditModeTempDir(projectPath, context)
         : undefined;
 
-    // ========================================================================
-    // PHASE 1-2: COMPONENT INSTALLATION
-    // ========================================================================
+    // ===== PHASE 1-2: COMPONENT INSTALLATION =====
 
     const installationContext = {
         project,
@@ -341,28 +346,26 @@ async function createOrRebuild(
         componentsDir: tempComponentsDir,
     };
 
-    await cloneAllComponents(installationContext);
-    await installAllComponents(installationContext);
+    step();
+    await runStep(S.downloadingComponents.label, caught(() => cloneAllComponents(installationContext)), false);
+    step();
+    await runStep(S.installingComponents.label, caught(() => installAllComponents(installationContext)), false);
 
-    // ========================================================================
-    // EDIT MODE: ATOMIC COMPONENT SWAP
-    // ========================================================================
+    // ===== EDIT MODE: ATOMIC COMPONENT SWAP =====
 
+    step();
     if (isEditMode && tempComponentsDir) {
         await performAtomicComponentSwap(context, project, projectPath, progressTracker);
     }
 
-    // ========================================================================
-    // EDS METADATA POPULATION (if EDS stack)
-    // ========================================================================
+    // ===== EDS METADATA POPULATION (if EDS stack) =====
 
     await populateEdsMetadata(context, project, typedConfig, isEdsStack);
 
-    // ========================================================================
-    // PHASE 3: MESH CONFIGURATION
-    // ========================================================================
+    // ===== PHASE 3: MESH CONFIGURATION =====
 
-    await executeMeshPhase(
+    step();
+    await runStep(S.deployingMesh.label, caught(() => executeMeshPhase(
         context,
         setupContext,
         project,
@@ -371,17 +374,19 @@ async function createOrRebuild(
         progressTracker,
         isEditMode,
         existingProject,
-    );
+    )));
 
-    // ========================================================================
-    // PHASE 3b: APP BUILDER INTEGRATIONS, then 3c: the ACO credential (PL-60)
-    // ========================================================================
-    await executeAppBuilderIntegrationsPhase(context, project, typedConfig, progressTracker);
-    await executeAcoCredentialPhase(context, project, progressTracker);
+    // ===== PHASE 3b: APP BUILDER INTEGRATIONS, then the ACO credential (PL-60) =====
+    // The credential rides the integrations step: both subscribe APIs on the project's
+    // workspace credential, and a project without ACO skips it (`usesAco`).
 
-    // ========================================================================
-    // PHASE 4-5: FINALIZATION
-    // ========================================================================
+    step();
+    await runStep(S.deployingIntegrations.label, caught(async () => {
+        await executeAppBuilderIntegrationsPhase(context, project, typedConfig, progressTracker);
+        await executeAcoCredentialPhase(context, project, progressTracker);
+    }));
+
+    // ===== PHASE 4-5: FINALIZATION =====
     //
     // Phase 4 now generates ALL config files (.env + site.json) using the
     // component registry pattern. EDS site.json is generated via configFiles
@@ -398,80 +403,43 @@ async function createOrRebuild(
         panel: context.panel,
     };
 
-    await generateEnvironmentFiles(finalizationContext);
+    step();
+    await runStep(S.writingConfigFiles.label, caught(() => generateEnvironmentFiles(finalizationContext)));
 
     // Populate componentConfigs for mesh from the generated .env file
     await populateMeshComponentConfigs(context, project);
 
-    // ========================================================================
-    // PHASE 5: SYNC EDS CONFIG TO REMOTE + PHASE 5b: EDS CONTENT SETUP
-    // ========================================================================
+    // ===== PHASE 5: SYNC EDS CONFIG TO REMOTE + PHASE 5b: EDS CONTENT SETUP =====
 
-    await syncEdsConfigToRemote(
+    step();
+    await runStep(S.publishingSettings.label, caught(() => syncEdsConfigToRemote(
         context,
         project,
         typedConfig,
         isEdsStack,
         edsComponentPath,
         progressTracker,
+    )));
+
+    step();
+    await runStep(RESET_STAGES.copyingContent.label, () =>
+        setupEdsContent(context, typedConfig, isEdsStack, progressTracker, project),
     );
 
-    await setupEdsContent(context, typedConfig, isEdsStack, progressTracker, project);
-
-    // ========================================================================
-    // PHASE 5c: SAMPLE DATA
-    // ========================================================================
+    // ===== PHASE 5c-6: THE OPTIONAL STEPS, THEN THE FINISH =====
     //
-    // After the config files exist, because the credentials this needs are read
-    // from them. Never throws — see `executeSampleDataPhase`.
-
-    await executeSampleDataPhase(context, project, progressTracker);
-
-    // ========================================================================
-    // PHASE 5d: CATALOG PRE-WARMING
-    // ========================================================================
-    //
-    // AFTER sample data, because pre-warming a catalog that has not been seeded
-    // publishes nothing useful. The EDS pipeline pre-warms at its own step 8,
-    // which is correct for RESET (that flow imports data BEFORE the pipeline)
-    // and impossible for creation, where the pipeline runs during storefront
-    // setup and the datapack lands here. Never throws.
-    await executeCatalogPrewarmPhase(context, project, progressTracker);
-
-    // ========================================================================
-    // PHASE 5e: CATEGORY PAGES AND THE CATALOG MENU (EDS-24)
-    // ========================================================================
-    //
-    // AFTER sample data for the same reason as pre-warming: the categories the pages
-    // are written for arrive with the datapack. Acts only on a storefront that has the
-    // catalog-menu block; reset and republish run the same step. Never throws.
-    if (isEdsStack) {
-        await executeCatalogMenuPhase(context, project, progressTracker, existingProject);
-    }
-
-    await finalizeProject(finalizationContext);
-    await sendCompletionAndCleanup(finalizationContext);
-
-    // Phase 6: Generate AI context files (non-blocking — failure does not abort project creation)
-    try {
-        await generateAIContextFiles(projectPath, project, context.context.extensionPath);
-        // Persist the freshness stamp generateAIContextFiles set on `project`
-        // (aiContextVersion), else the activation sweep re-refreshes the bundle on every start and the freshness log reports perpetual staleness.
-        await context.stateManager.saveProjectConfigOnly(project);
-    } catch (err) {
-        // Landed hashes must survive a partial failure (Phase-4 review) — on a
-        // fresh creation there are no OLD hashes to desync, but a retried
-        // creation over an existing directory has them.
-        try {
-            await context.stateManager.saveProjectConfigOnly(project);
-        } catch {
-            /* best-effort */
-        }
-        context.logger.warn(
-            '[Project Creation] Failed to generate AI context files',
-            err instanceof Error ? err : undefined,
-        );
-    }
+    // The datapack, product pages, catalog menu and AI files: each pauses the run on a
+    // failure until the SC fixes it or skips the step (F307). See `creationLastSteps.ts`.
+    await runLastSteps({
+        context,
+        project,
+        progress,
+        runStep,
+        step,
+        isEdsStack,
+        existingProject,
+        finalization: finalizationContext,
+    });
 
     // The per-project .mcp.json written in Phase 6 lets AI agents discover this
     // project's tools when launched from its directory, and it only loads those
@@ -488,12 +456,10 @@ async function createOrRebuild(
 }
 
 
-// ============================================================================
 // Public API re-exports — the executor was decomposed into phase modules
 // (2026-08-23); every import path that reached these through `./executor`
 // keeps working, which is what lets the decomposition prove itself with
 // zero consumer or test edits.
-// ============================================================================
 export { ensureMeshPreflightAuth, deployFreshMesh } from './executorMeshPhase';
 export { executeAppBuilderIntegrationsPhase } from './executorAppBuilderPhase';
-export { executeSampleDataPhase } from './executorSampleDataPhase';
+export { executeSampleDataPhase } from './executorDatapackPhase';

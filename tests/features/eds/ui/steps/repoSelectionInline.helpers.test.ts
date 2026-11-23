@@ -211,21 +211,19 @@ describe('isJustCreatedSelection', () => {
     });
 });
 
-/**
- * Presentation. The control stays rendered in every state — including its notice
- * row — so the layout never reflows as readiness resolves.
- */
+/** Presentation: the tick, and the house banner's two lines under it (owner, 2026-11-20). */
 describe('describeResetOption', () => {
     it('shows an empty repo as already handled, not as a question', () => {
         expect(describeResetOption({ kind: 'empty' }, false, false)).toStrictEqual({
             checked: true,
             locked: true,
             tone: 'info',
-            message: 'This repository is empty — it will be set up from the template.',
+            title: 'This repository is empty.',
+            detail: 'It will be set up from the template.',
         });
     });
 
-    it('names the missing files and says setup cannot complete', () => {
+    it('names the missing files and says to tick Reset', () => {
         expect(
             describeResetOption(
                 { kind: 'not-a-storefront', missing: ['scripts/scripts.js', '404.html'] },
@@ -236,9 +234,16 @@ describe('describeResetOption', () => {
             checked: false,
             locked: false,
             tone: 'warn',
-            message:
-                'Missing scripts/scripts.js, 404.html. Setup cannot complete without a reset.',
+            title: "This repository isn't a storefront.",
+            detail: 'It is missing scripts/scripts.js and 404.html. Tick Reset to set it up from the template.',
         });
+    });
+
+    it('lists one missing file, and three with commas and "and"', () => {
+        const detail = (missing: string[]) =>
+            describeResetOption({ kind: 'not-a-storefront', missing }, false, false).detail;
+        expect(detail(['head.html'])).toMatch(/^It is missing head\.html\. /);
+        expect(detail(['a', 'b', 'c'])).toMatch(/^It is missing a, b and c\. /);
     });
 
     it('reflects the tick for a non-storefront the user has chosen to reset', () => {
@@ -253,14 +258,15 @@ describe('describeResetOption', () => {
             checked: false,
             locked: false,
             tone: 'none',
-            message: '',
+            title: '',
+            detail: '',
         });
         expect(describeResetOption({ kind: 'storefront' }, true, false)).toStrictEqual({
             checked: true,
             locked: false,
             tone: 'warn',
-            message:
-                'This will delete and recreate the repository with the selected template content.',
+            title: 'Everything in this repository will be replaced.',
+            detail: 'It is deleted and made again from the template.',
         });
     });
 
@@ -274,13 +280,14 @@ describe('describeResetOption', () => {
             checked: false,
             locked: true,
             tone: 'none',
-            message: '',
+            title: '',
+            detail: '',
         });
     });
 
     it('says nothing while the repo is unusable for a reason a reset cannot fix', () => {
         expect(
             describeResetOption({ kind: 'not-a-storefront', missing: ['head.html'] }, true, false, true)
-        ).toStrictEqual({ checked: false, locked: true, tone: 'none', message: '' });
+        ).toStrictEqual({ checked: false, locked: true, tone: 'none', title: '', detail: '' });
     });
 });

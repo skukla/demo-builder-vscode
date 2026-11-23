@@ -13,6 +13,7 @@ import { Provider, defaultTheme } from '@adobe/react-spectrum';
 import { render, screen } from '@testing-library/react';
 import React from 'react';
 import { ReviewStep } from '@/features/project-creation/ui/steps/ReviewStep';
+import type { CommerceStoreStructure } from '@/types/commerceStore';
 import type { DemoPackage } from '@/types/demoPackages';
 import type { Stack } from '@/types/stacks';
 import type { WizardState } from '@/types/webview';
@@ -47,25 +48,25 @@ describe('the Edge Delivery card', () => {
     it('is absent entirely when the wizard has no EDS config', () => {
         renderReview({});
 
-        expect(screen.queryByText('EDGE DELIVERY SERVICES')).not.toBeInTheDocument();
+        expect(screen.queryByText('Edge Delivery Services')).not.toBeInTheDocument();
     });
 
     it('is absent when the EDS config carries no repo and no site', () => {
         renderReview(withEds({ daLiveOrg: 'acme-da' }));
 
-        expect(screen.queryByText('EDGE DELIVERY SERVICES')).not.toBeInTheDocument();
+        expect(screen.queryByText('Edge Delivery Services')).not.toBeInTheDocument();
     });
 
     it('appears for a config carrying only a repo name', () => {
         renderReview(withEds({ repoName: 'acme-site' }));
 
-        expect(screen.getByText('EDGE DELIVERY SERVICES')).toBeInTheDocument();
+        expect(screen.getByText('Edge Delivery Services')).toBeInTheDocument();
     });
 
     it('appears for a config carrying only a selected site', () => {
         renderReview(withEds({ selectedSite: { id: 's', name: 'acme-site-da' } }));
 
-        expect(screen.getByText('EDGE DELIVERY SERVICES')).toBeInTheDocument();
+        expect(screen.getByText('Edge Delivery Services')).toBeInTheDocument();
     });
 
     it('appears for a config carrying only a selected repo', () => {
@@ -80,17 +81,17 @@ describe('the Edge Delivery card', () => {
             })
         );
 
-        expect(screen.getByText('EDGE DELIVERY SERVICES')).toBeInTheDocument();
+        expect(screen.getByText('Edge Delivery Services')).toBeInTheDocument();
     });
 
     it('appears for a config carrying only a DA.live site name', () => {
         renderReview(withEds({ daLiveSite: 'acme-site-da' }));
 
-        expect(screen.getByText('EDGE DELIVERY SERVICES')).toBeInTheDocument();
+        expect(screen.getByText('Edge Delivery Services')).toBeInTheDocument();
     });
 });
 
-describe('the GitHub repository row', () => {
+describe('the GitHub Repository row', () => {
     it('takes the owner from the selected repo full name', () => {
         renderReview(
             withEds({
@@ -149,16 +150,19 @@ describe('the GitHub repository row', () => {
         expect(screen.queryByText('GitHub Repository')).not.toBeInTheDocument();
     });
 
-    it('reads "New repository" when no repo mode was chosen', () => {
+    // Walk F203 (owner, 2026-11-17): New creates the repository at once and selects it as an
+    // existing one (EDS-18), so the review called the repository it had just made "Existing
+    // repository". Neither word is said; only a reset, which replaces what is in it, is.
+    it('says nothing under a new repository', () => {
         renderReview(withEds({ repoName: 'acme-site' }));
 
-        expect(subItemsUnder('GitHub Repository')).toBe('New repository');
+        expect(subItemsUnder('GitHub Repository')).toBeNull();
     });
 
-    it('reads "Existing repository" for an existing repo that is not being reset', () => {
+    it('says nothing under an existing repository that is not being reset', () => {
         renderReview(withEds({ repoName: 'acme-site', repoMode: 'existing' }));
 
-        expect(subItemsUnder('GitHub Repository')).toBe('Existing repository');
+        expect(subItemsUnder('GitHub Repository')).toBeNull();
     });
 
     it('reads "Reset to template" for an existing repo that is being reset', () => {
@@ -169,10 +173,10 @@ describe('the GitHub repository row', () => {
         expect(subItemsUnder('GitHub Repository')).toBe('Reset to template');
     });
 
-    it('stays "New repository" when a reset is flagged on a repo that is not existing', () => {
+    it('says no reset when one is flagged on a repo that is not existing', () => {
         renderReview(withEds({ repoName: 'acme-site', resetToTemplate: true }));
 
-        expect(subItemsUnder('GitHub Repository')).toBe('New repository');
+        expect(subItemsUnder('GitHub Repository')).toBeNull();
     });
 });
 
@@ -260,7 +264,7 @@ describe('the Adobe I/O card', () => {
     it('is absent when none of the three is known', () => {
         renderReview({});
 
-        expect(screen.queryByText('ADOBE I/O')).not.toBeInTheDocument();
+        expect(screen.queryByText('Adobe I/O')).not.toBeInTheDocument();
     });
 
     it('shows only the organization when that is all that is known', () => {
@@ -351,7 +355,7 @@ describe('the project configuration card', () => {
     it('is absent when neither a package nor a stack was chosen', () => {
         renderWithCatalogs({});
 
-        expect(screen.queryByText('PROJECT CONFIGURATION')).not.toBeInTheDocument();
+        expect(screen.queryByText('Project Configuration')).not.toBeInTheDocument();
     });
 
     it('shows the package name for the selected package id', () => {
@@ -372,6 +376,57 @@ describe('the project configuration card', () => {
     it('is absent when the selected ids match nothing in the catalogs', () => {
         renderWithCatalogs({ selectedPackage: 'unknown', selectedStack: 'unknown' });
 
-        expect(screen.queryByText('PROJECT CONFIGURATION')).not.toBeInTheDocument();
+        expect(screen.queryByText('Project Configuration')).not.toBeInTheDocument();
+    });
+});
+
+// The datapack the project gets, by the name the SC picked it by (live run 8, owner 2026-11-16:
+// Final Review said nothing of an Edit that switched it).
+describe('the Datapack row', () => {
+    it('names the chosen datapack as the card did', () => {
+        renderReview({ datapack: { name: 'frescopa', version: 'main' }, datapackDisplayName: 'Frescopa' });
+
+        expect(screen.getByText('Datapack')).toBeInTheDocument();
+        expect(screen.getByText('Frescopa')).toBeInTheDocument();
+    });
+
+    it('CONTROL: shows no row when no datapack is chosen', () => {
+        renderReview({});
+
+        expect(screen.queryByText('Datapack')).toBeNull();
+    });
+});
+
+// Walk F211 (owner, 2026-11-17): Scratch 1028 B was created on the live store's website, picked by
+// mistake from two of the same brand, and the review never said which website it would write to.
+describe('where the project writes in Commerce', () => {
+    const STORE: CommerceStoreStructure = {
+        websites: [
+            { id: 1, code: 'acme', name: 'Acme Website' },
+            { id: 2, code: 'acme_test', name: 'Acme Test' },
+        ],
+        storeGroups: [{ id: 3, code: 'acme_test_store', name: 'Acme Test Store', website_id: 2, root_category_id: 2 }],
+        storeViews: [{ id: 4, code: 'acme_test_us', name: 'Acme Test Store US', store_group_id: 3, website_id: 2, is_active: true }],
+    };
+    const chosen = (website: string, storeView: string): Partial<WizardState> => ({
+        selectedBackend: 'adobe-commerce-accs',
+        storeDiscoveryData: STORE,
+        componentConfigs: { 'adobe-commerce-accs': { ACCS_WEBSITE_CODE: website, ACCS_STORE_VIEW_CODE: storeView } },
+    });
+
+    it('names the website and store view by their names', () => {
+        renderReview(chosen('acme_test', 'acme_test_us'));
+
+        expect(screen.getByText('Website')).toBeInTheDocument();
+        expect(screen.getByText('Acme Test')).toBeInTheDocument();
+        expect(screen.getByText('Store View')).toBeInTheDocument();
+        expect(screen.getByText('Acme Test Store US')).toBeInTheDocument();
+    });
+
+    it('shows neither row before a website is chosen', () => {
+        renderReview({});
+
+        expect(screen.queryByText('Website')).not.toBeInTheDocument();
+        expect(screen.queryByText('Store View')).not.toBeInTheDocument();
     });
 });

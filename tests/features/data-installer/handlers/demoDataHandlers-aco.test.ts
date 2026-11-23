@@ -9,7 +9,7 @@ import { type DemoDataDeps, createDemoDataHandlers } from '@/features/data-insta
 import type { AcoAccess } from '@/features/data-installer/services/aco/acoJobs';
 import type { AcoSearch } from '@/features/data-installer/services/aco/acoWipe';
 import { type InstallRecord, installRecordPath } from '@/features/data-installer/services/demoBuilderEngine/installRecord';
-import type { DemoDataCheck } from '@/types/demoDataWipe';
+import type { AcoClearCheck } from '@/types/demoDataWipe';
 import { ErrorCode } from '@/types/errorCodes';
 import type { HandlerContext } from '@/types/handlers';
 import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
@@ -49,6 +49,13 @@ function setUp(shown: { skus: string[]; slugs?: string[] }, overrides: Partial<D
         files,
         others: async () => [OTHER],
         erp: () => undefined,
+        // The website path's deps: the ACO path never reaches them.
+        openAdmin: async () => ({ outcome: 'opened' }),
+        remove: async () => {
+            throw new Error('the website path is not used here');
+        },
+        changes: async () => undefined,
+        ownNames: async () => [],
         aco: async () => access,
         acoSearch: () => search,
         ...overrides,
@@ -58,7 +65,7 @@ function setUp(shown: { skus: string[]; slugs?: string[] }, overrides: Partial<D
     return { handlers, context, aco };
 }
 
-const preview = (data: unknown) => (data as DemoDataCheck).aco;
+const preview = (data: unknown) => (data as AcoClearCheck).aco;
 
 describe('check-demo-data with aco', () => {
     it('names what the view shows less every local project\'s pack keys, writing nothing', async () => {
@@ -76,14 +83,6 @@ describe('check-demo-data with aco', () => {
 
         await expect(handlers['check-demo-data'](context, { aco: true })).resolves.toMatchObject({ success: false, error: 'Turn ACO on for the project first.' });
     });
-});
-
-describe('clear-demo-data with aco', () => {
-    async function checked(shown = { skus: ['S1', 'S2'], slugs: ['phones'] }) {
-        const ctx = setUp(shown);
-        const res = await ctx.handlers['check-demo-data'](ctx.context, { aco: true });
-        return { ...ctx, token: preview(res.data)?.token ?? '' };
-    }
 
     it("refuses to list anything when Adobe's connector owns the catalog, since its next sync would undo a clear", async () => {
         const { handlers, context } = setUp(
@@ -93,6 +92,14 @@ describe('clear-demo-data with aco', () => {
         const res = await handlers['check-demo-data'](context, { aco: true });
         expect(res).toMatchObject({ success: false, error: expect.stringMatching(/connector feeds this ACO instance/u) });
     });
+});
+
+describe('clear-demo-data with aco', () => {
+    async function checked(shown = { skus: ['S1', 'S2'], slugs: ['phones'] }) {
+        const ctx = setUp(shown);
+        const res = await ctx.handlers['check-demo-data'](ctx.context, { aco: true });
+        return { ...ctx, token: preview(res.data)?.token ?? '' };
+    }
 
     it('deletes exactly the plan shown, confirmed, and says what it removed', async () => {
         const { handlers, context, aco, token } = await checked();
@@ -130,11 +137,12 @@ describe('clear-demo-data with aco', () => {
         expect(aco.calls).toHaveLength(calls);
     });
 
-    it('needs no stores: the ACO clear never asks for them — control for the Commerce path, which does', async () => {
+    it("keeps the two lists apart: the websites' clear does not know an ACO token, and the ACO clear takes it", async () => {
         const { handlers, context, token } = await checked();
 
+        // Control: without `aco`, the same token reaches the websites' clear, which never showed it.
         const commerce = await handlers['clear-demo-data'](context, { token, confirm: true });
-        expect(commerce).toMatchObject({ success: false, error: expect.stringMatching(/Name the stores/) });
+        expect(commerce).toMatchObject({ success: false, error: expect.stringMatching(/no longer known here/) });
 
         await expect(handlers['clear-demo-data'](context, { aco: true, token, confirm: true })).resolves.toMatchObject({ success: true });
     });

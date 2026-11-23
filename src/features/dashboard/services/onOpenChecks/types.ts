@@ -15,7 +15,7 @@
  *     {@link CheckOutcome} — including on failure (the orchestrator converts a
  *     throw into a posted `error` outcome). Nothing vanishes into logs.
  *
- * See `.rptc/plans/dashboard-open-orchestrator/`.
+ * See `.rptc/complete/dashboard-open-orchestrator/`.
  *
  * @module features/dashboard/services/onOpenChecks/types
  */

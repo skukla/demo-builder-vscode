@@ -4,7 +4,7 @@
  * has (`repeatInstall.ts`), and by the preview of one, so the three never decide two ways.
  *
  * A category, an attribute set or a cart rule this engine made is kept while it holds anything the
- * engine did not make, or is not taking out in the same removal (a rule's coupons go with it, step 11): Commerce deletes a category's children with
+ * engine did not make (and an attribute or option while a product that stays carries it), or is not taking out in the same removal (a rule's coupons go with it, step 11): Commerce deletes a category's children with
  * it and leaves its products in no category, and (by Magento's schema, from memory, not yet checked
  * live) deletes a set's products with it.
  *
@@ -17,8 +17,9 @@
  * @module features/data-installer/services/demoBuilderEngine/removers
  */
 
-import { removeAssignment, removeAttributeSet } from './attributeSetsKind';
-import { removeAttribute, removeAttributeOption } from './attributesKind';
+import { type Carrier, attributeHold, carriersOnce } from './attributeHolds';
+import { ASSIGNMENT_KIND, removeAssignment, removeAttributeSet } from './attributeSetsKind';
+import { ATTRIBUTE_KIND, ATTRIBUTE_OPTION_KIND, removeAttribute, removeAttributeOption } from './attributesKind';
 import { type Taking, b2bHeldByOthers, isB2bContainer } from './b2bContainers';
 import { type AssignmentKind, CATALOG_CATEGORIES_KIND, CATALOG_COMPANIES_KIND, CATALOG_KIND, CATALOG_PRODUCTS_KIND, COMPANY_KIND, isAssignmentKind } from './b2bKeys';
 import { CART_RULE_KIND, removeCartRule } from './cartRulesKind';
@@ -26,14 +27,16 @@ import { removeCategory } from './categoriesKind';
 import { removeCompany } from './companiesKind';
 import { COUPON_KIND, couponsOfRule, removeCoupon } from './couponsKind';
 import { removeCustomer, removeCustomerGroup } from './customerKinds';
+import { fewReadsAtOnce } from './fewReadsAtOnce';
 import type { CreatedObject } from './installRecord';
-import { readOrNull, segment } from './kindContext';
+import { REQUESTS_AT_ONCE, readOrNull, segment } from './kindContext';
 import { ROOT_KEY } from './packForm';
 import { storeShowingRoot } from './packRootStep';
+import { PRODUCT_KINDS } from './productKinds';
 import type { StoreCategory } from './productLookups';
-import { PRODUCT_KINDS, removeProduct } from './productsKind';
-import { removeAssignmentPair, removeCatalog, splitPair } from './sharedCatalogKinds';
-import { removeSource, removeStock, removeStockSourceLink } from './stockKinds';
+import { removeProduct } from './productsKind';
+import { removeAssignmentPairs, removeCatalog, splitPair } from './sharedCatalogKinds';
+import { removeSource, removeStock, removeStockSourceLinks } from './stockKinds';
 import { andList } from '@/core/utils/andList';
 import { CommerceReadError, readAllPages } from '@/features/app-builder/services/erpFillReaders';
 import type { CommerceGet, CommerceSend } from '@/types/commerceWire';
@@ -55,7 +58,7 @@ const REMOVERS: Record<string, Remover> = {
     categories: (c, o) => removeCategory(c.send, o.id),
     stocks: (c, o) => removeStock(c, o),
     sources: (c, o) => removeSource(c, o.id),
-    stock_source_links: (c, o) => removeStockSourceLink(c.send, o.id),
+    stock_source_links: (c, o) => removeStockSourceLinks(c.send, [o.id]),
     products: (c, o) => removeProduct(c.send, o.id),
     giftcards: (c, o) => removeProduct(c.send, o.id),
     // Step 08.
@@ -63,9 +66,9 @@ const REMOVERS: Record<string, Remover> = {
     customers: (c, o) => removeCustomer(c.send, o.id),
     b2b_shared_catalogs: (c, o) => removeCatalog(c.send, o.id),
     b2b_companies: (c, o) => removeCompany(c.send, o.id),
-    b2b_shared_catalog_company_assignments: (c, o) => removeAssignmentPair(c.send, CATALOG_COMPANIES_KIND, o.id),
-    b2b_shared_catalog_categories: (c, o) => removeAssignmentPair(c.send, CATALOG_CATEGORIES_KIND, o.id),
-    b2b_shared_catalog_products: (c, o) => removeAssignmentPair(c.send, CATALOG_PRODUCTS_KIND, o.id),
+    b2b_shared_catalog_company_assignments: (c, o) => removeAssignmentPairs(c.send, CATALOG_COMPANIES_KIND, [o.id]),
+    b2b_shared_catalog_categories: (c, o) => removeAssignmentPairs(c.send, CATALOG_CATEGORIES_KIND, [o.id]),
+    b2b_shared_catalog_products: (c, o) => removeAssignmentPairs(c.send, CATALOG_PRODUCTS_KIND, [o.id]),
     // Step 11: Commerce deletes a rule's coupons with it.
     cart_rules: (c, o) => removeCartRule(c.send, o.id),
     coupons: (c, o) => removeCoupon(c.send, o.id),
@@ -74,7 +77,7 @@ const REMOVERS: Record<string, Remover> = {
 /**
  * Take one recorded object back out of the store.
  *
- * @throws Error naming the object when its kind cannot be taken back or Commerce refuses
+ * @throws TakeBackRefused when Commerce answers with an error; Error naming the object otherwise
  */
 export async function takeBack(commerce: RemovalAccess, object: CreatedObject): Promise<void> {
     const remover = REMOVERS[object.kind];
@@ -82,14 +85,31 @@ export async function takeBack(commerce: RemovalAccess, object: CreatedObject): 
     try {
         await remover(commerce, object);
     } catch (error) {
-        throw new Error(`Could not take back ${object.kind} ${object.id}: ${error instanceof Error ? error.message : String(error)}`);
+        const what = `Could not take back ${object.kind} ${object.id}`;
+        if (error instanceof CommerceReadError) throw new TakeBackRefused(what, error);
+        throw new Error(`${what}: ${error instanceof Error ? error.message : String(error)}`);
+    }
+}
+
+/**
+ * Commerce answered a take-back with an error: its status stays readable, so a refusal of the one
+ * object (`isRowRefusal`) can leave it in the store and carry on (`takeBackAll`).
+ */
+export class TakeBackRefused extends CommerceReadError {
+    constructor(
+        what: string,
+        /** Commerce's own answer. */
+        readonly refusal: CommerceReadError,
+    ) {
+        super(`${what}: ${refusal.message}`, refusal.status);
+        this.name = 'TakeBackRefused';
     }
 }
 
 /** A container kept because it holds what the engine did not make. */
 export interface KeptContainer {
     object: CreatedObject;
-    kind: 'category' | 'set' | 'company' | 'shared catalog' | 'customer group' | 'customer' | 'cart rule';
+    kind: 'category' | 'set' | 'company' | 'shared catalog' | 'customer group' | 'customer' | 'cart rule' | 'attribute' | 'attribute option';
     name: string;
     /** How many things of the SC's it holds. */
     count: number;
@@ -105,6 +125,8 @@ export interface KeptContainer {
      * Commerce will not delete while the company stands, and its catalog with that catalog's group.
      */
     with?: KeptPartner[];
+    /** The pack's root, kept because this store (as the Admin names it) shows it as its root (step 12). */
+    rootOfStore?: string;
 }
 
 /** One thing kept with a container, and how its line names it ("its admin"; "its <kind>" by default). */
@@ -123,8 +145,9 @@ export function keptObjects(kept: readonly KeptContainer[]): CreatedObject[] {
 const keyOfObject = (kind: string, id: string) => `${kind}\u0000${id}`;
 
 /** The products in a set or a category, by SKU; none when the store has no such search. */
-async function productsWhere(get: CommerceGet, field: 'attribute_set_id' | 'category_id', id: string): Promise<string[]> {
-    const criteria = `&searchCriteria[filterGroups][0][filters][0][field]=${field}&searchCriteria[filterGroups][0][filters][0][value]=${segment(id)}`;
+export async function productsWhere(get: CommerceGet, field: 'attribute_set_id' | 'category_id', id: string): Promise<string[]> {
+    // SKUs only: whole products, a hundred to a page, made Luma's keep decisions take over two minutes (2026-11-06).
+    const criteria = `&searchCriteria[filterGroups][0][filters][0][field]=${field}&searchCriteria[filterGroups][0][filters][0][value]=${segment(id)}&fields=total_count,items[sku]`;
     try {
         return (await readAllPages<{ sku: string }>(get, 'products', criteria)).map((p) => p.sku);
     } catch (error) {
@@ -154,30 +177,43 @@ async function cartRuleHeld(get: CommerceGet, object: CreatedObject, taking: Rea
     return { object, kind: 'cart rule', name: rule?.name || object.key || object.id, count: others, holds: 'coupon' };
 }
 
-/** What a container holds that is not being taken out with it, or undefined when nothing. */
-async function heldByOthers(get: CommerceGet, object: CreatedObject, removal: Taking, taking: ReadonlySet<string>): Promise<KeptContainer | undefined> {
-    if (object.kind === CART_RULE_KIND) return cartRuleHeld(get, object, taking);
-    if (object.kind === 'categories') {
-        const category = await readOrNull<StoreCategory>(get, `categories/${segment(object.id)}`);
-        const name = category?.name ?? object.id;
-        // Step 12: a store the SC pointed at the pack's root would be left with no root at all.
-        const showing = object.key === ROOT_KEY ? await storeShowingRoot(get, object.id) : undefined;
-        if (showing) return { object, kind: 'category', name, count: 0, holds: 'thing', reason: showing };
-        const others = (category?.children ?? '').split(',').map((id) => id.trim()).filter((id) => id !== '' && !taking.has(keyOfObject('categories', id)));
-        if (others.length > 0) return { object, kind: 'category', name, count: others.length, holds: 'category' };
-        // Its products too: deleting the category would leave the SC's own in no category at all.
-        const products = (await productsWhere(get, 'category_id', object.id)).filter((sku) => !takingSku(taking, sku));
-        if (products.length === 0) return undefined;
-        return { object, kind: 'category', name, count: products.length, holds: 'product' };
-    }
-    if (isB2bContainer(object.kind)) return b2bHeldByOthers(get, object, removal);
-    if (object.kind === 'attribute_sets') {
-        const others = (await productsWhere(get, 'attribute_set_id', object.id)).filter((sku) => !takingSku(taking, sku));
-        if (others.length === 0) return undefined;
-        const set = await readOrNull<{ attribute_set_name?: string }>(get, `products/attribute-sets/${segment(object.id)}`);
-        return { object, kind: 'set', name: set?.attribute_set_name ?? object.id, count: others.length, holds: 'product' };
-    }
-    return undefined;
+/**
+ * A category this engine made, kept while it holds a category or a product that is staying.
+ *
+ * @param childStays - whether a child category, by id, is staying: one not in the removal, or one
+ *   decided before this one and kept
+ */
+async function categoryHeld(get: CommerceGet, object: CreatedObject, taking: ReadonlySet<string>, childStays: (id: string) => Promise<boolean>): Promise<KeptContainer | undefined> {
+    const category = await readOrNull<StoreCategory>(get, `categories/${segment(object.id)}`);
+    const name = category?.name ?? object.id;
+    // Step 12: a store the SC pointed at the pack's root would be left with no root at all.
+    const showing = object.key === ROOT_KEY ? await storeShowingRoot(get, object.id) : undefined;
+    if (showing) return { object, kind: 'category', name, count: 0, holds: 'thing', reason: showing.reason, ...(showing.store ? { rootOfStore: showing.store } : {}) };
+    const children = (category?.children ?? '').split(',').map((id) => id.trim()).filter((id) => id !== '');
+    const others = (await Promise.all(children.map(childStays))).filter(Boolean).length;
+    if (others > 0) return { object, kind: 'category', name, count: others, holds: 'category' };
+    // Its products too: deleting the category would leave the SC's own in no category at all.
+    const products = (await productsWhere(get, 'category_id', object.id)).filter((sku) => !takingSku(taking, sku));
+    if (products.length === 0) return undefined;
+    return { object, kind: 'category', name, count: products.length, holds: 'product' };
+}
+
+/** An attribute set this engine made, kept while a product staying uses it. */
+async function setHeld(get: CommerceGet, object: CreatedObject, taking: ReadonlySet<string>): Promise<KeptContainer | undefined> {
+    const others = (await productsWhere(get, 'attribute_set_id', object.id)).filter((sku) => !takingSku(taking, sku));
+    if (others.length === 0) return undefined;
+    const set = await readOrNull<{ attribute_set_name?: string }>(get, `products/attribute-sets/${segment(object.id)}`);
+    return { object, kind: 'set', name: set?.attribute_set_name ?? object.id, count: others.length, holds: 'product' };
+}
+
+/**
+ * An attribute, or an option of one, this engine made, kept while a product that stays carries a
+ * value for it (`attributeHolds.ts`; C3 review, 2026-11-13).
+ */
+async function attributeHeld(read: (code: string, values: boolean) => Promise<Carrier[]>, object: CreatedObject, taking: ReadonlySet<string>): Promise<KeptContainer | undefined> {
+    const held = await attributeHold(read, object, (sku) => !takingSku(taking, sku));
+    if (!held) return undefined;
+    return { object, kind: object.kind === ATTRIBUTE_OPTION_KIND ? 'attribute option' : 'attribute', name: object.key ?? object.id, ...held };
 }
 
 /** The kind an assignment's member is recorded under. */
@@ -194,6 +230,71 @@ function decisionOrder(newestFirst: readonly CreatedObject[]): CreatedObject[] {
 }
 
 /**
+ * The containers to keep, in decision order, every container asked at once (live, 2026-11-09: asked
+ * one at a time, Luma's 39 categories and 8 sets took 134.8 s of a 3 min 5 s removal). The answers
+ * are the ones asking in order gave, since only two kinds of decision depend on another:
+ *
+ * - a category on the child categories decided before it: a kept child keeps it, and a child decided
+ *   after it was still being taken when it was asked (`childStays`);
+ * - a company, catalog or group on those decided before it: what each keeps with it changes what the
+ *   next one sees (`b2bContainers.ts`), so these are still asked one after another, in order.
+ *
+ * A category, set or cart rule keeps nothing but itself, and only a category reads another category,
+ * so those come off `taking` once all are decided (the caller); the B2B ones come off as they go.
+ *
+ * @throws the failure of the first decision in order that failed, once every decision has finished
+ */
+async function keptContainers(get: CommerceGet, newestFirst: readonly CreatedObject[], taking: Set<string>): Promise<KeptContainer[]> {
+    const byKey = new Map(newestFirst.map((o) => [keyOfObject(o.kind, o.id), o]));
+    const removal: Taking = {
+        has: (kind, id) => taking.has(keyOfObject(kind, id)),
+        find: (kind, id) => (taking.has(keyOfObject(kind, id)) ? byKey.get(keyOfObject(kind, id)) : undefined),
+        of: (kind) => newestFirst.filter((o) => o.kind === kind && taking.has(keyOfObject(o.kind, o.id))),
+    };
+    const decisions: Array<Promise<KeptContainer | undefined>> = [];
+    const carriers = carriersOnce(get);
+    // Where each container other than the B2B ones is first decided; asked again, it answers the same.
+    const firstAt = new Map<string, number>();
+    const childStays = (at: number) => async (id: string): Promise<boolean> => {
+        const child = keyOfObject('categories', id);
+        if (!byKey.has(child)) return true;
+        const decidedAt = firstAt.get(child);
+        return decidedAt !== undefined && decidedAt < at && (await decisions[decidedAt]) !== undefined;
+    };
+    const decide = (object: CreatedObject, at: number): Promise<KeptContainer | undefined> => {
+        if (object.kind === 'categories') return categoryHeld(get, object, taking, childStays(at));
+        if (object.kind === 'attribute_sets') return setHeld(get, object, taking);
+        if (object.kind === CART_RULE_KIND) return cartRuleHeld(get, object, taking);
+        if (object.kind === ATTRIBUTE_KIND || object.kind === ATTRIBUTE_OPTION_KIND) return attributeHeld(carriers, object, taking);
+        return Promise.resolve(undefined);
+    };
+    let inTurn: Promise<unknown> = Promise.resolve();
+    decisionOrder(newestFirst).forEach((object, at) => {
+        const key = keyOfObject(object.kind, object.id);
+        if (isB2bContainer(object.kind)) {
+            const decision = inTurn.then(async () => {
+                // Kept already, with a container decided before it (a company's catalog, a catalog's group).
+                if (!taking.has(key)) return undefined;
+                const held = await b2bHeldByOthers(get, object, removal);
+                for (const one of keptObjects(held ? [held] : [])) taking.delete(keyOfObject(one.kind, one.id));
+                return held;
+            });
+            inTurn = decision;
+            decisions.push(decision);
+        } else if (firstAt.has(key)) {
+            decisions.push(Promise.resolve(undefined));
+        } else {
+            firstAt.set(key, at);
+            decisions.push(decide(object, at));
+        }
+    });
+    const settled = await Promise.allSettled(decisions);
+    const failed = settled.find((s): s is PromiseRejectedResult => s.status === 'rejected');
+    if (failed) throw failed.reason;
+    return settled.flatMap((s) => (s.status === 'fulfilled' && s.value ? [s.value] : []));
+}
+
+/**
  * Which of these objects to take out and which containers to keep, read-only and up front. An
  * object kept with a container (`KeptContainer.with`) is decided with it; an assignment is taken
  * out only when neither the catalog nor the member it links is staying. Every object not taken
@@ -201,28 +302,24 @@ function decisionOrder(newestFirst: readonly CreatedObject[]): CreatedObject[] {
  *
  * @param newestFirst - what a removal would take out, newest first, so a child is decided
  *   before the container it sits in; a kept child keeps its container too
+ * @param options.alsoLeaving - products, by SKU, a clearing deletes right after this removal (Clear
+ *   Demo Data, step-06 C3 re-review): what they hold counts as going, as Clear's check counts it
  * @returns `take` in the order given, so writes still run newest first
  */
-export async function decideRemovals(get: CommerceGet, newestFirst: readonly CreatedObject[]): Promise<{ take: CreatedObject[]; kept: KeptContainer[] }> {
+export async function decideRemovals(get: CommerceGet, newestFirst: readonly CreatedObject[], options: { alsoLeaving?: readonly string[] } = {}): Promise<{ take: CreatedObject[]; kept: KeptContainer[] }> {
     const listed = new Set(newestFirst.map((o) => keyOfObject(o.kind, o.id)));
-    // Still to be taken: shrinks as decisions keep things.
-    const taking = new Set(listed);
-    const byKey = new Map(newestFirst.map((o) => [keyOfObject(o.kind, o.id), o]));
-    const removal: Taking = {
-        has: (kind, id) => taking.has(keyOfObject(kind, id)),
-        find: (kind, id) => (taking.has(keyOfObject(kind, id)) ? byKey.get(keyOfObject(kind, id)) : undefined),
-        of: (kind) => newestFirst.filter((o) => o.kind === kind && taking.has(keyOfObject(o.kind, o.id))),
-    };
-    const kept: KeptContainer[] = [];
-    for (const object of decisionOrder(newestFirst)) {
-        // Kept already, with a container decided before it (a company's catalog, a catalog's group).
-        if (!taking.has(keyOfObject(object.kind, object.id))) continue;
-        const held = await heldByOthers(get, object, removal, taking);
-        if (!held) continue;
-        for (const one of keptObjects([held])) taking.delete(keyOfObject(one.kind, one.id));
-        kept.push(held);
-    }
+    // Still to be taken: shrinks as decisions keep things. Products leaving with the clearing count as taken.
+    const taking = new Set([...listed, ...(options.alsoLeaving ?? []).map((sku) => keyOfObject('products', sku))]);
+    const kept = await keptContainers(fewReadsAtOnce(get, REQUESTS_AT_ONCE), newestFirst, taking);
+    for (const one of keptObjects(kept)) taking.delete(keyOfObject(one.kind, one.id));
     const staying = (kind: string, id: string) => listed.has(keyOfObject(kind, id)) && !taking.has(keyOfObject(kind, id));
+    // An attribute kept keeps its place in each set that stays: taking it out of a set blanks its values there.
+    const heldAttributes = new Set(kept.filter((k) => k.kind === 'attribute').map((k) => k.object.id));
+    const placeStays = (o: CreatedObject): boolean => {
+        const [setId, code] = o.id.split('/');
+        return heldAttributes.has(code ?? '') && !taking.has(keyOfObject('attribute_sets', setId));
+    };
+    for (const placed of newestFirst.filter((o) => o.kind === ASSIGNMENT_KIND && placeStays(o))) taking.delete(keyOfObject(placed.kind, placed.id));
     for (const pair of newestFirst.filter((o) => isAssignmentKind(o.kind))) {
         const { catalogId, ref } = splitPair(pair.id);
         if (staying(CATALOG_KIND, catalogId) || staying(MEMBER_KIND[pair.kind as AssignmentKind], ref)) taking.delete(keyOfObject(pair.kind, pair.id));
@@ -251,5 +348,5 @@ export function containersLine(kept: readonly KeptContainer[]): string | undefin
         return `Kept ${namedAs(one)}: ${reasonOf(one)}.`;
     }
     const names = kept.map(namedAs);
-    return `Kept ${kept.length} things that hold what you added: ${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}.`;
+    return `Kept ${kept.length} items that hold what you added: ${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}.`;
 }

@@ -178,7 +178,7 @@ name that no ERP in the project has, compared without case — made to end in "E
    unless the integration's shared rule says otherwise) is pinned on its own entry in the same
    PUT: once there are several, the integration reads an entry with no rule of its own as
    `erp_owner=<its id>` (commerce-erp-integration `router/ownership.js` `ownershipOf`). Without
-   the pin, adding Accuform on Justrite (2026-10-22) left Justrite ERP on a rule nobody set,
+   the pin, adding Accuform on Tailspin (2026-10-22) left Tailspin ERP on a rule nobody set,
    owning none of 321 products. Every path that grows the list sends it here, so the pin holds
    for the card's add, `add_erp` and a deploy's relist alike;
 3. saves the new ERP's ownership rule onto its entry (`PATCH erp/erps`, `erpOwnershipSync.ts`)
@@ -220,12 +220,12 @@ narrowing left (`existingRulesToChange`) is for a new ERP split by WEBSITE: a ca
 before a website rule and would take everything first, so it is given the websites nobody's
 rule names, saved with the new ERP's — the handler reads the store for this itself, so Add in
 the dialog never depends on the dialog's own read (that read is what the 2026-10-09 add
-skipped by clicking early, which left Justrite ERP on everything and an order refused as
+skipped by clicking early, which left Tailspin ERP on everything and an order refused as
 claimed by both). The dialog shows the existing ERPs as they will stand. When two specific
 rules both match a product (two attribute rules on different attributes, or two website rules
 for a product sold on both), both own it and the integration refuses its orders; the pass
 says so by count and name. Until AB-72 the add narrowed the first ERP to its own attribute,
-which would have left every untagged product with nobody (182 of 321 on Justrite).
+which would have left every untagged product with nobody (182 of 321 on Tailspin).
 
 **Applying ownership** (AB-70, `erpOwnershipReconcile.ts` → `applyErpOwnership`). Any change
 to who owns what is followed by one pass across every ERP the integration serves: after an
@@ -244,13 +244,13 @@ ERP's. The SC never resets by hand to make the ERPs match the rules. Per ERP, in
    that reason (its contract v17). Reset ERPs stays the only wipe.
    After an ADD, a pass that would mark every product an ERP sells discontinued marks none
    and says so: an add never asks to take an existing ERP's catalogue away, so that is a rule
-   gone wrong (Justrite, 2026-10-22), not a change to carry out.
+   gone wrong (Tailspin, 2026-10-22), not a change to carry out.
 
 When a removal leaves ONE ERP, its rule is set back to everything before the fills, so a
 single-ERP project looks as it did before the second ERP was added; with no ERP on everything
 left, the pass says how many products belong to no ERP. What the SC still has to do is said in
 the answer's `warning` and on the window: "Kukla ERP owns no products yet: use Assign products
-on its card to give it some." and "3 products are claimed by both Justrite ERP and Accuform
+on its card to give it some." and "3 products are claimed by both Tailspin ERP and Accuform
 ERP; orders for them are refused until one rule changes." An ERP that owns by an attribute
 other than `erp_owner` is still told to tag products in Commerce. Anything that did not go
 right for one ERP is its note and the pass stands; a store or an integration that could not be
@@ -295,7 +295,7 @@ no product in those sets carries a value. Agents reach all four through `assign_
 
 **Its look.** The ERP picks its starting theme from a hash of its list id (demo-erp
 `lib/appearance.js` `themeForErpId`) and cannot see the other ERPs, so two can start alike
-(`justrite` and `accuform` both hash to Foundry). Once the new ERP is deployed and linked,
+(`tailspin` and `accuform` both hash to Foundry). Once the new ERP is deployed and linked,
 before the list is sent, the add reads every ERP's look (`GET health`) and, when the new
 one's colour is another ERP's, gives it the first theme no other ERP shows, in the ERP's own
 order Harbour, Meridian, Granite, Foundry (`erpTheme.ts`, `erpAddTheme.ts`; written through
@@ -386,7 +386,7 @@ card's "Demo setup" line, the flyout's Next step and the guide's opening step al
 ## Applying the demo setup (AB-77, AB-82)
 
 Adobe Commerce as a Cloud Service gained `GET` and `PUT /V1/system/config` on 2026-09-08
-(measured live on Justrite 2026-10-10: `sales/totals_sort/tax` 40 → 41 → 40; a refused path
+(measured live on Tailspin 2026-10-10: `sales/totals_sort/tax` 40 → 41 → 40; a refused path
 comes back in the answer's `errors` list under HTTP 200, so every write reads that list).
 Since then the extension APPLIES the setup steps it can, not only checks them. The setup
 guide's **Apply all** and per-step **Apply this step**, and the agent's
@@ -425,7 +425,7 @@ takes the next priority after the stock's highest, never 1 beside one that alrea
 
 The checks and the engine read Commerce through an UNCUT signed GET (`setupCheckReader`),
 not the agent tool's `sendRest`, which cuts an answer at 30,000 characters: a set's attribute
-list is longer than that on Justrite, and the cut read broke the attribute-set check mid-JSON
+list is longer than that on Tailspin, and the cut read broke the attribute-set check mid-JSON
 (2026-10-10). A check that could not tell (`checkState: unknown`) is NEVER read as done, by
 the checklist, the guide or the engine: a step with a fix previews and applies from the fix's
 own read; one without is "could not check", with the check's words shown.
@@ -433,7 +433,7 @@ own read; one without is "could not check", with the check's words shown.
 The preview and the apply are statements about the store NOW. For every selected step that
 has a check the engine runs it fresh (the preview all of them at once, the apply each just
 before deciding) and decides from that answer alone; the saved checklist is never consulted,
-because a store changes after a check passes (Justrite 2026-10-10: two settings switched off
+because a store changes after a check passes (Tailspin 2026-10-10: two settings switched off
 by hand still previewed as Done and were skipped). The fresh answers are saved on the
 checklist, so the guide and the card agree afterwards. The guide offers "Apply this step" only
 on a step still open; a step saved done shows no Apply, and "Undo this step" only when Demo
@@ -455,13 +455,13 @@ so a datapack that already loaded the attributes, sources or shared catalogs is 
 and never relied on; and a refused item stops nothing else — what Commerce took stands and is
 recorded, what it refused is named by step and item in the result.
 
-A step says how it is applied in its catalog entry's `fix` (`app-builder-components.json`,
-schema beside it). A fix that is settings is DATA, with no code: `{ "kind": "config",
+A step says how it is applied in its catalog entry's `setup` (`app-builder-components.json`,
+schema beside it). A setup that is settings is DATA, with no code: `{ "kind": "config",
 "items": [{ "path": "payment/companycredit/active", "value": "1", "scope": "website" }] }`;
 `website` resolves to the project's website code when applied, and a `manual` sentence says
-what stays by hand. A fix that needs code names a handler (`{ "kind": "handler", "handler":
+what stays by hand. A setup that needs code names a handler (`{ "kind": "handler", "handler":
 "create-erp-attributes" }`); each handler implements the same preview / apply / undo contract
-(`fixContract.ts`), so the engine drives both alike. A second catalog entry declares config
+(`setupContract.ts`), so the engine drives both alike. A second catalog entry declares config
 fixes in JSON alone.
 
 | Step | Written | Undo | Still by hand |
@@ -484,10 +484,10 @@ does (`recordsAfterRun`), so Undo per step and the removal's teardown work uncha
 without a fix stays in the setup guide. Every way of adding it reaches this: the
 Integrations screen, `add_integration`, project creation and an Edit that adds it all run the
 runner's add. What it will change is confirmed first, because some steps change settings
-every website on a shared Commerce shares (`fixReach.ts`: a settings item at the default
+every website on a shared Commerce shares (`setupReach.ts`: a settings item at the default
 scope, the attributes, the shared catalogs; the warehouse is the project's website's only):
 the Integrations screen's add opens a confirm that reads the store
-(`PrepareOnAddDialog.tsx`), `add_integration` for the ERP integration answers that preview
+(`PrepareOnAddConfirm.tsx`), `add_integration` for the ERP integration answers that preview
 without `confirm: true` and adds nothing, and the wizard's Review names the steps from the
 catalog (no store can be read before the project exists). A preparation that stops never
 stops the add or the fill; the progress says why and that Apply all in the demo setup runs it
@@ -516,7 +516,7 @@ website first (its store scope, `ACCS_WEBSITE_CODE`), and beside it only the web
 sales organization of their own (`structureWebsites`), because the ERP takes the first
 website on its default sales organization as that organization's home: on a shared Commerce
 that was another demo's `base`, so the mapping named "Main Website" and the ERP called the
-project's own website and four others "unmapped" (Justrite, 2026-10-22). With no project
+project's own website and four others "unmapped" (Tailspin, 2026-10-22). With no project
 website, or one Commerce does not have, every website is sent as before. The answer's `mapping` block says what
 happened: `filled` and `kept` (rows of `{ erp, website, salesOrg }`; a kept row adds
 `erpSalesOrg` when the ERP names a different one), `skipped` (the ERP names a website
@@ -574,9 +574,9 @@ answers "Redeploy it to add one."
 
 **The SC names the ERP; the integration keeps its catalog name** (`pairNames.ts`). One
 integration serves several ERPs (Add another ERP), so naming it after the first stopped being
-true at the second (owner, 2026-10-06; it used to give "Justrite Integration"). The add
+true at the second (owner, 2026-10-06; it used to give "Tailspin Integration"). The add
 screen's field is "ERP name": a trailing "ERP" or "Integration" is dropped and "ERP" added,
-so "Justrite" (or "Justrite ERP Integration") gives the ERP **Justrite ERP** beside **ERP
+so "Tailspin" (or "Tailspin ERP Integration") gives the ERP **Tailspin ERP** beside **ERP
 Integration**, and nothing typed gives **Acme ERP**. The dashboard add, `add_integration` and
 the wizard all record the two names the same way, as the integration's inputs
 `INTEGRATION_DISPLAY_NAME` and `ERP_DISPLAY_NAME`. Before the project is created the wizard

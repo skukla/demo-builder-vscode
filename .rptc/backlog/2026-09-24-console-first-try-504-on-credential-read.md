@@ -5,7 +5,7 @@ area: app-builder
 parent: AB-9
 needs: []
 value: high
-status: built
+status: shipped
 ---
 
 # The first add of an integration dies on a Console 504 that the second add gets past
@@ -58,3 +58,4 @@ Filed 2026-09-24.
 - 2026-09-24  fix(app-builder): a 504 on the deploy-time credential read is retried once, so a first add survives it (`964ff4950`)
 - 2026-09-24  LIVE 2026-09-24 09:54 — first add of commerce-integration-starter-kit on Bodea through add_integration, on this build: succeeded first try in 2m 59s. The subscribe 504'd and the EXISTING retry got past it (org services 59s); the credential read that failed this morning took 1.1s, so the NEW retry had nothing to retry — not exercised live yet. Commerce install needed three rounds (transient conflict), ended installed at 1.0.2. Side warning: the storefront republish could not publish config.json to the CDN (401, no DA.live session) — the storefront still serves the previous config.json.
 - 2026-09-24  LIVE 2026-09-24 11:06 — the round trip's fresh add (new workspace, new credential): Getting Commerce access took 21.8s with no 504, so the credential-read retry again had nothing to retry. Two first adds today, both fine at that step; the 09:01 failure remains the only observed case.
+- 2026-11-20  Released in v1.0.0-beta.153

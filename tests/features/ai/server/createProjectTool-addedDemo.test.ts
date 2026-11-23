@@ -35,34 +35,34 @@ const mockRead = readAddedDemos as jest.Mock;
 const mockRow = readDemoRow as jest.Mock;
 const mockAdd = handleAddSharedDemo as jest.Mock;
 
-const JEN = makeAddedDemo({
-    source: { owner: 'jen', repo: 'isle5-demo', branch: 'demo' },
-    contentSource: { org: 'jen', site: 'isle5-content', indexPath: '/full-index.json' },
+const ROBIN = makeAddedDemo({
+    source: { owner: 'robin', repo: 'isle5-demo', branch: 'demo' },
+    contentSource: { org: 'robin', site: 'isle5-content', indexPath: '/full-index.json' },
 });
 const BOB = makeAddedDemo({ name: 'Bob', source: { owner: 'bob', repo: 'next-shop' }, storefrontKind: 'headless' });
 
 beforeEach(() => {
     jest.clearAllMocks();
     defaultStorefrontSetup();
-    mockRead.mockReturnValue([JEN, BOB]);
+    mockRead.mockReturnValue([ROBIN, BOB]);
 });
 
 describe('create_project — an added demo by id', () => {
     it("builds on the row: the derived package, its repository as the template on the row's branch, and the row in both payloads", async () => {
-        const res = await toolServer().call({ ...EDS, package: 'added:jen/isle5-demo' });
+        const res = await toolServer().call({ ...EDS, package: 'added:robin/isle5-demo' });
 
         expect(res.created).toBe(true);
         expect(getStorefrontForStack).not.toHaveBeenCalled();
         const payload = storefrontSetup.mock.calls[0][1];
         expect(payload).toMatchObject({
-            selectedPackage: 'added:jen/isle5-demo',
+            selectedPackage: 'added:robin/isle5-demo',
             selectedStack: 'eds-paas',
-            demo: JEN,
-            edsConfig: { templateOwner: 'jen', templateRepo: 'isle5-demo', contentSource: { org: 'jen', site: 'isle5-content', indexPath: '/full-index.json' } },
+            demo: ROBIN,
+            edsConfig: { templateOwner: 'robin', templateRepo: 'isle5-demo', contentSource: { org: 'robin', site: 'isle5-content', indexPath: '/full-index.json' } },
         });
-        expect(capturedWizardState()).toMatchObject({ selectedPackage: 'added:jen/isle5-demo', demo: JEN });
+        expect(capturedWizardState()).toMatchObject({ selectedPackage: 'added:robin/isle5-demo', demo: ROBIN });
         const catalog = (buildProjectConfig as jest.Mock).mock.calls[0][2] as Array<{ id: string }>;
-        expect(catalog.map((p) => p.id)).toEqual(['citisignal', 'added:jen/isle5-demo']);
+        expect(catalog.map((p) => p.id)).toEqual(['citisignal', 'added:robin/isle5-demo']);
         expect(executeProjectCreation).toHaveBeenCalled();
     });
 
@@ -77,19 +77,19 @@ describe('create_project — an added demo by id', () => {
             return { success: true };
         });
 
-        const res = await toolServer().call({ ...EDS, package: 'added:jen/isle5-demo' });
+        const res = await toolServer().call({ ...EDS, package: 'added:robin/isle5-demo' });
 
         expect(res).toMatchObject({ created: true, caveats: [offer] });
-        expect('caveats' in (await toolServer().call({ ...EDS, package: 'added:jen/isle5-demo' }))).toBe(false);
+        expect('caveats' in (await toolServer().call({ ...EDS, package: 'added:robin/isle5-demo' }))).toBe(false);
     });
 
     it("leaves a zip card's record behind: neither payload's row carries it", async () => {
-        mockRead.mockReturnValue([{ ...JEN, createdFromZip: true }, BOB]);
+        mockRead.mockReturnValue([{ ...ROBIN, createdFromZip: true }, BOB]);
 
-        await toolServer().call({ ...EDS, package: 'added:jen/isle5-demo' });
+        await toolServer().call({ ...EDS, package: 'added:robin/isle5-demo' });
 
-        expect(storefrontSetup.mock.calls[0][1].demo).toStrictEqual(JEN);
-        expect(capturedWizardState()?.demo).toStrictEqual(JEN);
+        expect(storefrontSetup.mock.calls[0][1].demo).toStrictEqual(ROBIN);
+        expect(capturedWizardState()?.demo).toStrictEqual(ROBIN);
     });
 
     it('takes a headless demo down the headless path with the row', async () => {
@@ -116,30 +116,30 @@ describe('create_project — an added demo by id', () => {
         const res = await toolServer().call({ ...EDS, package: 'added:nobody/x' });
 
         expect(res.error).toBe('Unknown added demo: added:nobody/x');
-        expect(res.validPackages).toEqual(['citisignal', 'added:jen/isle5-demo', 'added:bob/next-shop']);
+        expect(res.validPackages).toEqual(['citisignal', 'added:robin/isle5-demo', 'added:bob/next-shop']);
     });
 
     it('lists the added ids beside the shipped ones for an unknown shipped id too', async () => {
         const res = await toolServer().call({ ...EDS, package: 'nope' });
-        expect(res.validPackages).toEqual(['citisignal', 'added:jen/isle5-demo', 'added:bob/next-shop']);
+        expect(res.validPackages).toEqual(['citisignal', 'added:robin/isle5-demo', 'added:bob/next-shop']);
     });
 });
 
 describe('create_project — from a link', () => {
     it('reads the link, adds the demo, then builds on the remembered row, which reads from the link', async () => {
-        mockRow.mockResolvedValue({ demo: JEN, read: { fullName: 'jen/isle5-demo' }, warnings: [] });
-        mockAdd.mockResolvedValue({ success: true, result: { demo: JEN } });
+        mockRow.mockResolvedValue({ demo: ROBIN, read: { fullName: 'robin/isle5-demo' }, warnings: [] });
+        mockAdd.mockResolvedValue({ success: true, result: { demo: ROBIN } });
 
         const { package: _omitted, ...rest } = EDS;
-        const res = await toolServer().call({ ...rest, link: 'https://main--isle5-demo--jen.aem.live' });
+        const res = await toolServer().call({ ...rest, link: 'https://main--isle5-demo--robin.aem.live' });
 
-        expect(mockRow).toHaveBeenCalledWith(expect.anything(), { link: 'https://main--isle5-demo--jen.aem.live' });
-        expect(mockAdd).toHaveBeenCalledWith(expect.anything(), { demo: JEN });
+        expect(mockRow).toHaveBeenCalledWith(expect.anything(), { link: 'https://main--isle5-demo--robin.aem.live' });
+        expect(mockAdd).toHaveBeenCalledWith(expect.anything(), { demo: ROBIN });
         expect(res.created).toBe(true);
         expect(storefrontSetup.mock.calls[0][1]).toMatchObject({
-            selectedPackage: 'added:jen/isle5-demo',
-            demo: JEN,
-            edsConfig: { templateOwner: 'jen', templateRepo: 'isle5-demo' },
+            selectedPackage: 'added:robin/isle5-demo',
+            demo: ROBIN,
+            edsConfig: { templateOwner: 'robin', templateRepo: 'isle5-demo' },
         });
     });
 
@@ -147,7 +147,7 @@ describe('create_project — from a link', () => {
         mockRow.mockResolvedValue({ error: { error: 'This repository is not a storefront we can build on.' } });
         const { package: _omitted, ...rest } = EDS;
 
-        const res = await toolServer().call({ ...rest, link: 'https://github.com/jen/notes' });
+        const res = await toolServer().call({ ...rest, link: 'https://github.com/robin/notes' });
 
         expect(res).toEqual({ error: 'This repository is not a storefront we can build on.' });
         expect(mockAdd).not.toHaveBeenCalled();
@@ -163,15 +163,15 @@ describe('create_project — from a link', () => {
 
 describe("create_project — an added demo's Commerce endpoint (EDS-22)", () => {
     const SHARER_ENDPOINT = 'https://na1-sandbox.api.commerce.example/tenant/graphql';
-    const KHALIL = makeAddedDemo({
-        source: { owner: 'kmanns', repo: 'justrite' },
+    const PERSON_B = makeAddedDemo({
+        source: { owner: 'org-e', repo: 'tailspin' },
         configDefaults: { ACCS_GRAPHQL_ENDPOINT: SHARER_ENDPOINT },
     });
 
-    beforeEach(() => mockRead.mockReturnValue([KHALIL]));
+    beforeEach(() => mockRead.mockReturnValue([PERSON_B]));
 
     it("needs no accsEndpoint when the demo's row names the instance, and records it on the backend", async () => {
-        const res = await toolServer().call({ ...EDS, stack: 'eds-accs', package: 'added:kmanns/justrite' });
+        const res = await toolServer().call({ ...EDS, stack: 'eds-accs', package: 'added:org-e/tailspin' });
 
         expect(res.created).toBe(true);
         expect(capturedWizardState().edsConfig).toMatchObject({ accsHost: SHARER_ENDPOINT });
@@ -184,7 +184,7 @@ describe("create_project — an added demo's Commerce endpoint (EDS-22)", () => 
         await toolServer().call({
             ...EDS,
             stack: 'eds-accs',
-            package: 'added:kmanns/justrite',
+            package: 'added:org-e/tailspin',
             accsEndpoint: 'https://mine.example/graphql',
         });
 

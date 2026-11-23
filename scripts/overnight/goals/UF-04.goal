@@ -1,11 +1,11 @@
-Work `.rptc/plans/unmeasured-fifth/overview.md` STEP 3 — DESIGN ONLY, change no tooling.
+Work `.rptc/complete/unmeasured-fifth/overview.md` STEP 3 — DESIGN ONLY, change no tooling.
 
 Every attribution failure found on 2026-09-07 came from one rule: a module is measured against
 the suites that share its FILENAME (`focusModule.suitesFor`). Three shapes came out of it —
 a suite scored against a module it never runs, a suite carrying a module's name that tests
 something else, and a module tested only through a consumer's suite and so never measured.
 
-WRITE A PROPOSAL at `.rptc/plans/unmeasured-fifth/attribution-design.md`. Do NOT change
+WRITE A PROPOSAL at `.rptc/complete/unmeasured-fifth/attribution-design.md`. Do NOT change
 focusModule.mjs, mutationScope.mjs, any config, or the baseline. This rule is what every
 measurement in the repo rests on, and a wrong change still produces plausible numbers — the
 owner decides this one awake.

@@ -6,6 +6,7 @@
 
 import { getGitHubServices } from '@/features/eds/handlers/edsServiceCache';
 import { STOREFRONT_CHANGES, storefrontNeedsReset } from '@/features/eds/services/storefront/storefrontChanges';
+import { readPatchesRelease } from '@/features/eds/services/patches/lkgReader';
 import { resolveTemplateCommitSha } from '@/features/eds/services/templateCommitResolver';
 import { populateEdsMetadata } from '@/features/project-creation/handlers/executorEdsPhase';
 import type { Project } from '@/types/base';
@@ -17,6 +18,7 @@ import { createMockSecretStorage } from '../../../helpers/secretStorageFake';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
 
 jest.mock('@/features/eds/handlers/edsServiceCache', () => ({ getGitHubServices: jest.fn() }));
+jest.mock('@/features/eds/services/patches/lkgReader', () => ({ readPatchesRelease: jest.fn() }));
 jest.mock('@/features/eds/services/templateCommitResolver', () => ({ resolveTemplateCommitSha: jest.fn() }));
 
 const getFileContent = jest.fn();
@@ -53,6 +55,76 @@ beforeEach(() => {
     jest.clearAllMocks();
     (getGitHubServices as jest.Mock).mockReturnValue({ fileOperations: { getFileContent } });
     (resolveTemplateCommitSha as jest.Mock).mockResolvedValue('a'.repeat(40));
+});
+
+describe('populateEdsMetadata: the patches release is the storefront\'s version', () => {
+    const THIN_LAYER: ProjectCreationConfig = {
+        ...CONFIG,
+        edsConfig: {
+            ...CONFIG.edsConfig!,
+            codePatchSource: { owner: 'skukla', repo: 'eds-demo-patches', path: 'b2b', lkgFile: 'b2b/last-known-good' },
+        } as ProjectCreationConfig['edsConfig'],
+    };
+
+    it('records the release a thin-layer storefront was built from', async () => {
+        getFileContent.mockRejectedValue(new Error('not needed'));
+        (readPatchesRelease as jest.Mock).mockResolvedValue('v1.1.5');
+        const target = project();
+
+        await populateEdsMetadata(context(), target, THIN_LAYER, true);
+
+        expect(readPatchesRelease).toHaveBeenCalledWith(
+            expect.objectContaining({ owner: 'skukla', repo: 'eds-demo-patches' }),
+            expect.anything(),
+        );
+        expect(target.componentInstances?.['eds-storefront']?.metadata).toMatchObject({
+            patchesRelease: 'v1.1.5',
+        });
+    });
+
+    // F255: an imported storefront was built from the sender's release, not today's, so every
+    // release published since is offered. The import record keeps only the import.
+    it("records the sender's release for a storefront imported from a bundle", async () => {
+        getFileContent.mockRejectedValue(new Error('not needed'));
+        (readPatchesRelease as jest.Mock).mockResolvedValue('v1.2.0');
+        const target = project();
+        const imported: ProjectCreationConfig = {
+            ...THIN_LAYER,
+            importedFrom: { bundleName: 'Bodea Summit', bundlePath: '/x/bodea.zip' },
+            edsConfig: { ...THIN_LAYER.edsConfig!, bundleImport: { commit: 'import-commit', patchesRelease: 'v1.1.5' } },
+        };
+
+        await populateEdsMetadata(context(), target, imported, true);
+
+        expect(target.componentInstances?.['eds-storefront']?.metadata).toMatchObject({ patchesRelease: 'v1.1.5' });
+        expect(readPatchesRelease).not.toHaveBeenCalled();
+        expect(target.importedFrom).toStrictEqual({ bundleName: 'Bodea Summit', commit: 'import-commit' });
+    });
+
+    it("CONTROL: an import whose bundle names no release records today's", async () => {
+        getFileContent.mockRejectedValue(new Error('not needed'));
+        (readPatchesRelease as jest.Mock).mockResolvedValue('v1.2.0');
+        const target = project();
+        const imported: ProjectCreationConfig = {
+            ...THIN_LAYER,
+            importedFrom: { bundleName: 'Bodea Summit', bundlePath: '/x/bodea.zip' },
+            edsConfig: { ...THIN_LAYER.edsConfig!, bundleImport: { commit: 'import-commit' } },
+        };
+
+        await populateEdsMetadata(context(), target, imported, true);
+
+        expect(target.componentInstances?.['eds-storefront']?.metadata).toMatchObject({ patchesRelease: 'v1.2.0' });
+    });
+
+    it('records none for a storefront that is not thin-layer', async () => {
+        getFileContent.mockRejectedValue(new Error('not needed'));
+        const target = project();
+
+        await populateEdsMetadata(context(), target, CONFIG, true);
+
+        expect(readPatchesRelease).not.toHaveBeenCalled();
+        expect(target.componentInstances?.['eds-storefront']?.metadata).not.toHaveProperty('patchesRelease');
+    });
 });
 
 describe('populateEdsMetadata — the boilerplate (EDS-13f)', () => {
@@ -150,5 +222,117 @@ describe('populateEdsMetadata — the storefront built the way Demo Builder buil
         await populateEdsMetadata(context(), target, CONFIG, true);
 
         expect(metadataOf(target)).not.toHaveProperty('storefrontBuiltThrough');
+    });
+});
+
+// PL-101: the project's Finish Setup steps. A setup that ran replaces the record whole, so a
+// clean run leaves no stale step; an edit that ran no setup keeps what the project had.
+describe('populateEdsMetadata — the steps setup left to finish', () => {
+    beforeEach(() => getFileContent.mockRejectedValue(new Error('not needed here')));
+
+    const ran = (codeNotServed?: string[]): ProjectCreationConfig => ({
+        ...CONFIG,
+        edsConfig: { ...CONFIG.edsConfig!, storefrontBuildComplete: true, ...(codeNotServed ? { codeNotServed } : {}) },
+    });
+
+    it('saves Republish the Code with the files the live site did not serve', async () => {
+        const target = project();
+
+        await populateEdsMetadata(context(), target, ran(['scripts/commerce.js']), true);
+
+        expect(target.finishSetup).toStrictEqual({ 'republish-code': { files: ['scripts/commerce.js'] } });
+    });
+
+    it('replaces an earlier record when setup ran and the site served everything', async () => {
+        const target = project();
+        target.finishSetup = { 'republish-code': { files: ['scripts/old.js'], state: 'done' } };
+
+        await populateEdsMetadata(context(), target, ran(), true);
+
+        expect(target).not.toHaveProperty('finishSetup');
+    });
+
+    it('CONTROL: keeps the record when setup did not run (an edit builds nothing)', async () => {
+        const target = project();
+        target.finishSetup = { 'republish-code': { files: ['scripts/old.js'] } };
+
+        await populateEdsMetadata(context(), target, CONFIG, true);
+
+        expect(target.finishSetup).toStrictEqual({ 'republish-code': { files: ['scripts/old.js'] } });
+    });
+});
+
+// EDS-72 decisions 1 and 3: an imported project records the import (commit, sender's repository,
+// content site) and is recorded as a project on the brand it was built on, with no `demo` row.
+describe('populateEdsMetadata — a project imported from a demo bundle', () => {
+    beforeEach(() => getFileContent.mockRejectedValue(new Error('not needed here')));
+
+    const IMPORTED: ProjectCreationConfig = {
+        ...CONFIG,
+        selectedPackage: 'bodea',
+        importedFrom: { bundleName: 'Bodea Summit', bundlePath: '/x/bodea-demo-bundle.zip', sourceRepository: 'sender/kukla-bodea' },
+        edsConfig: {
+            ...CONFIG.edsConfig!,
+            bundleImport: { commit: 'import-commit', contentSource: { org: 'sender', site: 'kukla-bodea', indexPath: '/query-index.json' } },
+        },
+    };
+
+    it('records the import on the project, without the path on this machine', async () => {
+        const target = project();
+
+        await populateEdsMetadata(context(), target, IMPORTED, true);
+
+        expect(target.importedFrom).toStrictEqual({
+            bundleName: 'Bodea Summit',
+            sourceRepository: 'sender/kukla-bodea',
+            commit: 'import-commit',
+            contentSource: { org: 'sender', site: 'kukla-bodea', indexPath: '/query-index.json' },
+        });
+        expect(target.demo).toBeUndefined();
+        // Read as a brand project: the brand's template is the update record (decision 3).
+        expect(target.componentInstances?.['eds-storefront']?.metadata).toMatchObject({ templateRepo: 'boilerplate-b2b-template' });
+    });
+
+    // F252: updates count from the template commit the sender's code was built on, not today's.
+    it("records the sender's template commit as the version updates count from", async () => {
+        const senderBase = 'c'.repeat(40);
+        const target = project();
+        const withBase: ProjectCreationConfig = {
+            ...IMPORTED,
+            edsConfig: { ...IMPORTED.edsConfig!, bundleImport: { commit: 'import-commit', templateBase: senderBase } },
+        };
+
+        await populateEdsMetadata(context(), target, withBase, true);
+
+        expect(target.componentInstances?.['eds-storefront']?.metadata).toMatchObject({
+            templateOwner: 'adobe-commerce',
+            templateRepo: 'boilerplate-b2b-template',
+            lastSyncedCommit: senderBase,
+        });
+        expect(resolveTemplateCommitSha).not.toHaveBeenCalled();
+        // The import record keeps only the import: the base lives where updates read it.
+        expect(target.importedFrom).toStrictEqual({
+            bundleName: 'Bodea Summit',
+            sourceRepository: 'sender/kukla-bodea',
+            commit: 'import-commit',
+        });
+    });
+
+    it("CONTROL: with no sender's commit, records today's template version as before", async () => {
+        const target = project();
+
+        await populateEdsMetadata(context(), target, IMPORTED, true);
+
+        expect(target.componentInstances?.['eds-storefront']?.metadata).toMatchObject({ lastSyncedCommit: 'a'.repeat(40) });
+    });
+
+    it('records nothing when setup made no repository from the bundle, and nothing for other projects', async () => {
+        const noCommit = project();
+        await populateEdsMetadata(context(), noCommit, { ...IMPORTED, edsConfig: CONFIG.edsConfig }, true);
+        expect(noCommit.importedFrom).toBeUndefined();
+
+        const brand = project();
+        await populateEdsMetadata(context(), brand, CONFIG, true);
+        expect(brand.importedFrom).toBeUndefined();
     });
 });

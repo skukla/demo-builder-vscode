@@ -15,7 +15,7 @@ Filed 2026-09-28 from the case agent's review of `.rptc/plans/several-erps/prici
 ## The question
 
 The strategy gives every company with its own prices a shared catalog (and so a customer group)
-of its own. The JustRite client has about 3,000 customers ordering daily (intro call
+of its own. The Tailspin client has about 3,000 customers ordering daily (intro call
 2026-08-20), which could mean thousands of shared catalogs and customer groups. No Adobe
 guidance on practical limits (ACCS), or on catalog-export time at that count, was found yet.
 

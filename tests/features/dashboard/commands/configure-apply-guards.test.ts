@@ -202,11 +202,11 @@ describe('ConfigureProjectWebviewCommand - apply prompts and their guards', () =
                 ([id]) => id as string
             );
             const deploy = ids.indexOf('demoBuilder.deployMesh');
-            const stop = ids.indexOf('demoBuilder.stopDemo');
-            const start = ids.indexOf('demoBuilder.startDemo');
+            const restart = ids.indexOf('demoBuilder.restartDemo');
             expect(deploy).toBeGreaterThanOrEqual(0);
-            expect(stop).toBeGreaterThan(deploy);
-            expect(start).toBeGreaterThan(stop);
+            expect(restart).toBeGreaterThan(deploy);
+            // The one restart, for this screen's project (PL-104 fix 12).
+            expect(vscode.commands.executeCommand).toHaveBeenCalledWith('demoBuilder.restartDemo', '/test/project');
         });
 
         it('"Redeploy Mesh" leaves a stopped demo alone', async () => {
@@ -220,7 +220,7 @@ describe('ConfigureProjectWebviewCommand - apply prompts and their guards', () =
             );
 
             const commandsRun = (vscode.commands.executeCommand as jest.Mock).mock.calls.map(([id]) => id);
-            expect(commandsRun).not.toContain('demoBuilder.startDemo');
+            expect(commandsRun).not.toContain('demoBuilder.restartDemo');
         });
 
         it('"Later" saves the decline when one was recorded', async () => {
@@ -299,38 +299,34 @@ describe('ConfigureProjectWebviewCommand - apply prompts and their guards', () =
             );
         });
 
-        it('stops THEN starts the demo, in that order', async () => {
+        // PL-104 fix 12 (F268): the one restart (stop, a pause, start), for this screen's
+        // project. Its stop-before-start order is the command's own, pinned where it is registered.
+        it('runs the one restart for this screen\'s project', async () => {
             answerShouldShow({ [RESTART_SHOW]: true });
             (vscode.window.showInformationMessage as jest.Mock).mockResolvedValue('Restart Demo');
 
             await notifications(command).handleRestartNotification();
 
+            expect(vscode.commands.executeCommand).toHaveBeenCalledWith('demoBuilder.restartDemo', '/test/project');
             const ids = (vscode.commands.executeCommand as jest.Mock).mock.calls.map(
                 ([id]) => id as string
             );
-            expect(ids.indexOf('demoBuilder.stopDemo')).toBeGreaterThan(-1);
-            expect(ids.indexOf('demoBuilder.startDemo')).toBeGreaterThan(
-                ids.indexOf('demoBuilder.stopDemo')
-            );
+            expect(ids).not.toContain('demoBuilder.stopDemo');
+            expect(ids).not.toContain('demoBuilder.startDemo');
         });
 
-        it('does not start the demo when the stop fails', async () => {
+        it('a failed restart is not fatal: the prompt still counts as shown', async () => {
             answerShouldShow({ [RESTART_SHOW]: true });
             (vscode.window.showInformationMessage as jest.Mock).mockResolvedValue('Restart Demo');
             (vscode.commands.executeCommand as jest.Mock).mockImplementation((id: string) => {
                 if (id === RESTART_SHOW) return Promise.resolve(true);
-                if (id === 'demoBuilder.stopDemo') return Promise.reject(new Error('stuck'));
+                if (id === 'demoBuilder.restartDemo') return Promise.reject(new Error('stuck'));
                 return Promise.resolve(undefined);
             });
 
             const shown = await notifications(command).handleRestartNotification();
 
-            // Non-fatal: the prompt still counts as shown.
             expect(shown).toBe(true);
-            const ids = (vscode.commands.executeCommand as jest.Mock).mock.calls.map(
-                ([id]) => id as string
-            );
-            expect(ids).not.toContain('demoBuilder.startDemo');
         });
 
         it('does nothing when the prompt is dismissed', async () => {
@@ -342,7 +338,7 @@ describe('ConfigureProjectWebviewCommand - apply prompts and their guards', () =
             const ids = (vscode.commands.executeCommand as jest.Mock).mock.calls.map(
                 ([id]) => id as string
             );
-            expect(ids).not.toContain('demoBuilder.stopDemo');
+            expect(ids).not.toContain('demoBuilder.restartDemo');
         });
     });
 

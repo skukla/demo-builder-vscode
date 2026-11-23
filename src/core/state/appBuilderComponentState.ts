@@ -135,7 +135,7 @@ export function runsOlderCode(
  * Pure: the keyed map with every `systems` list holding only ids still in the map.
  *
  * A removed system's id used to stay in its integration's list (AB-70, the owner's
- * Justrite project: `systems: ['demo-erp', 'demo-erp-2']` with `demo-erp-2` gone).
+ * Tailspin project: `systems: ['demo-erp', 'demo-erp-2']` with `demo-erp-2` gone).
  * Readers skipped it, but a later system added under the same id read as linked
  * before its add finished. The removal drops the id through this, and the manifest
  * writer does too, so a project already carrying one heals on its next save. A list

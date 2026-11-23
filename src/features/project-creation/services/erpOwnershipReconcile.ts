@@ -118,7 +118,7 @@ function deadWebsitesNote(row: ErpRow, websites: ReadonlyArray<{ code: string }>
  * "Assign products" as its next step, can leave out the note that says the same.
  */
 export function assignProductsNote(name: string): string {
-    return `${name} owns no products yet: use Assign products on its card to give it some.`;
+    return `${name} owns no products yet: use Assign Products on its card to give it some.`;
 }
 
 /**
@@ -156,7 +156,7 @@ interface StatusChange {
 /**
  * The status changes an ERP's held products need: what it no longer owns becomes
  * discontinued; what it owns again, and the pass had discontinued, becomes sellable
- * (measured 2026-10-09: a removal gave Justrite ERP everything back and 278 products it
+ * (measured 2026-10-09: a removal gave Tailspin ERP everything back and 278 products it
  * owned again stayed discontinued, because an import never resets a status). A parent
  * carries no sales status and is left; `blocked` is the ERP user's own decision and is
  * never touched either way.
@@ -196,7 +196,7 @@ function emptiesTheErp(held: readonly { type?: string; salesStatus?: string }[],
 }
 
 /**
- * The note when an add would have emptied an ERP (Justrite, 2026-10-22): adding an ERP never
+ * The note when an add would have emptied an ERP (Tailspin, 2026-10-22): adding an ERP never
  * asks to take another's whole catalogue away, so a pass that would is a rule gone wrong, and
  * nothing is marked.
  */
@@ -362,7 +362,7 @@ export async function applyErpOwnership(
         // item; a rule that matches nothing is.
         if (owned.size === 0 && row.owns.mode !== 'all') {
             const note = ownsNothingNote(row);
-            // Not "use Assign products" after an assignment or its undo: an ERP left with nothing
+            // Not "use Assign Products" after an assignment or its undo: an ERP left with nothing
             // is what the SC just chose (owner, 2026-10-19). A rule on another attribute still says.
             if (moment !== 'assign' || note !== assignProductsNote(row.name)) notes.push(note);
         }

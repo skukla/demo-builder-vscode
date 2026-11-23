@@ -2,12 +2,13 @@
  * Project Reset Service
  *
  * Resets headless (non-EDS) projects by deleting and re-cloning components.
- * Follows the same UI pattern as edsResetService: confirmation → progress → execute → notify.
+ * Two doors, neither with a dialog: a batch's answered run (`runProjectResetAnswered`) and the
+ * `reset_project` agent tool (`executeProjectReset`).
  *
  * Reuses:
  * - cloneAllComponents / installAllComponents from componentInstallationOrchestrator
- * - ComponentRegistryManager for component definitions
- * - loadComponentDefinitions pattern from executor.ts
+ * - the component definitions read from the saved project (`projectResetComponents`)
+ * - a storefront reset's datapack step (`removeAnsweredDatapack`), when a batch or the agent asked
  * - generateComponentEnvFile for .env regeneration
  * - StopDemo command for stopping running demos
  *
@@ -19,23 +20,22 @@ import * as path from 'path';
 import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import { whileRunning } from '@/core/state/projectWorkRunning';
 import { numberedSteps } from '@/core/utils/numberedSteps';
-import { resetOperationId } from '@/core/utils/operationIds';
 import { OPERATION_STAGES as S } from '@/core/utils/operationStages';
-import { getProjectDisplayName } from '@/core/utils/projectDisplayName';
-import {
-    withOperationProgress,
-    type ReportStage,
-} from '@/core/vscode/withOperationProgress';
+import type { ReportStage } from '@/core/vscode/withOperationProgress';
 import type { AuthenticationService } from '@/features/authentication/services/authenticationService';
-import { getComponentRegistryManager } from '@/features/components/services/componentRegistryInstance';
-import { getStackById } from '@/features/components/services/demoPackageLoader';
+import {
+    datapackLeftSomething,
+    datapackStepLine,
+    FailedAfterDatapack,
+    removeAnsweredDatapack,
+    savedIntoLine,
+    type AnsweredDatapack,
+    type DatapackRemoval,
+} from '@/features/eds/services/reset/resetDatapackStep';
+import { loadComponentDefinitionsFromProject, type LoadResult } from '@/features/lifecycle/services/projectResetComponents';
 import { handleMeshRedeployment } from '@/features/lifecycle/services/projectResetMesh';
-import { toComponentDefinitionEntry } from '@/features/project-creation/services/componentDefinitionEntry';
-import type { ComponentDefinitionEntry } from '@/features/project-creation/services/componentInstallationOrchestrator';
 import type { Project } from '@/types/base';
-import type { ComponentRegistry, TransformedComponentDefinition } from '@/types/components';
-import type { HandlerContext, HandlerResponse } from '@/types/handlers';
-import type { Stack } from '@/types/stacks';
+import type { HandlerContext } from '@/types/handlers';
 import { getMeshComponentInstance } from '@/types/typeGuards';
 
 // ==========================================================
@@ -64,56 +64,9 @@ function projectResetSteps(project: Project): string[] {
     ];
 }
 
-/** The SC's door: the reset's own needs plus where its progress shows. */
-export interface ResetWithUIOptions extends ProjectResetDeps {
-    /** Started from a screen that hosts the progress modal (PL-59 R1). */
-    progress?: 'modal';
-    /** The id that screen named the operation by, so its modal follows this run. */
-    operationId?: string;
-}
-
 // ==========================================================
-// Component Definition Loading
+// What a reset keeps
 // ==========================================================
-
-/** Result of loading component definitions, includes registry for reuse */
-interface LoadResult {
-    componentDefinitions: Map<string, ComponentDefinitionEntry>;
-    registry: ComponentRegistry;
-    stack: Stack;
-}
-
-/** Look up a component definition by type from the registry manager */
-async function findComponentByType(
-    registryManager: {
-        getFrontends: () => Promise<TransformedComponentDefinition[]>;
-        getDependencies: () => Promise<TransformedComponentDefinition[]>;
-        getComponentById: (id: string) => Promise<TransformedComponentDefinition | undefined>;
-    },
-    comp: { id: string; type: string },
-): Promise<TransformedComponentDefinition | undefined> {
-    if (comp.type === 'frontend') {
-        const frontends = await registryManager.getFrontends();
-        return frontends.find((f: { id: string }) => f.id === comp.id);
-    }
-    if (comp.type === 'dependency') {
-        const deps = await registryManager.getDependencies();
-        return deps.find((d: { id: string }) => d.id === comp.id);
-    }
-    return undefined;
-}
-
-/** Build the flat component list from stack + saved selections */
-export function buildComponentList(stack: Stack, project: Project): { id: string; type: string }[] {
-    const frontend = stack.frontend;
-    // Use project's saved dependencies (includes user-selected optional deps like mesh) or fall back to stack defaults
-    const dependencies = project.componentSelections?.dependencies ?? stack.dependencies ?? [];
-    // No integrations: reset leaves them alone (see `integrationIds`).
-    return [
-        ...(frontend ? [{ id: frontend, type: 'frontend' }] : []),
-        ...dependencies.map((id: string) => ({ id, type: 'dependency' })),
-    ];
-}
 
 /**
  * The components a reset leaves exactly as they are: every App Builder component
@@ -162,71 +115,6 @@ async function removeComponentsExcept(
     }
 }
 
-/**
- * Reconstruct component definitions from saved project state.
- *
- * Uses the same logic as executor.ts loadComponentDefinitions() but reads
- * from the saved project (selectedStack, selectedAddons, componentInstances)
- * instead of the wizard's ProjectCreationConfig.
- *
- * Returns the registry alongside definitions so callers can reuse it
- * (avoids duplicate file I/O).
- */
-async function loadComponentDefinitionsFromProject(
-    project: Project,
-    context: HandlerContext,
-): Promise<LoadResult> {
-    const registryManager = getComponentRegistryManager(context.context.extensionPath);
-    const registry = await registryManager.loadRegistry();
-    const stack = project.selectedStack ? getStackById(project.selectedStack) : undefined;
-
-    if (!stack) {
-        throw new Error(`Stack "${project.selectedStack}" not found in stacks.json. Cannot reset.`);
-    }
-
-    const allComponents = buildComponentList(stack, project);
-
-    const componentDefinitions: Map<string, ComponentDefinitionEntry> = new Map();
-
-    for (const comp of allComponents) {
-        let componentDef = await findComponentByType(registryManager, comp);
-
-        // Fallback: search all sections (e.g., mesh in "mesh" section)
-        if (!componentDef) {
-            componentDef = await registryManager.getComponentById(comp.id);
-        }
-
-        if (!componentDef) {
-            context.logger.warn(`[ProjectReset] Component ${comp.id} not found in registry`);
-            continue;
-        }
-
-        // For frontend, restore source URL from saved componentInstance
-        if (comp.type === 'frontend') {
-            const savedInstance = project.componentInstances?.[comp.id];
-            if (savedInstance?.repoUrl) {
-                componentDef = {
-                    ...componentDef,
-                    source: {
-                        type: 'git' as const,
-                        url: savedInstance.repoUrl,
-                        branch: savedInstance.branch || 'main',
-                    },
-                };
-            }
-        }
-
-        if (!componentDef.source) {
-            context.logger.warn(`[ProjectReset] Component ${comp.id} has no source, skipping`);
-            continue;
-        }
-
-        componentDefinitions.set(comp.id, toComponentDefinitionEntry(componentDef, comp.type));
-    }
-
-    return { componentDefinitions, registry, stack };
-}
-
 // ==========================================================
 // The reset itself
 // ==========================================================
@@ -250,6 +138,8 @@ export interface ProjectResetOutcome {
     success: boolean;
     error?: string;
     meshRedeployed?: boolean;
+    /** What the datapack step did to the store, when it ran (the agent's reset, step-05 S7). */
+    datapackRemoval?: DatapackRemoval;
 }
 
 /**
@@ -324,8 +214,17 @@ async function rebuildComponents(
     await regenerateProjectEnvFiles(project, loaded.registry, context.logger, context.context.secrets);
 }
 
-/** The steps, numbered and reported through `show`. Throws on failure; the caller decides who hears. */
-async function runResetSteps(deps: ProjectResetDeps, show: ReportStage): Promise<ProjectResetOutcome> {
+/**
+ * The steps, numbered and reported through `show`. Throws on failure; the caller decides who hears.
+ * `beforeRebuild` runs once the components are known and before anything is removed (the datapack
+ * step), so a reset that cannot read what to rebuild touches nothing; a reason it returns ends the
+ * reset there, before anything is removed.
+ */
+async function runResetSteps(
+    deps: ProjectResetDeps,
+    show: ReportStage,
+    beforeRebuild?: () => Promise<string | undefined>,
+): Promise<ProjectResetOutcome> {
     const { project, context, logPrefix = '[ProjectReset]', commandManager, authManager } = deps;
     const vscode = await import('vscode');
     context.logger.info(`${logPrefix} Resetting project: ${project.name}`);
@@ -339,6 +238,8 @@ async function runResetSteps(deps: ProjectResetDeps, show: ReportStage): Promise
     }
     context.logger.info(`${logPrefix} Found ${loaded.componentDefinitions.size} components to reset`);
 
+    const stop = await beforeRebuild?.();
+    if (stop !== undefined) return { success: false, error: stop };
     await rebuildComponents(deps, loaded, report);
 
     // Steps 6–7: check Adobe access, redeploy the API Mesh (if project has mesh)
@@ -359,8 +260,8 @@ async function runResetSteps(deps: ProjectResetDeps, show: ReportStage): Promise
     project.status = 'ready';
     await context.stateManager.saveProject(project);
 
-    // No timed success toast (PL-59 R6): the modal closes itself, and
-    // a run handed to the background ends with "— done". What the mesh
+    // No timed success toast (PL-59 R6): the modal shows the result until closed, and a run handed to
+    // the background ends in its result's words (`operationBackgroundNotice`). What the mesh
     // did belongs in the log, which is where anyone checking will look.
     context.logger.info(
         `${logPrefix} Project reset completed` + (meshRedeployed ? ' (mesh redeployed)' : ''),
@@ -369,90 +270,108 @@ async function runResetSteps(deps: ProjectResetDeps, show: ReportStage): Promise
 }
 
 /**
- * Reset a headless project with no dialog and no notification: the core both
- * doors share. `resetProjectWithUI` wraps it for an SC; the `reset_project`
- * agent tool calls it directly, having taken consent through `confirm:true`.
+ * Reset a headless project with no dialog and no notification. The `reset_project`
+ * agent tool calls it, having taken consent through `confirm:true`; a batch runs the
+ * same steps through `runProjectResetAnswered`.
  *
  * It does not stop a running demo — the caller does, by whatever means it has.
  *
+ * The call's Uninstall Datapack runs as a batch's does (step-05 S7), with one difference: changes
+ * nobody answered end the reset before anything is removed, since an agent can ask the user and
+ * call again, where a batch row already had its one chance to ask.
+ *
  * @param deps - the project, its context and the two services the rebuild uses
  * @param report - told each stage as it starts
- * @returns the outcome, with what the mesh leg did
- * @throws whatever a step threw, after the project's status is put back
+ * @param answered - the call's Uninstall Datapack and its answer about the changes
+ * @returns the outcome, with what the mesh leg and the datapack step did
+ * @throws whatever a step threw, after the project's status is put back; after the datapack step,
+ *   as a `FailedAfterDatapack` carrying what it did
  */
 export async function executeProjectReset(
     deps: ProjectResetDeps,
     report: ReportStage,
+    answered?: AnsweredDatapack,
 ): Promise<ProjectResetOutcome> {
-    return whileResetting(deps, () => runResetSteps(deps, report));
+    return whileResetting(deps, async () => {
+        const { outcome, removal } = await resetWithDatapack(deps, report, answered, true);
+        return removal ? { ...outcome, datapackRemoval: removal } : outcome;
+    });
 }
-
-/** What the SC's surfaces read: the outcome without the agent's mesh detail. */
-function asHandlerResponse({ success, error }: ProjectResetOutcome): HandlerResponse {
-    return { success, ...(error ? { error } : {}) };
-}
-
-// ==========================================================
-// Full Reset with UI
-// ==========================================================
 
 /**
- * Reset a headless project with full UI flow.
+ * The steps with the datapack step before the rebuild. A failure after it throws as a
+ * `FailedAfterDatapack`, so the caller can still say what became of the store.
  *
- * Pattern mirrors edsResetUI.resetEdsProjectWithUI:
- * 1. Confirmation dialog
- * 2. Stop demo if running
- * 3. Set status to 'resetting'
- * 4. The steps of {@link executeProjectReset}'s core, narrated to the
- *    notification or the progress modal
- * 5. Restore status, show the error notification on failure
+ * @param stopUnanswered - end the reset when the changes had no answer (the agent's door)
  */
-export async function resetProjectWithUI(options: ResetWithUIOptions): Promise<HandlerResponse> {
-    const { project, context, logPrefix = '[ProjectReset]' } = options;
-
-    const vscode = await import('vscode');
-
-    // Show confirmation dialog
-    const confirmButton = 'Reset Project';
-    const confirmation = await vscode.window.showWarningMessage(
-        `Are you sure you want to reset "${project.name}"? This will delete its components and ` +
-            'install them again from scratch. Integrations are left as they are, and your ' +
-            'configuration is kept.',
-        { modal: true },
-        confirmButton,
-    );
-
-    if (confirmation !== confirmButton) {
-        context.logger.info(`${logPrefix} Reset cancelled by user`);
-        return { success: false, cancelled: true };
+async function resetWithDatapack(
+    deps: ProjectResetDeps,
+    report: ReportStage,
+    answered: AnsweredDatapack | undefined,
+    stopUnanswered: boolean,
+): Promise<{ outcome: ProjectResetOutcome; removal?: DatapackRemoval }> {
+    const step: { removal?: DatapackRemoval } = {};
+    const removeFirst = async (): Promise<string | undefined> => {
+        step.removal = await removeAnsweredDatapack(deps.project, deps.context, report, answered);
+        return stopUnanswered && step.removal?.unanswered ? step.removal.kept : undefined;
+    };
+    try {
+        return { outcome: await runResetSteps(deps, report, removeFirst), removal: step.removal };
+    } catch (error) {
+        // The same failure; after a datapack step it carries what the step did to the store.
+        throw step.removal ? new FailedAfterDatapack(error, step.removal) : error;
     }
+}
 
-    // Stop demo if running
-    if (project.status === 'running' || project.status === 'starting') {
-        context.logger.info(`${logPrefix} Stopping running demo before reset`);
+/** What a batch row reads: a failure's reason, or what a reset that finished could not do. */
+export interface AnsweredResetOutcome {
+    success: boolean;
+    error?: string;
+    /**
+     * In the reset's own words: on a success, the mesh not redeployed and a datapack that did not
+     * all come out; on a failure it returns after the datapack step, what that step did to the store.
+     */
+    warnings?: string[];
+    /** A plain note on a done row: where the changes went first (owner, 2026-11-14). */
+    note?: string;
+}
+
+/** The outcome as the row reads it: a success's `error` is something it finished around. */
+function asRowOutcome({ success, error }: ProjectResetOutcome, removal: DatapackRemoval | undefined): AnsweredResetOutcome {
+    const warnings: string[] = [];
+    if (success && error) warnings.push(error);
+    // A clean removal is said only beside a failure: the SC then needs to know the store was emptied.
+    if (removal && (!success || datapackLeftSomething(removal))) warnings.push(datapackStepLine(removal));
+    const reason = !success && error ? { error } : {};
+    const note = success ? savedIntoLine(removal) : undefined;
+    return { success, ...reason, ...(warnings.length > 0 ? { warnings } : {}), ...(note ? { note } : {}) };
+}
+
+/**
+ * The same reset, answered up front by a batch (the projects list's Reset Selected, owner
+ * 2026-11-04): no question, and it reports into the batch's window. A running demo is stopped
+ * first, as the single reset stops it: only one demo runs at a time, so it is this one.
+ *
+ * The datapack goes once the components to rebuild are known (a reset that cannot read them
+ * touches nothing; review, 2026-11-13) and before anything is removed, as a storefront reset's goes
+ * first (`edsResetRun`), though there is no catalog pre-warm here to stale: the demo is already
+ * stopped, so nothing serves the catalog while it empties, and the components come back against
+ * the catalog the SC is left with. A removal that stops is said on the row and the reset still runs;
+ * a reset that fails after it still says what became of the store.
+ */
+export async function runProjectResetAnswered(
+    deps: ProjectResetDeps,
+    report: ReportStage,
+    answered?: AnsweredDatapack,
+): Promise<AnsweredResetOutcome> {
+    const vscode = await import('vscode');
+    if (deps.project.status === 'running' || deps.project.status === 'starting') {
         await vscode.commands.executeCommand('demoBuilder.stopDemo');
     }
-
-    return whileResetting(options, async () => {
-        try {
-            return await withOperationProgress(
-                {
-                    id: options.operationId ?? resetOperationId(project.name),
-                    title: `Resetting ${getProjectDisplayName(project)}`,
-                    inModal: options.progress === 'modal',
-                },
-                async (report) => asHandlerResponse(await runResetSteps(options, report)),
-            );
-        } catch (error) {
-            const errorMessage = (error as Error).message;
-            context.logger.error(`${logPrefix} Reset failed`, error as Error);
-
-            // A modal already shows the reason, with Debug Logs beside it.
-            if (options.progress !== 'modal') {
-                vscode.window.showErrorMessage(`Failed to reset project: ${errorMessage}`);
-            }
-
-            return { success: false, error: errorMessage };
-        }
+    return whileResetting(deps, async () => {
+        // Uninstall Datapack as the batch answered it (step-05 S6, P5-Q3); a removal that stops is
+        // said on the row and the reset still runs.
+        const { outcome, removal } = await resetWithDatapack(deps, report, answered, false);
+        return asRowOutcome(outcome, removal);
     });
 }

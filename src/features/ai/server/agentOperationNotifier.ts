@@ -88,7 +88,7 @@ async function currentProjectName(): Promise<string | undefined> {
  * somehow shipped without one. The tool NAME is the honest fallback here: it is
  * visibly a fallback rather than prose pretending to be authored, and
  * `toolNarration.test.ts` makes the case unreachable. The project goes to a named
- * form that says where it acts ("Adding Accuform ERP to JustRite").
+ * form that says where it acts ("Adding Accuform ERP to Tailspin").
  */
 function label(toolName: string, args?: Record<string, unknown>, project?: string): string {
     return narrationForCall(toolName, args, project) ?? toolName;
@@ -219,13 +219,17 @@ export function phaseLine(message: string): string {
 }
 
 /**
- * Land a returned call's outcome in the window. Only a clean finish is quiet: a
- * hand-back and a failed answer are both things the user must not miss, and
- * both used to read as "— done" because neither throws (see `agentOutcome`).
+ * Land a returned call's outcome in the window. A clean finish is quiet, and so is
+ * a question to the agent, since nothing happened and the agent will ask if it needs
+ * the user: a hand-back and a failed answer are both things the user must not miss,
+ * and both used to read as "— done" because neither throws (see `agentOutcome`).
  */
 function landOutcome(title: string, toolName: string, outcome: AgentOutcome, logger: Logger): void {
     if (outcome.kind === 'done') {
-        vscode.window.setStatusBarMessage(`$(check) ${title} — done`, TIMEOUTS.STATUS_BAR_SUCCESS);
+        vscode.window.setStatusBarMessage(`$(check) ${agentNotice(title)} — done`, TIMEOUTS.STATUS_BAR_SUCCESS);
+        return;
+    }
+    if (outcome.kind === 'askedAgent') {
         return;
     }
     if (outcome.kind === 'needsUser') {

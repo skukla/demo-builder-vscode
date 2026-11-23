@@ -115,32 +115,32 @@ describe('a name deleted moments ago', () => {
 
     it('is numbered, though the project no longer lists it', async () => {
         let now = DELETED_AT;
-        const { ops, create, remove } = opsAfterDeleting('JustriteERP', () => now);
+        const { ops, create, remove } = opsAfterDeleting('TailspinERP', () => now);
         await remove();
         now += 3 * 60_000;
 
-        await ops.createWorkspace('Justrite ERP', 'd', TARGET);
+        await ops.createWorkspace('Tailspin ERP', 'd', TARGET);
 
-        expect(sentName(create)).toBe('JustriteERP1');
+        expect(sentName(create)).toBe('TailspinERP1');
     });
 
     it('is given out again once it has rested', async () => {
         let now = DELETED_AT;
-        const { ops, create, remove } = opsAfterDeleting('JustriteERP', () => now);
+        const { ops, create, remove } = opsAfterDeleting('TailspinERP', () => now);
         await remove();
         now += NAME_REST_MS + 1;
 
-        await ops.createWorkspace('Justrite ERP', 'd', TARGET);
+        await ops.createWorkspace('Tailspin ERP', 'd', TARGET);
 
-        expect(sentName(create)).toBe('JustriteERP');
+        expect(sentName(create)).toBe('TailspinERP');
     });
 
     it('holds only in the project it was deleted from', async () => {
-        const { ops, create, remove } = opsAfterDeleting('JustriteERP', () => DELETED_AT);
+        const { ops, create, remove } = opsAfterDeleting('TailspinERP', () => DELETED_AT);
         await remove();
 
-        await ops.createWorkspace('Justrite ERP', 'd', { ...TARGET, projectId: 'proj-2' });
+        await ops.createWorkspace('Tailspin ERP', 'd', { ...TARGET, projectId: 'proj-2' });
 
-        expect(sentName(create)).toBe('JustriteERP');
+        expect(sentName(create)).toBe('TailspinERP');
     });
 });

@@ -28,5 +28,5 @@ code was built from and `lkgFile` names the pointer the daily gate moves
 ## Done when
 
 A project created from a qualifying colleague's demo, and an existing one after its first
-check, both carry the same `boilerplateBase`; JustRite carries none, and the reason is in
+check, both carry the same `boilerplateBase`; Tailspin carries none, and the reason is in
 the debug log.

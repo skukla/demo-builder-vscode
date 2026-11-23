@@ -1,155 +1,77 @@
 /**
  * The Share dialog's "Send a link" form, once the storefront has been read.
  *
- * Top to bottom: the link and its one button, the Welcome box, the name and
- * description behind a quiet link, any check that needs the SC, then the
- * notices and the undo. What the link does is said once, under the choice. The button names the write when the press will make
- * one (owner, 2026-10-22: a copy button must not silently write). The checks
- * are the ones Save as demo package showed, here because this is the moment
- * the SC is about to send the link (a private repository is said before the
- * link leaves).
+ * Top to bottom (walk F228): any check that needs the SC first, since it applies
+ * before the link leaves; the repository as the read-only field Edit Demo uses, its
+ * label above like the fields under it (walk F231), with what became of the press
+ * (its button is the window's footer button) under it; then the name and description,
+ * always shown (walk F229). What the link does is said on step 1, on its card. The
+ * "Add to My Welcome Step" box and the undo moved to Save as Package on the dashboard
+ * (owner, 2026-11-18, EDS-72: Share Demo is not the place for it). The button names the
+ * write when the press will make one (owner, 2026-10-22: a copy button must not silently
+ * write). The checks are each an amber notice, its title the extension's when the check
+ * has one, with its fix (walk F227); a pack only the SC can see offers Share Datapack
+ * (walk F229); the notices are `ShareChecks`, which the file form shows too, for the
+ * datapack alone (walk F230). The link is not a copy-on-click value: the footer button
+ * copies it, and saves the details first when they are missing, which a second copy beside
+ * it would skip. Outcomes of a press are note lines beside the thing they are about
+ * (dialog design rules).
  *
  * @module features/dashboard/ui/components/share/ShareLinkForm
  */
 
-import { Button, Checkbox, TextArea, TextField } from '@adobe/react-spectrum';
-import React, { useState } from 'react';
+import { TextField } from '@adobe/react-spectrum';
+import React from 'react';
+import { ShareChecks } from './ShareChecks';
 import { SHARE_COPY } from './shareCopy';
-import { useShareLink, type UseShareLink } from './useShareLink';
-import { InlineNotice } from '@/core/ui/components/feedback/InlineNotice';
-import { StatusDot } from '@/core/ui/components/ui/StatusDot';
-import type { DemoPackageCheck, DemoPackagePreview, RemoveDemoPackageResult } from '@/types/webviewRequests';
+import { ShareDetails } from './ShareDetails';
+import type { ShareDatapackFix } from './useShareDatapack';
+import type { UseShareLink } from './useShareLink';
+import type { DemoPackagePreview } from '@/types/webviewRequests';
 
-/** The button's words: in flight, then copied for a moment, else the act it will do. */
-function buttonLabel(flow: UseShareLink): string {
-    if (flow.busy === 'save') return SHARE_COPY.saving;
+/** The button's words: copied for a moment, else the act it will do. Its spinner says it is working. */
+export function buttonLabel(flow: UseShareLink): string {
     if (flow.copied) return SHARE_COPY.copied;
     return flow.needsSave ? SHARE_COPY.saveAndCopy : SHARE_COPY.copyLink;
 }
 
-/** What the undo did, in one sentence. */
-function removedSentence(result: RemoveDemoPackageResult): string {
-    const file = result.file === 'skipped' ? SHARE_COPY.removedFileSkipped : SHARE_COPY.removedFile;
-    return result.removedFromList ? `${file} and ${SHARE_COPY.removedCard}.` : `${file}.`;
-}
-
-function CheckRow({ check }: { check: DemoPackageCheck }): React.ReactElement {
-    return (
-        <li className="demo-package-check" data-testid={`package-check-${check.id}`}>
-            <StatusDot variant="warning" />
-            <span>
-                {check.message}
-                {check.action === 'republish' ? <span className="demo-package-hint">{SHARE_COPY.republishHint}</span> : null}
-            </span>
-        </li>
-    );
-}
-
-/** Only the checks that need the SC: a list of green ticks is noise (owner, 2026-10-22). */
-function Checks({ checks }: { checks: DemoPackageCheck[] }): React.ReactElement | null {
-    const open = checks.filter((check) => !check.ok);
-    if (open.length === 0) return null;
-    return (
-        <div>
-            <p className="demo-package-checks-title">{SHARE_COPY.checksTitle}</p>
-            <ul className="demo-package-checks">
-                {open.map((check) => (
-                    <CheckRow key={`${check.id}-${check.repository ?? ''}`} check={check} />
-                ))}
-            </ul>
-        </div>
-    );
-}
-
-/** The name and description, behind a quiet link so the form stays the link first. */
-function Details({ flow }: { flow: UseShareLink }): React.ReactElement {
-    const [open, setOpen] = useState(false);
-    if (!open) {
-        return (
-            <button type="button" className="inline-action-link share-details-toggle" onClick={() => setOpen(true)}>
-                {SHARE_COPY.changeDetails}
-            </button>
-        );
-    }
-    return (
-        <div className="share-details">
-            <TextField
-                label={SHARE_COPY.name}
-                value={flow.draft.name}
-                onChange={flow.setName}
-                isRequired
-                width="100%"
-                data-testid="share-name"
-            />
-            <TextArea
-                label={SHARE_COPY.description}
-                value={flow.draft.description}
-                onChange={flow.setDescription}
-                width="100%"
-                data-testid="share-description"
-            />
-        </div>
-    );
-}
-
-function Notices({ flow }: { flow: UseShareLink }): React.ReactElement {
+/** What became of the press: why the link could not be prepared, or why the file was left alone. */
+function PressNotes({ flow }: { flow: UseShareLink }): React.ReactElement {
     return (
         <>
-            {flow.error ? (
-                <InlineNotice
-                    tone="warning"
-                    title={flow.error.title === 'save' ? SHARE_COPY.copyFailed : SHARE_COPY.removeFailed}
-                    testId="share-error"
-                >
-                    {flow.error.message}
-                </InlineNotice>
+            {flow.error !== undefined ? (
+                <p className="dialog-problem text-negative" data-testid="share-error">{SHARE_COPY.copyFailed} {flow.error}</p>
             ) : null}
             {flow.skipped ? (
-                <InlineNotice tone="warning" title={SHARE_COPY.skippedTitle} testId="share-skipped">
-                    {flow.skipped}
-                </InlineNotice>
-            ) : null}
-            {flow.removed ? (
-                <InlineNotice tone="info" title={SHARE_COPY.removedTitle} testId="share-removed">
-                    {removedSentence(flow.removed)}
-                </InlineNotice>
+                <p className="dialog-problem text-notice" data-testid="share-skipped">{SHARE_COPY.skipped}</p>
             ) : null}
         </>
     );
 }
 
 /**
- * The link form.
+ * The link form; its button is the window's footer button (step-07 Win2).
  *
  * @param props.preview - what the storefront read answered
+ * @param props.flow - the form's state (`useShareLink`)
+ * @param props.fix - Share Datapack, the fix on a pack only the SC can see (`useShareDatapack`)
  * @returns the form
  */
-export function ShareLinkForm({ preview }: { preview: DemoPackagePreview }): React.ReactElement {
-    const flow = useShareLink(preview);
+export function ShareLinkForm({
+    preview,
+    flow,
+    fix,
+}: {
+    preview: DemoPackagePreview;
+    flow: UseShareLink;
+    fix: ShareDatapackFix;
+}): React.ReactElement {
     return (
         <div className="export-link" data-testid="share-link">
-            <div className="export-link-row">
-                <code className="export-link-text">{preview.link}</code>
-                <Button variant="accent" onPress={flow.press} isDisabled={!flow.canPress} data-testid="share-copy-link">
-                    {buttonLabel(flow)}
-                </Button>
-            </div>
-            <Checkbox isSelected={flow.welcome} onChange={flow.setWelcome} data-testid="share-welcome">
-                {SHARE_COPY.welcome}
-            </Checkbox>
-            <Details flow={flow} />
-            <Checks checks={preview.checks} />
-            <Notices flow={flow} />
-            {flow.canRemove ? (
-                <button
-                    type="button"
-                    className="inline-action-link share-remove"
-                    onClick={flow.remove}
-                    disabled={flow.busy !== undefined}
-                >
-                    {flow.busy === 'remove' ? SHARE_COPY.removing : SHARE_COPY.remove}
-                </button>
-            ) : null}
+            <ShareChecks checks={preview.checks} fix={fix} />
+            <TextField label={SHARE_COPY.repository} value={preview.link} isReadOnly width="100%" />
+            <PressNotes flow={flow} />
+            <ShareDetails flow={flow} />
         </div>
     );
 }

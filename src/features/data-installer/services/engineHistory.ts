@@ -15,6 +15,7 @@
  * @module features/data-installer/services/engineHistory
  */
 
+import { plainFailure } from '../plainFailure';
 import type { ActivityEntry, InstalledDatapack } from '../types';
 import type { InstallRecord } from './demoBuilderEngine/installRecord';
 import type { EngineActivityEntry } from './engineActivityLog';
@@ -94,6 +95,7 @@ export function engineActivityRows(
                 source: 'demo-builder',
                 outcome: entry.outcome,
                 ...(entry.detail ? { detail: entry.detail } : {}),
+                ...(entry.shown ? { shown: plainFailure(entry.shown) } : {}),
                 at: entry.finishedAt,
                 activationId: entry.activationId,
             }),

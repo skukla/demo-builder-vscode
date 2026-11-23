@@ -196,7 +196,7 @@ describe('the org admin roster', () => {
         ]);
     });
 
-    // Leah's shape: the roster's own refusal is the finding. Nobody is visible
+    // Avery's shape: the roster's own refusal is the finding. Nobody is visible
     // to ask, which makes the Code Sync setup flow the only remaining path.
     it('reports a refused roster as unreadable', () => {
         expect(adminLine({ status: 'not_authorized' })).toStrictEqual([

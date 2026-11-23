@@ -364,8 +364,8 @@ describe('a system whose integration is not in the project', () => {
     });
 
     it('tells the SC what finishes it', () => {
-        expect(strandedSystemMessage('Justrite ERP', 'ERP Integration', true)).toBe(
-            'Justrite ERP came with ERP Integration, which is not in this project. Add ERP Integration to finish — it reuses Justrite ERP.',
+        expect(strandedSystemMessage('Tailspin ERP', 'ERP Integration', true)).toBe(
+            'Tailspin ERP came with ERP Integration, which is not in this project. Add ERP Integration to finish — it reuses Tailspin ERP.',
         );
         expect(strandedSystemMessage('ERP 2', 'ERP Integration', false)).toMatch(/Remove it\.$/);
     });

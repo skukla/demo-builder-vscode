@@ -10,6 +10,7 @@ import * as vscode from 'vscode';
 import { withProjectFromPath } from './projectFromPath';
 import { executeCommandForProject } from '@/core/handlers/projectCommandHelper';
 import { openPrivateBrowser } from '@/core/utils/browserUtils';
+import { openCommerceAdmin } from '@/core/utils/commerceAdmin';
 import { validateURL } from '@/core/validation/URLValidator';
 import {
     getEwCanvasBranch,
@@ -17,7 +18,7 @@ import {
 } from '@/features/eds/handlers/edsHelpers';
 import { ErrorCode } from '@/types/errorCodes';
 import type { MessageHandler, HandlerContext, HandlerResponse } from '@/types/handlers';
-import { getEdsLiveUrl, getEdsDaLiveUrl, getAdminPanelUrl } from '@/types/typeGuards';
+import { getEdsLiveUrl, getEdsDaLiveUrl } from '@/types/typeGuards';
 
 // ============================================================================
 // Demo Control Handlers (Start/Stop/Open)
@@ -133,16 +134,20 @@ export const handleOpenDaLive = withProjectFromPath<{ projectPath: string }>(
 /**
  * Open the Adobe Commerce Admin Panel for a project.
  *
- * The admin URL resolves via getAdminPanelUrl: an explicit
+ * The admin URL resolves via resolveAdminPanelUrl: an explicit
  * ADOBE_COMMERCE_ADMIN_URL (PaaS Configure field / override) wins, otherwise
  * SaaS projects derive it from the ACCS tenant endpoint. When unresolvable,
  * a notification offers a jump to the Configure screen instead of failing.
  */
 export const handleOpenAdminPanel = withProjectFromPath<{ projectPath: string }>(
     async (context, project): Promise<HandlerResponse> => {
-        const url = getAdminPanelUrl(project);
+        // The house opener (`openCommerceAdmin`): the URL validated, Classic UI in a private
+        // window and the Unified Shell in the SC's own browser. With the notification while Chrome
+        // starts, as the live site has: the card's menu closes as the item is picked, so nothing
+        // else shows it working (owner, 2026-10-31). This copied it line by line until PL-104 fix 9.
+        const opening = await openCommerceAdmin(project, { notify: true });
 
-        if (!url) {
+        if (opening.outcome === 'no-url') {
             // No URL configured — offer the Configure screen. Fire-and-forget so the
             // webview response isn't held on the user's notification choice. The
             // saveProject sets the current-project pointer, which configureProject
@@ -164,26 +169,12 @@ export const handleOpenAdminPanel = withProjectFromPath<{ projectPath: string }>
             return { success: true };
         }
 
-        // Validate URL before opening (defense against injection via stored URLs).
-        // Generic error only — the stored URL may embed credentials, never echo it.
-        // http is allowed alongside https — the Configure field accepts both, and
-        // the localhost/private-IP blocks still apply (mirrors configureHandlers).
-        try {
-            validateURL(url, ['https', 'http']);
-        } catch (validationError) {
-            context.logger.error(
-                '[ProjectsList] Admin Panel URL validation failed',
-                validationError as Error,
-            );
+        if (opening.outcome === 'invalid') {
+            // Generic error only — the stored URL may embed credentials, never echo it.
+            context.logger.error('[ProjectsList] Admin Panel URL validation failed', opening.error as Error);
             return { success: false, error: 'Invalid URL', code: ErrorCode.CONFIG_INVALID };
         }
 
-        // A private window, like the live site: Commerce Admin rejects a request whose
-        // adobe.com cookies have grown too large ("400 Request Header Or Cookie Too
-        // Large"), and a normal profile collects them. With the notification while Chrome
-        // starts, as the live site has: the card's menu closes as the item is picked, so nothing
-        // else shows it working (owner, 2026-10-31).
-        await openPrivateBrowser(url);
         return { success: true };
     },
 );

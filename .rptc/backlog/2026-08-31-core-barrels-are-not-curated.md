@@ -45,7 +45,7 @@ shrink-only and bidirectional. Every row carries its kind and its importer count
 **THAT SPLIT WAS WRONG, corrected 2026-08-31.** The classifier that seeded it
 counted `export type { X } from './Y'` as an own declaration — it is a re-export
 like any other. Re-measured against a corrected detector, of the 23 rows
-remaining at that point **22 are PURE and exactly ONE is genuinely MIXED**:
+still open at that point **22 are PURE and exactly ONE is genuinely MIXED**:
 `src/features/project-creation/helpers/index.ts`, which declares
 `export function validateField`. `core/shell` was the clearest case: filed as
 "12 re-export lines, 3 own declarations", it is twelve re-export lines and

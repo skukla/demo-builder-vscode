@@ -29,6 +29,6 @@ export const pendingSchema: z.ZodType<PendingObject> = z.object({
     kind: z.string(),
     key: z.string(),
     id: z.string().optional(),
-    find: z.record(z.union([z.string(), z.number()])).optional(),
+    find: z.record(z.string(), z.union([z.string(), z.number()])).optional(),
     previous: z.unknown().optional(),
 });

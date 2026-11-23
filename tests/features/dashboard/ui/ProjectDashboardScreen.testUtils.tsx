@@ -215,7 +215,7 @@ jest.mock('@/features/dashboard/ui/components/AiCapabilitiesModal', () => ({
                 </div>
             ))}
             <button data-testid="ai-capabilities-modal-regenerate" onClick={() => onRegenerate()}>
-                Regenerate AI files
+                Regenerate AI Files
             </button>
             <button data-testid="ai-capabilities-modal-close" onClick={onClose}>
                 Close

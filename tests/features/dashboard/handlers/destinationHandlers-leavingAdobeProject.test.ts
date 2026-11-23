@@ -103,7 +103,7 @@ it('says what did not finish without claiming nothing changed, once the old side
 
     expect(result.success).toBe(false);
     expect(result.error).toBe(
-        'Moved to New Project · Production, but erp-integration (boom) did not finish. ' +
+        'Moved to New Project, Production, but erp-integration (boom) did not finish. ' +
             'Redeploy it to try again: it is already set up in the new Adobe project.',
     );
 });

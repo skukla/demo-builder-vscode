@@ -46,6 +46,10 @@ export interface CreationProgressPhase {
     isGitHubAppInstall: boolean;
     handleCancel: () => void;
     handleOpenProject: () => void;
+    /** Finish Setup (PL-101): the project's dashboard, with its Finish Setup guide open. */
+    handleFinishSetup: () => void;
+    /** What is opening is the project's dashboard (Edit's way back, or Finish Setup). */
+    opensDashboard: boolean;
 }
 
 /**
@@ -57,7 +61,9 @@ export function useCreationProgressPhase(
     isEdit = false,
 ): CreationProgressPhase {
     const [isCancelling, setIsCancelling] = useState(false);
-    const [isOpeningProject, setIsOpeningProject] = useState(false);
+    // What the finished screen is opening: the projects list, or the project's own dashboard.
+    const [opening, setOpening] = useState<'list' | 'dashboard' | undefined>(undefined);
+    const isOpeningProject = opening !== undefined;
     const [phase, setPhase] = useState<StepPhase>('creating');
 
     // Update phase based on progress
@@ -71,15 +77,18 @@ export function useCreationProgressPhase(
         vscode.postMessage('cancel-project-creation');
     };
 
-    const handleOpenProject = () => {
-        setIsOpeningProject(true);
-
-        // Show transition message, then trigger reload
-        setTimeout(() => {
-            // Edit came from the project and goes back to it; Create goes to the list.
-            vscode.postMessage(isEdit ? 'backToProject' : 'openProject');
-        }, TIMEOUTS.PROJECT_OPEN_TRANSITION);
+    /** Show the transition, then send `message`. */
+    const openAfterTransition = (target: 'list' | 'dashboard', message: string): void => {
+        setOpening(target);
+        setTimeout(() => vscode.postMessage(message), TIMEOUTS.PROJECT_OPEN_TRANSITION);
     };
+
+    // Edit came from the project and goes back to it; Create goes to the list.
+    const handleOpenProject = () => {
+        if (isEdit) openAfterTransition('dashboard', 'backToProject');
+        else openAfterTransition('list', 'openProject');
+    };
+    const handleFinishSetup = () => openAfterTransition('dashboard', 'finishSetup');
 
     const isCancelled = phase === 'cancelled';
     const isFailed = phase === 'failed';
@@ -104,5 +113,7 @@ export function useCreationProgressPhase(
         isGitHubAppInstall,
         handleCancel,
         handleOpenProject,
+        handleFinishSetup,
+        opensDashboard: opening === 'dashboard',
     };
 }

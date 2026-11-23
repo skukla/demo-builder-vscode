@@ -10,6 +10,7 @@
 import {
     rowIdsOf,
     selectionsForIds,
+    SOURCE_RESET_DETAIL,
     storefrontUpdateName,
     toPendingUpdateRows,
 } from '@/features/updates/services/pendingUpdateRows';
@@ -19,7 +20,7 @@ import type { Project } from '@/types/base';
 import type { InstalledBlockLibrary } from '@/types/blockLibraries';
 import { createMockProject } from '../../../helpers/projectFake';
 
-const justrite = createMockProject({ name: 'justrite', title: 'JustRite', path: '/p/justrite' });
+const tailspin = createMockProject({ name: 'tailspin', title: 'Tailspin', path: '/p/tailspin' });
 const bodea = createMockProject({ name: 'bodea', title: 'Bodea', path: '/p/bodea' });
 const canary = createMockProject({ name: 'patch-canary-b2b', path: '/p/canary' });
 
@@ -41,7 +42,6 @@ function empty(): UpdateSelections {
         adobeMcp: [],
         blockLibrary: [],
         blockLibraryInstall: [],
-        inspector: [],
         integration: [],
     };
 }
@@ -50,19 +50,19 @@ const pair = (project: Project, otherOrg: boolean) => ({
     project,
     componentId: 'erp-integration',
     members: ['erp-integration', 'demo-erp'],
-    label: 'ERP Integration and Justrite ERP',
+    label: 'ERP Integration and Tailspin ERP',
     otherOrg,
 });
 
-/** A row that commits to the storefront repository, which the live site serves. */
-const LIVE = 'Updates the live site';
+/** A row with no version to name: its name alone; the window's sentence says it goes live. */
+const LIVE = '';
 
 /** A storefront whose template is followed through our patches repo's tested pointer. */
 function storefront(metadata: Record<string, unknown>): Project {
     return createMockProject({
-        name: 'justrite',
-        title: 'JustRite',
-        path: '/p/justrite',
+        name: 'tailspin',
+        title: 'Tailspin',
+        path: '/p/tailspin',
         componentInstances: {
             'eds-storefront': { id: 'eds-storefront', name: 'EDS Storefront', type: 'frontend', status: 'ready', metadata },
         },
@@ -75,18 +75,41 @@ describe('toPendingUpdateRows', () => {
     // repository it is that colleague's changes, and says whose.
     it.each([
         ['follows our tested template', { lkgSource: { owner: 'skukla', repo: 'eds-demo-patches' }, templateOwner: 'adobe-commerce', templateRepo: 'boilerplate-b2b-template' }, 'EDS template'],
-        ["follows a colleague's repository", { templateOwner: 'kmanns', templateRepo: 'justrite' }, 'Changes from kmanns/justrite'],
+        ["follows a colleague's repository", { templateOwner: 'org-e', templateRepo: 'tailspin' }, 'Changes from org-e/tailspin'],
     ])('names the template row by where it comes from: a storefront that %s', (_label, metadata, expected) => {
         const [row] = toPendingUpdateRows({ ...empty(), template: [{ project: storefront(metadata) }] }, undefined, undefined);
 
         expect(row).toMatchObject({ label: expected, detail: LIVE });
     });
 
+    // F50 (owner, 2026-11-07): the Updates window draws a project as Reset Selected does, its storefront's
+    // repository under its name.
+    it("heads a project's rows with its storefront's repository", () => {
+        const project = storefront({ githubRepo: 'skukla/tailspin', templateOwner: 'org-e', templateRepo: 'tailspin' });
+
+        const [row] = toPendingUpdateRows({ ...empty(), template: [{ project }] }, undefined, undefined);
+
+        expect(row.group).toEqual({ key: '/p/tailspin', title: 'Tailspin', detail: 'skukla/tailspin' });
+    });
+
+    // A colleague's demo reset since it was last taken replaces the storefront: the row waits for the
+    // SC's tick and says why (owner, 2026-11-03).
+    it("leaves a colleague's reset demo unticked, saying it was reset", () => {
+        const project = storefront({ templateOwner: 'org-e', templateRepo: 'tailspin' });
+
+        const [reset] = toPendingUpdateRows({ ...empty(), template: [{ project, sourceReset: true }] }, undefined, undefined);
+        const [edited] = toPendingUpdateRows({ ...empty(), template: [{ project }] }, undefined, undefined);
+
+        expect(reset).toMatchObject({ label: 'Changes from org-e/tailspin', detail: SOURCE_RESET_DETAIL, ticked: false });
+        // CONTROL: the same source, only edited, starts ticked as before.
+        expect(edited).toMatchObject({ detail: LIVE, ticked: true });
+    });
+
     // The notification a finished fix raises names the update as its row does (EDS-56, 2026-10-30).
     it.each([
         ['our tested template', { lkgSource: { owner: 'skukla', repo: 'eds-demo-patches' } }, 'template', 'EDS template update'],
-        ["a colleague's repository", { templateOwner: 'kmanns', templateRepo: 'justrite' }, 'template', 'update with changes from kmanns/justrite'],
-        ['any storefront', { templateOwner: 'kmanns', templateRepo: 'justrite' }, 'boilerplate', 'Adobe boilerplate update'],
+        ["a colleague's repository", { templateOwner: 'org-e', templateRepo: 'tailspin' }, 'template', 'update with changes from org-e/tailspin'],
+        ['any storefront', { templateOwner: 'org-e', templateRepo: 'tailspin' }, 'boilerplate', 'Adobe boilerplate update'],
     ] as const)('names a storefront update in a sentence as its row does: %s, %s track', (_label, metadata, track, expected) => {
         expect(storefrontUpdateName(storefront(metadata), track)).toBe(expected);
     });
@@ -115,7 +138,6 @@ describe('toPendingUpdateRows', () => {
             blockLibraryInstall: [
                 { project: bodea, library: { name: 'Bodea Blocks', source: library.source } },
             ],
-            inspector: [{ project: bodea, latestCommit: 'y' }],
             integration: [pair(bodea, false)],
         };
 
@@ -126,19 +148,58 @@ describe('toPendingUpdateRows', () => {
             ['Bodea', 'eds-storefront', '6.0.0 → 6.1.0', true],
             ['Bodea', 'Adobe MCP', '1.0.0 → 1.1.0', true],
             ['Bodea', 'Demo Builder Blocks', LIVE, true],
-            ['Bodea', 'Demo Inspector SDK', 'Newer version', true],
-            ['Bodea', 'Bodea Blocks', 'install, updates the live site', true],
-            ['Bodea', 'ERP Integration and Justrite ERP', 'Newer version, redeploys to Adobe', false],
+            ['Bodea', 'Bodea Blocks', 'Install', true],
+            ['Bodea', 'ERP Integration and Tailspin ERP', 'Newer version. Redeploys to Adobe', false],
         ]);
     });
 
     // Applying a pair deploys it to the live Adobe workspace, and nothing asks first: the
     // tick IS the confirmation, so the SC gives it rather than finds it given (owner,
     // 2026-10-20). Unticked is not locked: it can be ticked.
+    it('says which version a block library moves to, for one that ships by release', () => {
+        const [row] = toPendingUpdateRows(
+            {
+                ...empty(),
+                blockLibrary: [{ project: bodea, library, latestCommit: 'x', version: '0.2.0' }],
+            },
+            undefined,
+            undefined,
+        );
+
+        expect(row.detail).toBe('Version 0.2.0');
+    });
+
+    it('says which version a storefront moves to, when the release can be read', () => {
+        const [row] = toPendingUpdateRows(
+            { ...empty(), template: [{ project: bodea, version: '1.2.0' }] },
+            undefined,
+            undefined,
+        );
+
+        expect(row.detail).toBe('Version 1.2.0');
+    });
+
+    it('says which version a released component moves to', () => {
+        const one = { ...pair(bodea, false), releases: [{ name: 'ERP Integration', version: '0.2.0' }] };
+        const two = {
+            ...pair(bodea, false),
+            releases: [
+                { name: 'ERP Integration', version: '0.2.0' },
+                { name: 'Tailspin ERP', version: '0.3.0' },
+            ],
+        };
+
+        const [oneRow] = toPendingUpdateRows({ ...empty(), integration: [one] }, undefined, undefined);
+        const [twoRow] = toPendingUpdateRows({ ...empty(), integration: [two] }, undefined, undefined);
+
+        expect(oneRow.detail).toBe('Version 0.2.0. Redeploys to Adobe');
+        expect(twoRow.detail).toBe('ERP Integration 0.2.0, Tailspin ERP 0.3.0. Redeploys to Adobe');
+    });
+
     it('starts an integration pair unticked, saying it redeploys, and leaves it tickable', () => {
         const [row] = toPendingUpdateRows({ ...empty(), integration: [pair(bodea, false)] }, undefined, undefined);
 
-        expect(row).toMatchObject({ ticked: false, detail: 'Newer version, redeploys to Adobe' });
+        expect(row).toMatchObject({ ticked: false, detail: 'Newer version. Redeploys to Adobe' });
         expect(row.lockedReason).toBeUndefined();
         expect(selectionsForIds({ ...empty(), integration: [pair(bodea, false)] }, [row.id]).selections.integration)
             .toHaveLength(1);
@@ -158,7 +219,7 @@ describe('toPendingUpdateRows', () => {
 
         const [row] = toPendingUpdateRows(sel, undefined, undefined);
 
-        expect([row.label, row.detail]).toEqual(['EDS Storefront', 'version 6.1.0']);
+        expect([row.label, row.detail]).toEqual(['EDS Storefront', 'Version 6.1.0']);
     });
 
     // The order they apply (owner, 2026-10-21): the repositories a template update reads
@@ -174,7 +235,7 @@ describe('toPendingUpdateRows', () => {
                     parentFullName: 'adobe/citisignal',
                 },
             ],
-            blockLibrary: [canary, justrite, bodea].map((project) => ({
+            blockLibrary: [canary, tailspin, bodea].map((project) => ({
                 project,
                 library,
                 latestCommit: 'x',
@@ -184,12 +245,12 @@ describe('toPendingUpdateRows', () => {
         const rows = toPendingUpdateRows(
             sel,
             { current: '1.0.0-beta.149', latest: '1.0.0-beta.150' },
-            '/p/justrite'
+            '/p/tailspin'
         );
 
         expect(rows.map((r) => r.group.title)).toEqual([
-            'Template repositories',
-            'JustRite',
+            'Template Repositories',
+            'Tailspin',
             'Bodea',
             'patch-canary-b2b',
             'Demo Builder',
@@ -206,7 +267,7 @@ describe('toPendingUpdateRows', () => {
 
     it('shows an integration pair in another Adobe org unticked and locked, saying why', () => {
         const [row] = toPendingUpdateRows(
-            { ...empty(), integration: [pair(justrite, true)] },
+            { ...empty(), integration: [pair(tailspin, true)] },
             undefined,
             undefined
         );
@@ -220,12 +281,11 @@ describe('toPendingUpdateRows', () => {
     it('gives every row an id no other row has', () => {
         const sel: UpdateSelections = {
             ...empty(),
-            blockLibrary: [justrite, bodea].map((project) => ({
+            blockLibrary: [tailspin, bodea].map((project) => ({
                 project,
                 library,
                 latestCommit: 'x',
             })),
-            inspector: [{ project: justrite, latestCommit: 'y' }],
         };
 
         const ids = toPendingUpdateRows(sel, { current: '1', latest: '2' }, undefined).map(
@@ -243,7 +303,7 @@ describe('a colleague\'s storefront that follows both (EDS-56)', () => {
         lkgSource: { owner: 'skukla', repo: 'eds-demo-patches', lkgFile: 'b2b/last-known-good' },
         found: 'first-commit',
     };
-    const colleague = storefront({ templateOwner: 'kmanns', templateRepo: 'justrite' });
+    const colleague = storefront({ templateOwner: 'org-e', templateRepo: 'tailspin' });
     const sel = (): UpdateSelections => ({
         ...empty(),
         template: [{ project: colleague }],
@@ -254,8 +314,8 @@ describe('a colleague\'s storefront that follows both (EDS-56)', () => {
         const rows = toPendingUpdateRows(sel(), undefined, undefined);
 
         expect(rows.map((r) => [r.group.title, r.label, r.detail, r.ticked])).toEqual([
-            ['JustRite', 'Changes from kmanns/justrite', LIVE, true],
-            ['JustRite', 'Adobe boilerplate', 'Tested version, updates the live site', true],
+            ['Tailspin', 'Changes from org-e/tailspin', LIVE, true],
+            ['Tailspin', 'Adobe boilerplate', 'Verified version', true],
         ]);
     });
 
@@ -270,7 +330,7 @@ describe('a colleague\'s storefront that follows both (EDS-56)', () => {
 });
 
 describe('a storefront update kept to fix with AI (EDS-57)', () => {
-    const colleague = storefront({ templateOwner: 'kmanns', templateRepo: 'justrite' });
+    const colleague = storefront({ templateOwner: 'org-e', templateRepo: 'tailspin' });
     const clash = (track: 'template' | 'boilerplate') => ({
         track,
         source: { owner: 'adobe-commerce', repo: 'boilerplate-b2b-template' },
@@ -289,8 +349,8 @@ describe('a storefront update kept to fix with AI (EDS-57)', () => {
         );
 
         expect(rows.map((r) => [r.kind, r.label, r.detail, r.ticked])).toEqual([
-            ['finish', 'Finish the Adobe boilerplate update', 'Kept to fix with AI, updates the live site', true],
-            ['finish', 'Finish: Changes from kmanns/justrite', 'Kept to fix with AI, updates the live site', true],
+            ['finish', 'Finish the Adobe boilerplate update', 'Kept to fix with AI', true],
+            ['finish', 'Finish: Changes from org-e/tailspin', 'Kept to fix with AI', true],
         ]);
     });
 
@@ -306,7 +366,7 @@ describe('selectionsForIds', () => {
     it('applies exactly the entries whose rows stayed ticked', () => {
         const sel: UpdateSelections = {
             ...empty(),
-            blockLibrary: [justrite, bodea].map((project) => ({
+            blockLibrary: [tailspin, bodea].map((project) => ({
                 project,
                 library,
                 latestCommit: 'x',
@@ -314,14 +374,14 @@ describe('selectionsForIds', () => {
             template: [{ project: bodea }],
         };
         const rows = toPendingUpdateRows(sel, { current: '1', latest: '2' }, undefined);
-        const justriteLibrary = rows.find(
-            (r) => r.kind === 'blockLibrary' && r.group.key === '/p/justrite'
+        const tailspinLibrary = rows.find(
+            (r) => r.kind === 'blockLibrary' && r.group.key === '/p/tailspin'
         );
 
-        const picked = selectionsForIds(sel, [justriteLibrary?.id ?? '']);
+        const picked = selectionsForIds(sel, [tailspinLibrary?.id ?? '']);
 
         expect(picked.extension).toBe(false);
-        expect(picked.selections.blockLibrary.map((b) => b.project.path)).toEqual(['/p/justrite']);
+        expect(picked.selections.blockLibrary.map((b) => b.project.path)).toEqual(['/p/tailspin']);
         expect(picked.selections.template).toStrictEqual([]);
     });
 
@@ -332,7 +392,7 @@ describe('selectionsForIds', () => {
     });
 
     it('never applies a locked row, even when its id is sent', () => {
-        const sel = { ...empty(), integration: [pair(justrite, true)] };
+        const sel = { ...empty(), integration: [pair(tailspin, true)] };
         const [row] = toPendingUpdateRows(sel, undefined, undefined);
 
         expect(selectionsForIds(sel, [row.id]).selections.integration).toStrictEqual([]);
@@ -354,7 +414,7 @@ describe('rowIdsOf', () => {
         const sel: UpdateSelections = {
             ...empty(),
             template: [{ project: bodea }],
-            blockLibrary: [justrite, bodea].map((project) => ({ project, library, latestCommit: 'b' })),
+            blockLibrary: [tailspin, bodea].map((project) => ({ project, library, latestCommit: 'b' })),
         };
         const rows = toPendingUpdateRows(sel, undefined, undefined);
 

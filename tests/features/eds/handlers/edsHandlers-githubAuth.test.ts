@@ -228,7 +228,7 @@ describe('EDS Handlers', () => {
         });
 
         it('stale-session recovery: validateToken 401 → force fresh OAuth → fresh token stored', async () => {
-            // The leahrayard scenario: VS Code returned a cached session whose
+            // The avery scenario: VS Code returned a cached session whose
             // token has been revoked since (user cleared the OAuth app in
             // GitHub Settings, password reset, etc.). validateToken comes back
             // invalid; the handler triggers `forceNewSession` to mint a new
@@ -238,11 +238,11 @@ describe('EDS Handlers', () => {
             getSession
                 .mockResolvedValueOnce({
                     accessToken: 'stale-cached-token',
-                    account: { label: 'leahrayard' },
+                    account: { label: 'avery' },
                 })
                 .mockResolvedValueOnce({
                     accessToken: 'fresh-token',
-                    account: { label: 'leahrayard' },
+                    account: { label: 'avery' },
                 });
             mockGitHubTokenService.validateToken.mockResolvedValue({ valid: false });
 
@@ -265,12 +265,12 @@ describe('EDS Handlers', () => {
             // token was just minted, a transient 401 here would re-trigger
             // the prompt forever.
             expect(mockGitHubTokenService.validateToken).toHaveBeenCalledTimes(1);
-            // UI sees the post-reauth user (still leahrayard).
+            // UI sees the post-reauth user (still avery).
             expect(mockContext.sendMessage).toHaveBeenCalledWith(
                 'github-auth-complete',
                 expect.objectContaining({
                     isAuthenticated: true,
-                    user: expect.objectContaining({ login: 'leahrayard' }),
+                    user: expect.objectContaining({ login: 'avery' }),
                 })
             );
         });
@@ -281,7 +281,7 @@ describe('EDS Handlers', () => {
             getSession
                 .mockResolvedValueOnce({
                     accessToken: 'stale-cached-token',
-                    account: { label: 'leahrayard' },
+                    account: { label: 'avery' },
                 })
                 .mockResolvedValueOnce(null); // user cancelled the forced re-auth prompt
             mockGitHubTokenService.validateToken.mockResolvedValue({ valid: false });

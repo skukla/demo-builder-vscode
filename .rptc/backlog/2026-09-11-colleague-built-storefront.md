@@ -4,7 +4,8 @@ kind: epic
 area: eds
 needs: []
 value: high
-status: active
+status: backlog
+plan: portable-demos
 ---
 
 # Portable demos: share storefronts, move whole projects
@@ -13,7 +14,7 @@ Filed 2026-09-11 by the owner. An SC can only build a project on a demo that shi
 `demo-packages.json`. SCs want to build on a demo a colleague made, and to share their own.
 Research and every decision: `.rptc/research/colleague-storefront/research.md`. Plans:
 `.rptc/plans/portable-demos/` (program: ledger, contract step, track order) and
-`.rptc/plans/shareable-demo/` (the feature: nine steps and its iteration log).
+`.rptc/complete/shareable-demo/` (the feature: nine steps and its iteration log).
 
 Expanded 2026-09-11 (owner) from "shareable storefronts" into a PROGRAM with two tracks: a
 storefront is a piece of a project, and the project's own export, import and copy have
@@ -104,3 +105,4 @@ shared storefront is one of its parts. The decision of record, with the parts ta
 - 2026-10-12  fix(project-creation): a project built on an added demo publishes its config flags (`fb0bc2185`)
 - 2026-10-12  refactor(eds): creation, reset and republish build config.json params in one place (`01b7e84c1`)
 - 2026-10-23  feat(eds): every known fix reaches every storefront; the report is a window (`c75b52793`)
+- 2026-11-22  Paused 2026-11-22: back to backlog, last direct work 2026-10-23; no child is in progress after today's sort (EDS-56 gated on a live check, the rest backlog).

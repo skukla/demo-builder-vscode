@@ -232,6 +232,15 @@ describe('WebviewClient - messaging', () => {
             });
         });
 
+        it('requestAuth asks for a fresh sign-in, not an org switch, when asked to', () => {
+            loaded.client.requestAuth(false, true);
+
+            expect(lastMessage()).toMatchObject({
+                type: 'authenticate',
+                payload: { force: false, fresh: true },
+            });
+        });
+
         it('createProject sends the config through unchanged', () => {
             const config: ProjectCreationConfig = {
                 projectName: 'demo',

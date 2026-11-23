@@ -85,9 +85,9 @@ async function installed(): Promise<{ store: MemoryStore; files: ReturnType<type
     return { store, files };
 }
 
-async function savedBack(store: MemoryStore, files: ReturnType<typeof memoryFiles>): Promise<DatapackFile> {
+async function savedBack(store: MemoryStore, files: ReturnType<typeof memoryFiles>, asked: string[] = []): Promise<DatapackFile> {
     const deps: StoreChangesDeps = {
-        commerce: async () => ({ get: store.get, send: store.send }),
+        commerce: async () => ({ get: (path) => (asked.push(path), store.get(path)), send: store.send }),
         readPack: async () => PACK_ROWS,
         describe: async () => ({ displayName: 'Round trip' }),
         projectPath: PROJECT,
@@ -97,6 +97,7 @@ async function savedBack(store: MemoryStore, files: ReturnType<typeof memoryFile
     };
     const written: DatapackFile[] = [];
     await saveStoreChanges(deps, { pack: PACK, saveAs: { id: { name: 'round-trip', version: '2' }, displayName: 'Round trip' } }, async (file) => {
+        asked.push('(written)');
         written.push(file);
         return { pack: 'created', stored: file.items.map((i) => i.dataType), failed: [] };
     });
@@ -104,6 +105,22 @@ async function savedBack(store: MemoryStore, files: ReturnType<typeof memoryFile
 }
 
 describe('a pack installed and saved back is the pack again', () => {
+    // Walk F90: a save from a pack read the website's products twice before (a list to find what the
+    // demo uses, then each again by SKU to make its rows); one whole read now serves both.
+    it("reads the website's products once, whole, and none again by SKU to make the rows", async () => {
+        const { store, files } = await installed();
+        const asked: string[] = [];
+
+        await savedBack(store, files, asked);
+
+        // Before the write: the record's own re-read after it (`rebaseRecord`) is another matter.
+        const productReads = asked.slice(0, asked.indexOf('(written)')).filter((path) => path.startsWith('products?'));
+        const bySku = productReads.filter((path) => path.includes('[field]=sku'));
+        const websiteWhole = productReads.filter((path) => path.includes('[field]=website_id') && !path.includes('type_id') && !path.includes('fields='));
+        expect(websiteWhole).toHaveLength(1);
+        expect(bySku).toStrictEqual([]);
+    });
+
     it('installs into the empty store, writing each kind', async () => {
         const { store } = await installed();
 

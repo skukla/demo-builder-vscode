@@ -27,6 +27,7 @@ import { addIntegrationFlowHandlers } from '@/features/project-creation/handlers
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import type { AppBuilderComponentState, Project } from '@/types/base';
 import type { IntegrationsInitialData } from '@/types/webviewPayloads';
+import { createMockAuthenticationService } from '../../../helpers/authenticationServiceFake';
 import { internals } from '../../../helpers/commandInternals';
 import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
 import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
@@ -112,6 +113,11 @@ function commandFor(project: Project | null) {
     return { command, context, stateManager };
 }
 
+/** A panel context as production builds it: it always carries the sign-in service. */
+function panelContext() {
+    return createMockHandlerContext({ authManager: createMockAuthenticationService() });
+}
+
 function setTheme(kind: number): void {
     (vscode.window.activeColorTheme as { kind: number }).kind = kind;
 }
@@ -122,6 +128,7 @@ beforeEach(() => {
     jest.mocked(settingsCatalogOf).mockReturnValue(SETTINGS_CATALOG);
     jest.mocked(loadProjectComponentSettings).mockResolvedValue(COMPONENT_SETTINGS);
     jest.mocked(resolveViewMode).mockReturnValue('cards');
+    jest.mocked(createPanelHandlerContext).mockReturnValue(panelContext());
     setTheme(vscode.ColorThemeKind.Dark);
 });
 
@@ -286,7 +293,7 @@ describe('the handlers it wires', () => {
     });
 
     it('dispatches a flow message into the flow map with a fresh panel context', async () => {
-        const context = createMockHandlerContext();
+        const context = panelContext();
         jest.mocked(createPanelHandlerContext).mockReturnValue(context);
         jest.mocked(dispatchHandler).mockResolvedValue({ success: true, data: 'apis' });
         const { listenerFor } = wire();
@@ -304,7 +311,7 @@ describe('the handlers it wires', () => {
     });
 
     it('dispatches a grid message into the dashboard map, switchOrg included', async () => {
-        const context = createMockHandlerContext();
+        const context = panelContext();
         jest.mocked(createPanelHandlerContext).mockReturnValue(context);
         jest.mocked(dispatchHandler).mockResolvedValue({ success: true });
         const { listenerFor } = wire();
@@ -316,6 +323,44 @@ describe('the handlers it wires', () => {
             context,
             'switchOrg',
             { orgId: 'org-2' },
+        );
+    });
+});
+
+describe('a sign-in finished elsewhere (F303)', () => {
+    it("re-checks the flow's sign-in step, so it does not stay Not signed in", async () => {
+        const authManager = createMockAuthenticationService();
+        const context = createMockHandlerContext({ authManager });
+        jest.mocked(createPanelHandlerContext).mockReturnValue(context);
+        const { command } = commandFor(null);
+        internals(command).initializeMessageHandlers({ onStreaming: jest.fn(), on: jest.fn() });
+        expect(dispatchHandler).not.toHaveBeenCalled();
+
+        const onSignIn = jest.mocked(authManager.onDidSignIn).mock.calls[0][0];
+        onSignIn();
+
+        expect(dispatchHandler).toHaveBeenCalledWith(
+            addIntegrationFlowHandlers,
+            context,
+            'check-auth',
+            undefined,
+        );
+    });
+
+    it('re-checks on a sign-out too', () => {
+        const authManager = createMockAuthenticationService();
+        const context = createMockHandlerContext({ authManager });
+        jest.mocked(createPanelHandlerContext).mockReturnValue(context);
+        const { command } = commandFor(null);
+        internals(command).initializeMessageHandlers({ onStreaming: jest.fn(), on: jest.fn() });
+
+        jest.mocked(authManager.onDidSignOut).mock.calls[0][0]();
+
+        expect(dispatchHandler).toHaveBeenCalledWith(
+            addIntegrationFlowHandlers,
+            context,
+            'check-auth',
+            undefined,
         );
     });
 });
@@ -391,7 +436,7 @@ describe('execute', () => {
     });
 
     // Both doors (the dashboard tile and the projects list's Integrations) run this command,
-    // so the slow reads start here: the Commerce sign-in took two minutes on Justrite and Add
+    // so the slow reads start here: the Commerce sign-in took two minutes on Tailspin and Add
     // another ERP waited on all of it (2026-10-18).
     it('starts the slow reads with the panel\'s own handler context', async () => {
         const { command } = commandFor(null);

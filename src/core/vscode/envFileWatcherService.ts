@@ -69,7 +69,7 @@ export class EnvFileWatcherService implements vscode.Disposable {
 
     constructor(
         private _context: vscode.ExtensionContext,
-        private stateManager: { getCurrentProject(): Promise<{ status?: string } | undefined> },
+        private stateManager: { getCurrentProject(): Promise<{ status?: string; path?: string } | undefined> },
         private watcherManager: WorkspaceWatcherManager,
         private logger: Logger,
     ) {
@@ -206,9 +206,8 @@ export class EnvFileWatcherService implements vscode.Disposable {
                     )
                     .then((selection) => {
                         if (selection === 'Restart Demo') {
-                            vscode.commands.executeCommand('demoBuilder.stopDemo').then(() => {
-                                vscode.commands.executeCommand('demoBuilder.startDemo');
-                            });
+                            // The one restart (stop, a pause, start), for this project (PL-104 fix 12).
+                            vscode.commands.executeCommand('demoBuilder.restartDemo', currentProject.path);
                         }
                     });
             } else {

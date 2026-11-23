@@ -45,9 +45,9 @@
     transition: all var(--spectrum-global-animation-duration-600) ease;
 }
 
-/* Pointer + hover lift only where a press DOES something. A card renders without
+/* Pointer + hover colour only where a press DOES something. A card renders without
    `role="button"` when its host passed no `onOpen` (the wizard's mesh and catalog
-   cards have no editable detail), and a cursor and a lift on something inert
+   cards have no editable detail), and a cursor and a hover on something inert
    promise a click that never lands. Dashboard cards always pass `onOpen`, so this
    scoping leaves them exactly as they were. */
 .integration-card[role='button'] {
@@ -56,14 +56,12 @@
 
 .integration-card[role='button']:hover,
 .integration-card[role='button']:focus {
-    background: var(--spectrum-global-color-gray-75);
-    transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-    border-color: var(--spectrum-global-color-gray-400);
+    background: var(--spectrum-global-color-gray-100);
+    border-color: var(--spectrum-global-color-gray-500);
     outline: none;
 }
 
-/* Scoped to `[role='button']` for the SAME reason as the lift above, but also to
+/* Scoped to `[role='button']` for the SAME reason as the hover above, but also to
    keep specificity level with it. `:focus` there sets `outline: none`; if only
    that rule carried the attribute selector it would score (0,3,0) against this
    rule's (0,2,0) and win outright, silently removing the keyboard focus ring
@@ -151,7 +149,7 @@
 }
 
 .integration-card-status--error {
-    color: var(--spectrum-global-color-red-600);
+    color: var(--spectrum-semantic-negative-color-text-small);
 }
 
 /* A system card's type ("ERP") beside its name; never squeezed by a long name. */
@@ -175,22 +173,6 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-}
-
-/* One line, not two.
-
-   `.integration-panel-row` ends with a border-bottom, guarded by a
-   `:last-child` rule so the final row does not leave a trailing line. That guard
-   silently stops applying the moment ANYTHING follows the rows — and this footer
-   does, as their sibling inside `.db-drawer-body`. So the last row kept its
-   bottom border, this kept its top border, and the two rendered a pixel apart as
-   a double rule.
-
-   Dropping the footer's border only where a row precedes it: the row's own line
-   is already there, and where the panel body ends with something else the footer
-   still draws its own. Exactly one line either way. */
-.integration-panel-row + .db-drawer-actions {
-    border-top: none;
 }
 
 /* One height whether or not the name can be edited. A renamable title carries the
@@ -313,11 +295,20 @@
     color: var(--spectrum-global-color-gray-600);
 }
 
-/* The muted tail of the health line — "· installed in Commerce" after DEPLOYED. Deploy
+/* The muted tail of the health line: "(installed in Commerce)" after Deployed. Deploy
    and install are one answer to "is it working?" (owner, 2026-10-01). */
 .integration-panel-status-aside {
     font-size: 12px;
     color: var(--spectrum-global-color-gray-600);
+}
+
+/* The status inside the flyout is a label like the others there: small, muted, sentence case,
+   never capitals (dialog design rules). The card keeps the house capitals it shares with the
+   project card. */
+.integration-panel-health .integration-card-status {
+    font-size: 12px;
+    text-transform: none;
+    letter-spacing: normal;
 }
 
 /* The flyout, second redesign (owner, 2026-10-01, from three mockup passes): the health
@@ -363,10 +354,7 @@
 }
 
 .integration-panel-section-label {
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
+    font-size: 12px;
     color: var(--spectrum-global-color-gray-600);
 }
 
@@ -437,9 +425,13 @@
     color: var(--spectrum-global-color-gray-600);
 }
 
-.integration-panel-action.is-danger,
+/* The label is text, so Spectrum's text red; the icon keeps the icon red (2026-11-05). */
+.integration-panel-action.is-danger {
+    color: var(--spectrum-semantic-negative-color-text-small);
+}
+
 .integration-panel-action.is-danger .integration-panel-action-icon {
-    color: var(--spectrum-global-color-red-600);
+    color: var(--spectrum-semantic-negative-color-icon);
 }
 
 .integration-panel-actions-divider {
@@ -456,7 +448,7 @@
 /* ---- Rows: the list view of the same cards --------------------------------------
  * The integrations screen's List view (owner, 2026-09-24), the twin of the projects
  * list's `.project-row`: the same name, status line and kebab as the card, laid out
- * as one full-width row per integration. Same gray-50 base, hover lift and focus
+ * as one full-width row per integration. Same gray-50 base, hover and focus
  * ring as the card so switching views moves nothing but the shape. */
 .integration-row-list {
     display: flex;
@@ -481,8 +473,8 @@
 
 .integration-row:hover,
 .integration-row:focus {
-    background: var(--spectrum-global-color-gray-75);
-    border-color: var(--spectrum-global-color-gray-400);
+    background: var(--spectrum-global-color-gray-100);
+    border-color: var(--spectrum-global-color-gray-500);
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
     outline: none;
 }

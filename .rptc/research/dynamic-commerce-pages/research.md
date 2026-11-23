@@ -152,7 +152,7 @@ page and the drop-in renders it in the browser.
 list is new. Every other Commerce page is per-shopper and stays a fixed authored page
 (`/cart`, `/checkout`, `/customer/...`, `/search`).
 
-The exact block list in each template (ACO boilerplate for Justrite, the commerce
+The exact block list in each template (ACO boilerplate for Tailspin, the commerce
 boilerplate, the B2B template) was not re-read for this file: **UNVERIFIED**. The
 per-shopper classification above follows from what each page shows, not from the code.
 
@@ -287,7 +287,7 @@ for one store (EDS-24).
 **VERIFIED (EDS-24 measurements, 2026-10-01):**
 
 - On a B2B website a category not granted to a shared catalog is denied.
-- `productSearch` returned 0 for guest and General on Justrite and 49 for the two company
+- `productSearch` returned 0 for guest and General on Tailspin and 49 for the two company
   groups. `products(skus:)` ignores grants.
 
 A pre-rendered category page is the same template for everyone. The drop-in queries with
@@ -321,7 +321,7 @@ the switch is the undo, and `removeCatalogMenuSwitch` already does that byte-for
 
 EDS-24 is **unreleased**: commit `f7b196e3c` is on no tag and not on `develop`
 (`git merge-base --is-ancestor` → NOT_ON_DEVELOP, checked today). No shipped project
-carries `metadata.catalogMenu`. One unknown remains: whether the owner's own Justrite site
+carries `metadata.catalogMenu`. One unknown remains: whether the owner's own Tailspin site
 ever got pages from a dev run. The plan tabled the first real run, so probably not. Check
 before deleting.
 
@@ -391,30 +391,30 @@ before deleting.
 - Whether `product-list-page` can read its category from the URL.
 - The exact Commerce block list per template.
 - How reset clears pre-warmed paths.
-- Whether the owner's Justrite site holds EDS-24 pages from a dev run.
+- Whether the owner's Tailspin site holds EDS-24 pages from a dev run.
 - Whether `productSearch` `categoryPath` accepts nested url paths on every store.
 
 ## UPDATE 2: the template read (same day)
 
 A separate read of every storefront template our packages use (upstream at default-branch
-HEAD via `gh api`; Justrite from its local clone; live pages by plain GET) settles two of the
+HEAD via `gh api`; Tailspin from its local clone; live pages by plain GET) settles two of the
 unverified points above:
 
 - **The list block reads its category ONLY from its own table.** In the B2B template,
-  `hlxsites/aem-boilerplate-commerce@main`, isle5 and Justrite, `product-list-page.js` takes
+  `hlxsites/aem-boilerplate-commerce@main`, isle5 and Tailspin, `product-list-page.js` takes
   `urlpath` from `readBlockConfig` and filters `categoryPath eq urlpath`; it reads the URL
   only for `q`/`page`/`sort`/`filter`, never the path. With no `urlpath` it is the search
   page. So the render action filling in the block's `urlPath` row (the plan's step 2) is the
   way in; changing the block to read the path would be a fork of Adobe's code.
 - **Block lists per template** are recorded: the main boilerplate's shop, account and order
-  blocks; the B2B template (and Justrite) add company, quote, purchase-order, quick-order and
+  blocks; the B2B template (and Tailspin) add company, quote, purchase-order, quick-order and
   requisition-list blocks; isle5 adds search-bar and store-locator; BuildRight is custom code
   (category from `?category=`, a `/catalog/<slug>` router). No template has a brand,
   collection or compare block — the inventory verdict (only product and category pages in
   scope) stands.
 - **There is no separate ACO boilerplate.** ACO is the same boilerplate switched on by
   `demo-config-aco.json` (`"adobe-commerce-optimizer": true`).
-- **Justrite is an added package** (`kmanns/justrite`, a copy of the B2B template plus a few
+- **Tailspin is an added package** (`org-e/tailspin`, a copy of the B2B template plus a few
   blocks), and it **already has hand-authored category pages**: `/apparel`,
   `/hazard-communication`, `/workplace-safety`, each a list block with a fixed `urlPath` plus
   `enrichment` and `product-recommendations` blocks. Because the overlay wins over authored

@@ -4,13 +4,19 @@ kind: feature
 area: platform
 needs: []
 value: high
-status: active
+status: built
 ---
 
 # A mesh is released and updated like the other components
 
 Owner, 2026-11-01: "A mesh is a demo component. It's release and update process should be consistent
 with other components."
+
+## Reworked by PL-89
+
+Owner, 2026-11-02: every component the builder owns moves to semantic-version releases before beta.153. Following `main` is not
+the model. PL-89 (`.rptc/plans/component-semantic-versions/overview.md`) moves meshes to releases, keeping the one-step deploy,
+shallow clone and `mesh.json` handling. The branch renames stay.
 
 ## What is inconsistent, measured 2026-11-01
 
@@ -42,8 +48,7 @@ lookup in `componentInstallation.ts` and the mesh arm of the release updater, in
 ## What the change had to get right
 
 - **Existing projects hold `source.branch: 'stable'`**: a project moves to `main` when it loads.
-- **The `stable` tags outlive the change.** Extensions already installed clone them on a dashboard add and as a
-  fallback, so deleting them breaks those. Delete them once no supported build reads them.
+- **The `stable` tags** were deleted on the owner's go, 2026-11-02 (PL-89 records the commits).
 - **Shallow clones** could never read as behind, so a clone gains its history on the first check. A rebuilt
   `mesh.json` is tracked, so it had to stop reading as the SC's own edit.
 - **Branch names.** Two of the three repositories used `master`, and one also had a stale `main` holding an old Node
@@ -57,5 +62,5 @@ answers unknown and offers nothing. Removing and adding the mesh again puts it r
 
 ## Shipped so far
 
-- 2026-11-01  fix(mesh): a mesh updates from its branch, as the other components do (`6b6815f24`)
-- 2026-11-01  revert: the release-based mesh update fix, replaced by PL-88 (`23ad93895`)
+- 2026-11-01  fix(mesh): a mesh updates from its branch, as the other components do (`a2bea4164`)
+- 2026-11-21  Reconciled 2026-11-21: done under PL-89. Meshes update to their newest release (7a136fb7c, in v1.0.0-beta.153); the last piece, no branch fallback for owned repos, landed after the tag (68d7aedff), so built until the next release.

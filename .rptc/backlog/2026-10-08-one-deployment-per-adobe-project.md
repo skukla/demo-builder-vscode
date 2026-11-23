@@ -4,7 +4,7 @@ kind: fix
 area: app-builder
 needs: []
 value: med
-status: built
+status: shipped
 ---
 # One deployment per Adobe project
 
@@ -16,8 +16,8 @@ Filed 2026-10-08.
 
 ## What happened
 
-Two Demo Builder projects, `justrite` and its copy `justrite-copy`, each deployed the
-ERP integration into the SAME Adobe project (KuklaJustriteXjap) in two workspaces, and
+Two Demo Builder projects, `tailspin` and its copy `tailspin-copy`, each deployed the
+ERP integration into the SAME Adobe project (KuklaTailspinXjap) in two workspaces, and
 both installed into the same Commerce. Commerce's Orders grid showed the integration's
 two columns twice, both labelled with the Adobe project's title. Verified on the
 owner's machine, 2026-10-08.
@@ -32,7 +32,7 @@ project, and that was the only check.
 One Adobe project holds one ERP of a given name. The unit of uniqueness is the pair's
 ERP SYSTEM's display name within the Adobe project (`adobe.projectId`), not the catalog
 id and not the integration's name (a default nobody changes): an SC talks about the ERP
-("orders go to Justrite ERP"). Two pairs whose ERPs are named differently coexist. Same
+("orders go to Tailspin ERP"). Two pairs whose ERPs are named differently coexist. Same
 ERP name (the copy case) means deploying REPLACES the other project's pair, and the
 replacement must be absolutely clean: nothing of the old deployment left anywhere, each
 step confirmed by reading back, never assumed. An integration that brings no system
@@ -84,18 +84,18 @@ the finder suite covers same name replaces, different name coexists, same defaul
 integration name with a different ERP name untouched, different Adobe project
 untouched; each door suite asserts the removal is called with the OTHER project and the
 integration id before the add, and that a failed removal stops the add. Nothing here
-was run against Adobe: the live check is the owner's, on the Justrite sandbox.
+was run against Adobe: the live check is the owner's, on the Tailspin sandbox.
 
 ## Follow-up, not this repo
 
 The Admin UI SDK registration in `commerce-erp-integration` should carry the ERP's
-display name, so the Orders grid reads "ERP order (Justrite ERP)" instead of the Adobe
+display name, so the Orders grid reads "ERP order (Tailspin ERP)" instead of the Adobe
 project's title. Today two same-named columns cannot be told apart in Commerce.
 
 ## Live read, 2026-10-08 20:50: the registry body is a BARE map
 
 After the owner signed `aio` into Adobe Demo System, `getEndPointsInWorkspace` was called
-for both Justrite workspaces (JustriteERPIntegrat and JustriteERP). Each answered 200 with
+for both Tailspin workspaces (TailspinERPIntegrat and TailspinERP). Each answered 200 with
 a top-level map keyed `commerce/extensibility/1`, `commerce/configuration/1` and
 `commerce/backend-ui/2`, with no `endpoints` wrapper. The Console API spec and the CLI's
 fixtures show `{ endpoints: {...} }`; that wrapper is the CLI's own (`getExtensionPoints`
@@ -111,15 +111,15 @@ Run through the running extension's MCP tools on the release-candidate build
 believed from the tool's own answer.
 
 **Before.** Both project records held a deployed pair into Adobe project
-KuklaJustriteXjap. Adobe's registry held the three points (`commerce/extensibility/1`,
+KuklaTailspinXjap. Adobe's registry held the three points (`commerce/extensibility/1`,
 `commerce/configuration/1`, `commerce/backend-ui/2`) on BOTH workspaces. Commerce held
 ONE set of ERP state, not two: one placement webhook, and it pointed at the ORIGINAL
-justrite workspace even though the copy had deployed two days later; eight
+tailspin workspace even though the copy had deployed two days later; eight
 `commerce_erp_integration.*` event subscriptions on one provider.
 
 **Removing the copy's pair** (`remove_integration`, four minutes): Runtime verified
 empty (12 packages deleted), Commerce detached ("undid 109 company changes"), the
-JustriteERP workspace deleted; the registry answers 404 for it; the copy's record empty.
+TailspinERP workspace deleted; the registry answers 404 for it; the copy's record empty.
 
 - **Finding 1: Commerce holds one install per app, so the copy's uninstall emptied it for
   the original too.** Read with the ORIGINAL project's credential right after the copy's
@@ -147,29 +147,29 @@ list the published pages (HTTP 401), so NOTHING was unpublished.
   `cleanup_dalive_site org=skukla site=kukla-just-rite-test githubRepo=skukla/kukla-just-rite-test`
   (whether Helix unpublishes a site whose code repo is already deleted is untested).
 
-**Removing justrite's pair** (`remove_integration`, four minutes): Runtime verified
+**Removing tailspin's pair** (`remove_integration`, four minutes): Runtime verified
 empty, Commerce detached ("undid 109 company changes and cleared 2 ERP order
-numbers"), the JustriteERPIntegrat workspace deleted. Commerce reads from this host are
+numbers"), the TailspinERPIntegrat workspace deleted. Commerce reads from this host are
 now 401 by design: `run_commerce_rest` signs with the integration's workspace
 credential, and there is none. The webhooks and subscriptions had already been read
 empty under Finding 1.
 
 **After, Adobe side, clean:** the project holds only its Production workspace; the
 registry answers 404 for both ERP workspaces; both Runtime namespaces verified empty by
-the removals; justrite's record has no `appBuilderComponents`; the copy is gone from disk.
+the removals; tailspin's record has no `appBuilderComponents`; the copy is gone from disk.
 Not checked from here: Commerce Admin's Apps > App Management list and the Orders grid
 columns after "Refresh registrations" (the owner's browser), and the Runtime namespaces
 Adobe deletes about ten minutes after each workspace.
 
 **Re-add** (owner: "just add one ERP so I can demo adding the second"): `add_integration`
-id `erp-integration`, name "Justrite", on justrite. Ten minutes (01:13 to 01:23 UTC).
-Read back: the record holds the pair, ERP "Justrite ERP" (listId `justrite`), deployed into
+id `erp-integration`, name "Tailspin", on tailspin. Ten minutes (01:13 to 01:23 UTC).
+Read back: the record holds the pair, ERP "Tailspin ERP" (listId `tailspin`), deployed into
 a new workspace; Commerce installed at 0.13.0 (live install succeeded 01:21); ONE placement
 webhook, pointing at the new workspace; the eight `commerce_erp_integration.*`
 subscriptions back, one set; the registry holds the three points on the new workspace
 and nothing on Production. One set of everything, which is the end state the owner asked
-for. Small oddity: Adobe named the workspace `JustriteERP1` because the deleted
-`JustriteERP` still held its name minutes after its delete; the title is "Justrite ERP".
+for. Small oddity: Adobe named the workspace `TailspinERP1` because the deleted
+`TailspinERP` still held its name minutes after its delete; the title is "Tailspin ERP".
 
 Still the owner's to check in the browser: the Orders grid shows ONE set of ERP columns
 after "Refresh registrations", and Apps > App Management lists one app.
@@ -181,3 +181,4 @@ after "Refresh registrations", and Apps > App Management lists one app.
 - 2026-10-08  fix(app-builder): name what a removal checks, and say why Adobe refused a delete (`cb5c45420`)
 - 2026-10-08  docs(backlog): AB-69 logs cb5c45420 (`c1ba61c66`)
 - 2026-10-19  Reassessed 2026-10-19 (loop): the built scope is on the branch; one browser check remains, in the walkthrough queue
+- 2026-11-20  Released in v1.0.0-beta.153

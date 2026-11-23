@@ -1,297 +1,393 @@
 /**
- * What clearing a demo's part of the store would do (datapack-engine step 10, owner 2026-10-27,
- * widened from one website to a set of STORES 2026-10-30): everything the chosen stores own that
- * Demo Builder did NOT install, decided from reads alone. Writes nothing; `wipeRun.ts` carries the
- * plan out.
+ * What clearing a demo's websites would do (datapack-engine step 10, owner 2026-10-27; whole
+ * websites since datapack-simplification step 06): everything the chosen websites own that no
+ * install record it respects lists, decided from reads alone. Writes nothing; `wipeRun.ts` carries
+ * the plan out, and `clearCheck.ts` answers it as the check's rows and record lists.
  *
- * The sandbox holds several demos at once (JustRite's live demo, Bodea, BJU, CitiSignal), so what a
- * store owns is judged against the whole chosen set (`wipeScope.ts`):
+ * The sandbox holds several demos at once (Tailspin's live demo, Bodea, CLIENT_C, CitiSignal), so what the
+ * websites own is judged against the whole chosen set (`wipeScope.ts`):
  *
- * | Kind | Done | Left, and said why |
+ * | Kind | Done | Kept |
  * |---|---|---|
- * | products | `wipeProducts.ts`: deleted when tied to the chosen stores on every website they are on; taken off the chosen websites when also sold elsewhere | can't tell which demo they belong to; in a store not chosen; variants; fields not answered |
- * | categories | under a root every store using it is chosen, deepest first | under a root a store not chosen also shows (`justrite_test_store` and JustRite's share 119): all left. One holding a category Demo Builder installed: left |
- * | customers | `wipeCustomers.ts`: of a wholly chosen website, or made in a chosen store with no order elsewhere | made in or ordering from a store not chosen; store not said; in a B2B company |
- * | orders | `wipeOrders.ts`, the one reset rule shared with the ERP reset: placed in a chosen store's views and not invoiced or shipped, cancelled; any other, refunded with an offline credit memo; noted; open returns closed. Never deleted | already Canceled or Closed, or noted by a reset before; neither cancellable nor refundable |
- * | orders an ERP integration handles | `wipeErp.ts`: on a website whose orders an ERP integration sends to an ERP, closed by that integration, not here; its ERP refreshed after | the integration must be updated first, or could not be asked: left open, the line says why |
- * | cart rules (step 11) | `wipeCartRules.ts`: on wholly chosen websites only, deleted with their coupons; also on a website not chosen, taken off the chosen ones | on a website only partly chosen; holding a coupon Demo Builder installed |
+ * | products | `wipeProducts.ts`: deleted when on chosen websites only; taken off the chosen websites when also sold elsewhere | listed by a record; variants no product going holds; fields not answered |
+ * | categories | under a root only chosen websites' stores use, the top ones first | under a root a website not chosen also shows; one installed or a cart rule that stays tests, or holding one |
+ * | customers | `wipeCustomers.ts`: every customer of the chosen websites | listed by a record; in a B2B company that stays |
+ * | orders | `wipeOrders.ts`, the one reset rule shared with the ERP reset: placed in the chosen websites' views; noted first; each one's open returns closed; not invoiced or shipped, cancelled; any other, invoiced in full and refunded with an offline credit memo, so Commerce closes it. Never deleted | already Canceled or Closed, or left open by a reset before: not listed. In payment review: left open with a note, named by the clearing's result |
+ * | the ERP, when an ERP integration routes some chosen websites | `wipeErp.ts`: brought in line after the clearing, then filled again from Commerce | the integration must be updated first, or could not be asked: the ERP is not brought in line, the line says why |
+ * | cart rules (step 11) | `wipeCartRules.ts`: deleted with their coupons; also on a website not chosen, taken off the chosen ones | listed by a record, or holding a coupon one lists |
+ * | companies, and the customers in them | `wipeCompanies.ts`: everyone in the company on chosen websites, with no order in a store not chosen | a customer elsewhere, or with an order elsewhere; a record lists it or a customer in it |
+ * | shared catalogs and customer groups, one unit | `wipeCatalogs.ts`: everyone in the group going, no cart rule that stays naming it | a customer, company or rule that stays uses it; a record lists it. Commerce's own groups and the public catalog: never |
+ * | attribute sets and attributes | `wipeAttributes.ts`: used by the products going, and nothing else on the instance uses them | a product that stays; a set that stays holds it; a rule that stays tests it; an integration's. System attributes and the Default set: never |
+ * | website settings | `wipeSettings.ts`: a value that differs from the Default scope's is set to it | protected (base URLs, cookies, the Admin's, credentials; written by a datapack or the setup guide) and those with no default: not listed. Lists: named by the clearing's result |
  *
- * Never touched, whatever is there: anything an install record lists (every local project's on the
- * chosen websites, `readWipeClaims`; the pack's removal takes those, by its own rules); product
- * attributes and attribute sets; customer groups, companies and shared catalogs (a catalog and its
- * group are one unit, and deleting either moves customers to General); stocks and sources (the
- * Default Stock and Source included); websites, stores, store views and root categories; store
- * settings; admin users; the integration's credential.
+ * "Only the chosen websites use it" is decided in that order, each kind reading the one before: who is
+ * going decides which companies go, those two which groups, the products going which sets and
+ * attributes. Everything is decided before anything is written.
+ *
+ * **A read that fails** (P6-Q3) is collected per type, never thrown: that type's decision is empty, so
+ * nothing of it is written, and the check marks it by its kind. A kind reading another's answer fails
+ * with it where its proof is missing: catalogs, groups, attributes and categories when the cart rules
+ * that stay are unknown; categories when the products are; returns with orders, which close inside
+ * each order's work; and the ERP step is held when the orders are unknown.
+ *
+ * Never touched, whatever is there: anything an install record lists, this project's and every other
+ * local project's (`readWipeClaims`; the check plans as if this project's datapack were already
+ * uninstalled, since the clearing runs that removal first, step 06 C3); Commerce's own customer
+ * groups and attributes, the public catalog and the Default attribute set; stocks and sources (the Default Stock and Source included); websites,
+ * stores, store views and root categories; the Default scope's settings and another website's; admin
+ * users; the integration's credential.
  *
  * @module features/data-installer/services/demoDataWipe/wipePlan
  */
 
-import type { InstallRecord } from '../demoBuilderEngine/installRecord';
-import { named } from '../demoBuilderEngine/saveOutcome';
-import { type CartRuleDecision, decideCartRules } from './wipeCartRules';
+import { ATTRIBUTE_SET_KIND } from '../demoBuilderEngine/attributeSetsKind';
+import { ATTRIBUTE_KIND } from '../demoBuilderEngine/attributesKind';
+import { CATALOG_KIND, COMPANY_KIND, CUSTOMER_GROUP_KIND, CUSTOMER_KIND } from '../demoBuilderEngine/b2bKeys';
+import { CART_RULE_KIND } from '../demoBuilderEngine/cartRulesKind';
+import { PRODUCT_KIND } from '../demoBuilderEngine/productKinds';
+import { ORDERS, RETURNS, WEBSITE_SETTINGS, categoryTree, checkOf } from './clearCheck';
+import { type AttributeDecision, decideAttributes } from './wipeAttributes';
+import { type CartRuleDecision, categoriesNamedBy, decideCartRules } from './wipeCartRules';
+import { type CatalogDecision, decideCatalogs } from './wipeCatalogs';
+import { type CategoryDecision, categoryOrder, decideCategories } from './wipeCategories';
+import type { WipeRespects } from './wipeClaims';
+import { type CompanyDecision, decideCompanies } from './wipeCompanies';
 import { type CustomerDecision, decideCustomers } from './wipeCustomers';
-import { type WipeErp, type WipeErpPlan, type WipeErpRoute, erpCloseIds, erpPartOf, erpPlanOf, splitByErp, websiteCodesOf } from './wipeErp';
-import { type OrderStep, openReturns, orderStepOf } from './wipeOrders';
+import { type WipeErp, type WipeErpPlan, type WipeErpRoute, erpPartOf, erpPlanOf, erpStoresAsked, websiteCodesOf } from './wipeErp';
+import { type Failures, attempt, noteDecisionFailures, noteFailed } from './wipeFailures';
+import { type OrderReturn, type OrderStep, openReturns, orderStepOf } from './wipeOrders';
 import { type ProductDecision, decideProducts } from './wipeProducts';
 import { type WipeCategory, readCategoryTree, readOrderReturns, readViewOrders, readWebsiteProducts, readWipeStructure } from './wipeReads';
-import { type WipeScope, choicesOfScope, resolveWipeScope } from './wipeScope';
+import { type Recorded, type RecordedOnInstance, recordedIds, recordedOnInstance } from './wipeRecorded';
+import type { WipeOutcome } from './wipeRun';
+import { type WipeScope, resolveWipeScope } from './wipeScope';
+import { type SettingsDecision, decideSettings } from './wipeSettings';
 import { sha256 } from '@/core/utils/sha256';
 import type { CommerceStoreStructure } from '@/types/commerceStore';
 import type { CommerceGet, CommerceOrder, CommerceProduct } from '@/types/commerceWire';
-import type { WipeLeft, WipePreview, WipeStoreChoice } from '@/types/demoDataWipe';
+import type { ClearCheck, ClearRecords } from '@/types/demoDataWipe';
 
-/** The plan in full: the preview, and every id it would write to. */
+/** The plan in full: the check's answer, and every id it would write to. */
 export interface WipePlan {
-    /** The chosen stores, by code: what the clearing re-plans against. */
-    choices: WipeStoreChoice[];
-    /** The chosen stores as one key, the same however they were named. */
+    /** The chosen websites, by code: what the clearing re-plans against. */
+    websiteCodes: string[];
+    /** The chosen websites as one key, the same however they were named. */
     scopeKey: string;
-    preview: WipePreview;
+    check: Omit<ClearCheck, 'project' | 'warning' | 'datapack'>;
     deleteSkus: string[];
     takeOff: Array<{ sku: string; websiteId: number }>;
-    /** Deepest first, so no delete takes a category another delete still names. */
+    /** The top categories going first, then each one under them (`categoryUnder`). */
     categoryIds: string[];
+    /**
+     * Each category going with one above it, by id: Commerce deletes a category's children with it, so
+     * no request is sent for these, and each is held back if the one above it could not be removed.
+     */
+    categoryUnder: Record<string, string>;
+    /** Customers going, those in a company going after it. */
     customerIds: string[];
+    /** Companies going, before their customers: Commerce refuses to delete an admin while the company stands. */
+    companyIds: string[];
+    /** Each customer in a company going, by id: written after that company, or held back. */
+    memberOf: Record<string, string>;
+    /** Customer groups going, each with its shared catalog when it has one: after everyone in them. */
+    groups: CatalogDecision['remove'];
+    attributeSets: AttributeDecision['sets'];
+    attributes: AttributeDecision['attributes'];
+    /** Website settings to set to the Default scope's value. */
+    settings: SettingsDecision['reset'];
+    /** List settings that differ from the default, which no write can put back: named by the clearing's result. */
+    listSettings: string[];
     /** Cart rules on only the chosen websites (step 11): deleted, their coupons with them. */
     ruleIds: string[];
     /** Cart rules also on websites not chosen: each kept on these websites only. */
     ruleTakeOff: Array<{ id: string; websiteIds: number[] }>;
+    /** Each order the wipe closes itself, with its open returns. */
     orders: OrderStep[];
-    /** Orders in the chosen stores already Canceled or Closed, or handled by a reset before. */
+    /** Orders in the chosen websites already Canceled or Closed, or left open by a reset before. */
     alreadyClosed: number;
-    returnIds: string[];
-    /** Orders an ERP integration handles, when one routes some chosen stores' websites: not in `orders`. */
+    /** The ERP step, when an ERP integration routes some chosen websites: their orders are in `orders`. */
     erp?: WipeErpPlan;
+    /** Each type a read failed for, with what Commerce said: for the Debug Logs. */
+    unreadDetails: Record<string, string>;
+    /** Website settings the datapack's removal puts back before the re-plan (`<website>/<path>`), which it may then set back. */
+    setBack?: string[];
 }
 
-/** What a plan must respect beyond the store: every install record, and the ERP integration serving the instance. */
-export interface WipeInputs {
-    records: readonly InstallRecord[];
+/**
+ * What a plan must respect beyond the store: install records, and the ERP integration serving the
+ * instance. Without `everyRecord` the records on the chosen websites stand in for it.
+ */
+export interface WipeInputs extends Pick<WipeRespects, 'records'>, Partial<Omit<WipeRespects, 'records'>> {
     erp?: WipeErp;
-}
-
-export const NEVER_TOUCHED =
-    'Never touched: what Demo Builder installed (its removal takes that), product attributes and sets, customer groups, ' +
-    'companies and shared catalogs, stocks and sources, websites, stores, store views and root categories, ' +
-    "store settings, admin users and the integration's credential. Orders are closed, never deleted.";
-
-type Recorded = Record<'products' | 'categories' | 'customers' | 'rules' | 'coupons', Set<string>>;
-
-function recordedIds(records: readonly InstallRecord[]): Recorded {
-    const of = (kinds: string[], lower = false) =>
-        new Set(records.flatMap((r) => r.created.filter((o) => kinds.includes(o.kind)).map((o) => (lower ? o.id.toLowerCase() : o.id))));
-    return {
-        // A gift card is a product (step 11).
-        products: of(['products', 'giftcards'], true),
-        categories: of(['categories']),
-        customers: of(['customers']),
-        rules: of(['cart_rules']),
-        coupons: of(['coupons']),
-    };
-}
-
-function installedCounts(records: readonly InstallRecord[]): Record<string, number> {
-    const counts: Record<string, number> = {};
-    for (const object of records.flatMap((r) => r.created)) counts[object.kind] = (counts[object.kind] ?? 0) + 1;
-    return counts;
-}
-
-interface CategoryDecision {
-    remove: WipeCategory[];
-    shared: Array<{ root: string; under: WipeCategory[]; with: string[] }>;
-    holding: WipeCategory[];
-}
-
-const segmentsOf = (c: WipeCategory): string[] => (c.path ?? '').split('/').filter(Boolean);
-
-/** The categories under each chosen store's root: deleted, or left with the reason. */
-function decideCategories(tree: readonly WipeCategory[], scope: WipeScope, recorded: Set<string>): CategoryDecision {
-    const decided: CategoryDecision = { remove: [], shared: [], holding: [] };
-    const holdsRecorded = new Set(tree.filter((c) => recorded.has(String(c.id))).flatMap((c) => segmentsOf(c).slice(0, -1)));
-    const under = (root: string) => tree.filter((c) => segmentsOf(c)[1] === root && segmentsOf(c).length > 2);
-    for (const [root, others] of scope.sharedRoots) decided.shared.push({ root, under: under(root), with: others });
-    for (const root of scope.clearedRoots) {
-        for (const category of under(root)) {
-            if (recorded.has(String(category.id))) continue;
-            (holdsRecorded.has(String(category.id)) ? decided.holding : decided.remove).push(category);
-        }
-    }
-    decided.remove.sort((a, b) => segmentsOf(b).length - segmentsOf(a).length);
-    return decided;
+    /** Told as each of `WIPE_PHASES` starts, by its place in the list: the check's progress. */
+    onPhase?: (at: number) => void;
+    /** Told the wipe's outcome, and the plan it ran (made again at run time), before the ERP steps (`clearShown`). */
+    onWiped?: (outcome: WipeOutcome, ran: WipePlan) => Promise<void>;
 }
 
 const skus = (products: readonly CommerceProduct[]) => products.map((p) => p.sku);
-const categoryNames = (categories: readonly WipeCategory[]) => categories.map((c) => c.name ?? String(c.id));
-const emails = (customers: CustomerDecision['remove']) => customers.map((c) => c.email);
-const ruleNames = (rules: CartRuleDecision['remove']) => rules.map((r) => r.name);
-const leftRow = (kind: WipeLeft['kind'], names: string[], why: string): WipeLeft => ({ kind, ...named(names), why });
-
-function leftOf({ products, categories, customers, cartRules }: Decided): WipeLeft[] {
-    const left: WipeLeft[] = [
-        leftRow('products', skus(products.cannotTell), "nothing ties them to the chosen stores (no category, or only categories other stores share), so which demo they belong to can't be told"),
-        leftRow('products', skus(products.elsewhere), 'they are in the categories of a store not chosen'),
-        leftRow('products', skus(products.variants), 'shown only as part of another product, which may be one another website sells'),
-        leftRow('products', skus(products.unknown), 'Commerce did not say which websites they are on or whether they are shown on their own'),
-        ...categories.shared.map((s) => leftRow('categories', categoryNames(s.under), `under root category ${s.root}, which ${s.with.join(' and ')} also shows`)),
-        leftRow('categories', categoryNames(categories.holding), 'they hold a category Demo Builder installed'),
-        leftRow('customers', emails(customers.inCompany), 'they are in a B2B company, which a wipe does not clear'),
-        leftRow('customers', emails(customers.elsewhere), 'they were made in, or have orders in, a store not chosen'),
-        leftRow('customers', emails(customers.unknownStore), 'Commerce did not say which store they were made in'),
-        leftRow('cart rules', ruleNames(cartRules.partWebsite), 'they apply on a website a store not chosen also sells on'),
-        leftRow('cart rules', ruleNames(cartRules.holding), 'they hold a coupon Demo Builder installed'),
-    ];
-    return left.filter((l) => l.count > 0);
-}
+/** Each product's name by its SKU, those with one: Review Records' Name column (walk F147). */
+const productNames = (products: readonly CommerceProduct[]): Record<string, string> =>
+    Object.fromEntries(products.flatMap((p) => (p.name ? [[p.sku, p.name]] : [])));
+const nameOf = (category: WipeCategory): string => category.name ?? String(category.id);
+const ruleName = (rule: CartRuleDecision['remove'][number]): string => rule.name ?? String(rule.rule_id);
+/** The shared catalogs of these groups, those that have one. */
+const catalogsOf = (groups: CatalogDecision['remove']): Array<{ id: number; name: string }> => groups.flatMap((g) => (g.catalog ? [g.catalog] : []));
 
 /** Every product on the chosen websites, each once. */
 async function readScopeProducts(get: CommerceGet, scope: WipeScope): Promise<CommerceProduct[]> {
     const bySku = new Map<string, CommerceProduct>();
-    for (const websiteId of [...scope.websites.whole, ...scope.websites.part]) {
+    for (const websiteId of scope.websiteIds) {
         for (const product of await readWebsiteProducts(get, websiteId)) bySku.set(product.sku, product);
     }
     return [...bySku.values()];
 }
 
 interface Decided {
+    tree: WipeCategory[];
     products: ProductDecision;
     categories: CategoryDecision;
     customers: CustomerDecision;
     cartRules: CartRuleDecision;
+    companies: CompanyDecision;
+    catalogs: CatalogDecision;
+    attributes: AttributeDecision;
+    settings: SettingsDecision;
     orders: OrderStep[];
     alreadyClosed: number;
-    returns: Array<{ id: string; number: string }>;
     erp?: WipeErpPlan;
 }
 
-/** Each order's step; one closed or handled before is only counted. */
-function decideOrders(orders: readonly CommerceOrder[]): Pick<Decided, 'orders' | 'alreadyClosed'> {
-    const steps = orders.map(orderStepOf);
-    return { orders: steps.filter((s): s is OrderStep => s !== 'done'), alreadyClosed: steps.filter((s) => s === 'done').length };
+/**
+ * Each order's step, with its open returns: those are closed inside the order's work, after its note.
+ * One finished before is only counted, and its returns are not read: a return is written to only
+ * after its order's note.
+ */
+async function decideOrders(get: CommerceGet, orders: readonly CommerceOrder[]): Promise<Pick<Decided, 'orders' | 'alreadyClosed'>> {
+    const steps = orders.map(orderStepOf).filter((s): s is OrderStep => s !== 'done');
+    const returns = openReturns(await readOrderReturns(get, steps.map((s) => Number(s.id))));
+    const returnsOf = (id: string): OrderReturn[] =>
+        returns.filter((r) => String(r.order_id) === id).map((r) => ({ id: String(r.entity_id), number: r.increment_id ?? String(r.entity_id) }));
+    return { orders: steps.map((s) => ({ ...s, returns: returnsOf(s.id) })), alreadyClosed: orders.length - steps.length };
 }
 
-/** The orders the wipe closes itself, and the ERP part: what an ERP integration's websites hold. */
-async function decideAllOrders(get: CommerceGet, scope: WipeScope, route: WipeErpRoute | undefined): Promise<Pick<Decided, 'orders' | 'alreadyClosed' | 'returns' | 'erp'>> {
-    const split = splitByErp(scope, route, await readViewOrders(get, [...scope.viewIds]));
-    // Returns of the ERP's orders are the integration's to close, with their orders.
-    const returns = openReturns(await readOrderReturns(get, split.own.map((o) => Number(o.entity_id))));
-    const own = decideOrders(split.own);
-    const erp = route ? erpPlanOf(scope, route, split.erp) : undefined;
-    return {
-        orders: own.orders,
-        alreadyClosed: own.alreadyClosed + (erp?.alreadyClosed ?? 0),
-        returns: returns.map((r) => ({ id: String(r.entity_id), number: r.increment_id ?? String(r.entity_id) })),
-        ...(erp ? { erp: erp.plan } : {}),
-    };
+/** Why the ERP step is held when the orders could not be read: its premise, every order closed, is not known. */
+export const ORDERS_UNREAD_HELD = 'the orders could not be read';
+
+/**
+ * Every order of the chosen websites' views, the wipe's own; and the ERP step, when an integration
+ * routes some of them. Held when the orders could not be read: the integration is asked only once
+ * every order is closed (`wipeErp.ts`).
+ */
+async function decideAllOrders(get: CommerceGet, scope: WipeScope, route: WipeErpRoute | undefined, failures: Failures): Promise<Pick<Decided, 'orders' | 'alreadyClosed' | 'erp'>> {
+    const own = await attempt(failures, [ORDERS, RETURNS], async () => decideOrders(get, await readViewOrders(get, [...scope.viewIds])), { orders: [], alreadyClosed: 0 });
+    if (!route) return own;
+    return { ...own, erp: erpPlanOf(scope, failures.has(ORDERS) ? { ...route, held: ORDERS_UNREAD_HELD } : route) };
 }
 
-async function decideAll(get: CommerceGet, scope: WipeScope, structure: CommerceStoreStructure, inputs: { recorded: Recorded; route?: WipeErpRoute }): Promise<Decided> {
-    const { recorded } = inputs;
-    const tree = await readCategoryTree(get);
-    return {
-        products: decideProducts(await readScopeProducts(get, scope), scope, tree, recorded.products),
-        categories: decideCategories(tree, scope, recorded.categories),
-        customers: await decideCustomers(get, scope, structure, recorded.customers),
-        cartRules: await decideCartRules(get, scope, { rules: recorded.rules, coupons: recorded.coupons }),
-        ...(await decideAllOrders(get, scope, inputs.route)),
-    };
+/** Every return the plan's orders close, by id and number. */
+const returnsOf = (orders: readonly OrderStep[]): OrderReturn[] => orders.flatMap((o) => o.returns);
+
+/** What deciding is handed: the records, read as ids by kind, and the rest of what a plan respects. */
+interface Respecting {
+    recorded: Recorded;
+    onInstance: RecordedOnInstance;
+    route?: WipeErpRoute;
+    settingsKept: ReadonlySet<string>;
+    unfinished?: WipeRespects['unfinished'];
+    onPhase?: WipeInputs['onPhase'];
 }
 
-function previewOf(scope: WipeScope, decided: Decided, plan: Omit<WipePlan, 'preview' | 'choices' | 'scopeKey'>, records: readonly InstallRecord[]): WipePreview {
-    const { orders } = plan;
-    const total =
-        plan.deleteSkus.length +
-        plan.takeOff.length +
-        plan.categoryIds.length +
-        plan.customerIds.length +
-        plan.ruleIds.length +
-        plan.ruleTakeOff.length +
-        orders.length +
-        plan.returnIds.length +
-        erpCloseIds(plan.erp).length;
-    return {
-        stores: scope.stores.map((s) => ({ websiteCode: s.website.code, websiteName: s.website.name, storeCode: s.code, storeName: s.name })),
-        remove: {
-            products: named(plan.deleteSkus),
-            categories: named(categoryNames(decided.categories.remove)),
-            customers: named(emails(decided.customers.remove)),
-            cartRules: named(ruleNames(decided.cartRules.remove)),
-        },
-        takenOff: named([...new Set(plan.takeOff.map((t) => t.sku))]),
-        rulesTakenOff: named(decided.cartRules.takeOff.map((t) => t.rule.name)),
-        orders: {
-            cancel: named(orders.filter((o) => o.action === 'cancel').map((o) => o.number)),
-            refund: named(orders.filter((o) => o.action === 'refund').map((o) => o.number)),
-            leftOpen: named(orders.filter((o) => o.action === 'note').map((o) => o.number)),
-            returns: named(decided.returns.map((r) => r.number)),
-        },
-        ...(plan.erp ? { erp: erpPartOf(plan.erp, named) } : {}),
-        left: leftOf(decided),
-        installed: installedCounts(records),
-        total,
-        token: sha256(JSON.stringify({ stores: scope.key, ...plan })),
-        never: NEVER_TOUCHED,
-    };
+/** Customers on the chosen websites no record lists: the only ones a company may hold and still go. */
+function wholeCustomerIds(customers: CustomerDecision): Set<number> {
+    return new Set([...customers.remove, ...customers.inCompany].map((c) => Number(c.id)));
+}
+
+/** Those in a company going leave the list that stays, and join those going. */
+function withMembers(customers: CustomerDecision, companies: CompanyDecision): CustomerDecision {
+    const members = new Set(companies.remove.flatMap((c) => c.memberIds));
+    const isMember = (customer: CustomerDecision['remove'][number]): boolean => members.has(String(customer.id));
+    return { ...customers, remove: [...customers.remove, ...customers.inCompany.filter(isMember)], inCompany: customers.inCompany.filter((c) => !isMember(c)) };
+}
+
+/** The B2B kinds, each reading the one before: who goes decides the companies, those two the groups. */
+async function decideB2b(get: CommerceGet, scope: WipeScope, read: CustomerDecision, stayingRules: CartRuleDecision['staying'], respecting: Respecting): Promise<Pick<Decided, 'customers' | 'companies' | 'catalogs'>> {
+    const { onInstance, unfinished } = respecting;
+    const companies = await decideCompanies(get, { scope, inCompany: read.inCompany, wholeCustomerIds: wholeCustomerIds(read), recorded: onInstance });
+    const customers = withMembers(read, companies);
+    const catalogs = await decideCatalogs(get, { goingCustomers: customers.remove, goingCompanies: companies.remove, stayingRules, recorded: onInstance, unfinishedGroups: unfinished?.groups ?? [] });
+    return { customers, companies, catalogs };
+}
+
+const NO_RULES: CartRuleDecision = { remove: [], takeOff: [], kept: [], staying: [] };
+const NO_CUSTOMERS: CustomerDecision = { remove: [], inCompany: [], kept: [] };
+
+async function decideAll(get: CommerceGet, scope: WipeScope, respecting: Respecting, failures: Failures): Promise<Decided> {
+    const { recorded, onInstance, unfinished } = respecting;
+    const phase = respecting.onPhase ?? (() => undefined);
+    phase(0);
+    const tree = await attempt(failures, ['categories'], () => readCategoryTree(get), []);
+    phase(1);
+    const products = decideProducts(await attempt(failures, [PRODUCT_KIND], () => readScopeProducts(get, scope), []), scope, recorded.products);
+    phase(2);
+    const cartRules = await attempt(failures, [CART_RULE_KIND], () => decideCartRules(get, scope, { rules: recorded.rules, coupons: recorded.coupons }), NO_RULES);
+    phase(3);
+    const customers = await attempt(failures, [CUSTOMER_KIND], () => decideCustomers(get, scope, recorded.customers), NO_CUSTOMERS);
+    phase(4);
+    const b2b = await decideB2b(get, scope, customers, cartRules.staying, respecting);
+    phase(5);
+    const attributes = await decideAttributes(get, {
+        goingProducts: products.remove,
+        stayingRules: cartRules.staying,
+        recorded: onInstance,
+        unfinished: { sets: unfinished?.sets ?? [], attributes: unfinished?.attributes ?? [] },
+    });
+    phase(6);
+    const settings = await decideSettings(get, scope, respecting.settingsKept);
+    phase(7);
+    const orders = await decideAllOrders(get, scope, respecting.route, failures);
+    const decided = { tree, products, cartRules, ...b2b, attributes, settings, ...orders };
+    noteDecisionFailures(decided, failures);
+    return { ...decided, categories: categoriesOf(decided, scope, recorded, failures) };
 }
 
 /**
- * What clearing the chosen stores would do, read-only.
- *
- * @param inputs - every install record the wipe must respect (`readWipeClaims`), whose lists are
- *   left; and the ERP integration serving the instance, asked which chosen websites it routes
+ * The categories, kept where a record lists one or a rule that stays tests one (a rule's conditions
+ * name categories by id). Left alone when the products or the rules could not be read: which products
+ * sit in them, and which rules test them, are the proof.
  */
-export async function planWipe(get: CommerceGet, structure: CommerceStoreStructure, scope: WipeScope, inputs: WipeInputs): Promise<WipePlan> {
-    const { records } = inputs;
-    const route = inputs.erp ? await inputs.erp.route(websiteCodesOf(scope)) : undefined;
-    const decided = await decideAll(get, scope, structure, { recorded: recordedIds(records), route });
-    const ids = {
+function categoriesOf(decided: Pick<Decided, 'tree' | 'cartRules'>, scope: WipeScope, recorded: Recorded, failures: Failures): CategoryDecision {
+    noteFailed(failures, ['categories'], failures.get(PRODUCT_KIND) ?? failures.get(CART_RULE_KIND));
+    if (failures.has('categories')) return { remove: [], kept: [] };
+    return decideCategories(decided.tree, scope, new Set([...recorded.categories, ...categoriesNamedBy(decided.cartRules.staying)]));
+}
+
+type Ids = Omit<WipePlan, 'check' | 'websiteCodes' | 'scopeKey' | 'unreadDetails'>;
+
+/** Names by type, as the check counts them. */
+function plannedOf(decided: Decided, ids: Ids, scope: WipeScope): Record<string, ClearRecords> {
+    const { products, customers, cartRules, companies, catalogs, attributes } = decided;
+    const several = scope.websites.length > 1;
+    // Which website a setting is on, by name (owner, 2026-11-15).
+    const websiteNameOf = (code: string): string => scope.websites.find((w) => w.code === code)?.name || code;
+    const going = categoryTree(decided.tree, decided.categories.remove);
+    const removedCategories = decided.tree.filter((c) => ids.categoryIds.includes(String(c.id))).map(nameOf);
+    const orders = ids.orders.filter((o) => o.action !== 'note');
+    return {
+        [PRODUCT_KIND]: {
+            removed: [...ids.deleteSkus, ...new Set(ids.takeOff.map((t) => t.sku))],
+            kept: skus(products.kept),
+            names: productNames([...products.remove, ...products.takeOff.map((t) => t.product), ...products.kept]),
+        },
+        categories: { removed: removedCategories, kept: decided.categories.kept.map(nameOf), ...(going.length > 0 ? { tree: going } : {}) },
+        [CUSTOMER_KIND]: { removed: customers.remove.map((c) => c.email), kept: [...customers.inCompany, ...customers.kept].map((c) => c.email) },
+        [COMPANY_KIND]: { removed: companies.remove.map((c) => c.name), kept: companies.kept },
+        [CATALOG_KIND]: { removed: catalogsOf(ids.groups).map((c) => c.name), kept: catalogs.kept.flatMap((g) => g.catalog ?? []) },
+        [CART_RULE_KIND]: { removed: [...cartRules.remove, ...cartRules.takeOff.map((t) => t.rule)].map(ruleName), kept: cartRules.kept.map(ruleName) },
+        [CUSTOMER_GROUP_KIND]: { removed: ids.groups.map((g) => g.groupName), kept: catalogs.kept.map((g) => g.groupName) },
+        [ATTRIBUTE_SET_KIND]: { removed: ids.attributeSets.map((s) => s.name), kept: attributes.setsKept },
+        [ATTRIBUTE_KIND]: { removed: ids.attributes.map((a) => a.code), kept: attributes.attributesKept },
+        [WEBSITE_SETTINGS]: { removed: ids.settings.map((s) => (several ? `${s.path} (${websiteNameOf(s.websiteCode)})` : s.path)), kept: [] },
+        [ORDERS]: { removed: orders.map((o) => o.number), kept: [] },
+        [RETURNS]: { removed: returnsOf(orders).map((r) => r.number), kept: [] },
+    };
+}
+
+function idsOf(decided: Decided): Ids {
+    return {
         deleteSkus: skus(decided.products.remove),
         takeOff: decided.products.takeOff.flatMap((t) => t.websiteIds.map((websiteId) => ({ sku: t.product.sku, websiteId }))),
-        categoryIds: decided.categories.remove.map((c) => String(c.id)),
+        ...categoryOrder(decided.categories.remove),
         customerIds: decided.customers.remove.map((c) => String(c.id)),
+        companyIds: decided.companies.remove.map((c) => c.id),
+        memberOf: Object.fromEntries(decided.companies.remove.flatMap((c) => c.memberIds.map((id) => [id, c.id]))),
+        groups: decided.catalogs.remove,
+        attributeSets: decided.attributes.sets,
+        attributes: decided.attributes.attributes,
+        settings: decided.settings.reset,
+        listSettings: decided.settings.lists,
         ruleIds: decided.cartRules.remove.map((r) => String(r.rule_id)),
         ruleTakeOff: decided.cartRules.takeOff.map((t) => ({ id: String(t.rule.rule_id), websiteIds: t.websiteIds })),
         orders: decided.orders,
         alreadyClosed: decided.alreadyClosed,
-        returnIds: decided.returns.map((r) => r.id),
         ...(decided.erp ? { erp: decided.erp } : {}),
     };
-    return { choices: choicesOfScope(scope), scopeKey: scope.key, preview: previewOf(scope, decided, ids, records), ...ids };
+}
+
+const detailOf = (error: unknown): string => (error instanceof Error ? error.message : String(error));
+
+/**
+ * What clearing the chosen websites would do, read-only.
+ *
+ * @param inputs - the install records the wipe must respect (`readWipeClaims`), whose lists are left;
+ *   and the ERP integration serving the instance, asked which chosen websites it routes
+ */
+export async function planWipe(get: CommerceGet, scope: WipeScope, inputs: WipeInputs): Promise<WipePlan> {
+    const { records } = inputs;
+    const route = inputs.erp ? await inputs.erp.route(websiteCodesOf(scope)) : undefined;
+    const failures: Failures = new Map();
+    const decided = await decideAll(get, scope, {
+        recorded: recordedIds(records),
+        onInstance: recordedOnInstance(inputs.everyRecord ?? records),
+        route,
+        settingsKept: inputs.settingsKept ?? new Set(),
+        ...(inputs.unfinished ? { unfinished: inputs.unfinished } : {}),
+        ...(inputs.onPhase ? { onPhase: inputs.onPhase } : {}),
+    }, failures);
+    const ids = idsOf(decided);
+    const check = {
+        ...checkOf({ scope, planned: plannedOf(decided, ids, scope), failures }),
+        token: sha256(JSON.stringify({ websites: scope.key, ...ids })),
+        ...(ids.erp ? { erp: erpPartOf(ids.erp) } : {}),
+    };
+    const unreadDetails = Object.fromEntries([...failures].map(([type, error]) => [type, detailOf(error)]));
+    return { websiteCodes: scope.websites.map((w) => w.code), scopeKey: scope.key, check, unreadDetails, ...ids };
 }
 
 /**
  * The same, reading the store structure first (and asking the ERP integration, when one serves the
  * instance, which chosen websites it routes): what the clearing re-plans with.
  *
- * @throws WipeScopeError when a chosen website or store is no longer in the store
+ * @throws WipeScopeError when a chosen website is no longer in the store
  */
-export async function planWipeFor(get: CommerceGet, choices: readonly WipeStoreChoice[], records: readonly InstallRecord[], erp?: WipeErp): Promise<WipePlan> {
-    const structure = await readWipeStructure(get);
-    return planWipe(get, structure, resolveWipeScope(structure, choices), { records, erp });
+export async function planWipeFor(get: CommerceGet, websiteCodes: readonly string[], inputs: WipeInputs): Promise<WipePlan> {
+    const structure: CommerceStoreStructure = await readWipeStructure(get);
+    return planWipe(get, resolveWipeScope(structure, websiteCodes), inputs);
 }
 
 const orderIds = (plan: WipePlan, step: (o: OrderStep) => boolean) => plan.orders.filter(step).map((o) => o.id);
 
+/** Every id a plan would write to, a list per kind: what `withinPlan` compares. */
+const WRITES: Array<(plan: WipePlan) => readonly string[]> = [
+    (p) => p.deleteSkus,
+    (p) => p.takeOff.map((t) => `${t.sku}@${t.websiteId}`),
+    (p) => p.categoryIds,
+    (p) => p.customerIds,
+    (p) => p.companyIds,
+    (p) => p.groups.map((g) => String(g.groupId)),
+    (p) => p.groups.flatMap((g) => (g.catalog ? [String(g.catalog.id)] : [])),
+    (p) => p.attributeSets.map((s) => String(s.id)),
+    (p) => p.attributes.map((a) => a.code),
+    (p) => [...p.settings.map((s) => `${s.websiteCode}/${s.path}`), ...(p.setBack ?? [])],
+    (p) => p.ruleIds,
+    (p) => p.ruleTakeOff.map((t) => `${t.id}@${t.websiteIds.join(',')}`),
+    (p) => orderIds(p, (o) => o.action === 'cancel'),
+    (p) => orderIds(p, (o) => o.action === 'refund'),
+    (p) => orderIds(p, (o) => o.invoice),
+    (p) => orderIds(p, (o) => o.unhold),
+    (p) => returnsOf(p.orders).map((r) => r.id),
+    (p) => erpStoresAsked(p.erp),
+];
+
 /**
- * Whether a plan made now takes nothing the plan the SC saw did not: the same stores, and every id
- * it would delete, take off, clear, cancel, refund, release or close (itself, or through the ERP
- * integration) was in the one shown. Things
- * gone or closed since are fine.
+ * Whether a plan made now takes nothing the plan the SC saw did not: the same websites, and every id
+ * it would delete, take off, clear, set back, cancel, invoice, refund, release or close was in the
+ * one shown, and the ERP integration is asked about no store the list said it would not be (it was
+ * held then). Things gone or closed since are fine. So is a website setting the datapack's removal
+ * put back (`setBack`): the removal changes settings only that way (`putBackSettings`, by the record's
+ * `previous`), so a value the list saw as the default's may differ from it again; everything else
+ * the removal deletes, or keeps on its record, which the re-plan respects.
  */
 export function withinPlan(shown: WipePlan, now: WipePlan): boolean {
-    const inside = (a: readonly string[], b: readonly string[]) => a.every((id) => b.includes(id));
-    const offKeys = (plan: WipePlan) => plan.takeOff.map((t) => `${t.sku}@${t.websiteId}`);
-    const ruleOffKeys = (plan: WipePlan) => plan.ruleTakeOff.map((t) => `${t.id}@${t.websiteIds.join(',')}`);
-    const steps: Array<(o: OrderStep) => boolean> = [(o) => o.action === 'cancel', (o) => o.action === 'refund', (o) => o.unhold];
-    return (
-        now.scopeKey === shown.scopeKey &&
-        inside(now.deleteSkus, shown.deleteSkus) &&
-        inside(offKeys(now), offKeys(shown)) &&
-        inside(now.categoryIds, shown.categoryIds) &&
-        inside(now.customerIds, shown.customerIds) &&
-        inside(now.ruleIds, shown.ruleIds) &&
-        inside(ruleOffKeys(now), ruleOffKeys(shown)) &&
-        steps.every((step) => inside(orderIds(now, step), orderIds(shown, step))) &&
-        inside(now.returnIds, shown.returnIds) &&
-        inside(erpCloseIds(now.erp), erpCloseIds(shown.erp))
-    );
+    return now.scopeKey === shown.scopeKey && WRITES.every((ids) => ids(now).every((id) => ids(shown).includes(id)));
 }

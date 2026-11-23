@@ -74,8 +74,8 @@ import { createMockLogger } from '../../../../helpers/loggerFake';
 
 const AEM_AUTHOR_URL = 'author-p158081-e1683323.adobeaemcloud.com';
 const IMS_ORG_ID = 'ABCDEF1234567890@AdobeOrg';
-const DA_LIVE_ORG = 'leahrayard';
-const DA_LIVE_SITE = 'leah-b2b-demo';
+const DA_LIVE_ORG = 'avery';
+const DA_LIVE_SITE = 'avery-b2b-demo';
 const SITE_ROW_KEY = `/${DA_LIVE_ORG}/${DA_LIVE_SITE}`;
 
 describe('applyDaLiveOrgConfigSettings — config scope routing', () => {
@@ -141,6 +141,12 @@ describe('applyDaLiveOrgConfigSettings — config scope routing', () => {
         // LOAD-BEARING: editor.path must NOT go through the org-scoped write —
         // that is what isolates sibling sites in a shared DA org.
         expect(mockApplyOrgConfig).not.toHaveBeenCalled();
+    });
+
+    it('writes the default experience when the caller names none: a new storefront', async () => {
+        await applyDaLiveOrgConfigSettings(mockContentOps, DA_LIVE_ORG, DA_LIVE_SITE, mockLogger);
+
+        expect(mockApplySiteConfig.mock.calls[0][2]['editor.path']).toBe(`${SITE_ROW_KEY}=https://da.live/canvas#`);
     });
 
     it('routes Experience Workspace editor.path to applySiteConfig with the canvas row', async () => {
@@ -269,7 +275,7 @@ describe('applyDaLiveOrgConfigSettings — config scope routing', () => {
     });
 
     /**
-     * Leah's 2026-08-18 log said `Applied: aem.repositoryId, editor.path` and
+     * Avery's 2026-08-18 log said `Applied: aem.repositoryId, editor.path` and
      * nothing more — a binding existed, and there was no way to tell WHAT it
      * pointed at. `demoBuilder.daLive.aemAuthorUrl` ships with a default
      * (a shared demo-system AEM host), so "the key was written" says nothing

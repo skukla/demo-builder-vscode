@@ -45,7 +45,7 @@ const CATALOG = [
     }),
 ];
 
-/** The SC's copy of Jen's storefront. */
+/** The SC's copy of Robin's storefront. */
 const OWN_FILES: Record<string, string | Error> = {
     'package.json': '{"name":"@adobe/aem-boilerplate-commerce","version":"4.0.1"}',
     '404.html': `<html><body>${SMART_404_PAGE_MARKER_START}\n<script>/* handler */</script></body></html>`,
@@ -71,7 +71,7 @@ function deps(own: Record<string, string | Error> = OWN_FILES, overrides: Partia
             getRepository: jest.fn(async () => ({
                 id: 1,
                 name: 'aistore',
-                fullName: 'sayurihanki/aistore',
+                fullName: 'org-j/aistore',
                 htmlUrl: '',
                 cloneUrl: '',
                 defaultBranch: 'main',
@@ -113,7 +113,7 @@ function project(overrides: Partial<Project> = {}, metadata: Record<string, unkn
     });
 }
 
-const COLLEAGUE = project({ demo: makeAddedDemo({ source: { owner: 'sayurihanki', repo: 'aistore' } }) });
+const COLLEAGUE = project({ demo: makeAddedDemo({ source: { owner: 'org-j', repo: 'aistore' } }) });
 
 /** The report for a project that has a storefront: every project here does. */
 async function read(target: Project, d: StorefrontReportDeps): Promise<StorefrontReport> {
@@ -137,7 +137,7 @@ describe('readStorefrontReport — a colleague’s storefront', () => {
             origin: { kind: 'added', lineage: { status: 'read', value: { templateRepository: B2B } }, match: { by: 'template', template: B2B } },
             written: { smart404: 'present', fstab: 'present', config: 'present', description: 'absent' },
             contentSite: { org: 'steve', site: 'aistore-copy' },
-            adobe: { reason: 'GitHub could not be read for sayurihanki/aistore' },
+            adobe: { reason: 'GitHub could not be read for org-j/aistore' },
         });
     });
 
@@ -146,7 +146,7 @@ describe('readStorefrontReport — a colleague’s storefront', () => {
 
         await read(COLLEAGUE, d);
 
-        expect(d.repoOps.getRepository).toHaveBeenCalledWith('sayurihanki', 'aistore');
+        expect(d.repoOps.getRepository).toHaveBeenCalledWith('org-j', 'aistore');
         expect(d.readLkg).toHaveBeenCalledWith({ owner: 'skukla', repo: 'eds-demo-patches', lkgFile: 'b2b/last-known-good' });
         expect(d.fileOps.getFileContent).toHaveBeenCalledWith(B2B.owner, B2B.repo, 'package.json', LKG);
     });
@@ -197,7 +197,7 @@ describe('storefrontReportLines — the SC-facing rendering', () => {
             "Built on Adobe's Commerce boilerplate 4.0.1. Demo Builder's current one is 6.0.0. " +
                 'Built on an older boilerplate (4.x) than Demo Builder tests on.',
             "GitHub records it as made from adobe-commerce/boilerplate-b2b-template, one of Demo Builder's templates.",
-            'Adobe boilerplate updates: not offered, because GitHub could not be read for sayurihanki/aistore.',
+            'Adobe boilerplate updates: not offered, because GitHub could not be read for org-j/aistore.',
             '## What Demo Builder wrote',
             'Product-page fallback (smart 404): there.',
             'Content mount (fstab.yaml): there.',
@@ -212,7 +212,7 @@ describe('storefrontReportLines — the SC-facing rendering', () => {
         ['71a67e027b4b288a67f5cda1fc106d2df9a34805', "Demo Builder's tested version is abcdef0; Check for Updates offers it."],
     ])('says where its Adobe code started and how it stands against the tested version (%s)', async (base, ending) => {
         const known = project(
-            { demo: makeAddedDemo({ source: { owner: 'sayurihanki', repo: 'aistore' } }) },
+            { demo: makeAddedDemo({ source: { owner: 'org-j', repo: 'aistore' } }) },
             { boilerplateBase: { template: B2B, commit: base, lkgSource: LEDGER_SOURCE, found: 'first-commit' } },
         );
 

@@ -95,7 +95,7 @@ Virtuals: `sc-intro` 499 · `coolingservice` 1000 · `powerservice` 1000 ·
 | `indoorpatchcable` | Indoor Patch Cable | `cable_size` / "Size" | 6, 8, 10 foot |
 
 Each has ONE option attribute → the configurator's `attribute-groups` must be rewritten from
-Jen's `"Materials: Material, Finish; Signature: Hardware, Scale"` to match a real label, e.g.
+Robin's `"Materials: Material, Finish; Signature: Hardware, Scale"` to match a real label, e.g.
 `"Configuration: Processor"`. Note `wattage`'s frontend label is lowercase in the pack — it
 renders verbatim.
 
@@ -298,11 +298,11 @@ Manual Admin step, belongs in the runbook next to "create the website".
 
 ## guided-selling-luxe — the custom-data check (2026-08-15)
 
-Flagged as a possible "Jen custom data" dependency. Investigated; the smell was real, and
+Flagged as a possible "Robin custom data" dependency. Investigated; the smell was real, and
 it sat **entirely in her authored JSON**, not in the block code or the backend.
 
 **Her deployed schema** (`/data/guided-selling/bodea-rack-finder.json` on
-`jenhankib2bbodea`, 23,870 bytes) is built on data that does not exist here:
+`org-k`, 23,870 bytes) is built on data that does not exist here:
 
 | She referenced | Status against our catalog |
 |---|---|
@@ -364,7 +364,7 @@ today. Clearing that cache in the existing `authenticated`/`auth change` handler
 ## The step-04 migration dropped 13 storefront pages (found and fixed 2026-08-16)
 
 **A site's sitemap is not its page set.** The step-04 content migration built its page list
-from Jen's `/sitemap.json` (87 entries). Her site *serves* `/cart` and `/checkout` — byte
+from Robin's `/sitemap.json` (87 entries). Her site *serves* `/cart` and `/checkout` — byte
 identical to the b2b template's — but her sitemap does not list them. Everything absent from
 that index was therefore never copied, silently.
 
@@ -394,7 +394,7 @@ Several blocks (`features-grid`, `catalog-highlights`, `product-highlights`) sto
 as **plain text in key-value cells**, not as anchors. A crawler matching `href="..."` reports
 full closure while those paths are dead. Re-scanning the stripped text for bare `/path`
 strings found 14 dead references the href-only pass could not see, including a homepage
-headline still reading "Partner Enablement Session Let's Go!" from one of Jen's demo sessions.
+headline still reading "Partner Enablement Session Let's Go!" from one of Robin's demo sessions.
 
 Scan the tag-stripped text, not just attributes. Current state: 30 pages, 21 references,
 zero dead.

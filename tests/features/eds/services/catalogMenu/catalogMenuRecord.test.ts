@@ -54,7 +54,7 @@ const EMPTY = { legacyPages: [], links: [], navSwitch: false };
 
 describe('readCatalogMenuRecord', () => {
     it('reads the record kept on the storefront instance, the old pages from `pages`', () => {
-        const project = withMetadata({ githubRepo: 'steve/kukla-justrite', catalogMenu: STORED });
+        const project = withMetadata({ githubRepo: 'steve/kukla-tailspin', catalogMenu: STORED });
         expect(readCatalogMenuRecord(project)).toEqual(RECORD);
     });
 
@@ -83,12 +83,12 @@ describe('readCatalogMenuRecord', () => {
 
 describe('writeCatalogMenuRecord', () => {
     it('keeps the record beside the instance metadata already there, in its stored shape', () => {
-        const project = withMetadata({ githubRepo: 'steve/kukla-justrite', daLiveOrg: 'skukla' });
+        const project = withMetadata({ githubRepo: 'steve/kukla-tailspin', daLiveOrg: 'skukla' });
 
         writeCatalogMenuRecord(project, RECORD);
 
         expect(project.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT]?.metadata).toEqual({
-            githubRepo: 'steve/kukla-justrite',
+            githubRepo: 'steve/kukla-tailspin',
             daLiveOrg: 'skukla',
             catalogMenu: STORED,
         });

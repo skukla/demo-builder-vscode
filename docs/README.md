@@ -78,6 +78,8 @@ Enforced by `tests/sop/doc-module-refs.test.ts` — each area's front door must 
   — the seams where doing one job two ways causes real bugs
 - [development/sop/testing-guide.md](development/sop/testing-guide.md) — the two
   project-specific test traps
+- [development/sop/dialog-design.md](development/sop/dialog-design.md) — what goes
+  inside a dialog, how big it is and how it moves: five layouts and the noise test
 - [development/styling-guide.md](development/styling-guide.md) — the practical half
   of CSS; [ADR-018](architecture/adr/018-css-architecture.md) is the architecture
 
@@ -90,6 +92,12 @@ Enforced by `tests/sop/doc-module-refs.test.ts` — each area's front door must 
   answers "I want to add X — what do I write and where".
 - [architecture/overview.md](architecture/overview.md) — start here if the system is
   new to you.
+- [diagrams/data-flow/README.md](diagrams/data-flow/README.md) — how data moves, as
+  four diagram outlines: [d1 overview](diagrams/data-flow/d1-overview-sketch.md) ·
+  [d2 creating a project](diagrams/data-flow/d2-create-project-sketch.md) ·
+  [d3 storefront](diagrams/data-flow/d3-storefront-sketch.md) ·
+  [d4 App Builder](diagrams/data-flow/d4-app-builder-sketch.md). The outlines are the
+  source the Lucid diagrams are drawn from; edit an outline first.
 
 ## Subsystems
 

@@ -95,13 +95,13 @@ describe('withComponentProgress — started from the integrations screen', () =>
     it("ends with the run's notes as the modal's warning, so the SC reads them there", async () => {
         await withComponentProgress(options('modal'), async () => ({
             success: true,
-            warnings: ['Justrite ERP owns every product again.', 'Justrite ERP: 2 products are sellable again.'],
+            warnings: ['Tailspin ERP owns every product again.', 'Tailspin ERP: 2 products are sellable again.'],
         }));
 
         expect(mockSendOperationProgress).toHaveBeenLastCalledWith({
             id: 'erp-sync',
             state: 'succeeded',
-            warning: 'Justrite ERP owns every product again. Justrite ERP: 2 products are sellable again.',
+            warning: 'Tailspin ERP owns every product again. Tailspin ERP: 2 products are sellable again.',
         });
     });
 
@@ -203,7 +203,7 @@ describe('a modal-hosted request always ends', () => {
         expect(mockSendOperationProgress).toHaveBeenLastCalledWith({
             id: 'erp-sync',
             state: 'failed',
-            error: 'The operation stopped unexpectedly. Details are in Debug Logs.',
+            error: "Demo Builder couldn't tell what went wrong.",
             startedAt: expect.any(Number),
             tookMs: expect.any(Number),
         });
@@ -239,7 +239,7 @@ describe('a modal-hosted request always ends', () => {
         mockRemoveAppBuilderComponent.mockResolvedValue({
             success: true,
             runtimeCleanup: { verified: true, deleted: ['kit-a'], failed: ['kit-b'] },
-            warnings: ['Justrite ERP owns every product again.'],
+            warnings: ['Tailspin ERP owns every product again.'],
         });
 
         const result = await handleRemoveAppBuilderComponent(mockContext, { id: 'erp-sync', progress: 'modal' });
@@ -248,7 +248,7 @@ describe('a modal-hosted request always ends', () => {
         const ended = mockSendOperationProgress.mock.calls.at(-1)![0] as { state: string; warning?: string };
         expect(ended.state).toBe('succeeded');
         expect(ended.warning).toContain('kit-b');
-        expect(ended.warning).toContain('Justrite ERP owns every product again.');
+        expect(ended.warning).toContain('Tailspin ERP owns every product again.');
         // An agent still reads the same words in the answer.
         expect((result.data as { warning?: string }).warning).toBe(ended.warning);
     });

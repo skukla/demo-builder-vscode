@@ -4,7 +4,7 @@ kind: fix
 area: eds
 needs: []
 value: high
-status: built
+status: shipped
 ---
 
 # Setup resumes when the install dialog detects AEM Code Sync, instead of demanding a Retry
@@ -50,8 +50,8 @@ setup" / "Resuming content copy"). The App case wants the same shape:
   and WAIT — poll Adobe's status at the existing lenient cadence, bounded (say 30 minutes, the
   Runtime timeout being the real ceiling), honouring the run's abort controller so Cancel still
   works.
-- When the poll sees the App, log it, send a "resuming" progress line, and continue with the
-  next step of the same phase. Nothing is repeated; `partialState` stays truthful.
+- When the poll sees the App, log it, send a "resuming" progress line, and carry on with
+  what follows in the same phase. Nothing is repeated; `partialState` stays truthful.
 - The dialog's Check Again becomes a nudge to the same poll (or simply disappears when the run's
   own poll succeeds); "select Retry to run it again" is deleted with the wall it explained.
 - On the bound expiring: the existing error state, now honestly "waited N minutes for the App
@@ -73,3 +73,4 @@ what `createRepoFromSource` does today when the name already exists.
 
 - 2026-09-25  fix(eds): setup waits for AEM Code Sync inside the run and resumes where it paused (`b920b2936`)
 - 2026-09-25  refactor(eds): the install dialog's "site not registered" screen was unreachable; delete it (`058e89e4b`)
+- 2026-11-20  Released in v1.0.0-beta.153

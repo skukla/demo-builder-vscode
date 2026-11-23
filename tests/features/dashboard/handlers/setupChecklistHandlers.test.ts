@@ -86,17 +86,17 @@ describe('getSetupChecklist', () => {
     // integration's own workspace when it has one, else the project's.
     it("names the integration's Adobe project and workspace in the App Management step", async () => {
         const { context, project } = setup();
-        project.adobe = { ...project.adobe, projectTitle: 'Kukla Justrite', workspaceTitle: 'Production' };
+        project.adobe = { ...project.adobe, projectTitle: 'Kukla Tailspin', workspaceTitle: 'Production' };
         const listing = async () => {
             const result = await handleGetSetupChecklist(context, { id: 'erp-integration' });
             const items = (result.data as { items: Array<{ id: string; enter?: string[] }> }).items;
             return items.find((item) => item.id === 'app-management-listing')?.enter;
         };
-        expect(await listing()).toStrictEqual(['Kukla Justrite', 'Production']);
+        expect(await listing()).toStrictEqual(['Kukla Tailspin', 'Production']);
 
         const component = project.appBuilderComponents?.['erp-integration'];
-        if (component) component.workspace = { id: '1', name: 'JustriteERP1', title: 'Justrite ERP' };
-        expect(await listing()).toStrictEqual(['Kukla Justrite', 'Justrite ERP']);
+        if (component) component.workspace = { id: '1', name: 'TailspinERP1', title: 'Tailspin ERP' };
+        expect(await listing()).toStrictEqual(['Kukla Tailspin', 'Tailspin ERP']);
     });
 });
 
@@ -254,19 +254,19 @@ describe('checkSetupSteps', () => {
         expect(Object.keys(steps)).toStrictEqual(['company-catalogs']);
     });
 
-    // The flyout said "All done" on Justrite with Test ERP just added and no warehouse of its
+    // The flyout said "All done" on Tailspin with Test ERP just added and no warehouse of its
     // own (2026-10-26): the check was told no ERPs, so any sold warehouse passed.
     it("checks the warehouse step for each of the integration's ERPs", async () => {
         mockSendRest.mockImplementation(async (_method: string, _target: unknown, path: string) => {
             if (path.startsWith('inventory/sources')) {
-                return JSON.stringify({ items: [{ source_code: 'justrite', name: 'Justrite Warehouse', enabled: true }] });
+                return JSON.stringify({ items: [{ source_code: 'tailspin', name: 'Tailspin Warehouse', enabled: true }] });
             }
             if (path.startsWith('inventory/stock-source-links')) {
-                return JSON.stringify({ items: [{ stock_id: 3, source_code: 'justrite' }] });
+                return JSON.stringify({ items: [{ stock_id: 3, source_code: 'tailspin' }] });
             }
             if (path.startsWith('inventory/stocks')) {
                 return JSON.stringify({
-                    items: [{ stock_id: 3, name: 'Justrite Stock', extension_attributes: { sales_channels: [{ type: 'website', code: 'acme' }] } }],
+                    items: [{ stock_id: 3, name: 'Tailspin Stock', extension_attributes: { sales_channels: [{ type: 'website', code: 'acme' }] } }],
                 });
             }
             return JSON.stringify([]);
@@ -275,8 +275,8 @@ describe('checkSetupSteps', () => {
         const { context, saved, project } = setup({ 'second-source': { state: 'done' } });
         project.appBuilderComponents = {
             ...project.appBuilderComponents,
-            'erp-integration': { ...project.appBuilderComponents!['erp-integration'], systems: ['justrite-erp', 'test-erp'] },
-            'justrite-erp': { kind: 'system', status: 'deployed', name: 'Justrite ERP', source: { owner: 'o', repo: 'r' } },
+            'erp-integration': { ...project.appBuilderComponents!['erp-integration'], systems: ['tailspin-erp', 'test-erp'] },
+            'tailspin-erp': { kind: 'system', status: 'deployed', name: 'Tailspin ERP', source: { owner: 'o', repo: 'r' } },
             'test-erp': { kind: 'system', status: 'deployed', name: 'Test ERP', source: { owner: 'o', repo: 'r' } },
         };
         await handleCheckSetupSteps(context, { id: 'erp-integration', stepId: 'second-source' });

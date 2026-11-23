@@ -17,8 +17,12 @@ jest.mock('@/features/eds/handlers/edsHelpers', () => ({
     tryCreateDaLiveTokenProvider: jest.fn(() => ({ getAccessToken: () => mockDaLiveAuth.getAccessToken() })),
 }));
 
-/** The DA.live session: no token by default, so the suites drive the IMS fallback they were written for. */
-const mockDaLiveAuth = { getAccessToken: jest.fn(async (): Promise<string | null> => null) };
+/**
+ * The DA.live session, the one sign-in the DA.live tools run on (PL-104 fix 7: the Adobe
+ * IMS fallback is gone). Signed in unless a test says otherwise; the token is set in
+ * `resetCloudResourceMocks`, since the config's `resetMocks` empties it before each test.
+ */
+const mockDaLiveAuth = { getAccessToken: jest.fn(async (): Promise<string | null> => 'da-live-token') };
 const mockInspectToken = jest.fn();
 const mockListOrgSites = jest.fn();
 const mockDeleteAllSiteContent = jest.fn();
@@ -28,7 +32,16 @@ jest.mock('@/core/di/serviceLocator', () => ({
         getAuthenticationService: jest.fn(() => ({
             getTokenManager: () => ({ inspectToken: mockInspectToken }),
         })),
+        getCommandExecutor: jest.fn(() => ({})),
     },
+}));
+/**
+ * The template reset `create_github_repo` runs on a source that is not a GitHub template
+ * (`createRepoFromSource`, PL-104 fix 13). It pushes to GitHub, so it is answered here.
+ */
+const mockResetRepository = jest.fn();
+jest.mock('@/features/updates/services/templateSyncService', () => ({
+    TemplateSyncService: jest.fn(() => ({ resetRepository: mockResetRepository })),
 }));
 jest.mock('@/features/eds/services/daLive/daLiveOrgOperations', () => ({
     DaLiveOrgOperations: jest.fn(() => ({ listOrgSites: mockListOrgSites })),
@@ -70,7 +83,7 @@ export { runWithAdobeTarget } from '@/features/ai/server/adobeTargetStore';
 export { DaLiveOrgOperations } from '@/features/eds/services/daLive/daLiveOrgOperations';
 export { DaLiveContentOperations } from '@/features/eds/services/daLive/daLiveContentOperations';
 
-export { mockDaLiveAuth, mockInspectToken, mockListOrgSites, mockDeleteAllSiteContent };
+export { mockDaLiveAuth, mockInspectToken, mockListOrgSites, mockDeleteAllSiteContent, mockResetRepository };
 export const getGitHubServicesMock = getGitHubServices as jest.Mock;
 
 /**
@@ -136,6 +149,9 @@ export function gh(
         repos?: Array<{ fullName: string; isPrivate: boolean; updatedAt: string }>;
         deleteRepository?: jest.Mock;
         createFromTemplate?: jest.Mock;
+        /** The source repository, read to learn whether it is a GitHub template. A template by default. */
+        getRepository?: jest.Mock;
+        createEmptyRepository?: jest.Mock;
         waitForContent?: jest.Mock;
         /** The repository's files, read before a delete. Empty by default: not a storefront. */
         listRepoFiles?: jest.Mock;
@@ -150,6 +166,8 @@ export function gh(
         tokenService: { validateToken },
         repoOperations: {
             listUserRepositories: jest.fn(async () => overrides.repos ?? []),
+            getRepository:
+                overrides.getRepository ?? jest.fn(async () => ({ isTemplate: true, defaultBranch: 'main' })),
         },
         repoLifecycle: {
             deleteRepository: overrides.deleteRepository ?? jest.fn(async () => undefined),
@@ -166,6 +184,7 @@ export function gh(
                     defaultBranch: 'main',
                     isPrivate: false,
                 })),
+            createEmptyRepository: overrides.createEmptyRepository ?? jest.fn(),
             waitForContent: overrides.waitForContent ?? jest.fn(async () => true),
         },
         fileOperations: {
@@ -183,4 +202,6 @@ export function resetCloudResourceMocks(): void {
     mockInspectToken.mockResolvedValue({ valid: true, expiresIn: 60, token: 'ims-token' });
     mockListOrgSites.mockResolvedValue([]);
     mockDeleteAllSiteContent.mockResolvedValue({ success: true, deletedCount: 0 });
+    mockResetRepository.mockResolvedValue({ success: true });
+    mockDaLiveAuth.getAccessToken.mockResolvedValue('da-live-token');
 }

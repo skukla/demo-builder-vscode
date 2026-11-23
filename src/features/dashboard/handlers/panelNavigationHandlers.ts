@@ -1,9 +1,10 @@
 /**
  * Dashboard Panel Navigation Handlers
  *
- * Handlers that swap the visible webview surface (Configure, projects list,
- * integrations, back to the dashboard) — each disposing the sibling panel inside
- * a webview transition before dispatching the target command. Extracted from
+ * Handlers that swap the visible webview surface (Configure, the projects list, plain
+ * or on one project's Delete window, integrations, back to the dashboard) — each
+ * disposing the sibling panel inside a webview transition before dispatching the
+ * target command. Extracted from
  * `dashboardHandlers.ts` for the 500-line handler cap; the parent re-exports
  * everything here so import sites are unchanged.
  */

@@ -9,7 +9,7 @@
  *
  * Concurrency is safe here for two reasons, both verified rather than assumed:
  *   - The three functions write DISJOINT fields of the report section
- *     (`authConfigured`/token fields · `currentContext` · `canListOrgs` +
+ *     (`authConfigured`/token fields, `currentContext`, `canListOrgs` +
  *     `organizationCount`), so no two race on the same slot. An earlier reading
  *     that `checkCurrentContext` also wrote `canListOrgs` was a grep-window
  *     artifact — there is exactly one write site, in `checkOrganizations`.

@@ -20,7 +20,6 @@ import {
     mockEnsureDaLiveAuth,
     mockEnsureProjectOrgContext,
     resetEdsProjectWithUI,
-    vscode,
     fakeGitHubAppService,
 } from './edsResetUI.testUtils';
 import type { Project, ProjectStatus } from '@/types/base';
@@ -153,9 +152,6 @@ function createMockContext(): HandlerContext {
 describe('edsResetUI - checkDaLiveAuth (refactored to use ensureDaLiveAuth)', () => {
     beforeEach(() => {
         jest.clearAllMocks();
-
-        // User confirms reset by default
-        (vscode.window.showWarningMessage as jest.Mock).mockResolvedValue('Reset Project');
         // Adobe auth + org gate now run for any Adobe-context project (the fixture
         // has an org), so default them to passing for the DA.live-focused cases.
         mockEnsureAdobeIOAuth.mockResolvedValue({ authenticated: true });
@@ -170,6 +166,7 @@ describe('edsResetUI - checkDaLiveAuth (refactored to use ensureDaLiveAuth)', ()
 
         // When: resetEdsProjectWithUI is called
         const result = await resetEdsProjectWithUI({
+            withinEdit: { report: jest.fn() },
             githubAppService: fakeGitHubAppService,
             meshDeps,
             project,
@@ -197,6 +194,7 @@ describe('edsResetUI - checkDaLiveAuth (refactored to use ensureDaLiveAuth)', ()
 
         // When
         const result = await resetEdsProjectWithUI({
+            withinEdit: { report: jest.fn() },
             githubAppService: fakeGitHubAppService,
             meshDeps,
             project,
@@ -224,6 +222,7 @@ describe('edsResetUI - checkDaLiveAuth (refactored to use ensureDaLiveAuth)', ()
 
         // When
         const result = await resetEdsProjectWithUI({
+            withinEdit: { report: jest.fn() },
             githubAppService: fakeGitHubAppService,
             meshDeps,
             project,
@@ -244,9 +243,6 @@ describe('edsResetUI - checkDaLiveAuth (refactored to use ensureDaLiveAuth)', ()
 describe('edsResetUI - checkAdobeAuth (refactored to use ensureAdobeIOAuth)', () => {
     beforeEach(() => {
         jest.clearAllMocks();
-
-        // User confirms reset by default
-        (vscode.window.showWarningMessage as jest.Mock).mockResolvedValue('Reset Project');
         // DA.live auth succeeds by default
         mockEnsureDaLiveAuth.mockResolvedValue({ authenticated: true });
         // Org gate reachable by default (mismatch cases override per-test)
@@ -261,6 +257,7 @@ describe('edsResetUI - checkAdobeAuth (refactored to use ensureAdobeIOAuth)', ()
 
         // When
         const result = await resetEdsProjectWithUI({
+            withinEdit: { report: jest.fn() },
             githubAppService: fakeGitHubAppService,
             meshDeps,
             project,
@@ -294,6 +291,7 @@ describe('edsResetUI - checkAdobeAuth (refactored to use ensureAdobeIOAuth)', ()
 
         // When
         const result = await resetEdsProjectWithUI({
+            withinEdit: { report: jest.fn() },
             githubAppService: fakeGitHubAppService,
             meshDeps,
             project,
@@ -316,6 +314,7 @@ describe('edsResetUI - checkAdobeAuth (refactored to use ensureAdobeIOAuth)', ()
 
         // When
         const result = await resetEdsProjectWithUI({
+            withinEdit: { report: jest.fn() },
             githubAppService: fakeGitHubAppService,
             meshDeps,
             project,
@@ -336,6 +335,7 @@ describe('edsResetUI - checkAdobeAuth (refactored to use ensureAdobeIOAuth)', ()
 
         // When
         const result = await resetEdsProjectWithUI({
+            withinEdit: { report: jest.fn() },
             githubAppService: fakeGitHubAppService,
             meshDeps,
             project,
@@ -363,6 +363,7 @@ describe('edsResetUI - checkAdobeAuth (refactored to use ensureAdobeIOAuth)', ()
 
         // When
         const result = await resetEdsProjectWithUI({
+            withinEdit: { report: jest.fn() },
             githubAppService: fakeGitHubAppService,
             meshDeps,
             project,
@@ -387,6 +388,7 @@ describe('edsResetUI - checkAdobeAuth (refactored to use ensureAdobeIOAuth)', ()
 
         // When
         const result = await resetEdsProjectWithUI({
+            withinEdit: { report: jest.fn() },
             githubAppService: fakeGitHubAppService,
             meshDeps,
             project,
@@ -407,6 +409,7 @@ describe('edsResetUI - checkAdobeAuth (refactored to use ensureAdobeIOAuth)', ()
 
         // When
         await resetEdsProjectWithUI({
+            withinEdit: { report: jest.fn() },
             githubAppService: fakeGitHubAppService,
             meshDeps,
             project,

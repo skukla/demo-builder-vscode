@@ -36,7 +36,7 @@ jest.mock('@/features/app-builder/services/setupChecks', () => ({
     runSetupCheck: (...a: unknown[]) => mockRunCheck(...a),
 }));
 jest.mock('@/features/dashboard/services/setupCheckReader', () => ({
-    erpNamesOf: () => ['Justrite ERP'],
+    erpNamesOf: () => ['Tailspin ERP'],
     setupCheckReader: async () => ({ read: jest.fn(), scope: { websiteCode: 'acme' } }),
 }));
 const mockPreview = jest.fn();
@@ -48,14 +48,14 @@ jest.mock('@/features/app-builder/services/storePreparation/storePreparationEngi
     undoPreparation: (...a: unknown[]) => mockUndo(...a),
 }));
 const mockConfigFix = { preview: jest.fn(), apply: jest.fn(), undo: jest.fn(), previewUndo: jest.fn() };
-jest.mock('@/features/app-builder/services/storePreparation/configFix', () => ({
+jest.mock('@/features/app-builder/services/storePreparation/configSetup', () => ({
     // The path rule is the real one: the handler validates with it, and a pack's settings share it.
-    SETTING_PATH: jest.requireActual('@/features/app-builder/services/storePreparation/configFix').SETTING_PATH,
-    configFix: jest.fn(() => mockConfigFix),
+    SETTING_PATH: jest.requireActual('@/features/app-builder/services/storePreparation/configSetup').SETTING_PATH,
+    configSetup: jest.fn(() => mockConfigFix),
 }));
 
 // Imported after the mocks, which jest hoists above it.
-import { configFix } from '@/features/app-builder/services/storePreparation/configFix';
+import { configSetup } from '@/features/app-builder/services/storePreparation/configSetup';
 import {
     handlePrepareCommerceStore,
     handleSetCommerceConfig,
@@ -105,7 +105,7 @@ describe('prepareCommerceStore', () => {
         await deps.runCheck('payment-on-account-enabled');
         expect(mockRunCheck).toHaveBeenCalledWith('payment-on-account-enabled', expect.any(Function), {
             websiteCode: 'acme',
-            erpNames: ['Justrite ERP'],
+            erpNames: ['Tailspin ERP'],
         });
     });
 
@@ -147,7 +147,7 @@ describe('prepareCommerceStore', () => {
         const [steps, state, deps, stepIds] = mockPreview.mock.calls[0];
         expect(steps.map((s: { id: string }) => s.id)).toContain('price-scope-website');
         expect(state).toMatchObject({ kind: 'integration' });
-        expect(deps).toMatchObject({ commerce: COMMERCE, websiteCode: 'acme', erpNames: ['Justrite ERP'] });
+        expect(deps).toMatchObject({ commerce: COMMERCE, websiteCode: 'acme', erpNames: ['Tailspin ERP'] });
         expect(stepIds).toEqual(['price-scope-website']);
         expect(mockApply).not.toHaveBeenCalled();
         expect(COMMERCE.send).not.toHaveBeenCalled();
@@ -281,13 +281,13 @@ describe('undoCommerceStorePreparation', () => {
     it('without confirm, leaves the hashes out of what it answers is recorded', async () => {
         const warehouse: StorePreparationRecord = {
             at: 't',
-            steps: { 'erp-warehouse': { kind: 'warehouse', createdSources: ['justrite_warehouse'], links: [], sourceFingerprints: { justrite_warehouse: 'a'.repeat(64) } } },
+            steps: { 'erp-warehouse': { kind: 'warehouse', createdSources: ['tailspin_warehouse'], links: [], sourceFingerprints: { tailspin_warehouse: 'a'.repeat(64) } } },
         };
         const { context } = setup({ storePreparation: warehouse });
         const result = await handleUndoCommerceStorePreparation(context, { id: 'erp-integration' });
         expect(result).toStrictEqual({
             success: true,
-            data: { confirmed: false, at: 't', steps: [{ id: 'erp-warehouse', recorded: { kind: 'warehouse', createdSources: ['justrite_warehouse'], links: [] } }] },
+            data: { confirmed: false, at: 't', steps: [{ id: 'erp-warehouse', recorded: { kind: 'warehouse', createdSources: ['tailspin_warehouse'], links: [] } }] },
         });
     });
 });
@@ -314,7 +314,7 @@ describe('setCommerceConfig', () => {
     it('without confirm, previews through the config fix built from the items', async () => {
         const { context, saved } = setup();
         const result = await handleSetCommerceConfig(context, { items: ITEMS });
-        expect(configFix).toHaveBeenCalledWith({ kind: 'config', items: ITEMS });
+        expect(configSetup).toHaveBeenCalledWith({ kind: 'config', items: ITEMS });
         expect(mockConfigFix.preview).toHaveBeenCalledWith({ commerce: COMMERCE, websiteCode: 'acme', erpNames: [] });
         expect(result).toStrictEqual({ success: true, data: { confirmed: false, changes: ['catalog/price/scope at the default scope: 0 → 1'] } });
         expect(saved()).toBeUndefined();
@@ -333,7 +333,7 @@ describe('setCommerceConfig', () => {
         const recorded = setup({}, { commerceConfigChange: { at: 't', previous: PREVIOUS } });
         const result = await handleSetCommerceConfig(recorded.context, { undo: true, confirm: true });
         // Built with no items: the record's `wrote`, not a guessed value, says what was written.
-        expect(configFix).toHaveBeenLastCalledWith({ kind: 'config', items: [] });
+        expect(configSetup).toHaveBeenLastCalledWith({ kind: 'config', items: [] });
         expect(mockConfigFix.undo).toHaveBeenCalledWith(expect.objectContaining({ commerce: COMMERCE }), { kind: 'config', previous: PREVIOUS });
         expect(recorded.saved()).not.toHaveProperty('commerceConfigChange');
         expect(result).toMatchObject({ success: true, data: { confirmed: true, undone: true } });

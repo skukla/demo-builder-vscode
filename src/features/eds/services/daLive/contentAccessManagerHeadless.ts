@@ -11,7 +11,7 @@
  * so it sees only what they published. Their block library (`.da/library/`) and
  * every unpublished page are invisible without READ on their DA.live site — and
  * DA.live has no in-app way to grant that short of editing a permissions sheet
- * by hand (owner, 2026-09-30: "Khalil doesn't know how to add it by hand").
+ * by hand (owner, 2026-09-30: "PersonB doesn't know how to add it by hand").
  *
  * ## The rows, and the trap
  *

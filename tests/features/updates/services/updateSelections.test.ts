@@ -21,7 +21,6 @@ import {
     mockCheckBlockLibraries,
     mockCheckForkStatus,
     mockCheckBoilerplate,
-    mockCheckInspectorSdk,
     mockCheckMcpUpdates,
     mockCheckTemplateUpdates,
     recordsIntegrationProbe,
@@ -37,6 +36,7 @@ import { createMockProject } from '../../../helpers/projectFake';
 
 const RELEASE = {
     version: '2.0.0',
+    tag: 'v2.0.0',
     downloadUrl: 'https://example.com/mesh.zip',
     releaseNotes: '',
     publishedAt: '',
@@ -187,7 +187,7 @@ describe('computeProjectUpdateSelections', () => {
     });
 
     describe('components', () => {
-        it('asks the update manager about this project only, and selects an outdated component with a download', async () => {
+        it('asks the update manager about this project only, and selects an outdated component with its release tag', async () => {
             const project = edsProject();
             mockCheckAllProjectsForUpdates.mockResolvedValue([componentResult({}, project)]);
 
@@ -203,7 +203,7 @@ describe('computeProjectUpdateSelections', () => {
                     project,
                     componentId: 'mesh',
                     latestVersion: '2.0.0',
-                    downloadUrl: 'https://example.com/mesh.zip',
+                    tag: 'v2.0.0',
                     currentVersion: '1.0.0',
                 },
             ]);
@@ -234,7 +234,7 @@ describe('computeProjectUpdateSelections', () => {
                 'the outdated project is a different one',
                 componentResult({}, edsProject({ path: '/p/other' })),
             ],
-            ['there is no release to download', componentResult({ releaseInfo: undefined })],
+            ['there is no release to move to', componentResult({ releaseInfo: undefined })],
         ])('selects nothing when %s, without warning', async (_label, result) => {
             mockCheckAllProjectsForUpdates.mockResolvedValue([result]);
             const handlerCtx = createMockHandlerContext();
@@ -291,18 +291,12 @@ describe('computeProjectUpdateSelections', () => {
     });
 
     describe('add-ons', () => {
-        it('selects each behind library with its latest commit, and the inspector SDK when it has an update', async () => {
+        it('selects each behind library with its latest commit', async () => {
             const project = edsProject();
             const lib = installedLibrary('Lib A');
             mockCheckBlockLibraries.mockResolvedValue([
                 { library: lib, latestCommit: 'bbb', commitsBehind: 1 },
             ]);
-            mockCheckInspectorSdk.mockResolvedValue({
-                hasUpdate: true,
-                currentCommit: 'old',
-                latestCommit: 'sdk-new',
-                commitsBehind: 2,
-            });
 
             const sel = await computeProjectUpdateSelections(
                 project,
@@ -311,28 +305,27 @@ describe('computeProjectUpdateSelections', () => {
             );
 
             expect(mockCheckBlockLibraries).toHaveBeenCalledWith(project);
-            expect(mockCheckInspectorSdk).toHaveBeenCalledWith(project);
             expect(sel.blockLibrary).toEqual([
                 { project, library: lib, latestCommit: 'bbb' },
             ]);
-            expect(sel.inspector).toEqual([{ project, latestCommit: 'sdk-new' }]);
         });
 
-        it('selects no inspector update when the SDK is current', async () => {
-            mockCheckInspectorSdk.mockResolvedValue({
-                hasUpdate: false,
-                currentCommit: 'x',
-                latestCommit: 'x',
-                commitsBehind: 0,
-            });
+        it('carries the release a library would move to', async () => {
+            const project = edsProject();
+            const lib = installedLibrary('Lib A');
+            mockCheckBlockLibraries.mockResolvedValue([
+                { library: lib, latestCommit: 'bbb', commitsBehind: 1, version: '0.2.0' },
+            ]);
 
             const sel = await computeProjectUpdateSelections(
-                edsProject(),
+                project,
                 createMockHandlerContext(),
                 recordsIntegrationProbe()
             );
 
-            expect(sel.inspector).toStrictEqual([]);
+            expect(sel.blockLibrary).toStrictEqual([
+                { project, library: lib, latestCommit: 'bbb', version: '0.2.0' },
+            ]);
         });
     });
 
@@ -378,7 +371,6 @@ describe('computeProjectUpdateSelections', () => {
             mockCheckBlockLibraries.mockResolvedValue([
                 { library: installedLibrary('Lib A'), latestCommit: 'b', commitsBehind: 1 },
             ]);
-            mockCheckInspectorSdk.mockResolvedValue({ hasUpdate: true, latestCommit: 'n' });
             mockCheckBoilerplate.mockResolvedValue([{ project, base: {}, tested: 'b'.repeat(40) }]);
         }
 
@@ -406,7 +398,7 @@ describe('computeProjectUpdateSelections', () => {
                 expect(sel[category]).toStrictEqual([]);
                 const others = (Object.keys(sel) as Array<keyof typeof sel>).filter(
                     // finish is read from the project, not checked: it has an entry only for a kept clash.
-                    (k) => k !== category && k !== 'finish' && !(category === 'blockLibrary' && k === 'inspector')
+                    (k) => k !== category && k !== 'finish'
                 );
                 for (const k of others) expect(sel[k]).toHaveLength(1);
                 expect(handlerCtx.logger.warn).toHaveBeenCalledTimes(1);
@@ -423,7 +415,7 @@ describe('computeProjectUpdateSelections', () => {
                 recordsIntegrationProbe()
             );
 
-            expect(countSelections(sel)).toBe(9);
+            expect(countSelections(sel)).toBe(8);
         });
     });
 });
@@ -457,11 +449,10 @@ describe('countSelections', () => {
             blockLibraryInstall: [
                 { project, library: { name: 'n', source: installedLibrary('n').source } },
             ],
-            inspector: [{ project, latestCommit: 'c' }],
             integration: [],
         };
 
-        expect(countSelections(sel)).toBe(10);
+        expect(countSelections(sel)).toBe(9);
     });
 });
 

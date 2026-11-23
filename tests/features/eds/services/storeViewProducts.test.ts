@@ -14,9 +14,9 @@ import { graphqlResponse } from './catalogPrewarmService.testUtils';
 
 const ENDPOINT = 'https://na1-sandbox.api.commerce.adobe.com/tenant/graphql';
 const SCOPE: StoreViewCodes = {
-    websiteCode: 'justrite',
-    storeCode: 'justrite_store',
-    storeViewCode: 'justrite_us',
+    websiteCode: 'tailspin',
+    storeCode: 'tailspin_store',
+    storeViewCode: 'tailspin_us',
 };
 const logger = createMockLogger();
 
@@ -91,11 +91,11 @@ describe('probeStoreViewProducts — the request', () => {
         expect(url).toBe(ENDPOINT);
         expect(init.method).toBe('POST');
         expect(init.headers).toStrictEqual({
-            Store: 'justrite_us',
+            Store: 'tailspin_us',
             'Magento-Customer-Group': '',
-            'Magento-Store-Code': 'justrite_store',
-            'Magento-Store-View-Code': 'justrite_us',
-            'Magento-Website-Code': 'justrite',
+            'Magento-Store-Code': 'tailspin_store',
+            'Magento-Store-View-Code': 'tailspin_us',
+            'Magento-Website-Code': 'tailspin',
             'Content-Type': 'application/json',
         });
     });

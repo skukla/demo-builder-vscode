@@ -165,7 +165,7 @@ ACO, or a shopper sees a price or a product the cart will not honour. Both are s
 ## Not tested
 
 An order on these prices. Checkout reached the right total, and the ERP integration on this instance refused the
-order, because a new company has no credit there (AB-84). Placing one would have meant changing credit in a live
+order, because a new company has no credit there (AB-93). Placing one would have meant changing credit in a live
 ERP. Also untested: Adobe's connector itself, because no backend here has it on, and whether the dashboard says
 "redeploy" after a mesh's files change. `get_project_status` still said deployed; PL-88 removes the gap.
 
@@ -200,4 +200,4 @@ confirmed by reading back, apart from a few empty guest carts.
 | Can Commerce list a shared catalog's products? | Yes, `V1/sharedCatalog/{id}/products` |
 | Do guest cart calls behave the same through the mesh as direct? | Yes: store, email, a bad SKU and a bad sign-in token all answer the same |
 | Does a refused order read the same? | **No.** `placeOrder.errors` matches, but the mesh replaces Commerce's top-level error with "Cannot return null for non-nullable field CustomerOrder.number". Adobe's order drop-in reads top-level errors first. What the shopper reads is not checked |
-| A finished order through the mesh | Not run: it leaves ERP records (AB-84). Approved for the build |
+| A finished order through the mesh | Not run: it leaves ERP records (AB-93). Approved for the build |

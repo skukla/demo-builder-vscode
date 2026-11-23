@@ -1,6 +1,6 @@
 /**
  * Labelled lines that scan as one small table: a muted label column and a value column
- * ("Where / Enter / Then / Why" in the setup guide).
+ * ("Where / Set / Then / Why" in the setup guide).
  *
  * Extracted 2026-10-23 (EDS-64) from the setup guide's `.setup-guide-facts` when the
  * storefront report built the same list a second time with its own spacing and label

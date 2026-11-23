@@ -5,7 +5,8 @@
  * A project file or a copy names a pack by reference. By the time someone creates a project
  * from it, the pack may have gone (its owner deleted it) or never have been readable to them
  * (a library pack only its owner can read). Project creation does not stop: it carries on with
- * the pack the recorded one was made from, or that pack's newest version, or no sample data,
+ * the same datapack's newest save (Phase 2: only two saves are kept), else the pack the recorded
+ * one was made from, or that pack's newest version, or no sample data,
  * and says which. The Datapacks step shows the same sentence before creation, from the same
  * answer.
  *
@@ -22,10 +23,10 @@ import type { DataInstallerClient } from './dataInstallerClient';
 import { DataInstallerApiError } from './dataInstallerErrors';
 import { groupDatapacks, pickDefaultVersion } from './datapackCatalog';
 import {
-    type DatapackAvailability,
     type DatapackId,
     type DatapackLocation,
     type DatapackStoreName,
+    type DatapackWhereabouts,
     type ProjectDatapack,
     type RecordedPackCheck,
     storeOf,
@@ -56,7 +57,7 @@ export type StoreAccess =
 export function packReadsVia(open: (store: DatapackStoreName) => Promise<StoreAccess>): PackReads {
     const clientOf = async (store: DatapackStoreName) => {
         const access = await open(store);
-        if (!access.ok) throw new Error(`The ${store === 'library' ? 'datapack library' : 'Data Installer'} is not reachable.`);
+        if (!access.ok) throw new Error((store === 'library' ? "Demo Builder's datapacks aren't available right now." : 'The Data Installer is not reachable.'));
         return access.client;
     };
     return {
@@ -92,40 +93,53 @@ async function newest(reads: PackReads, origin: DatapackLocation): Promise<Datap
  * library versions too (rule 3, no migration), and the answer names the store it was found in.
  */
 async function locate(reads: PackReads, recorded: ProjectDatapack): Promise<{ pack: ProjectDatapack; found: DatapackSummary } | null> {
+    if (storeOf(recorded) !== 'library') {
+        // The datapack store's copy wins, and answers when the Data Installer will not.
+        const inLibrary = await find(reads, { ...recorded, store: 'library' }).catch(() => null);
+        if (inLibrary) return { pack: { ...recorded, store: 'library' }, found: inLibrary };
+    }
     const found = await find(reads, recorded);
-    if (found) return { pack: recorded, found };
-    if (recorded.store !== undefined) return null;
-    const inLibrary = await find(reads, { ...recorded, store: 'library' });
-    return inLibrary ? { pack: { ...recorded, store: 'library' }, found: inLibrary } : null;
+    return found ? { pack: recorded, found } : null;
 }
 
+/** The same datapack's newest save in the library, readable to the caller, or none. */
+async function newestSave(reads: PackReads, recorded: ProjectDatapack): Promise<RecordedPackCheck | undefined> {
+    const inLibrary: DatapackLocation = { name: recorded.name, version: recorded.version, store: 'library' };
+    const latest = await newest(reads, inLibrary).catch(() => undefined);
+    if (!latest) return undefined;
+    return { verdict: 'readable', pack: located(latest, 'library'), displayName: latest.displayName, mine: latest.mine === true, shared: latest.shared };
+}
+
+/**
+ * What the SC reads when the recorded pack is not available to them (walk F237, owner: simple,
+ * readable, like an application): the pack never by its code, since the project records no
+ * display name for it, and never a version (overview Phase 7).
+ */
+const UNAVAILABLE = "This project's datapack isn't available to you";
+const WITHOUT_DATA = 'The project will be created without sample data.';
+
 /** The pack it was made from, its newest version, or nothing: what a fallback can install. */
-async function fallbackFor(reads: PackReads, recorded: ProjectDatapack, unreadable: string): Promise<RecordedPackCheck> {
+async function fallbackFor(reads: PackReads, recorded: ProjectDatapack): Promise<RecordedPackCheck> {
     const origin = recorded.origin;
-    if (!origin) return { verdict: 'none', note: `${unreadable} This project will be created without sample data.` };
+    if (!origin) return { verdict: 'none', note: `${UNAVAILABLE}. ${WITHOUT_DATA}` };
     const same = await find(reads, origin);
     if (same) {
         return {
             verdict: 'fallback',
             pack: located(same, storeOf(origin)),
             displayName: same.displayName,
-            note: `${unreadable} You can continue with ${same.displayName}, the pack it was made from; their changes won't be included.`,
+            note: `${UNAVAILABLE}. You can use ${same.displayName}, the datapack it was made from, without the changes made to it.`,
         };
     }
     const latest = await newest(reads, origin);
     if (!latest) {
-        return {
-            verdict: 'none',
-            note: `${unreadable} The pack it was made from, ${origin.name}, has gone too, so this project will be created without sample data.`,
-        };
+        return { verdict: 'none', note: `${UNAVAILABLE}, and neither is the one it was made from. ${WITHOUT_DATA}` };
     }
     return {
         verdict: 'fallback',
         pack: located(latest, storeOf(origin)),
         displayName: latest.displayName,
-        note:
-            `${unreadable} ${latest.displayName} version ${origin.version} has gone too, so its newest version, ` +
-            `${latest.id.version}, is used; their changes won't be included.`,
+        note: `${UNAVAILABLE}. You can use the newest ${latest.displayName}, the datapack it was made from, without the changes made to it.`,
     };
 }
 
@@ -147,8 +161,11 @@ export async function checkRecordedPack(reads: PackReads, recorded: ProjectDatap
                 shared: located.found.shared,
             };
         }
-        const unreadable = `The ${recorded.name} pack this project uses can't be read: its owner has deleted it or not shared it.`;
-        return await fallbackFor(reads, recorded, unreadable);
+        // A datapack is always its latest save (D3) and only two are kept (Phase 2), so a save that
+        // has gone is the same datapack's newest save: the changes are in it.
+        const latest = await newestSave(reads, recorded);
+        if (latest) return latest;
+        return await fallbackFor(reads, recorded);
     } catch {
         return { verdict: 'unknown' };
     }
@@ -159,9 +176,10 @@ export async function checkRecordedPack(reads: PackReads, recorded: ProjectDatap
  * Ask both stores for a pack by name AND version: the store it records first, then the other,
  * since a pack saved before the store was recorded may be a library version.
  *
- * @returns where it is, or undefined when a store could not be asked and none had it
+ * @returns where it is, with the store's name for it when found, or undefined when a store could
+ *   not be asked and none had it
  */
-export async function availabilityOf(reads: PackReads, pack: DatapackLocation): Promise<DatapackAvailability | undefined> {
+export async function availabilityOf(reads: PackReads, pack: DatapackLocation): Promise<DatapackWhereabouts | undefined> {
     const first = storeOf(pack);
     const stores: DatapackStoreName[] = [first, first === 'library' ? 'installer' : 'library'];
     let unasked = false;
@@ -169,11 +187,12 @@ export async function availabilityOf(reads: PackReads, pack: DatapackLocation): 
         try {
             const found = await find(reads, { name: pack.name, version: pack.version, store });
             if (!found) continue;
-            if (store === 'installer') return 'installer';
-            return found.shared ? 'library-shared' : 'library-yours-only';
+            const { displayName } = found;
+            if (store === 'installer') return { where: 'installer', displayName };
+            return { where: found.shared ? 'library-shared' : 'library-yours-only', displayName };
         } catch {
             unasked = true;
         }
     }
-    return unasked ? undefined : 'missing';
+    return unasked ? undefined : { where: 'missing' };
 }

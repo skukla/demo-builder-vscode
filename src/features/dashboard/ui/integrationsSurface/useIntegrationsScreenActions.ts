@@ -30,8 +30,9 @@ export const MESH_OPERATION: Omit<ComponentOperation, 'run' | 'resume'> = {
     name: 'API Mesh',
     message: 'deployMesh',
     title: 'Deploying API Mesh',
-    failureTitle: "Couldn't deploy API Mesh",
-    successTitle: 'API Mesh deployed',
+    thing: 'API Mesh',
+    failureTitle: "Couldn't Deploy API Mesh",
+    successTitle: 'API Mesh Deployed',
 };
 
 /** The project and workspace the destination journey settled on. */
@@ -84,8 +85,13 @@ export function useIntegrationsScreenActions(
         startOperation(MESH_OPERATION);
     }, [startOperation]);
 
+    // The one Sign In (`authenticate`, every screen's), then the screen's own status
+    // re-read, also when the sign-in turned out not to be needed.
     const handleReAuthenticate = useCallback((): void => {
-        webviewClient.postMessage('reAuthenticate');
+        void webviewClient
+            .request('authenticate')
+            .catch(() => undefined)
+            .then(() => webviewClient.postMessage('requestStatus'));
     }, []);
 
     const handleRefresh = useCallback((): void => {
@@ -106,17 +112,18 @@ export function useIntegrationsScreenActions(
                 chosen.workspace.title ?? chosen.workspace.name,
             ]
                 .filter(Boolean)
-                .join(' · ');
+                .join(', ');
             startOperation({
                 id: DESTINATION_OPERATION_ID,
                 name: target,
                 message: 'setProjectDestination',
                 payload: { project: chosen.project, workspace: chosen.workspace },
                 // The target on its own line: "project · workspace" in the title wrapped.
-                title: 'Changing destination',
+                title: 'Changing Destination',
+                thing: 'Destination',
                 subject: target,
-                failureTitle: "Couldn't change the destination",
-                successTitle: 'Destination changed',
+                failureTitle: "Couldn't Change the Destination",
+                successTitle: 'Destination Changed',
             });
             closeDestination();
         },

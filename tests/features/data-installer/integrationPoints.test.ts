@@ -37,7 +37,10 @@ function read(relative: string): string {
     return fs.readFileSync(path.join(ROOT, relative), 'utf-8');
 }
 
+/** A project's Datapacks: opened from its dashboard, so in no palette. */
 const COMMAND_ID = 'demoBuilder.showDataInstaller';
+/** The Datapack Library: the palette's and the sidebar's (owner, 2026-11-07). */
+const LIBRARY_COMMAND_ID = 'demoBuilder.showDatapackLibrary';
 
 describe('Data Installer integration points', () => {
     it('builds a webview bundle', () => {
@@ -46,11 +49,24 @@ describe('Data Installer integration points', () => {
         expect(config).toMatch(/dataInstaller:\s*'src\/features\/data-installer\/ui\/index\.tsx'/);
     });
 
-    it('contributes the palette command', () => {
+    it('contributes the library to the palette, and not a project\'s Datapacks', () => {
         const pkg = JSON.parse(read('package.json'));
-        const ids = pkg.contributes.commands.map((c: { command: string }) => c.command);
+        const commands = pkg.contributes.commands as { command: string; title: string }[];
 
-        expect(ids).toContain(COMMAND_ID);
+        expect(commands.find((c) => c.command === LIBRARY_COMMAND_ID)?.title).toBe('Open Datapack Library');
+        expect(commands.map((c) => c.command)).not.toContain(COMMAND_ID);
+    });
+
+    // Step 06 C5 (P6-Q5): the header's two Clear windows, reachable from the palette.
+    it.each([
+        ['demoBuilder.clearDemoData', 'Clear Demo Data'],
+        ['demoBuilder.clearCommerceInstance', 'Clear Commerce Instance'],
+    ])('contributes %s to the palette as "%s", and registers it', (id, title) => {
+        const pkg = JSON.parse(read('package.json'));
+        const commands = pkg.contributes.commands as { command: string; title: string; category?: string }[];
+
+        expect(commands.find((c) => c.command === id)).toEqual({ command: id, title, category: 'Demo Builder' });
+        expect(read('src/commands/commandManager.ts')).toContain(`'${id}'`);
     });
 
     it('registers that command, so the id resolves to something', () => {
@@ -58,6 +74,8 @@ describe('Data Installer integration points', () => {
 
         expect(manager).toContain('ShowDataInstallerCommand');
         expect(manager).toContain(COMMAND_ID);
+        expect(manager).toContain("'library'");
+        expect(manager).toContain(LIBRARY_COMMAND_ID);
     });
 
     /**

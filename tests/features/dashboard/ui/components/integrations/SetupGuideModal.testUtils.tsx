@@ -26,9 +26,16 @@ jest.mock('@adobe/react-spectrum', () => ({
 }));
 
 jest.mock('@/core/ui/components/ui/Modal', () => ({
-    Modal: ({ title, actionButtons = [], onClose, closeLabel, children }: any) => (
+    Modal: ({ title, actionButtons = [], startButtons = [], onClose, closeLabel, children }: any) => (
         <div role="dialog" aria-label={title}>
             {children}
+            <div data-testid="modal-footer-start">
+                {startButtons.map((b: any) => (
+                    <button key={b.label} onClick={b.onPress} disabled={b.isDisabled} data-pending={b.isPending ? 'true' : undefined}>
+                        {b.label}
+                    </button>
+                ))}
+            </div>
             <button onClick={onClose}>{closeLabel ?? 'Close'}</button>
             {actionButtons.map((b: any) => (
                 <button key={b.label} onClick={b.onPress} disabled={b.isDisabled} data-pending={b.isPending ? 'true' : undefined}>
@@ -41,6 +48,6 @@ jest.mock('@/core/ui/components/ui/Modal', () => ({
 
 // Below the mocks on purpose: jest.mock hoists above this file's imports.
 export { SetupGuideModal } from '@/features/dashboard/ui/components/integrations/SetupGuideModal';
-export { FIX_COPY } from '@/features/dashboard/ui/components/integrations/setupGuideFooter';
+export { APPLY_COPY } from '@/features/dashboard/ui/components/integrations/setupGuideFooter';
 export { DONE_COPY, STATUS_COPY } from '@/core/ui/components/ui/SetupStepHeader';
 export { setupNextStep, useSetupGuide } from '@/features/dashboard/ui/components/integrations/useSetupGuide';

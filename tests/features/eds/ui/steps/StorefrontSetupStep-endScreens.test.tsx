@@ -48,7 +48,7 @@ describe('StorefrontSetupStep — failed screen', () => {
         pushError({ message: 'Pipeline stopped', error: 'HTTP 502' });
 
         expect(screen.getByText('Storefront Setup Failed')).toBeInTheDocument();
-        expect(iconClass(container)).toBe('text-red-600');
+        expect(iconClass(container)).toBe('text-negative');
     });
 
     it('shows the error detail instead of the message, centred', () => {
@@ -104,7 +104,7 @@ describe('StorefrontSetupStep — published screen', () => {
         pushComplete({ message: 'Storefront setup completed successfully!' });
 
         expect(screen.getByText('Storefront Published')).toBeInTheDocument();
-        expect(iconClass(container)).toBe('text-green-600');
+        expect(iconClass(container)).toBe('text-positive');
         expect(screen.getByText(HINT)).toBeInTheDocument();
         expect(screen.queryAllByRole('button')).toHaveLength(0);
     });
@@ -114,7 +114,7 @@ describe('StorefrontSetupStep — published screen', () => {
         pushComplete({ message: 'done', warnings: [] });
 
         expect(screen.getByText('Storefront Published')).toBeInTheDocument();
-        expect(iconClass(container)).toBe('text-green-600');
+        expect(iconClass(container)).toBe('text-positive');
     });
 
     it('does not wear the green check when product pages will not work', () => {
@@ -124,8 +124,8 @@ describe('StorefrontSetupStep — published screen', () => {
             warnings: ['Product pages will not render', 'Search is not configured'],
         });
 
-        expect(screen.getByText('Storefront Published, with warnings')).toBeInTheDocument();
-        expect(iconClass(container)).toBe('text-orange-600');
+        expect(screen.getByText('Storefront Published, with Warnings')).toBeInTheDocument();
+        expect(iconClass(container)).toBe('text-notice');
     });
 
     it('lists each warning, in order, above the Continue hint', () => {

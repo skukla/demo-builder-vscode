@@ -16,7 +16,7 @@ jest.mock('@/core/di/serviceLocator', () => ({
         })),
     },
 }));
-jest.mock('@/core/state/projectStateSync');
+jest.mock('@/core/state/frontendEnvDrift');
 // The warm-ups have their own suites; here we only check that opening the dashboard
 // starts them.
 jest.mock('@/features/dashboard/handlers/warmProjectReads', () => ({
@@ -47,7 +47,7 @@ jest.mock(
 );
 
 import './dashboardValidatorMocks';
-import { handleReAuthenticate, handleRequestStatus } from '@/features/dashboard/handlers/dashboardHandlers';
+import { handleRequestStatus } from '@/features/dashboard/handlers/dashboardHandlers';
 import { postStatusUpdate } from '@/features/dashboard/handlers/statusHandlers';
 import { adobeSignInRestored } from '@/features/dashboard/services/adobeSignInPrompt';
 import { warmProjectReads } from '@/features/dashboard/handlers/warmProjectReads';
@@ -57,12 +57,27 @@ describe('dashboardHandlers - handleRequestStatus', () => {
     beforeEach(() => {
         jest.clearAllMocks();
 
-        const { detectFrontendChanges } = require('@/core/state/projectStateSync');
+        const { detectFrontendChanges } = require('@/core/state/frontendEnvDrift');
         detectFrontendChanges.mockReturnValue(false);
     });
 
+    // Every status push carries the steps a run left: the dashboard replaces its status with
+    // each one, so the "N steps remaining" line lives on all of them (PL-101).
+    it('carries the steps a run left to finish', async () => {
+        const { mockContext } = setupMocks({
+            finishSetup: { 'republish-code': { files: ['scripts/a.js'] } },
+        });
+
+        const result = await handleRequestStatus(mockContext);
+
+        expect(result).toMatchObject({
+            success: true,
+            data: { finishSetup: { remaining: 1, republishDue: true } },
+        });
+    });
+
     it('should return persisted mesh status from meshStatusSummary (Pattern B)', async () => {
-        const { detectFrontendChanges } = require('@/core/state/projectStateSync');
+        const { detectFrontendChanges } = require('@/core/state/frontendEnvDrift');
         detectFrontendChanges.mockReturnValue(false);
 
         // Project has meshStatusSummary='deployed' (set by card grid)
@@ -91,7 +106,7 @@ describe('dashboardHandlers - handleRequestStatus', () => {
     });
 
     it('should return "config-changed" when meshStatusSummary is stale', async () => {
-        const { detectFrontendChanges } = require('@/core/state/projectStateSync');
+        const { detectFrontendChanges } = require('@/core/state/frontendEnvDrift');
         detectFrontendChanges.mockReturnValue(false);
 
         const { mockContext } = setupMocks({ meshStatusSummary: 'stale' });
@@ -114,7 +129,7 @@ describe('dashboardHandlers - handleRequestStatus', () => {
     // so setting it to undefined asserted nothing — keyed-only is now the only
     // shape there is. An `as any` on the override was hiding it.
     it('should report deployed status + endpoint for a keyed-only project (Steps 07+09)', async () => {
-        const { detectFrontendChanges } = require('@/core/state/projectStateSync');
+        const { detectFrontendChanges } = require('@/core/state/frontendEnvDrift');
         detectFrontendChanges.mockReturnValue(false);
 
         const { mockContext } = setupMocks({
@@ -154,7 +169,7 @@ describe('dashboardHandlers - handleRequestStatus', () => {
             },
         });
 
-        const { detectFrontendChanges } = require('@/core/state/projectStateSync');
+        const { detectFrontendChanges } = require('@/core/state/frontendEnvDrift');
         detectFrontendChanges.mockReturnValue(false);
 
         const result = await handleRequestStatus(mockContext);
@@ -196,7 +211,7 @@ describe('dashboardHandlers - handleRequestStatus', () => {
     });
 
     it('should return frontendConfigChanged=true when frontend config differs', async () => {
-        const { detectFrontendChanges } = require('@/core/state/projectStateSync');
+        const { detectFrontendChanges } = require('@/core/state/frontendEnvDrift');
         detectFrontendChanges.mockReturnValue(true);
 
         const { mockContext } = setupMocks({
@@ -223,7 +238,7 @@ describe('dashboardHandlers - handleRequestStatus', () => {
     // a no (this mock's 'Cancel') opens no sign-in.
     it('reports needs-auth and asks to sign in, opening nothing on a no', async () => {
         adobeSignInRestored();
-        const { detectFrontendChanges } = require('@/core/state/projectStateSync');
+        const { detectFrontendChanges } = require('@/core/state/frontendEnvDrift');
         detectFrontendChanges.mockReturnValue(false);
 
         const { mockContext } = setupMocks();
@@ -233,7 +248,7 @@ describe('dashboardHandlers - handleRequestStatus', () => {
         const signIn = jest.fn().mockResolvedValue(false);
         ServiceLocator.getAuthenticationService.mockReturnValue({
             isAuthenticated: jest.fn().mockResolvedValue(false),
-            loginAndRestoreProjectContext: signIn,
+            login: signIn,
         });
 
         const result = await handleRequestStatus(mockContext);
@@ -259,7 +274,7 @@ describe('dashboardHandlers - handleRequestStatus', () => {
     it('should NOT carry orgMismatch in the status payload (delivered separately)', async () => {
         // The org check is decoupled — it's posted via the on-open orchestrator's
         // `checkResult` message, never bundled into the status payload (kept fast).
-        const { detectFrontendChanges } = require('@/core/state/projectStateSync');
+        const { detectFrontendChanges } = require('@/core/state/frontendEnvDrift');
         detectFrontendChanges.mockReturnValue(false);
 
         const { mockContext } = setupMocks({ meshStatusSummary: 'deployed' });
@@ -280,7 +295,7 @@ describe('dashboardHandlers - handleRequestStatus', () => {
 
     // The counterpart: signed in, so the same silent read gives the real status.
     it('reports the deployed mesh when the session is still good', async () => {
-        const { detectFrontendChanges } = require('@/core/state/projectStateSync');
+        const { detectFrontendChanges } = require('@/core/state/frontendEnvDrift');
         detectFrontendChanges.mockReturnValue(false);
 
         const { mockContext } = setupMocks({ meshStatusSummary: 'deployed' });
@@ -289,7 +304,7 @@ describe('dashboardHandlers - handleRequestStatus', () => {
         const signIn = jest.fn().mockResolvedValue(true);
         ServiceLocator.getAuthenticationService.mockReturnValue({
             isAuthenticated: jest.fn().mockResolvedValue(true),
-            loginAndRestoreProjectContext: signIn,
+            login: signIn,
         });
 
         const result = await handleRequestStatus(mockContext);
@@ -307,7 +322,7 @@ describe('dashboardHandlers - handleRequestStatus', () => {
     it('starts the slow reads when the dashboard opens', async () => {
         // Developer Console loads its API list the moment it opens, so the list is
         // ready before anyone looks; a cold load takes Adobe about a minute. The
-        // Commerce sign-in took two on Justrite (2026-10-18).
+        // Commerce sign-in took two on Tailspin (2026-10-18).
         const { mockContext } = setupMocks({ meshStatusSummary: 'deployed' });
 
         await handleRequestStatus(mockContext);
@@ -334,27 +349,38 @@ describe('dashboardHandlers - handleRequestStatus', () => {
 });
 
 /**
- * The dashboard's "Sign in" buttons appear only after Adobe has refused the sign-in, so they
- * always ask for a FRESH one (`aio auth login -f`). A colleague on beta.149, 2026-10-27:
- * Adobe answered 401 ErrInvalidOauthToken to a token whose saved expiry was hours away, so
- * the normal login reused it in five seconds with no browser, reported success, and the
- * dashboard stayed on "Not Checked" however often she pressed "Sign in to check".
+ * A yes to the expired-sign-in prompt runs the one Sign In (`signInToAdobe`), not a door
+ * of the dashboard's own (2026-11-18: `handleReAuthenticate` and its `reAuthenticate`
+ * message were deleted). It does not force: a sign-in Adobe refused while it still had
+ * time left (a colleague on beta.149, 2026-10-27) is rerun forced inside the shared
+ * sign-in (`RejectedTokens`, walk F247), and forcing here also signed the SC out of DA.live.
  */
-describe('handleReAuthenticate', () => {
-    it('asks for a fresh sign-in, never the saved one', async () => {
+describe('the expired-sign-in prompt', () => {
+    it('signs in with the one Sign In, un-forced, on a yes', async () => {
+        adobeSignInRestored();
+        const { detectFrontendChanges } = require('@/core/state/frontendEnvDrift');
+        detectFrontendChanges.mockReturnValue(false);
         const { mockContext } = setupMocks();
         const { ServiceLocator } = require('@/core/di/serviceLocator');
-        const signIn = jest.fn().mockResolvedValue(false);
-        ServiceLocator.getAuthenticationService.mockReturnValue({ loginAndRestoreProjectContext: signIn });
-        // The sign-in notice runs inside a cancellable progress window.
+        const login = jest.fn().mockResolvedValue(false);
+        const loginAndRestoreProjectContext = jest.fn().mockResolvedValue(false);
+        ServiceLocator.getAuthenticationService.mockReturnValue({
+            isAuthenticated: jest.fn().mockResolvedValue(false),
+            login,
+            loginAndRestoreProjectContext,
+        });
         const vscode = require('vscode');
+        vscode.window.showWarningMessage.mockResolvedValueOnce('Sign In');
+        // The sign-in notice runs inside a cancellable progress window.
         vscode.window.withProgress.mockImplementation((_options: unknown, task: (p: unknown, t: unknown) => unknown) =>
             task({ report: jest.fn() }, { onCancellationRequested: jest.fn() }),
         );
 
-        await handleReAuthenticate(mockContext);
+        await handleRequestStatus(mockContext);
+        for (let i = 0; i < 10; i++) await new Promise((r) => setImmediate(r));
 
-        expect(signIn).toHaveBeenCalledTimes(1);
-        expect(signIn.mock.calls[0][1]).toBe(true);
+        expect(login).toHaveBeenCalledTimes(1);
+        expect(login).toHaveBeenCalledWith();
+        expect(loginAndRestoreProjectContext).not.toHaveBeenCalled();
     });
 });

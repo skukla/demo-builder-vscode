@@ -144,3 +144,7 @@ stryker.redundancy.config.json
 # vscode-extension-tester downloads (PL-46 UI tier)
 test-resources/
 .test-extensions/
+
+# Battery runs record what agents saw (emails, internal URLs), so new runs stay local.
+# The runs committed before 2026-11-21 stay tracked, redacted.
+.rptc/plans/evaluation-mode/battery/results/

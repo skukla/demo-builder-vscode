@@ -13,7 +13,7 @@
  * in the same PUT (`pinLoneErpRule`). A lone ERP owns by the integration's shared rule (unset:
  * everything); once there are several, an entry with no rule of its own is read as
  * `erp_owner=<its id>` (commerce-erp-integration `router/ownership.js` `ownershipOf`). Without
- * the pin, adding a second ERP silently moved the first to a rule nobody set: on Justrite
+ * the pin, adding a second ERP silently moved the first to a rule nobody set: on Tailspin
  * (2026-10-22) it then owned 0 of 321 products and the add's pass marked them discontinued.
  * Every path that grows the list (the card's add, the agent's add_erp, a deploy's relist) sends
  * it here, so the pin holds for all of them.

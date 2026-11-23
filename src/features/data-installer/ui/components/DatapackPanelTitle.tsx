@@ -24,7 +24,7 @@ export function DatapackPanelTitle({ title, detail, onRename }: DatapackPanelTit
     return (
         <InlineRenameField
             name={title}
-            label="New datapack name"
+            label="New Datapack Name"
             onRename={(displayName) => onRename(detail.id, displayName)}
         />
     );

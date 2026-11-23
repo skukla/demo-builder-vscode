@@ -1,7 +1,8 @@
 /**
- * Every export door asks about a private pack (owner, 2026-10-30): the projects list's Export and
- * the dashboard's bundle ask a person first; `export_project_settings` and an agent's
- * `export_demo_bundle` answer the note instead. The question itself has its own suite
+ * Every export door says so about a private pack (owner, 2026-10-30): the projects list's Export
+ * asks a person first; the dashboard's Share Demo file step shows the notice in its window and the
+ * save asks nothing (walk F230); `export_project_settings` and an agent's `export_demo_bundle`
+ * answer the note instead. The question itself has its own suite
  * (`privatePackPrompt.test.ts`); here it is mocked and WHERE it is asked is asserted.
  */
 
@@ -60,10 +61,12 @@ it('export_project_settings answers the note, asking no one', async () => {
     expect(mockedOffer).not.toHaveBeenCalled();
 });
 
-it("the dashboard's export asks a person once, and carries no note", async () => {
+// Walk F230: Share Demo's file step shows the datapack notice with Share Datapack before Save File
+// is pressed, so the save asks nothing more (the pop-up never stopped a save anyway).
+it("the dashboard's Share Demo file asks no one and carries no note: its window already said it", async () => {
     const res = await handleExportDemoBundle(contextWith(true), { setup: true, storefront: false });
 
-    expect(mockedOffer).toHaveBeenCalledTimes(1);
+    expect(mockedOffer).not.toHaveBeenCalled();
     expect(mockedNote).not.toHaveBeenCalled();
     expect(res.success).toBe(true);
 });

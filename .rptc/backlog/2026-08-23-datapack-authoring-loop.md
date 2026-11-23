@@ -4,8 +4,10 @@ kind: feature
 area: data-installer
 needs: []
 value: med
-status: active
+status: gated
 layer: F
+plan: datapack-store
+waiting-on: the owner's call: run the live round trip, or close it as done by the datapack store
 ---
 # Datapack authoring loop — export, modify, publish-your-own via project skills
 
@@ -182,7 +184,7 @@ Step 2 fails today (gap 1). Steps 1 and 3 work now.
 
 ## Shipped so far
 
-- 2026-10-01  2026-10-01, from AB-53: the owner separates SHARING finished work (this item) from an agent working Commerce data (AI-10). The rebuilt Justrite setup — category tree, the 13 categories granted to shared catalogs 1/15/16, companies Northgate and Harbor with contract prices — is a real first candidate pack once export works. Caveats measured elsewhere: packs bring their own root and do not merge into an existing tree, and whether an import grants new categories to the PUBLIC shared catalog is unverified (if not, guests see an empty store — the EDS-24 B2B finding).
+- 2026-10-01  2026-10-01, from AB-53: the owner separates SHARING finished work (this item) from an agent working Commerce data (AI-10). The rebuilt Tailspin setup — category tree, the 13 categories granted to shared catalogs 1/15/16, companies Northgate and Harbor with contract prices — is a real first candidate pack once export works. Caveats measured elsewhere: packs bring their own root and do not merge into an existing tree, and whether an import grants new categories to the PUBLIC shared catalog is unverified (if not, guests see an empty store — the EDS-24 B2B finding).
 - 2026-10-01  2026-10-01: PLAN recorded at .rptc/plans/datapack-store/overview.md (owner: 'Record the plan'). Preferred shape, pending its step 1: a datapack store as a new package in accs-discovery-service on the App Builder Database, behind the service's existing IMS + email-domain guard; the library = packs marked shared, SCs' own packs private until promoted (one registry); export runs in our service over REST with the credential get-commerce-credentials already dispenses; install stays the Data Installer's via its working write APIs. Step 1 measures whether a long export can share the namespace with render-pdp before anything is built. Supersedes the three shapes in Constraints above.
 - 2026-10-01  2026-10-01: step 01 of the datapack-store plan MEASURED. In a scratch workspace of the discovery service's project, 5/100/150/300 activations held open beside render-pdp moved its latency not at all (p50 66-112 ms, p95 under 165 ms, every status 200, no 429 anywhere). Decision: the store is a package in the SAME Stage workspace; one non-blocking activation per store job as the design rule. The documented 100-per-namespace cap did not fire at 300 I/O-bound activations (intra-container concurrency, likely). DatapackSpike workspace kept as the development namespace until the build ships.
 - 2026-10-01  2026-10-01: datapack-store step 02 code done on accs-discovery-service feature/datapack-store (11acaae, pushed): database declared, four actions (packs, save-pack, save-pack-items, delete-pack), shared caller guard, 51 tests. Scratch workspace DatapackSpike has its S2S credential subscribed to App Builder Data Services (the one API the database needs). Deploy stopped at the permission classifier on 'aio app use --merge' + 'aio app db provision'; the owner runs the three commands in step-02.md or grants the permission; step02-roundtrip.sh then proves the round trip.
@@ -203,3 +205,5 @@ Step 2 fails today (gap 1). Steps 1 and 3 work now.
 - 2026-10-30  docs(data-installer): saving a store into a pack, and step 14's G3 items as built (`dd352da2c`)
 - 2026-10-30  feat(data-installer): pick what goes into a save from the store, on the catalog screen (`cc69149b2`)
 - 2026-10-30  feat(data-installer): save any store into the demo's own pack, with the items picked (`3c1630c54`)
+- 2026-11-21  Reconciled 2026-11-21: the authoring loop exists and is taught by the datapacks skill (5f9f3ed00, 3c1630c54, in v1.0.0-beta.153). Left: the owner says whether to run the live round trip (change shared catalogs, save to a private pack, reinstall on a fresh scope) or close the item as done by the datapack store.
+- 2026-11-22  Zip files for datapacks were planned separately in .rptc/complete/datapack-zip/ (all 7 steps done) and shipped in 08ec30412.

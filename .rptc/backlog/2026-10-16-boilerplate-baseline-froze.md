@@ -4,7 +4,7 @@ kind: fix
 area: eds
 needs: []
 value: high
-status: built
+status: shipped
 ---
 
 # Storefronts stopped receiving Adobe's boilerplate updates after 2026-08-28
@@ -54,6 +54,7 @@ workflow only runs inside `adobe-commerce/boilerplate-b2b-template` and skipped 
 - 2026-10-16  docs(adr-006): the end-to-end test of automatic patch upkeep, and what it fixed (`fda7e7457`)
 - 2026-10-16  docs(adr-006): the patches repo now lets its workflow open PRs (`9d346d164`)
 - 2026-10-19  Reassessed 2026-10-19 (loop): release v1.1.1 is published with the fix; one live observation remains
+- 2026-11-20  Last open check closed at the beta.153 cut: npm run patches:released reads 'released as v1.1.10', so the daily gate publishes releases
 
 ## Still open
 

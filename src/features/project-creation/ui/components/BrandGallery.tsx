@@ -43,11 +43,13 @@ export interface BrandGalleryProps {
     onForgetDemo?: (packageId: string) => void;
     /** Rename an added demo's card and change its description. */
     onEditDemo?: (packageId: string) => void;
+    /** One fixed card (an imported demo, EDS-72): no filter above it. */
+    fixed?: boolean;
 }
 
 /** The plus card's words, accepted 2026-09-11. */
 export const ADD_DEMO_CARD = {
-    name: 'Add a demo package',
+    name: 'Add a Demo Package',
     description: "Use a colleague's storefront or your own, from a link or a zip file.",
 } as const;
 
@@ -154,7 +156,7 @@ function PackageCard({
                     </Text>
                     {libraryCount > 0 && (
                         <span className="brand-card-detail-trigger">
-                            <span className="brand-card-selection-sep"> · </span>
+                            <span className="brand-card-selection-sep">, </span>
                             <Text UNSAFE_className="brand-card-detail-link">
                                 {libraryCount} block {libraryCount === 1 ? 'library' : 'libraries'}
                             </Text>
@@ -196,6 +198,7 @@ export function BrandGallery({
     onAddDemo,
     onForgetDemo,
     onEditDemo,
+    fixed = false,
 }: BrandGalleryProps) {
     const [searchQuery, setSearchQuery] = useState('');
 
@@ -228,16 +231,17 @@ export function BrandGallery({
             {/* Optional header content (e.g., project name field) */}
             {headerContent}
 
-            <SearchHeader
-                searchQuery={searchQuery}
-                onSearchQueryChange={setSearchQuery}
-                searchPlaceholder="Filter packages"
-                searchThreshold={2}
-                totalCount={packages.length}
-                filteredCount={filteredPackages.length}
-                itemNoun="package"
-                hasLoadedOnce={true}
-            />
+            {!fixed && (
+                <SearchHeader
+                    searchQuery={searchQuery}
+                    onSearchQueryChange={setSearchQuery}
+                    searchPlaceholder="Filter packages"
+                    totalCount={packages.length}
+                    filteredCount={filteredPackages.length}
+                    itemNoun="package"
+                    hasLoadedOnce={true}
+                />
+            )}
 
             <div className="expandable-brand-grid">
                 {filteredPackages.map((pkg) => {

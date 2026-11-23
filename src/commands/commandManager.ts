@@ -17,6 +17,7 @@ import { ServiceLocator } from '@/core/di/serviceLocator';
 import { openUrl } from '@/core/utils/browserUtils';
 import { formatMinutes } from '@/core/utils/timeFormatting';
 import { showSuccessInStatusBar } from '@/core/vscode/statusBarSuccess';
+import { signInToAdobe } from '@/features/authentication/handlers/signInToAdobe';
 import { ConfigureProjectWebviewCommand } from '@/features/dashboard/commands/configure';
 import { ShowAiCommand } from '@/features/dashboard/commands/openAi';
 import { ProjectDashboardWebviewCommand } from '@/features/dashboard/commands/showDashboard';
@@ -72,7 +73,7 @@ export class CommandManager {
                 ProjectDashboardWebviewCommand.disposeActivePanel();
                 ConfigureProjectWebviewCommand.disposeActivePanel();
                 // Check for Updates opens it with the Updates modal (PL-80).
-                await projectsList.execute({ showUpdates: isRecord(options) && options.showUpdates === true });
+                await projectsList.execute(projectsListOptionsOf(options));
             } finally {
                 if (ownsTransition) BaseWebviewCommand.endWebviewTransition();
             }
@@ -110,7 +111,7 @@ export class CommandManager {
             this.stateManager,
             this.logger,
         );
-        this.registerCommand('demoBuilder.showProjectDashboard', async () => {
+        this.registerCommand('demoBuilder.showProjectDashboard', async (options?: unknown) => {
             // Clear projects list context to show components tree in sidebar
             await vscode.commands.executeCommand(
                 'setContext',
@@ -124,7 +125,10 @@ export class CommandManager {
             }
             // Note: Projects List disposal is handled by showDashboard.execute() AFTER panel creation
             ShowIntegrationsCommand.disposeActivePanel();
-            await projectDashboard.execute();
+            // The creation end screen's Finish Setup opens the dashboard on its guide (PL-101).
+            await projectDashboard.execute({
+                openFinishSetup: isRecord(options) && options.openFinishSetup === true,
+            });
         });
 
         // Integrations surface (dedicated, opened from the dashboard summary tile)
@@ -170,7 +174,7 @@ export class CommandManager {
                 await vscode.commands.executeCommand('demoBuilder.stopDemo');
             }
 
-            const project = await this.stateManager.loadProjectFromPath(projectPath);
+            const project = await this.stateManager.openProject(projectPath);
             if (project) {
                 this.logger.info(`[LoadProject] Loaded project: ${project.name}`);
                 vscode.commands.executeCommand('demoBuilder.showProjectDashboard');
@@ -382,13 +386,15 @@ export class CommandManager {
         // Sign in to Adobe (PL-5). Until now the only doors were the wizard's
         // auth step and an agent calling sign_in — an expired token outside a
         // wizard flow had no human-reachable handle. Checks state FIRST: an
-        // already-valid session offers a forced re-login (the org-switch
-        // recovery) rather than silently re-running a login that would succeed
-        // without changing anything.
+        // already-valid session offers "Sign In Again", a fresh sign-in that renews
+        // the same account, rather than silently re-running a login that would
+        // succeed without changing anything. It is not the org switch: a new token
+        // is not a new org (owner, 2026-11-18). Either way it is the one Sign In
+        // (`signInToAdobe`) every screen and the agent run; `fresh` is its parameter.
         this.registerCommand('demoBuilder.signInAdobe', async () => {
             const auth = ServiceLocator.getAuthenticationService();
             const status = await auth.getTokenStatus();
-            let force = false;
+            let fresh = false;
             if (status.isAuthenticated) {
                 const minutes = status.expiresInMinutes;
                 // A modal with a heading, like every other sign-in question, and no Cancel
@@ -405,22 +411,16 @@ export class CommandManager {
                                 : ''
                         }Signing in again can also sign you out of DA.live.`,
                     },
-                    'Sign in again',
+                    'Sign In Again',
                 );
-                if (pick !== 'Sign in again') return;
-                force = true;
+                if (pick !== 'Sign In Again') return;
+                fresh = true;
             }
-            const ok = await vscode.window.withProgress(
-                {
-                    location: vscode.ProgressLocation.Notification,
-                    title: 'Signing in to Adobe',
-                },
-                () => auth.login(force),
-            );
+            const { success: ok } = await signInToAdobe(auth, this.logger, 'person', { fresh });
             // Success is announced by the sign-in itself (extension.ts, onDidSignIn).
             if (!ok) {
                 void vscode.window.showWarningMessage(
-                    'Adobe sign-in did not complete. Check the Debug Logs output channel.',
+                    'Adobe sign-in did not complete.',
                 );
             }
         });
@@ -467,13 +467,13 @@ export class CommandManager {
                         modal: true,
                         detail: current.user?.login ? `Signed in as ${current.user.login}.` : undefined,
                     },
-                    'Sign in again',
+                    'Sign In Again',
                 );
-                if (pick !== 'Sign in again') return;
+                if (pick !== 'Sign In Again') return;
                 force = true;
             }
             const outcome = await vscode.window.withProgress(
-                { location: vscode.ProgressLocation.Notification, title: 'Signing in to GitHub' },
+                { location: vscode.ProgressLocation.Notification, title: 'Signing In to GitHub' },
                 () => signInToGitHub(tokenService, this.logger, { force }),
             );
             // Success is announced by signInToGitHub itself.
@@ -481,8 +481,25 @@ export class CommandManager {
             // A cancel is the SC's own choice; only a failure is worth a warning.
             if (!outcome.cancelled) {
                 void vscode.window.showWarningMessage(
-                    `GitHub sign-in did not complete: ${outcome.error}. Check the Debug Logs output channel.`,
+                    `GitHub sign-in did not complete: ${outcome.error}.`,
                 );
+            }
+        });
+
+        // Sign out of Adobe (owner, 2026-11-19): the counterpart of Sign In, so an SC can
+        // end a session and start again from zero. Clears the local aio token; the
+        // browser's Adobe session is left alone. Open screens hear it (onDidSignOut).
+        this.registerCommand('demoBuilder.signOutAdobe', async () => {
+            const auth = ServiceLocator.getAuthenticationService();
+            const status = await auth.getTokenStatus();
+            if (!status.isAuthenticated) {
+                void vscode.window.showInformationMessage('Not signed in to Adobe.');
+                return;
+            }
+            try {
+                await auth.logout();
+            } catch {
+                void vscode.window.showWarningMessage('Adobe sign-out did not complete.');
             }
         });
 
@@ -522,6 +539,19 @@ export class CommandManager {
         );
         this.registerCommand('demoBuilder.showDataInstaller', async () => {
             await dataInstaller.execute();
+        });
+        // The Datapack Library (sidebar, palette): the same screen, no project, no store actions.
+        const datapackLibrary = new ShowDataInstallerCommand(this.context, this.stateManager, this.logger, 'library');
+        this.registerCommand('demoBuilder.showDatapackLibrary', async () => {
+            await datapackLibrary.execute();
+        });
+        // The Datapacks header's two Clear windows, from the palette (step 06 C5, P6-Q5): the current
+        // project's Datapacks opens with the window open, refused without a project with Commerce.
+        this.registerCommand('demoBuilder.clearDemoData', async () => {
+            await dataInstaller.openClearWindow('project');
+        });
+        this.registerCommand('demoBuilder.clearCommerceInstance', async () => {
+            await dataInstaller.openClearWindow('instance');
         });
 
         // One-shot storefront name migration (heals pre-`164fd251` storefronts
@@ -668,4 +698,12 @@ export class CommandManager {
         this.commands.forEach((disposable) => disposable.dispose());
         this.commands.clear();
     }
+}
+
+/**
+ * What `demoBuilder.showProjectsList` was asked to open on the list: the Updates modal (Check
+ * for Updates, PL-80). Anything else is ignored.
+ */
+function projectsListOptionsOf(options: unknown): { showUpdates: boolean } {
+    return { showUpdates: isRecord(options) && options.showUpdates === true };
 }

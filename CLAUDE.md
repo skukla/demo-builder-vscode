@@ -152,7 +152,7 @@ Feature config lives per-feature in `src/features/*/config/*.json`.
 → See wizard steps in respective feature directories:
   - `src/features/authentication/ui/steps/` - Adobe auth steps
   - `src/features/prerequisites/ui/steps/` - Prerequisites step
-  - `src/features/project-creation/ui/steps/` - WelcomeStep (demo package selection); `BuildYourProjectStep` (step id `'build-your-project'`) — the nested builder shell that renders a sub-step rail of **area bodies**: `CommerceStep` (area id `'commerce'`: a restyled `StepTabs` step strip (Backend · [Sign in] · Connection · Business Structure · Catalog) over a dedicated full-width view of the active step's body (one `ConnectStoreStepContent` for config steps); step/lock logic in `commerceSections.ts`), `StorefrontStep` (area id `'storefront'`, EDS-only: GitHub/DA.live + repo + block libraries), `IntegrationsStep` (area id `'integrations'`); `SampleDataStep` — **not an area**: it is a step INSIDE the Commerce strip, shown as "Datapacks" (`commerceSections.ts`), and records which datapack seeds this project — never imports; always complete, so it cannot gate Continue; ReviewStep, ProjectCreationStep; plus `BuildYourProjectSummary` — ONE cross-area summary rendered by `BuildYourProjectStep`, fed by `buildSummary.ts`, not the per-area `CommerceSummary` it was generalized from; `buildYourProjectAreas.ts` (visible areas + order/status, reusing `filterStepsForStack`) and `useProjectBuilder.ts` (selection hub; `selectedAppBuilderComponents` is the single mesh authority — the dual-flow mirror was removed by D3)
+  - `src/features/project-creation/ui/steps/` - WelcomeStep (demo package selection); `BuildYourProjectStep` (step id `'build-your-project'`) — the nested builder shell that renders a sub-step rail of **area bodies**: `CommerceStep` (area id `'commerce'`: a restyled `StepTabs` step strip (Backend · [Sign in] · Connection · Business Structure · Catalog) over a dedicated full-width view of the active step's body (one `ConnectStoreStepContent` for config steps); step/lock logic in `commerceSections.ts`), `StorefrontStep` (area id `'storefront'`, EDS-only: GitHub/DA.live + repo + block libraries), `IntegrationsStep` (area id `'integrations'`); `DatapackStep` — **not an area**: it is a step INSIDE the Commerce strip, shown as "Datapacks" (`commerceSections.ts`), and records which datapack seeds this project — complete with nothing chosen; a chosen datapack holds Continue until the backend has a website and store view (`datapackGate.ts`), since creation would skip its install; ReviewStep, ProjectCreationStep; plus `BuildYourProjectSummary` — ONE cross-area summary rendered by `BuildYourProjectStep`, fed by `buildSummary.ts`, not the per-area `CommerceSummary` it was generalized from; `buildYourProjectAreas.ts` (visible areas + order/status, reusing `filterStepsForStack`) and `useProjectBuilder.ts` (selection hub; `selectedAppBuilderComponents` is the single mesh authority — the dual-flow mirror was removed by D3)
   - `src/features/eds/ui/steps/RepoSelectionInline.tsx` - single-column repo choose/create body used by `StorefrontStep`
 → Note: WelcomeStep's brand card selects a demo package; backend/stack + connect, integrations, and storefront (GitHub/DA.live + block libraries) are all configured **within the single `'build-your-project'` step** via its nested Commerce/Storefront/Integrations/Sample Data area rail. The canonical step order lives in `wizard-steps.json` (a single `build-your-project` entry); the area order/visibility lives in `buildYourProjectAreas.ts`. Custom block libraries are configured in VS Code settings and selected via checkboxes (see `demo-packages.json`, `block-libraries.json`, and `src/types/blockLibraries.ts`).
 
@@ -176,15 +176,22 @@ red, and so is a registry entry for something deleted.
 
 | Cadence | What runs | Who triggers it |
 |---|---|---|
-| per-tool-call | 25 hook rules in `.claude/hooks/rules/` | automatic |
-| per-jest-run | 62 enforcer suites in `tests/sop/` | automatic |
+| per-tool-call | 22 hook rules in `.claude/hooks/rules/` | automatic |
+| per-jest-run | 74 enforcer suites in `tests/sop/` | automatic |
 | per-push | lint, both typecheckers, 2 validators | CI |
 | per-push (local) | the CSS baseline check — `.githooks/pre-push` only, never CI | the git hook |
-| periodic | 14 scripted checks + 10 guided reviews | **`npm run sweep`** |
+| periodic | 15 scripted checks + 9 guided reviews | **`npm run sweep`** |
 | overnight | 2 Stryker runs — the stale-row re-measure (`npm run test:mutation:sweep -- --stale --minutes 480`) and the pilot. Never inside the sweep | a person, when no other test run needs the machine |
 
 The sweep REPORTS and never starts Stryker: it lists stale mutation rows, and the
 overnight re-measure corrects them.
+
+**Every instrument with a command is also a dev-pipeline toolbox tool**, so run it
+through the toolbox rather than typing it into a shell: `run_tool` (with no arguments
+it lists them) for a quick one, `job_start` for anything over a few minutes (the
+sweep, the battery, the mutation runs). The `tools:` block in `.pipeline.yaml` is
+generated from the registry by `tests/sop/toolboxTools.ts`, and
+`tests/sop/toolbox-tools.test.ts` fails when the two disagree.
 
 Read a sweep by its labels, not its exit code: a `reported` row always exits 0
 and its OUTPUT is the result; a failing `gate` row is a real failure; `COULD NOT
@@ -204,6 +211,7 @@ without producing a signal.
 **Skills are invoked, not transcribed.** A backticked skill name in a plan, doc, or step (e.g. "run `gate`") is an instruction to INVOKE that skill — not a shell command to reproduce from memory. Reproducing the steps by hand silently skips the rules in the skill's body; the 2026-07-30 dream run found a whole feature delivered this way, hand-running a scoped lint and missing `gate` §6's whole-repo lint that CI enforces.
 
 - `gate` — inner-loop quality gate (scoped jest + tsc + eslint) · `cut-release` — VSIX beta release
+- `component-release` — publish a version of a component the builder owns: a push reaches no SC, a release does. Refuses a bad version, empty notes, an unpushed HEAD, failing checks, and an ERP pair that disagrees on its contract; dry by default
 - `worktree-setup` — create/relocate a worktree correctly + copy the one still-ignored .claude file (settings.local.json — permissions; hooks/skills/settings.json now travel via git) + start the preview loop
 - `adobe-org-context` — canonical IMS org/auth model; use for ANY org guard or org-mismatch work
 - `eds-publish-and-config` — Helix/DA.live/Config Service auth+scoping traps · `eds-dropin-vendoring` — dropin delivery / import map / B2B template rules
@@ -214,7 +222,7 @@ without producing a signal.
 - `mcp-live-probe` — call the RUNNING MCP server over its socket: which BUILD is serving, a tool's real response and token cost, destructive calls refused by default. The counterpart to `mcp-tool-authoring` — that one says how to write a tool, this one proves it works against reality instead of against its own fixtures
 - `spectrum-webview-ui` — load-bearing Spectrum/webview UI gotchas (dimension-token scale, Menu sections/submenus, Flex-450px, box-sizing, dashboard notices)
 - `webview-test-authoring` — write/fix a React/Spectrum webview test: mock preamble, `advanceTimers` contract, hoist-safe `.testUtils` extraction, div-role card queries, mocked-vs-bundled-JSON trap (test-side counterpart to `spectrum-webview-ui`)
-- `dream` — out-of-band curation pass over memory/skills/CLAUDE.md: mine transcripts for recurring failures + staleness, propose evidence-backed changes (runs at release cuts; proposes, never applies)
+- `dream` was retired at the dev-pipeline rollout (2026-11-16): `/dev-pipeline:reflect` does its job — mine past sessions for repeated mistakes and manual steps, record proposals, apply only what the owner accepts (runs at release cuts; records in `.rptc/dream/`)
 - `codebase-sweep` — dream's sibling for the CODE: runs the four scans together, triages against measured baselines, proposes cleanups (runs at release cuts; proposes, never applies). Duplication is the one defect class with no automatic hook, because deciding whether two things SHOULD be one needs judgment — this is where that judgment gets scheduled.
 - `debug-log-triage` — parse a pasted Debug Logs dump: the structured stdout/stderr block above a blank error carries the truth; benign-noise catalog; channel→feature map
 - `adobe-docs-lookup` — route an Adobe docs question to the source that has it (App Builder concepts live on developer.adobe.com, which NO doc MCP indexes) + recover from `-32002` / 401 MCP session failures
@@ -229,7 +237,7 @@ without producing a signal.
 - `reuse-first` — the same question asked BEFORE the duplicate exists: find the house component/hook/pattern that already does the job. Enforced by a PreToolUse rule (`30-reuse-first.rule`), so it fires when you create a file under a `ui/` directory rather than at a release cut
 - `ai-coverage-scan` — which extension features an AGENT can actually reach: the gap between the human surface (handler types behind every webview button) and the agent surface (MCP tools), which dispatch into the same handler maps
 - `agent-gap-scan` — the same gap read from the other end: what agents ACTUALLY did in real session transcripts — tools nobody calls, jobs done with Bash because no tool existed, tools that failed. No instrumentation; it reads Claude Code's own transcripts
-- `test-divergence-scan` — how many DIFFERENT ways the suite builds the same fake. The sibling of the duplication scans aimed at TESTS: not copy-paste, but divergence nobody agreed to (26 StateManager fakes across 48 uses; 32 Project shapes across 38). HandlerContext is its control — 165 suites share a builder and 4 hand-roll, which is what happens when the builder exists
+- `test-divergence-scan` — how many DIFFERENT ways the suite builds the same fake. The sibling of the duplication scans aimed at TESTS: not copy-paste, but divergence nobody agreed to (31 Project shapes across 30 suites, measured 2026-11-21). HandlerContext is its control — 269 suites share a builder and none hand-rolls one, which is what happens when the builder exists. An object handed INTO a builder is its overrides and is not counted
 - `code-duplication-scan` — find copy-paste LOGIC duplication (jscpd) that should be one shared function (logic counterpart to component-extraction-scan)
 - `dead-mock-scan` — jest.mock calls that do NOTHING. Two halves: a static, exact one (a bare
   automock of a module `moduleNameMapper` already redirects — the line is a no-op) and a scoped
@@ -238,14 +246,14 @@ without producing a signal.
   shared setup in 11 split-suite families, **79 mocks were dead**. Probe the SET — twice, a mock
   and the line using it were both dead while each kept the other alive
 - `dead-code-scan` — find unused exports (ts-prune) + abandonment markers; serves "no soft deprecation"
-- `backlog-item` — READ and WRITE the backlog through one CLI (`backlog.mjs`): `list`/`next`/`show` (all take `--json`, the agent-facing form), `new`/`set`/`log` for mutations that validate BEFORE touching disk, `check`, and `sync` to regenerate the README's spans. Carries the frontmatter contract (kind/area/layer/parent/needs/value/status), the five kinds and why a `question` is not an epic. Everything hand-maintained here has rotted: the index (three items invisible for months, a reverted correction, an epic with no file) and then the second, prose copy of the list that survived it and drifted to 25 items against 32. Test any change with `dogfood.sh`, which runs the real content through the real CLI inside a temp copy
+- `dev-pipeline:backlog` (the plugin's skill, on through `.pipeline.yaml`) — READ and WRITE the backlog: `list`/`next`/`show`, mutations that validate before touching disk, `check`, and `sync`; the same items and frontmatter contract the retired `backlog-item` CLI used
 - `tool-verdicts` — per-tool verdict on the agent surface (keep/fix/investigate/find-out), from real transcript usage AND battery outcomes together. Exists because "85 tools are unused so nobody needs them" was measured and found unsupportable: 78 of 107 had been judged by nothing at all. Refuses to conclude anything about a tool no prompt has ever asked for
 - `rptc-hygiene-scan` — the same idea aimed at the RECORD rather than the code: backlog index rot in BOTH directions, plans that shipped and never moved, and file:line citations pointing at deleted files (runs at release cuts; proposes, never applies)
 - `circular-dependency-scan` — find import cycles (madge) and how to break them
 - `architecture-duplication-scan` — guided review for competing/parallel implementations (same job solved twice); resolve by deleting one
-- `unattended-loop` — the owner-away working mode: pick a backlog item, triage its lane (fully executable / to-a-supervised-edge / research), execute with the proven rails (branch commits, gate-conditional, no cloud writes), report in plain English (the 2026-08-27 standing contract)
+- `dev-pipeline:unattended-loop` (the plugin's skill since 2026-11-22) — the owner-away working mode: pick a backlog item, sort it by how far it can go unattended, work it on a branch with every commit gated, report in plain English. Demo Builder's own rules for it (what is off limits, the done scans, the live check) are in `.rptc/loop-rules.md`
 - `ai-bundle-coherence` — do real projects' AI bundles match their shape: delivered skill sets vs composition, bundle sources that exist, .mcp.json/package agreement (live half; the static half runs every commit in `tests/templates/ai-bundle-coherence.test.ts`)
-- `call-path-audit` — prove a user action has ONE definitive path: trace every door down + every occurrence of the action's ground-truth primitive up, pin the verdict in `tests/templates/spine-chokepoints.test.ts` (runs at release cuts over its own sweep worklist; the mechanical, per-action half of `architecture-duplication-scan`)
+- `call-path-audit` — prove a user action has ONE definitive path: trace every door down + every occurrence of the action's ground-truth primitive up, AND audit the entry-point layer (the functions handlers, commands and MCP tools call to start the action), pinning both in `tests/templates/spine-chokepoints.test.ts` (runs at release cuts over its own sweep worklist; the mechanical, per-action half of `architecture-duplication-scan`). **One path means one entry-point layer, not just one primitive call**: modes (normal or forced sign-in) are parameters of the one path, and a door may not re-decide a mode or add policy the path should own. Before adding a handler, command or tool that starts an action, find the action's existing door and call it. Measured 2026-11-18: Adobe sign-in passed its primitive pin with ONE `aio auth login` site while SEVEN doors above it each re-decided the mode, one forced to work around a bug in the shared sign-in; an audit then found 13 more actions whose doors disagree (`.rptc/research/entry-point-drift-audit/research.md`)
 - `decompose-god-file` — split an oversized multi-responsibility file into single-responsibility units without breaking its public API (the fix to the scan skills' find)
 - `mutation-test-pilot` — the only instrument that measures whether a test would CATCH a defect rather than merely execute the line: Stryker changes the source and re-runs the suite, and a surviving mutant is a defect the suite would ship. Carries both measured numbers and the gap between them — 93% on the four-module pilot, 59% on a representative sample — because the score falls almost monotonically as `await` count rises, so async, heavily-mocked code is the hard case, not the careless one
 - `test-strategy-scan` — the census half of the same question: how the suite is BUILT (tier mix, mock density, hollow suites) read across every file at once, where `mutation-test-pilot` measures a few modules empirically. Use the census to pick what to mutate
@@ -253,7 +261,7 @@ without producing a signal.
 ## The conventions live in one place
 
 **[docs/development/handbook.md](docs/development/handbook.md)** states every convention
-this codebase holds itself to — 131 of them, 129 with an enforcer that fails the build — and
+this codebase holds itself to — 148 of them, 145 with an enforcer that fails the build — and
 explains each one for a human reader. Read it once, start to finish.
 
 Some rules appear both there and here, deliberately: this file is loaded into every agent
@@ -513,6 +521,12 @@ are sure is present, re-Read rather than re-deriving it from memory.
      evidence that a longer form works. -->
 
 
+## Words on screen
+
+What names a thing is Title Case: titles, buttons, tabs, menu items, headings and field labels. A
+sentence or a status note keeps normal capitals. The owner chose this over Spectrum's sentence case
+on 2026-11-02, so do not propose it again. `tests/sop/ui-label-case.test.ts` enforces it.
+
 ## Gotchas (verified, load-bearing)
 
 - **A value passed into a hook must be stable across renders.** An inline `[]`, `{}` or
@@ -542,3 +556,11 @@ For detailed information about specific areas, navigate to the CLAUDE.md file in
 
 ## RPTC Verification Configuration
 verification-agent-mode: automatic
+
+## Lessons
+
+- **Use the extension's own tools before handing a step to the person.** Before asking them to
+  reload the window, republish, deploy or build something in Commerce, check the demo-builder MCP
+  tools and the window-reload ability (`reload_window`). If one can do it, do it yourself and say
+  which tool you used. Three corrections on record, the last of them "You have the ability to do
+  what you need to do agenticly, do you not?" (reflect proposal 7, accepted 2026-11-16).

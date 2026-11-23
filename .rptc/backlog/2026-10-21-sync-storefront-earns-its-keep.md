@@ -31,7 +31,7 @@ waits up to 5 minutes (`TIMEOUTS.VERY_LONG`) before undoing everything. The agen
   not recorded there, so this says nothing about Copilot users.
 - The newest commits in each local copy are Demo Builder's own
   ("chore(demo-builder): vendor brand-assets snippet into head.html"), not a person's.
-- Nothing pulls the local copy after an update commits through GitHub. JustRite's is 11+
+- Nothing pulls the local copy after an update commits through GitHub. Tailspin's is 11+
   commits behind its GitHub main, with an uncommitted `config.json`. Agents are being sent
   to edit an old copy. EDS-57 step 1 fixes the refresh either way.
 

@@ -4,7 +4,7 @@ kind: epic
 area: ai
 needs: []
 value: high
-status: active
+status: backlog
 ---
 # Is the surface good enough for an agent to do the work?
 
@@ -40,3 +40,7 @@ needs (`AI-1a`).
 ## Done when
 
 `AI-1a` and `AI-1b` can be answered with evidence rather than opinion.
+
+## Shipped so far
+
+- 2026-11-22  2026-11-22: set back to backlog. It was marked active with no work recorded on it; its one open child, AI-75, is backlog.

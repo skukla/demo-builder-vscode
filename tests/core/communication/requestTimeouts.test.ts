@@ -50,8 +50,14 @@ describe('REQUEST_TIMEOUTS', () => {
         expect([...budgetedTypes()]).toContain('checkSetupSteps');
     });
 
+    // PL-101: a Finish Setup check reads GitHub and the live site (15s a file) or the store with
+    // the project's credential, so it budgets as the integrations' check does.
+    it('budgets the Finish Setup check checkFinishSetupSteps', () => {
+        expect([...budgetedTypes()]).toContain('checkFinishSetupSteps');
+    });
+
     // Add another ERP's store read: a credential plus every product in the store. On
-    // Justrite it outran 30s, and the dialog said the store could not be read while the
+    // Tailspin it outran 30s, and the dialog said the store could not be read while the
     // extension was still reading it (2026-10-18).
     it('budgets the Add another ERP store read getErpOwnershipOptions', () => {
         expect([...budgetedTypes()]).toContain('getErpOwnershipOptions');
@@ -85,12 +91,13 @@ describe('REQUEST_TIMEOUTS', () => {
         expect([...budgetedTypes()]).toContain(type);
     });
 
-    // Both sign-in messages AWAIT a browser flow (human think-time + 2FA), so the
-    // 30s default cannot cover either. `reAuthenticate` shipped unbudgeted while its
-    // sibling `authenticate` was covered — found when the API picker's new
-    // "Sign In with Adobe" action needed to await it (2026-07-31).
-    it.each(['authenticate', 'reAuthenticate'])('budgets the browser sign-in %s', (type) => {
-        expect([...budgetedTypes()]).toContain(type);
+    // The sign-in message AWAITS a browser flow (human think-time + 2FA), so the
+    // 30s default cannot cover it. A second sign-in message, `reAuthenticate`, once
+    // shipped unbudgeted beside it (2026-07-31); it was deleted 2026-11-18, when every
+    // screen's Sign In became `authenticate`, and its budget row must go with it.
+    it('budgets the browser sign-in, and only the one sign-in message', () => {
+        expect([...budgetedTypes()]).toContain('authenticate');
+        expect([...budgetedTypes()]).not.toContain('reAuthenticate');
     });
 
     // The Code Sync check is fast ONLY when the caller passes `skipTrigger`.

@@ -20,7 +20,7 @@ import {
     parseStocks,
     removeSource,
     removeStock,
-    removeStockSourceLink,
+    removeStockSourceLinks,
 } from '@/features/data-installer/services/demoBuilderEngine/stockKinds';
 import { type SentCall, fakeContext } from './demoBuilderEngine.testUtils';
 
@@ -69,7 +69,7 @@ describe('installSources', () => {
         await installSources(ctx, parseSources({ sources: [{ source: BROADWAY }] }));
 
         expect(ctx.sent).toEqual([{ method: 'POST', path: 'inventory/sources', body: { source: BROADWAY } }]);
-        expect(ctx.recorder.created).toEqual([{ kind: SOURCE_KIND, id: 'carvelo_broadway' }]);
+        expect(ctx.recorder.created).toEqual([{ kind: SOURCE_KIND, id: 'carvelo_broadway', key: 'carvelo_broadway' }]);
     });
 
     it('leaves a source the store has and uses alone', async () => {
@@ -90,7 +90,7 @@ describe('installSources', () => {
         expect(ctx.sent).toEqual([
             { method: 'PUT', path: 'inventory/sources/carvelo_broadway', body: { source: { ...off, enabled: true } } },
         ]);
-        expect(ctx.recorder.created).toEqual([{ kind: SOURCE_KIND, id: 'carvelo_broadway', previous: { enabled: false } }]);
+        expect(ctx.recorder.created).toEqual([{ kind: SOURCE_KIND, id: 'carvelo_broadway', key: 'carvelo_broadway', previous: { enabled: false } }]);
     });
 });
 
@@ -111,7 +111,7 @@ describe('installStocks', () => {
             },
         ]);
         expect(ctx.recorder.created).toEqual([
-            { kind: STOCK_KIND, id: '7', previous: { websiteCode: 'base', stockId: 1 } },
+            { kind: STOCK_KIND, id: '7', key: 'Carvelo Inventory', previous: { websiteCode: 'base', stockId: 1 } },
         ]);
     });
 
@@ -134,7 +134,7 @@ describe('installStocks', () => {
         const ctx = await fakeContext(inventory({}), () => ({}));
         ctx.session.websiteCode = 'base';
 
-        await expect(installStocks(ctx, parseStocks(CARVELO))).rejects.toThrow(/did not answer the new stock Carvelo Inventory's id/);
+        await expect(installStocks(ctx, parseStocks(CARVELO))).rejects.toThrow(/did not return the new stock Carvelo Inventory's id/);
     });
 });
 
@@ -158,7 +158,8 @@ describe('installStockSourceLinks', () => {
                 body: { links: [{ stock_id: 7, source_code: 'carvelo_broadway', priority: 3 }] },
             },
         ]);
-        expect(ctx.recorder.created).toEqual([{ kind: LINK_KIND, id: '7/carvelo_broadway' }]);
+        // Keyed by the pack's name for it (the stock's name), as a reinstall looks it up; the id is what removal sends.
+        expect(ctx.recorder.created).toEqual([{ kind: LINK_KIND, id: '7/carvelo_broadway', key: 'Carvelo Inventory/carvelo_broadway' }]);
     });
 
     // Step 14 item 3: skipped and named, and the rest of the pack goes on.
@@ -167,7 +168,7 @@ describe('installStockSourceLinks', () => {
 
         await installStockSourceLinks(ctx, parseStockSourceLinks(LINKS_PACK));
 
-        expect(ctx.session.skipped?.map((r) => r.reason)).toContain('The store has no stock named Carvelo Inventory.');
+        expect(ctx.session.skipped?.map((r) => r.reason)).toContain('Commerce has no stock named Carvelo Inventory.');
         expect(ctx.sent).toStrictEqual([]);
     });
 });
@@ -232,7 +233,7 @@ describe('removal', () => {
     it('takes a link it made back out', async () => {
         const ctx = await fakeContext();
 
-        await removeStockSourceLink(ctx.send, '7/carvelo_broadway');
+        await removeStockSourceLinks(ctx.send, ['7/carvelo_broadway']);
 
         expect(ctx.sent).toEqual([
             { method: 'POST', path: 'inventory/stock-source-links-delete', body: { links: [{ stock_id: 7, source_code: 'carvelo_broadway' }] } },

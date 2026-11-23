@@ -11,7 +11,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { productLookups } from '@/features/data-installer/services/demoBuilderEngine/productLookups';
-import { packedFingerprint, readCopies, rowsByKey } from '@/features/data-installer/services/demoBuilderEngine/storeCopies';
+import { packedFingerprint, readBySku, readCopies, rowsByKey } from '@/features/data-installer/services/demoBuilderEngine/storeCopies';
 import { fingerprintRow } from '@/features/data-installer/services/demoBuilderEngine/fingerprint';
 import type { CommerceInventoryStock, CommerceProduct, CommerceStockSourceLink } from '@/types/commerceWire';
 import { fakeContext, page } from './demoBuilderEngine.testUtils';
@@ -46,6 +46,24 @@ describe('readCopies', () => {
 
         expect([...copies.keys()]).toEqual(['essentials-plan', 'DigiWristQuantum']);
         expect((copies.get('DigiWristQuantum') as { product: CommerceProduct }).product.sku).toBe('DigiWristQuantum');
+    });
+
+    // Live, 2026-11-06: one request per child, Luma's 1,900 took two minutes of the read-back.
+    it("names a configurable's children from the page it read, asking nothing more for them", async () => {
+        const parent = { id: 10, sku: 'MH01', type_id: 'configurable', extension_attributes: { configurable_product_links: [11, 12] } };
+        const children = [{ id: 11, sku: 'MH01-XS-Black' }, { id: 12, sku: 'MH01-XS-Gray' }];
+        const ctx = await fakeContext({ [skuIn('MH01,MH01-XS-Black,MH01-XS-Gray')]: { items: [parent, ...children], total_count: 3 } });
+        const read = jest.spyOn(ctx, 'get');
+
+        const copies = await readCopies(ctx, productLookups(ctx), 'products', [
+            { kind: 'products', id: 'MH01' },
+            { kind: 'products', id: 'MH01-XS-Black' },
+            { kind: 'products', id: 'MH01-XS-Gray' },
+        ]);
+
+        const links = (copies.get('MH01') as { product: CommerceProduct }).product.extension_attributes?.configurable_product_links;
+        expect(links).toEqual(['MH01-XS-Black', 'MH01-XS-Gray']);
+        expect(read).toHaveBeenCalledTimes(1);
     });
 
     it('reads stocks, sources and links from one read of the inventory, naming a link\'s stock', async () => {
@@ -109,5 +127,32 @@ describe('packedFingerprint', () => {
         expect(packedFingerprint('attribute_sets', { attributeSet: { attribute_set_name: 'Racks', sort_order: 1 } })).toBe(
             packedFingerprint('attribute_sets', { attributeSet: { attribute_set_name: 'Racks', sort_order: 9 } }),
         );
+    });
+});
+
+describe('readBySku', () => {
+    // Live, 2026-11-06: read one page after another, Luma's 2,046 products took over three minutes; a
+    // page of 50 then read about 60% more products a second than a page of 20.
+    it('reads fifty SKUs a page, five pages at once, and keeps every row', async () => {
+        const ctx = await fakeContext();
+        let inFlight = 0;
+        let most = 0;
+        const sizes: number[] = [];
+        ctx.get = async (asked) => {
+            inFlight += 1;
+            most = Math.max(most, inFlight);
+            await new Promise((resolve) => setImmediate(resolve));
+            inFlight -= 1;
+            const skus = decodeURIComponent(/\[value\]=([^&]*)/u.exec(asked)?.[1] ?? '').split(',');
+            sizes.push(skus.length);
+            return { items: skus.map((sku) => ({ sku })), total_count: skus.length };
+        };
+        const skus = Array.from({ length: 300 }, (_, i) => `s${i}`);
+
+        const rows = await readBySku<{ sku: string }>(ctx, 'products', skus);
+
+        expect(sizes).toEqual([50, 50, 50, 50, 50, 50]);
+        expect(most).toBe(5);
+        expect(rows.map((r) => r.sku).sort()).toEqual([...skus].sort());
     });
 });

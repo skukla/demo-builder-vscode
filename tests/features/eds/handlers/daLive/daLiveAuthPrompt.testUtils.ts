@@ -34,8 +34,8 @@ import { createMockStateManager } from '../../../../helpers/stateManagerFake';
 
 // SIX AUTOMOCKS USED TO SIT HERE, and both suites carried them:
 //
-//   githubTokenService · githubRepoOperations · githubFileOperations
-//   githubOAuthService · daLiveOrgOperations · daLiveContentOperations
+//   githubTokenService, githubRepoOperations, githubFileOperations
+//   githubOAuthService, daLiveOrgOperations, daLiveContentOperations
 //
 // Their comment said they existed "so daLiveAuthPrompt can load". Measured
 // 2026-08-31, individually and then all six together: all 51 tests pass without

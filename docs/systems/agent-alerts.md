@@ -44,7 +44,7 @@ project, another person's access.
 
 Not "is it a write". Not "did the agent say confirm". Both of those were tried:
 keying on `confirm` alone put a modal on `open_url` (opens a browser tab) while
-`remove_integration` and `reset_datapack` raised nothing.
+`remove_integration` and `uninstall_datapack` raised nothing.
 
 ### The list
 
@@ -53,14 +53,14 @@ Deleting things
 - `cleanup_dalive_site` · `remove_block_from_library` · `remove_integration`
 
 Replacing or wiping
-- `reset_project` · `reset_datapack` · `migrate_storefront_name` · `reset_erp_records`
+- `reset_project` · `uninstall_datapack` · `migrate_storefront_name` · `reset_erp_records`
 - `forget_added_demo` (with `deleteRepository` it deletes the repository made from a zip)
 - `remove_demo_package` (takes the description file colleagues add the demo from out of the repository)
 
 Reaching other people
 - `set_site_admin` · `republish` · `rename_adobe_project`
 - `write_page` (replaces a page in the DA.live source the live site is built from; the dialog shows whether it also publishes) · `publish_page` (puts a page live) — both since 2026-10-04
-- `start_datapack_import` · `start_datapack_export`
+- `install_datapack` · `create_datapack`
 
 ### Deliberately NOT on it
 
@@ -168,7 +168,7 @@ point the claim is made rather than in review.
 
 ## Writing the copy
 
-`action` completes "Agent · ___?" — a verb phrase, no full stop. Every agent notification opens with the same "Agent ·" (`agentNotice.ts`).
+`action` completes "Agent: ___?" — a verb phrase, no full stop. Every agent notification opens with the same "Agent:" (`agentNotice.ts`).
 `consequence` is ONE sentence saying what changes.
 
 - Say what changes, not what the tool is. The reader already wants the thing;

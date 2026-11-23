@@ -31,7 +31,7 @@ kept, and finishes the update once the markers are gone.
   (`<project>/components/eds-storefront`, cloned at creation, `executor.ts:279`). AGENTS.md
   tells agents to edit there (`agentsMdStorefrontSections.ts:37`). Nothing pulls it after
   an update commits through GitHub; only Sync Storefront does
-  (`storefrontSyncService.ts:201,233`). Measured: JustRite's copy is 11+ commits behind its
+  (`storefrontSyncService.ts:201,233`). Measured: Tailspin's copy is 11+ commits behind its
   GitHub main, with an uncommitted `config.json`.
 - That clone can push with the SC's GitHub token (`storefrontSyncService.ts:13,159`).
 - Sync Storefront already leaves a clash in the real files and waits for markers to go
@@ -70,7 +70,7 @@ kept, and finishes the update once the markers are gone.
 
 ## Open questions (found by the research; each is answered in the step that needs it)
 
-- Why JustRite's local `config.json` is uncommitted, and whether it is ahead of GitHub's
+- Why Tailspin's local `config.json` is uncommitted, and whether it is ahead of GitHub's
   (step 01 must not throw away a config write).
 - What the local copy does when it has commits GitHub lacks (step 01 refuses rather than
   guesses).

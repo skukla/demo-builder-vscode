@@ -87,13 +87,15 @@ export function createEntityCollaborators(
         onNoOrgsAccessible?: () => Promise<void>;
         isTokenValid?: () => Promise<boolean>;
         savedState?: SavedState;
+        /** Adobe refused the sign-in itself (walk F247). */
+        onTokenRejected?: () => void;
     } = {},
 ): EntityCollaborators {
     const cli = new AdobeCliFallback(
         commandManager,
         config.isTokenValid ? { isTokenValid: config.isTokenValid } : {},
     );
-    const sdkFetch = new SdkEntityFetch(sdkClient);
+    const sdkFetch = new SdkEntityFetch(sdkClient, config.onTokenRejected);
     const orgReads = new AdobeOrgReads(sdkClient, sdkFetch, cacheManager, logger, stepLogger, cli, {
         onNoOrgsAccessible: config.onNoOrgsAccessible,
     });
@@ -168,6 +170,8 @@ export function createEntityServices(
     isTokenValid?: () => Promise<boolean>,
     /** Keeps the org's API list and deleted workspace names across reloads (`context.globalState`). */
     savedState?: SavedState,
+    /** Adobe refused the sign-in itself (walk F247): the auth service marks it signed out. */
+    onTokenRejected?: () => void,
 ): EntityServices {
     const selector = new AdobeEntitySelector(commandManager, cacheManager);
     const collaborators = createEntityCollaborators(
@@ -180,6 +184,7 @@ export function createEntityServices(
             onNoOrgsAccessible: () => selector.clearConsoleContext(),
             ...(isTokenValid ? { isTokenValid } : {}),
             ...(savedState ? { savedState } : {}),
+            ...(onTokenRejected ? { onTokenRejected } : {}),
         },
     );
     const resolver = new AdobeContextResolver(

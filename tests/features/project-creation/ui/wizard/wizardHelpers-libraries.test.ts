@@ -18,7 +18,6 @@ import {
     getEnabledWizardSteps,
     getNextButtonText,
     getWizardTitle,
-    initializeAdobeContextFromImport,
 } from '@/features/project-creation/ui/wizard/wizardHelpers';
 import { editChoicesOf } from '@/features/project-creation/ui/wizard/editChanges';
 import type { CustomBlockLibrary, InstalledBlockLibrary } from '@/types/blockLibraries';
@@ -172,23 +171,6 @@ describe('computeStateUpdatesForBackwardNav', () => {
         });
 
         expect(Object.keys(updates)).toEqual(['currentStep']);
-    });
-});
-
-describe('initializeAdobeContextFromImport', () => {
-    it('should return nothing when the import carries no Adobe section at all', () => {
-        expect(initializeAdobeContextFromImport({} as ImportedSettings)).toStrictEqual({});
-    });
-
-    it('should rebuild only the parts the import actually names', () => {
-        const imported = {
-            adobe: { orgId: 'org-1', workspaceId: 'ws-1' },
-        } as ImportedSettings;
-
-        expect(initializeAdobeContextFromImport(imported)).toEqual({
-            org: { id: 'org-1', code: '', name: '' },
-            workspace: { id: 'ws-1', name: '', title: undefined },
-        });
     });
 });
 
@@ -405,6 +387,25 @@ describe('buildProjectConfig', () => {
             expect(withEds({ storefrontBuildComplete: false })).toMatchObject({ storefrontBuildComplete: false });
             expect(withEds({ storefrontBuildComplete: true })).toMatchObject({ storefrontBuildComplete: true });
             expect(withEds({})).not.toHaveProperty('storefrontBuildComplete');
+        });
+
+        it('should hand over the code files the live site did not serve, and no key when it served them all', () => {
+            expect(withEds({ codeNotServed: ['scripts/commerce.js'] })?.codeNotServed).toStrictEqual(['scripts/commerce.js']);
+            expect(withEds({})).not.toHaveProperty('codeNotServed');
+            expect(withEds({ codeNotServed: [] })).not.toHaveProperty('codeNotServed');
+        });
+
+        // EDS-72: creation records an imported project's commit, for Reset to restore.
+        it('should hand over what setup made from an imported bundle, and no key for any other project', () => {
+            const bundleImport = { commit: 'import-commit' };
+            expect(withEds({ bundleImport })?.bundleImport).toStrictEqual(bundleImport);
+            expect(withEds({})).not.toHaveProperty('bundleImport');
+        });
+
+        it('should hand over the imported bundle itself, and no key for any other project', () => {
+            const importedFrom = { bundleName: 'Bodea Summit', bundlePath: '/x/b.zip', sourceRepository: 'sender/kukla-bodea' };
+            expect(buildProjectConfig({ ...base, importedFrom }, null, []).importedFrom).toStrictEqual(importedFrom);
+            expect(buildProjectConfig(base, null, [])).not.toHaveProperty('importedFrom');
         });
 
         it('should hand over the broken links storefront setup found, and no key when it found none', () => {

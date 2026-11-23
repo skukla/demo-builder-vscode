@@ -44,6 +44,8 @@ export function ProjectCreationStep({
         isGitHubAppInstall,
         handleCancel,
         handleOpenProject,
+        handleFinishSetup,
+        opensDashboard,
     } = useCreationProgressPhase(progress, state.wizardMode === 'edit');
     const { githubAppInstallData, handleGitHubAppInstalled } = useGitHubAppPreflight({
         state,
@@ -67,6 +69,7 @@ export function ProjectCreationStep({
                         githubAppInstallData={githubAppInstallData}
                         onGitHubAppInstalled={handleGitHubAppInstalled}
                         isEdit={state.wizardMode === 'edit'}
+                        opensDashboard={opensDashboard}
                     />
                 </SingleColumnLayout>
             </div>
@@ -86,6 +89,9 @@ export function ProjectCreationStep({
                 onCancel={handleCancel}
                 onOpenProject={handleOpenProject}
                 isEdit={state.wizardMode === 'edit'}
+                stepsRemaining={progress?.stepsRemaining}
+                onFinishSetup={handleFinishSetup}
+                canSkipStep={isActive && progress?.pause?.canSkip === true}
             />
         </div>
     );

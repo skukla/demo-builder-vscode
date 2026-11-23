@@ -1,5 +1,5 @@
 ---
-id: AB-84
+id: AB-93
 kind: fix
 area: app-builder
 needs: []
@@ -13,7 +13,7 @@ Found 2026-11-01. A company created on a Commerce instance with an ERP integrati
 even from another website on that instance. Deleting the company in Commerce leaves the customer behind, and
 products reach the ERP the same way.
 
-Measured on Justrite's ERP after live tests that removed everything on the Commerce side: customers C27 to C34
+Measured on Acme's ERP after live tests that removed everything on the Commerce side: customers C27 to C34
 and products `zz-aco-buyer-1` and `-2` remain, all test records. That breaks "whatever can be done can be undone".
 
 Also measured: a company the ERP gives no credit cannot check out by any payment method, and the shopper reads

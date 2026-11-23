@@ -128,6 +128,17 @@ export class ShowProjectsListCommand extends BundledPanelCommand<ProjectsListIni
         watcher.onDidChange(reloadSoon);
         watcher.onDidDelete(reloadSoon);
         this.disposables.add(watcher);
+        // A delete removes the project's whole folder, and the watcher above hears only
+        // the folder go, not the file in it: an agent's delete left the project listed
+        // until the SC pressed refresh (owner, 2026-11-20).
+        const folders = vscode.workspace.createFileSystemWatcher(
+            new vscode.RelativePattern(vscode.Uri.file(resolveProjectsRoot()), '*'),
+            true,
+            true,
+            false,
+        );
+        folders.onDidDelete(reloadSoon);
+        this.disposables.add(folders);
         // A creation starting or ending changes a tile with no file write to watch:
         // an Edge Delivery project has no file until its storefront is set up (PL-82).
         this.disposables.add(onWorkChanged(reloadSoon));

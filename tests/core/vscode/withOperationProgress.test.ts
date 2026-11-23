@@ -1,6 +1,6 @@
 /**
  * withOperationProgress — the one place that decides where a long operation reports
- * (PL-59 phase 2, `.rptc/plans/operation-progress/extension-wide.md`, rules R1–R3, R7).
+ * (PL-59 phase 2, `.rptc/complete/operation-progress/extension-wide.md`, rules R1–R3, R7).
  *
  * The rule each test pins is named beside it; the plan's routing table says which
  * operation starts where.
@@ -91,6 +91,22 @@ describe('started from a button on a screen (R1)', () => {
         });
     });
 
+    // Walk F89: a save that found nothing to save names its own success ("No Changes to Save").
+    it('carries a success title of the run’s own when it has one', async () => {
+        await withOperationProgress({ id: ID, title: 'Saving My Luma', inModal: true }, async () => ({
+            success: true,
+            title: 'No Changes to Save',
+            note: "Nothing changed since this demo's last save, so nothing was saved.",
+        }));
+
+        expect(modalPayloads().at(-1)).toEqual({
+            id: ID,
+            state: 'succeeded',
+            title: 'No Changes to Save',
+            note: "Nothing changed since this demo's last save, so nothing was saved.",
+        });
+    });
+
     // What a run changed reaches the result screen (live release test, 2026-10-22: "Store
     // prepared" named nothing it did). An empty list is not carried.
     it('ends the modal with the lines of what a run that succeeded changed', async () => {
@@ -150,14 +166,14 @@ describe('started from a button on a screen (R1)', () => {
         await withOperationProgress({ id: ID, title: 'Resetting Bodea', inModal: true }, async (report) => {
             report(STAGE.label);
             await withProgressRegister({ title: 'Deploying API Mesh' }, async (nested) => {
-                nested('Building the mesh config');
+                nested('Building the mesh configuration');
             });
             return { success: true };
         });
 
         expect(vscode.window.withProgress).not.toHaveBeenCalled();
         expect(modalPayloads()).toContainEqual(
-            expect.objectContaining({ stage: STAGE.label, step: 'Building the mesh config' }),
+            expect.objectContaining({ stage: STAGE.label, step: 'Building the mesh configuration' }),
         );
     });
 

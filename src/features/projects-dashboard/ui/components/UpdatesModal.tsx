@@ -10,123 +10,151 @@
  * that leaves rows the SC unticked still waiting says how many and offers "Back to
  * updates", the list again on a fresh check (owner, 2026-10-22).
  *
- * Built from the house pieces: `ui/Modal`, `CheckboxRow` (extracted from the API picker
- * for this) and `DisclosureToggle` (extracted from here, 2026-10-23). Each
- * group is a panel in the projects list's own row style, the trailing chevron: Spectrum's Disclosure was tried first and
- * brought a look nothing else here has (owner, 2026-10-20). With {@link OPEN_UP_TO} updates or
- * fewer in all, every group starts open, since they fit and a closed one hid what the SC
- * was approving (owner, 2026-10-24); with more, a group starts closed and says what it holds: its name in its own casing, and how many rows wait for the SC (one that
- * started unticked: the redeploy, or one locked in another org), so a closed group cannot
- * hide the row that needs a decision. Its checkbox already shows all, some or none ticked. The rest of its line opens it.
- * Its checkbox ticks or unticks the whole group (mixed while some rows are ticked; never a
- * locked row), and sits beside the opening button rather than in it, so ticking a group
- * does not open it. The list has a set height and scrolls (`.updates-group-list`), so
- * opening a project never resizes the window. No sentence under the title: the ticks and
- * the Apply count say it.
+ * Drawn as Reset Selected and Delete Selected draw their projects (F50, owner 2026-11-07): a table,
+ * a project per row with its storefront's repository under its name, hairlines between them, its
+ * updates as boxes in the Apply column, whose header ticks or unticks every update. Demo Builder
+ * itself and the template repositories are rows of their own. Nothing folds away, so a row waiting
+ * for the SC (a redeploy, or one locked in another org) is simply unticked with its reason under
+ * it. A long list scrolls under the fixed header, its bottom edge fading while there is more
+ * (`scroll-fade`), and Apply counts every ticked update, seen or not: the owner chose scrolling over
+ * pages, which would hide rows being approved (2026-11-07). The groups with chevrons it replaces
+ * (2026-10-20) had a group's own tick-all; a project's updates are now ticked one by one or all at
+ * once. One sentence under the title, only when a listed update reaches the live site (owner,
+ * 2026-11-05). Built from the house pieces: the layouts' windows in one `DialogContainer` (the list a
+ * Steps window, the run and how it ended the Progress layout's; step-07 Win1),
+ * `CheckboxRow`, and the batch window's table classes (`projects-batch.css`).
+ * A run ends in place, as the Prerequisites step does (owner, 2026-11-19): the title says how it
+ * went, with its icon ("Some Updates Didn't Apply"), the cards stay where they were, and an update
+ * that did not apply carries Retry, then Fix with AI, then Check Again (`UpdateRowFix`). It ended on
+ * the large mark of the shared result look until then (walk F222, 2026-11-17), which replaced the
+ * list the SC was reading.
+ * The list and the run each hold the height they open at (rule 14).
  *
  * @module features/projects-dashboard/ui/components/UpdatesModal
  */
 
-import { Checkbox, DialogContainer } from '@adobe/react-spectrum';
-import React, { useState } from 'react';
-import { APPLYING_TITLE, type RowStatuses, type UpdatesModalControls } from '../hooks/useUpdatesModal';
-import { groupsOf, type RowGroup } from './updateGroups';
-import { UpdatesRunView } from './UpdatesRunView';
+import { DialogContainer } from '@adobe/react-spectrum';
+import React from 'react';
+import {
+    APPLIED_TITLE,
+    APPLYING_TITLE,
+    NOT_APPLIED_TITLE,
+    type RowStatuses,
+    SOME_NOT_APPLIED_TITLE,
+    type UpdatesModalControls,
+} from '../hooks/useUpdatesModal';
+import { endingRowOf, promptButtons } from './runWindowParts';
+import { groupsOf, updatesLiveSite, type RowGroup } from './updateGroups';
+import { UpdatesRunView, waitingLine } from './UpdatesRunView';
+import { OperationQuestion, questionTakesWindow } from '@/core/ui/components/feedback/OperationQuestion';
+import { ResultBody } from '@/core/ui/components/feedback/ResultBody';
 import { CheckboxRow } from '@/core/ui/components/selection/CheckboxRow';
-import { DisclosureToggle } from '@/core/ui/components/ui/DisclosureToggle';
-import { Modal, type ActionButton } from '@/core/ui/components/ui/Modal';
+import { LeadText } from '@/core/ui/components/ui/LeadText';
+import type { ActionButton, ModalStatus } from '@/core/ui/components/ui/Modal';
+import { ProgressWindow } from '@/core/ui/components/ui/ProgressDialog';
+import { StepsWindow } from '@/core/ui/components/ui/StepsDialog';
+import { resultOutcome } from '@/core/ui/utils/resultWords';
+import { type EndingRow, endsClean, endStatus } from '@/core/ui/utils/runEnding';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import type { PendingUpdateRow } from '@/types/pendingUpdates';
-import type { OperationProgressPayload } from '@/types/webviewPayloads';
+import type { OperationProgressPayload, OperationPrompt } from '@/types/webviewPayloads';
 
-const LIST_TITLE = 'Updates available';
+const LIST_TITLE = 'Updates Available';
+/** What a clean end is about: its title, with the outcome ("Applied") under the mark. */
+const UPDATES_THING = 'Updates';
+const LIVE_SITE_SENTENCE = 'Storefront updates go to the live site.';
 const NO_ACTIONS: ActionButton[] = [];
-/** The most updates the list opens every group for: two lines each, they fit unscrolled. */
-export const OPEN_UP_TO = 3;
 
-/**
- * The rows a group's checkbox ticks, and what a closed group says about itself. It
- * says only how many rows wait for the SC, since a closed group could hide those. It
- * said "1 of 2" as well until 2026-10-21; the checkbox already shows all, some or none.
- */
-function summaryOf(group: RowGroup, ticked: ReadonlySet<string>): { open: string[]; tickedCount: number; text: string } {
-    const open = group.rows.filter((r) => !r.lockedReason).map((r) => r.id);
-    const tickedCount = open.filter((id) => ticked.has(id)).length;
-    const waiting = group.rows.filter((r) => !r.ticked && !ticked.has(r.id)).length;
-    return { open, tickedCount, text: waiting > 0 ? `${waiting} waiting for you` : '' };
-}
-
-interface RowGroupViewProps {
-    group: RowGroup;
-    controls: UpdatesModalControls;
-    startsOpen: boolean;
-}
-
-function RowGroupView({ group, controls, startsOpen }: RowGroupViewProps) {
-    const [isOpen, setOpen] = useState(startsOpen);
-    const { open, tickedCount, text } = summaryOf(group, controls.ticked);
-    const all = open.length > 0 && tickedCount === open.length;
+/** One project (or Demo Builder, or the template repositories): its name over its line, then its updates. */
+function GroupRow({ group, controls }: { group: RowGroup; controls: UpdatesModalControls }) {
     return (
-        <div className="updates-group">
-            <div className="updates-group-header">
-                <Checkbox
-                    aria-label={`All of ${group.title}`}
-                    isSelected={all}
-                    isIndeterminate={tickedCount > 0 && !all}
-                    isDisabled={open.length === 0}
-                    onChange={() => controls.toggleGroup(open)}
-                />
-                <DisclosureToggle isOpen={isOpen} onToggle={() => setOpen(!isOpen)} note={text || undefined}>
-                    {group.title}
-                </DisclosureToggle>
-            </div>
-            <div className="updates-group-rows" hidden={!isOpen}>
+        <tr>
+            <th scope="row">
+                <span className="checkbox-row-label">{group.title}</span>
+                {group.detail && <div className="work-row-detail">{group.detail}</div>}
+            </th>
+            <td>
+                <div className="updates-table-boxes">
                 {group.rows.map((row) => (
                     <CheckboxRow
                         key={row.id}
                         label={row.label}
-                        detail={row.detail}
+                        detail={row.detail || undefined}
                         reason={row.lockedReason}
                         isSelected={controls.ticked.has(row.id) && !row.lockedReason}
                         isDisabled={Boolean(row.lockedReason)}
                         onChange={() => controls.toggle(row.id)}
                     />
                 ))}
+                </div>
+            </td>
+        </tr>
+    );
+}
+
+/** The list as Reset Selected's table: a project per row, its updates in the Apply column, whose header ticks them all. */
+function UpdateList({ rows, controls }: { rows: PendingUpdateRow[]; controls: UpdatesModalControls }) {
+    const open = rows.filter((r) => !r.lockedReason).map((r) => r.id);
+    const tickedCount = open.filter((id) => controls.ticked.has(id)).length;
+    const all = open.length > 0 && tickedCount === open.length;
+    return (
+        <div className="batch-confirm">
+            {updatesLiveSite(rows) && <LeadText>{LIVE_SITE_SENTENCE}</LeadText>}
+            <div className="batch-delete scroll-fade scroll-fade--capped">
+                <table className="batch-delete-table updates-table">
+                    <thead>
+                        <tr>
+                            <td className="batch-changes-head batch-project-head">Project</td>
+                            <th scope="col">
+                                <CheckboxRow
+                                    label="Apply"
+                                    isSelected={all}
+                                    isIndeterminate={tickedCount > 0 && !all}
+                                    isDisabled={open.length === 0}
+                                    onChange={() => controls.toggleGroup(open)}
+                                />
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {groupsOf(rows).map((group) => (
+                            <GroupRow key={group.key} group={group} controls={controls} />
+                        ))}
+                    </tbody>
+                </table>
             </div>
         </div>
     );
 }
 
-function UpdateList({ rows, controls }: { rows: PendingUpdateRow[]; controls: UpdatesModalControls }) {
-    return (
-        <div className="updates-group-list">
-            {groupsOf(rows).map((group) => (
-                <RowGroupView
-                    key={group.key}
-                    group={group}
-                    controls={controls}
-                    startsOpen={rows.length <= OPEN_UP_TO}
-                />
-            ))}
-        </div>
-    );
+/** The title, and the icon before it saying how things stand. */
+interface Heading {
+    title: string;
+    status?: ModalStatus;
 }
 
 /**
- * The run's title: what it is doing, then how it ended. A row can end after the run: the
- * SC's AI finishing a kept fix turns its row done (EDS-56), so every row done is
- * "Updates applied" whatever the run's warning said when it ended.
+ * The run's title: what it is doing, then how it ended, coloured by the one amber rule (`endStatus`):
+ * amber on the run's warning or a row that did not apply, green when every row is done, notes and
+ * all. A row can end after the run: the SC's AI finishing a kept fix turns its row done (EDS-56), so
+ * every row done is "Updates applied" whatever the run's warning said when it ended.
  */
-function runTitleOf(progress: OperationProgressPayload | null, rows: PendingUpdateRow[], statuses: RowStatuses): string {
-    if (progress?.state === 'failed') return "Couldn't apply the updates";
-    if (progress?.state !== 'succeeded') return APPLYING_TITLE;
+export function runHeadingOf(progress: OperationProgressPayload | null, rows: PendingUpdateRow[], statuses: RowStatuses): Heading {
+    if (progress?.state === 'failed') return { title: NOT_APPLIED_TITLE, status: 'error' };
+    if (progress?.state !== 'succeeded') return { title: APPLYING_TITLE };
     const allDone = rows.every((row) => statuses[row.id]?.state === 'done');
-    return progress.warning && !allDone ? "Some updates didn't apply" : 'Updates applied';
+    const status = endStatus({ succeeded: true, warning: allDone ? undefined : progress.warning, rows: endingRowsOf(rows, statuses) });
+    return status === 'warning' ? { title: SOME_NOT_APPLIED_TITLE, status } : { title: APPLIED_TITLE, status };
+}
+
+/** Every row as the ending rules read it, the local copy steps included. */
+function endingRowsOf(rows: PendingUpdateRow[], statuses: RowStatuses): EndingRow[] {
+    return [...rows.map((row) => statuses[row.id]), ...Object.values(statuses)].map(endingRowOf);
 }
 
 /** The window's dismiss button and the buttons beside it. */
 interface Chrome {
-    closeLabel?: string;
+    closeLabel?: 'Close' | 'Run in Background' | 'Cancel';
     hideClose?: boolean;
     actions: ActionButton[];
 }
@@ -142,14 +170,15 @@ function runChrome(controls: UpdatesModalControls): Chrome {
     const { progress } = controls;
     const ended = progress?.state === 'succeeded' || progress?.state === 'failed';
     if (!ended && progress?.prompt) {
-        const actions = progress.prompt.actions.map((label, index): ActionButton => ({
-            label,
-            variant: index === 0 ? 'accent' : 'secondary',
-            onPress: () => controls.answer(label),
-        }));
-        return { hideClose: true, actions };
+        // A question with fields (a sign-in) has no answer that does not go on: Cancel is its
+        // way out, and a Cancel among its answers is the dismiss's, drawn once (2026-11-04).
+        const buttons = promptButtons(progress.prompt, controls.answer);
+        if (progress.prompt.fields?.length) {
+            return { closeLabel: 'Cancel', actions: buttons.filter((b) => b.label !== 'Cancel') };
+        }
+        return { hideClose: true, actions: buttons };
     }
-    if (!ended) return { closeLabel: 'Run in background', actions: NO_ACTIONS };
+    if (!ended) return { closeLabel: 'Run in Background', actions: NO_ACTIONS };
     if (progress?.state !== 'failed') return { closeLabel: 'Close', actions: backTo(controls) };
     const logs: ActionButton = {
         label: 'Open Debug Logs',
@@ -163,53 +192,129 @@ function runChrome(controls: UpdatesModalControls): Chrome {
 function backTo(controls: UpdatesModalControls): ActionButton[] {
     if (controls.remaining === 0) return NO_ACTIONS;
     // The button's spinner while the list is read again, not "Checking for updates" (owner, 2026-10-31).
-    return [{ label: 'Back to updates', variant: 'secondary', onPress: controls.back, isPending: controls.rechecking }];
+    return [{ label: 'Back to Updates', variant: 'secondary', onPress: controls.back, isPending: controls.rechecking }];
 }
 
-/** What the modal shows: its title, body, dismiss label and the buttons beside it. */
-function contentFor(controls: UpdatesModalControls): Chrome & { title: string; body: React.ReactNode } {
-    const { view } = controls;
-    if (view.phase === 'applying') {
-        const body = (
-            <UpdatesRunView
-                rows={view.rows}
-                statuses={controls.statuses}
-                progress={controls.progress}
-                onTyped={controls.onTyped}
-                remaining={controls.remaining}
+/** The question the run is paused on, while it is. */
+function askingOf(controls: UpdatesModalControls): OperationPrompt | undefined {
+    const { progress } = controls;
+    return progress?.state === 'running' ? progress.prompt : undefined;
+}
+
+/** The list: a Steps window holding the height it opens at; the table scrolls in its own pane. */
+function ListWindow({ rows, controls, onClose }: { rows: PendingUpdateRow[]; controls: UpdatesModalControls; onClose: () => void }) {
+    const count = rows.filter((r) => controls.ticked.has(r.id) && !r.lockedReason).length;
+    const apply: ActionButton = {
+        label: applyLabel(count),
+        variant: 'accent',
+        onPress: controls.apply,
+        isDisabled: count === 0,
+        sizeLabels: applyLabelsOf(rows),
+    };
+    return (
+        <StepsWindow title={LIST_TITLE} actionButtons={[apply]} onClose={onClose}>
+            <UpdateList rows={rows} controls={controls} />
+        </StepsWindow>
+    );
+}
+
+/** A task taking the window (a sign-in): its own heading, amber. */
+function taskHeading(asking: OperationPrompt): Heading {
+    return { title: asking.title ?? APPLYING_TITLE, status: 'warning' };
+}
+
+/**
+ * The run, in the Progress layout (step-07 Win1): large, as a question is asked under the row it is
+ * about, and holding the height it opens at. A task (a sign-in) takes the window's body and its
+ * heading the title. While a question waits whose answers are every way on, Close is hidden.
+ */
+function RunWindow({ rows, controls, onClose }: { rows: PendingUpdateRow[]; controls: UpdatesModalControls; onClose: () => void }) {
+    const asking = askingOf(controls);
+    const takes = asking && questionTakesWindow(asking);
+    const heading = takes ? taskHeading(asking) : runHeadingOf(controls.progress, rows, controls.statuses);
+    const chrome = runChrome(controls);
+    // Every update applied with nothing to read on a card: the cards have nothing left to say, so the
+    // result is a small window of its own, the thing as the title and the outcome under its mark
+    // (owner, 2026-11-20). A card with a note, or an update that did not apply (with its button,
+    // walk F294), keeps the cards in place.
+    if (!takes && heading.status === 'success' && endsClean({ succeeded: true, rows: endingRowsOf(rows, controls.statuses) })) {
+        const waiting = controls.remaining > 0 ? waitingLine(controls.remaining) : undefined;
+        const took = controls.progress?.tookMs;
+        return (
+            <ProgressWindow
+                title={UPDATES_THING}
+                stream={
+                    <ResultBody
+                        status="success"
+                        outcome={resultOutcome(APPLIED_TITLE, UPDATES_THING)}
+                        lines={[waiting]}
+                        {...(took === undefined ? {} : { tookMs: took })}
+                    />
+                }
+                actions={chrome.actions}
+                endedClean
+                onClose={onClose}
             />
         );
-        return { title: runTitleOf(controls.progress, view.rows, controls.statuses), body, ...runChrome(controls) };
     }
-    const rows = view.phase === 'list' ? view.rows : [];
-    const count = rows.filter((r) => controls.ticked.has(r.id) && !r.lockedReason).length;
-    const label = count === 1 ? 'Apply 1 update' : `Apply ${count} updates`;
-    return {
-        title: LIST_TITLE,
-        body: <UpdateList rows={rows} controls={controls} />,
-        actions: [{ label, variant: 'accent', onPress: controls.apply, isDisabled: count === 0 }],
-    };
+    const stream = takes ? (
+        <OperationQuestion prompt={asking} onTyped={controls.onTyped} />
+    ) : (
+        <UpdatesRunView
+            rows={rows}
+            statuses={controls.statuses}
+            progress={controls.progress}
+            onTyped={controls.onTyped}
+            remaining={controls.remaining}
+            rowFix={controls.rowFix}
+        />
+    );
+    return (
+        <ProgressWindow
+            title={heading.title}
+            {...(heading.status ? { status: heading.status } : {})}
+            stream={stream}
+            actions={chrome.actions}
+            {...(chrome.closeLabel ? { closeLabel: chrome.closeLabel } : {})}
+            hideClose={Boolean(chrome.hideClose)}
+            asksUnderRows
+            onClose={onClose}
+        />
+    );
+}
+
+/** The window the view shows: the list, or the run and how it ended. */
+function UpdatesWindow({ controls, onClose }: { controls: UpdatesModalControls; onClose: () => void }) {
+    const { view } = controls;
+    if (view.phase === 'closed') return null;
+    if (view.phase === 'list') return <ListWindow rows={view.rows} controls={controls} onClose={onClose} />;
+    return <RunWindow rows={view.rows} controls={controls} onClose={onClose} />;
 }
 
 /** The Updates modal; nothing while closed. */
 export function UpdatesModal({ controls }: { controls: UpdatesModalControls }): React.ReactElement {
-    const open = controls.view.phase !== 'closed';
-    const content = open ? contentFor(controls) : undefined;
+    // Cancel on a sign-in answers it and keeps the window for the rest of the run.
+    const signingIn = controls.view.phase === 'applying' && Boolean(askingOf(controls)?.fields?.length);
+    const dismiss = signingIn ? () => controls.answer(undefined) : controls.close;
     return (
-        <DialogContainer onDismiss={controls.close}>
-            {content && (
-                <Modal
-                    title={content.title}
-                    size="L"
-                    fitContent
-                    onClose={controls.close}
-                    closeLabel={content.closeLabel}
-                    hideClose={content.hideClose}
-                    actionButtons={content.actions}
-                >
-                    {content.body}
-                </Modal>
-            )}
+        <DialogContainer onDismiss={dismiss}>
+            {/* Only while open: the container is open whenever its child is an element, even one that
+                draws nothing, and an open container dims the whole page (the visual baseline,
+                2026-11-14). */}
+            {controls.view.phase === 'closed' ? null : <UpdatesWindow controls={controls} onClose={dismiss} />}
         </DialogContainer>
     );
+}
+
+/** The labels Apply can take besides none ticked: one, and every row that can be ticked. */
+function applyLabelsOf(rows: PendingUpdateRow[]): string[] {
+    const tickable = rows.filter((r) => !r.lockedReason).length;
+    return tickable > 1 ? [applyLabel(1), applyLabel(tickable)] : [applyLabel(1)];
+}
+
+/** The Apply button names what it will do; with nothing ticked it names no number (2026-11-03: "Apply 0 Updates"). */
+function applyLabel(count: number): string {
+    if (count === 0) return 'Apply Updates';
+    if (count === 1) return 'Apply 1 Update';
+    return `Apply ${count} Updates`;
 }

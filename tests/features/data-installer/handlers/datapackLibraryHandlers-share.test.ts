@@ -1,7 +1,7 @@
 /**
  * Sharing a library pack (owner, 2026-10-30): every version of the SC's own pack is shared, or
  * stops being shared, through the library's owner-only `update-datapack-metadata` (`shared`).
- * Confirm-gated: shared, everyone with access to the datapack library can see and install it.
+ * Confirm-gated: shared, everyone using Demo Builder can see and install it.
  */
 
 // The shared wall first: it owns the access-guard mock and the subject's import.
@@ -66,8 +66,8 @@ it('stops sharing the same way', async () => {
 });
 
 it.each([
-    ['no name', { shared: true, confirm: true }, 'Name the library datapack, and whether to share it.'],
-    ['no shared', { datapackName: 'acme-1a2b3c', confirm: true }, 'Name the library datapack, and whether to share it.'],
+    ['no name', { shared: true, confirm: true }, 'Name the datapack, and whether to share it.'],
+    ['no shared', { datapackName: 'acme-1a2b3c', confirm: true }, 'Name the datapack, and whether to share it.'],
 ])('refuses, writing nothing, with %s', async (_label, payload, error) => {
     expect(await share(createMockHandlerContext(), payload)).toEqual({ success: false, error });
     expect(fetchMock).not.toHaveBeenCalled();
@@ -78,7 +78,7 @@ it('refuses without confirm, saying who will see it', async () => {
 
     expect(result).toEqual({
         success: false,
-        error: 'Everyone with access to the datapack library can see and install this pack. Send confirm:true to proceed.',
+        error: 'Everyone can find and install it under Community Datapacks. Send confirm:true to proceed.',
         code: ErrorCode.INVALID_OPERATION,
     });
     expect(fetchMock).not.toHaveBeenCalled();
@@ -89,6 +89,21 @@ it("refuses a pack the SC does not own, writing nothing", async () => {
 
     const result = await share(createMockHandlerContext(), { datapackName: 'acme-1a2b3c', shared: true, confirm: true });
 
-    expect(result).toMatchObject({ success: false, error: 'The datapack library has no pack of yours named acme-1a2b3c.' });
+    expect(result).toMatchObject({ success: false, error: 'My Datapacks has no datapack named acme-1a2b3c.' });
     expect(puts()).toStrictEqual([]);
+});
+
+it("shares the pack's settings layer with it: a colleague installing the pack gets what its owner gets (step 09)", async () => {
+    const layer = { ...row('v1', true), id: { name: 'acme-1a2b3c-settings', version: 'v1' }, dataTypes: ['store_config'] };
+    library.findDatapacks.mockImplementation(async ({ datapackName }: { datapackName: string }) =>
+        datapackName === 'acme-1a2b3c-settings' ? { items: [layer, { ...layer, mine: undefined, id: { ...layer.id, version: 'theirs' } }], count: 2 } : { items: [row('v1', true)], count: 1 },
+    );
+
+    const result = await share(createMockHandlerContext(), { datapackName: 'acme-1a2b3c', shared: true, confirm: true });
+
+    expect(puts()).toEqual([
+        { datapack_name: 'acme-1a2b3c', version: 'v1', shared: true },
+        { datapack_name: 'acme-1a2b3c-settings', version: 'v1', shared: true },
+    ]);
+    expect(result).toMatchObject({ success: true, data: { versions: 1, settingsLayerVersions: 1 } });
 });

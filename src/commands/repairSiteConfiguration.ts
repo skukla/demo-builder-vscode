@@ -26,6 +26,7 @@
 import * as vscode from 'vscode';
 import { BaseCommand } from '@/core/base/baseCommand';
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
+import { ensureDaLiveAuth } from '@/features/eds/handlers/daLive/daLiveAuthGuard';
 import { lostGrantsMessage } from '@/features/eds/services/configService/lostGrantsMessage';
 import { repairSiteConfigForProject } from '@/features/eds/services/configService/repairSiteConfigForProject';
 import type { RepairSiteConfigResult } from '@/features/eds/services/configService/repairSiteConfigHeadless';
@@ -64,7 +65,7 @@ export class RepairSiteConfigurationCommand extends BaseCommand {
         if (!result.verified) {
             await this.showWarning(
                 `Site configuration written for ${result.site}, but the overlay did not read ` +
-                    'back. Product pages may still not load — check the Debug Logs.',
+                    'back. Product pages may still not load.',
             );
         }
 
@@ -82,7 +83,7 @@ export class RepairSiteConfigurationCommand extends BaseCommand {
         return vscode.window.withProgress(
             {
                 location: vscode.ProgressLocation.Notification,
-                title: 'Repairing site configuration',
+                title: 'Repairing Site Configuration',
                 cancellable: false,
             },
             // Each half names its step, as the same job is named everywhere else
@@ -107,7 +108,7 @@ export class RepairSiteConfigurationCommand extends BaseCommand {
         const result = await vscode.window.withProgress(
             {
                 location: vscode.ProgressLocation.Notification,
-                title: 'Repairing site configuration',
+                title: 'Repairing Site Configuration',
                 cancellable: false,
             },
             (progress) => {
@@ -117,10 +118,22 @@ export class RepairSiteConfigurationCommand extends BaseCommand {
                     project,
                     secrets: this.context.secrets,
                     logger: this.logger,
+                    // A palette command has a person there: the CDN publish needs the
+                    // DA.live session, so ask for it as the Configure save does (PL-104 fix 11).
+                    ensureDaLiveSession: () =>
+                        ensureDaLiveAuth({ context: this.context, logger: this.logger }, '[Repair Site Configuration]'),
                 });
             },
         );
 
+        // Pushed to GitHub, but the CDN did not take it: the storefront is not current.
+        if (result.success && result.cdnError) {
+            await this.showWarning(
+                'Site configuration was repaired, but the live storefront still serves the previous ' +
+                    `settings: ${result.cdnError}`,
+            );
+            return;
+        }
         if (result.success) {
             await state.saveProject(project);
             await this.showSuccessMessage('Site configuration repaired and storefront republished');

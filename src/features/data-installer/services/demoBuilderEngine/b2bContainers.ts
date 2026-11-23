@@ -9,7 +9,7 @@
  * |---|---|---|---|
  * | a company | its customers, but its own admin (`super_user_id` from `GET company/{id}`, else `previous.superUserId`) | `GET hierarchy/{id}`, nodes with `entity_type` `customer` | yes, 2026-10-30 (`HIERARCHY_27_DB08`, and two levels `HIERARCHY_28_DB08`) |
  * | a shared catalog | companies, products, categories beyond what it held when made (`previous.held`) | `readHeld` | yes, 2026-10-30 (`CATALOG_19_…_DB08`) |
- * | a customer group | customers (deleting it would move them to another group), companies and shared catalogs that use it | `GET customers/search` (`group_id`), `GET company` (`customer_group_id`), the catalog list | catalog list only |
+ * | a customer group | customers (deleting it would move them to another group), companies, shared catalogs and cart rules that use it (`demoUses.ts`'s definition of use) | `GET customers/search` (`group_id`), `GET company` (`customer_group_id`), the catalog list, `GET salesRules/search` (`customer_group_ids`; a store without the route answers 404, read as none) | catalog list only |
  *
  * **A shared catalog and its customer group are one unit** (live, 2026-10-30, scratch-1028):
  * making a catalog on a group renames the group to the catalog's name, and deleting the catalog
@@ -37,6 +37,7 @@
 
 import { CATALOG_CATEGORIES_KIND, CATALOG_COMPANIES_KIND, CATALOG_KIND, CATALOG_PRODUCTS_KIND, COMPANY_KIND, CUSTOMER_GROUP_KIND, CUSTOMER_KIND } from './b2bKeys';
 import { filterBy, readCatalogs, readHeld } from './b2bReads';
+import { CART_RULE_KIND } from './cartRulesKind';
 import { companyMembers } from './companiesKind';
 import type { CreatedObject } from './installRecord';
 import { readOrNull, segment } from './kindContext';
@@ -44,6 +45,7 @@ import type { KeptContainer, KeptPartner } from './removers';
 import { splitPair } from './sharedCatalogKinds';
 import { andList } from '@/core/utils/andList';
 import { CommerceReadError, readAllPages } from '@/features/app-builder/services/erpFillReaders';
+import type { CommerceSalesRule } from '@/types/commerceSalesRule';
 import type { CommerceCompany, CommerceCompanyRow, CommerceCustomer, CommerceGet, CommerceSharedCatalog } from '@/types/commerceWire';
 import type { SharedCatalogHeld } from '@/types/storePreparation';
 
@@ -104,15 +106,28 @@ async function catalogHolds(get: CommerceGet, object: CreatedObject, taking: Tak
     ];
 }
 
+/** Every cart rule; a store without the route (404) has none. */
+async function readRules(get: CommerceGet): Promise<CommerceSalesRule[]> {
+    try {
+        return await readAllPages<CommerceSalesRule>(get, 'salesRules/search');
+    } catch (error) {
+        if (error instanceof CommerceReadError && error.status === NOT_FOUND) return [];
+        throw error;
+    }
+}
+
 async function groupHolds(get: CommerceGet, object: CreatedObject, taking: Taking): Promise<string[]> {
     const id = Number(object.id);
     const customers = (await readAllPages<CommerceCustomer>(get, 'customers/search', filterBy('group_id', id))).filter((c) => !taking.has(CUSTOMER_KIND, String(c.id)));
     const companies = (await readAllPages<CommerceCompanyRow>(get, 'company', filterBy('customer_group_id', id))).filter((c) => !taking.has(COMPANY_KIND, String(c.id)));
     const catalogs = (await readCatalogs(get)).filter((c) => c.customer_group_id === id && !taking.has(CATALOG_KIND, String(c.id)));
+    // A rule the removal is not taking would lose the group it applies to.
+    const rules = (await readRules(get)).filter((r) => (r.customer_group_ids ?? []).map(Number).includes(id) && !taking.has(CART_RULE_KIND, String(r.rule_id)));
     return [
         ...counted(customers.length, 'customer', 'customers'),
         ...counted(companies.length, 'company', 'companies'),
         ...counted(catalogs.length, 'shared catalog', 'shared catalogs'),
+        ...counted(rules.length, 'cart rule', 'cart rules'),
     ];
 }
 

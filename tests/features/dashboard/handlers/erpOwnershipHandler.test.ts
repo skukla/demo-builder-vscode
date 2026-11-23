@@ -51,7 +51,7 @@ describe('getErpOwnershipOptions', () => {
     });
 
     // Without the store the credential is read from Adobe Console on every reload: about two
-    // minutes on Justrite, all of it under "Reading the store" (2026-10-18).
+    // minutes on Tailspin, all of it under "Reading the store" (2026-10-18).
     it('hands the read the extension\'s credential store, so a kept credential is used', async () => {
         const { mockContext } = setupMocks(pairProject());
 

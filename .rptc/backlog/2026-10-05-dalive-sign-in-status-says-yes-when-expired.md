@@ -4,12 +4,12 @@ kind: fix
 area: eds
 needs: []
 value: med
-status: built
+status: shipped
 ---
 
 # The sign-in status says DA.live is signed in when the sign-in has expired
 
-Filed 2026-10-05 from the first EDS-24 run on Justrite. `get_auth_status` answered
+Filed 2026-10-05 from the first EDS-24 run on Tailspin. `get_auth_status` answered
 `"dalive":{"authenticated":true,"orgName":"skukla"}`; minutes later every DA.live call in
 Republish failed with "Authentication expired. Please log in again." and a 401 on the org
 config. The status reports that a stored sign-in EXISTS, not that it still works (the Adobe
@@ -30,3 +30,4 @@ answer for both. Test: an expired stored token reads as not authenticated.
 ## Shipped so far
 
 - 2026-10-19  fix(ai): get_auth_status asks DA.live whether the stored sign-in still works (`604743e70`)
+- 2026-11-20  Released in v1.0.0-beta.153

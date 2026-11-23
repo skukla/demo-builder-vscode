@@ -1,0 +1,157 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>Integrations Prototype</title>
+<!--
+  A click-through prototype of the Integrations screen: Integration Settings (the Form that shows a
+  failure, keeping what was typed) and Add ERP Integration (the Confirm that reads first, then asks).
+  The screen is the REAL compiled integrations bundle; only the extension host is scripted
+  (scenario-integrations.js, with data typed against the extension's own interfaces in
+  scenarioIntegrations.ts). The same harness as proto.html.
+
+  Serve this directory beside integrations-bundle.js and scenarioIntegrations.js.
+-->
+<link rel="icon" href="data:,">
+<style>
+  /* Theme variables from VS Code's dark_modern.json, as the baseline harness carries them. */
+  :root {
+    --vscode-font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+    --vscode-font-size: 13px;
+  }
+  body.vscode-dark {
+    --vscode-foreground: #cccccc;
+    --vscode-editor-background: #1f1f1f; --vscode-descriptionForeground: #9d9d9d;
+    --vscode-badge-background: #616161; --vscode-badge-foreground: #f8f8f8;
+    --vscode-button-background: #0078d4; --vscode-button-foreground: #ffffff;
+    --vscode-panel-border: #2b2b2b; --vscode-focusBorder: #0078d4;
+    --vscode-errorForeground: #f85149; --vscode-textLink-foreground: #4daafc;
+    --vscode-input-background: #313131; --vscode-input-foreground: #cccccc;
+    --vscode-sideBar-background: #181818; --vscode-list-hoverBackground: #2a2d2e;
+  }
+  body.vscode-light {
+    --vscode-foreground: #3b3b3b;
+    --vscode-editor-background: #ffffff; --vscode-descriptionForeground: #3b3b3b;
+    --vscode-badge-background: #cccccc; --vscode-badge-foreground: #3b3b3b;
+    --vscode-button-background: #005fb8; --vscode-button-foreground: #ffffff;
+    --vscode-panel-border: #e5e5e5; --vscode-focusBorder: #005fb8;
+    --vscode-errorForeground: #f85149; --vscode-textLink-foreground: #005fb8;
+    --vscode-input-background: #ffffff; --vscode-input-foreground: #3b3b3b;
+    --vscode-sideBar-background: #f8f8f8; --vscode-list-hoverBackground: #f2f2f2;
+  }
+  body { margin:0; background:var(--vscode-editor-background); color:var(--vscode-foreground);
+         font-family:var(--vscode-font-family); font-size:var(--vscode-font-size); }
+
+  /* The prototype's own control: deliberately unlike the product (dashed, monospace, amber). */
+  #proto-pill { position:fixed; right:12px; bottom:12px; z-index:2147483647;
+    font:12px/1.4 ui-monospace, Menlo, monospace; color:#f5c451; background:rgba(20,20,20,.92);
+    border:1.5px dashed #f5c451; border-radius:14px; padding:6px 10px; max-width:260px;
+    box-shadow:0 2px 10px rgba(0,0,0,.5); }
+  #proto-pill button { font:inherit; color:inherit; background:transparent; border:1px dashed #f5c451;
+    border-radius:8px; padding:2px 8px; cursor:pointer; }
+  #proto-pill .head { display:flex; gap:8px; align-items:center; justify-content:space-between; cursor:pointer; user-select:none; }
+  #proto-pill .body { margin-top:6px; display:flex; flex-direction:column; gap:6px; }
+  #proto-pill label { display:flex; flex-direction:column; gap:2px; color:#e8d9a8; }
+  #proto-pill select { font:inherit; background:#222; color:#f5c451; border:1px dashed #f5c451; border-radius:6px; padding:2px 4px; }
+  #proto-pill.collapsed .body { display:none; }
+</style></head><body class="vscode-dark">
+<div id="root"></div>
+
+<div id="proto-pill">
+  <div class="head" id="proto-head"><span>Prototype</span><span id="proto-caret">Hide</span></div>
+  <div class="body">
+    <label>Integration Settings Save
+      <select id="proto-save">
+        <option value="fails">Fails</option>
+        <option value="succeeds">Succeeds</option>
+      </select>
+    </label>
+    <label>Add ERP Integration
+      <select id="proto-add">
+        <option value="reads">Reads the Store</option>
+        <option value="refused">Refused</option>
+      </select>
+    </label>
+    <button id="proto-restart" type="button">Restart</button>
+  </div>
+</div>
+
+<script>
+  // ---- The prototype control: its choices live in localStorage so a Restart keeps them.
+  (() => {
+    const KEY = 'integrations-proto';
+    const saved = JSON.parse(localStorage.getItem(KEY) || '{}');
+    const pill = document.getElementById('proto-pill');
+    const saveSel = document.getElementById('proto-save');
+    const add = document.getElementById('proto-add');
+    saveSel.value = saved.save || 'fails';
+    add.value = saved.add || 'reads';
+    if (saved.collapsed) pill.classList.add('collapsed');
+    const caret = () => { document.getElementById('proto-caret').textContent = pill.classList.contains('collapsed') ? 'Show' : 'Hide'; };
+    caret();
+    const save = () => localStorage.setItem(KEY, JSON.stringify({ save: saveSel.value, add: add.value, collapsed: pill.classList.contains('collapsed') }));
+    saveSel.onchange = save;
+    add.onchange = save;
+    document.getElementById('proto-head').onclick = () => { pill.classList.toggle('collapsed'); caret(); save(); };
+    document.getElementById('proto-restart').onclick = () => location.reload();
+    window.__OUTCOME__ = () => ({ save: saveSel.value, add: add.value });
+  })();
+
+  // ---- What went wrong on the page, for whoever drives it.
+  window.__ERRORS__ = [];
+  window.__FALLBACK__ = [];
+  window.addEventListener('error', (e) => window.__ERRORS__.push('error: ' + (e.message || e)));
+  window.addEventListener('unhandledrejection', (e) => window.__ERRORS__.push('rejection: ' + (e.reason && e.reason.message || e.reason)));
+  const origError = console.error.bind(console);
+  console.error = (...args) => { window.__ERRORS__.push('console: ' + args.map(String).join(' ').slice(0, 400)); origError(...args); };
+
+  // ---- The host side of the webview channel.
+  window.__SENT__ = [];
+  const post = (m) => window.dispatchEvent(new MessageEvent('message', { data: m }));
+  let pushSeq = 0;
+  /** Push one message to the webview, as the extension's sendMessage does. */
+  window.__PUSH__ = (type, payload) => post({ id: 'push-' + (++pushSeq), type, payload, timestamp: Date.now() });
+  /** Push a sequence, one entry every `everyMs`: [{type, payload}] or functions returning one. */
+  window.__SCHEDULE__ = (entries, everyMs) => entries.forEach((entry, i) =>
+    setTimeout(() => { const e = typeof entry === 'function' ? entry() : entry; if (e) window.__PUSH__(e.type, e.payload); }, everyMs * (i + 1)));
+  const delay = (ms) => new Promise((r) => setTimeout(r, ms));
+
+  window.acquireVsCodeApi = () => ({
+    postMessage: (m) => {
+      window.__SENT__.push({ type: m.type, payload: m.payload, expectsResponse: !!m.expectsResponse, at: Date.now() });
+      if (m.type === '__webview_ready__') {
+        // 30ms, not 0: the client registers its listener in the same initialize() that sends ready.
+        setTimeout(() => { post({ id: 'h', type: '__handshake_complete__', timestamp: Date.now() });
+                           post({ id: 'i', type: 'init', payload: window.SCENARIO_INTEGRATIONS.INIT, timestamp: Date.now() }); }, 30);
+        return;
+      }
+      const host = window.__HOST__ || {};
+      if (!m.expectsResponse) {
+        if (host.onPlain) host.onPlain(m.type, m.payload || {});
+        return;
+      }
+      // An answer is a HandlerResponse ({success, data} or {success:false, error}), or a function
+      // of the request returning one, or a promise of one. `delayMs` on the host sets the wait.
+      Promise.resolve().then(async () => {
+        const entry = host.answers && host.answers[m.type];
+        let answer;
+        if (entry === undefined) {
+          window.__FALLBACK__.push(m.type);
+          answer = { success: true, data: null };
+        } else {
+          answer = typeof entry === 'function' ? await entry(m.payload || {}, m) : entry;
+        }
+        const wait = host.delayMs ? host.delayMs(m.type, m.payload || {}) : 0;
+        if (wait) await delay(wait);
+        post({ id: m.id + '-r', isResponse: true, responseToId: m.id, payload: answer, timestamp: Date.now() });
+      }).catch((e) => window.__ERRORS__.push('host: ' + m.type + ': ' + (e && e.message || e)));
+    },
+    getState: () => undefined, setState: () => {},
+  });
+
+</script>
+<script src="./scenarioIntegrations.js"></script>
+<script src="./scenario-integrations.js"></script>
+<script>
+  // The bundle last, so the scripted host is in place before the webview says it is ready.
+  const s = document.createElement('script');
+  s.src = './integrations-bundle.js?cb=' + Date.now();
+  document.body.appendChild(s);
+</script>
+</body></html>

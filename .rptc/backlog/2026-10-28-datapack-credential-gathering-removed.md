@@ -4,7 +4,8 @@ kind: chore
 area: data-installer
 needs: []
 value: med
-status: active
+status: gated
+waiting-on: the owner's live reset of an older project (Before finishing); the clean-up shipped in 90f494b15
 ---
 
 # The Commerce secrets gathered for the Data Installer service are no longer needed
@@ -70,7 +71,7 @@ They were not removed in the same change because existing projects hold values i
 
 - **The App Builder deploy and EDS reset must keep working**: run their suites, and a live reset
   of a project with sample data.
-- **Afreen's answer on product profiles** (is it a matter of adding the service's technical account
+- **The Data Installer team's answer on product profiles** (is it a matter of adding the service's technical account
   to the store's profile?) decides whether the service can install into an SC's store again. It
   still needs no secrets from us either way.
 
@@ -78,3 +79,6 @@ They were not removed in the same change because existing projects hold values i
 
 - 2026-10-28  fix(data-installer): stop gathering Commerce secrets; remove the shared-credential broker (`ff7c67be1`)
 - 2026-10-28  fix(data-installer): stop gathering Commerce secrets; remove the shared-credential broker (`dedcf8c7d`)
+- 2026-11-21  Reconciled 2026-11-21: broker and shared credential removed. DEFECT found: 2aea69b3e took ACCS_OAUTH_CLIENT_SECRET out of SECRET_ENV_KEYS without the clean-up this item said must come first, so an older project still holding it in componentConfigs would export it in plain text, and SecretStorage copies are never deleted. Left: strip or clean that key for existing projects, then the live reset under Before finishing.
+- 2026-11-21  Fixed 2026-11-21 (uncommitted): ACCS_OAUTH_CLIENT_ID and ACCS_OAUTH_CLIENT_SECRET are listed as REMOVED_CREDENTIAL_ENV_KEYS in envVarKeys.ts, so every strip (export, import, get_project, .env reads) removes them again, and the activation secret sweep deletes them from existing projects' files and from SecretStorage. Left: the live reset under Before finishing.
+- 2026-11-21  fix(secrets): a removed Commerce credential never leaves the machine (`90f494b15`)

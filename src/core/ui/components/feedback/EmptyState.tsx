@@ -1,6 +1,6 @@
 import { Flex, Text, Well } from '@adobe/react-spectrum';
-import AlertCircle from '@spectrum-icons/workflow/AlertCircle';
 import React from 'react';
+import { StatusIcon } from '@/core/ui/components/feedback/StatusIcon';
 
 export interface EmptyStateProps {
     /** Icon to display (defaults to AlertCircle) */
@@ -9,8 +9,6 @@ export interface EmptyStateProps {
     title: string;
     /** Description text */
     description: string;
-    /** Icon color class (default: 'text-yellow-600') */
-    iconColor?: string;
     /** Whether to center the display (default: true) */
     centered?: boolean;
     /** Optional action buttons or additional content */
@@ -35,7 +33,6 @@ export const EmptyState = React.memo<EmptyStateProps>(({
     icon,
     title,
     description,
-    iconColor = 'text-yellow-600',
     centered = true,
     children,
 }) => {
@@ -43,7 +40,7 @@ export const EmptyState = React.memo<EmptyStateProps>(({
         <Flex direction="column" gap="size-300" alignItems="center">
             <Well>
                 <Flex gap="size-200" alignItems="center">
-                    {icon || <AlertCircle UNSAFE_className={iconColor} />}
+                    {icon || <StatusIcon status="warning" size="M" />}
                     <Flex direction="column" gap="size-50">
                         <Text>
                             <strong>{title}</strong>

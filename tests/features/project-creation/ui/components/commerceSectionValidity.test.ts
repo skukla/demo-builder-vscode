@@ -97,7 +97,6 @@ describe('computeCommerceSectionValidity', () => {
         // which is the inverse of the deadlock this function exists to prevent.
         expect(validity).toEqual({
             connection: true,
-            credentials: true,
             'business-structure': true,
             catalog: true,
         });

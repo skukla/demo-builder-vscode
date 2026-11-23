@@ -6,6 +6,7 @@ parent: AB-26
 needs: [AB-26e, AB-26m, AB-26l]
 value: high
 status: shipped
+plan: erp-screen-realism
 ---
 
 # The walk-through — what to look at in the ERP, what to look at in Commerce, and how each relates
@@ -22,7 +23,7 @@ Slice of [[AB-26]]. **Lane: 1** — a document plus a preview recording, nothing
 map:
 
 1. **The ERP, screen by screen** in the order the twenty-minute demo path walks them
-   (`.rptc/plans/erp-screen-realism/overview.md` §7): Home → a product → a customer → pricing
+   (`.rptc/complete/erp-screen-realism/overview.md` §7): Home → a product → a customer → pricing
    conditions → a sales order → its shipments → its invoice → a held order → the event
    journal → Settings' Organisation card. For each screen: what is on it, which numbers are
    the ERP's own and which are mirrored from Commerce, and what to click.

@@ -1,9 +1,9 @@
 /**
  * AI-11 — `create_project` sets the store scope, the same way `configure_project` does.
  *
- * Found building JustRite (AB-53): an added demo's codes were `justrite / juststore /
- * justeng`, the ACCS instance it was built on had `justrite / justrite_store /
- * justrite_us`. Without this input an agent's only path was create → configure →
+ * Found building Tailspin (AB-53): an added demo's codes were `tailspin / juststore /
+ * justeng`, the ACCS instance it was built on had `tailspin / tailspin_store /
+ * tailspin_us`. Without this input an agent's only path was create → configure →
  * republish: a storefront published wrong once, then fixed. With it, the codes reach
  * the creation that generates config.json.
  *
@@ -30,11 +30,11 @@ import {
 } from './createProjectTool.testUtils';
 
 const ENDPOINT = 'https://accs.example/graphql';
-const SCOPE = { website: 'justrite', store: 'justrite_store', storeView: 'justrite_us' };
+const SCOPE = { website: 'tailspin', store: 'tailspin_store', storeView: 'tailspin_us' };
 const SCOPE_ENV = {
-    ACCS_WEBSITE_CODE: 'justrite',
-    ACCS_STORE_CODE: 'justrite_store',
-    ACCS_STORE_VIEW_CODE: 'justrite_us',
+    ACCS_WEBSITE_CODE: 'tailspin',
+    ACCS_STORE_CODE: 'tailspin_store',
+    ACCS_STORE_VIEW_CODE: 'tailspin_us',
 };
 const ACCS = { ...EDS, stack: 'eds-accs', accsEndpoint: ENDPOINT };
 
@@ -62,7 +62,7 @@ describe('create_project — storeScope', () => {
     });
 
     it.each([
-        ['two of three codes', { website: 'justrite', store: 'justrite_store' }],
+        ['two of three codes', { website: 'tailspin', store: 'tailspin_store' }],
         ['a code that is not text', { ...SCOPE, storeView: 7 }],
     ])('refuses %s, and creates nothing', async (_label, storeScope) => {
         const res = await toolServer().call({ ...ACCS, storeScope });
@@ -92,7 +92,7 @@ describe('create_project_from_file — storeScope', () => {
         configs: {
             'adobe-commerce-accs': {
                 ACCS_GRAPHQL_ENDPOINT: ENDPOINT,
-                ACCS_WEBSITE_CODE: 'justrite',
+                ACCS_WEBSITE_CODE: 'tailspin',
                 ACCS_STORE_CODE: 'juststore',
                 ACCS_STORE_VIEW_CODE: 'justeng',
             },

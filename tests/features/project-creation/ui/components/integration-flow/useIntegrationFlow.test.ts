@@ -209,17 +209,6 @@ describe('useIntegrationFlow — dest-project Continue', () => {
             workspacesCache: undefined,
         });
     });
-
-    it('blocks Continue while a destination phase is running (setPhaseRunning seam)', () => {
-        const s = setup();
-        pickKindAndContinue(s, 'mesh');
-        act(() => s.result.current.setPendingProject(PROJECT));
-        expect(s.result.current.canContinue).toBe(true);
-        act(() => s.result.current.setPhaseRunning(true));
-        expect(s.result.current.canContinue).toBe(false);
-        act(() => s.result.current.setPhaseRunning(false));
-        expect(s.result.current.canContinue).toBe(true);
-    });
 });
 
 describe('useIntegrationFlow — dest-workspace Continue and mesh finish', () => {

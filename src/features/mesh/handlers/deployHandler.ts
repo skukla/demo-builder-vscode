@@ -11,10 +11,11 @@
  * because that tool routes through the keyed runner. An agent-driven deploy is
  * the case the notification exists for, so it now reports itself exactly like
  * the UI path (`DeployMeshCommand`, same wrapper). What stays different is only
- * what each does with the RESULT: toasts there, a tool response here.
+ * what each does with the RESULT: toasts there, a tool response here. The one-at-a-time
+ * lock and the mesh prompt are the deploy's own, so this door gets both without asking
+ * (PL-104 fix 4).
  */
 
-import * as vscode from 'vscode';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { ensureDaLiveAuth } from '@/features/eds/handlers/edsHelpers';
 import { republishStorefrontConfig } from '@/features/eds/services/storefront/storefrontRepublishService';
@@ -23,7 +24,6 @@ import {
     deployMeshWithFeedback,
     type DeployMeshWithFeedbackDeps,
 } from '@/features/mesh/services/deployMeshWithFeedback';
-import { meshDeployLock } from '@/features/mesh/services/meshDeployLock';
 import type { Project } from '@/types/base';
 import { ErrorCode } from '@/types/errorCodes';
 import type { HandlerContext, HandlerResponse, MessageHandler } from '@/types/handlers';
@@ -93,7 +93,7 @@ export const handleDeployApiMesh: MessageHandler = async (context) => {
 /**
  * Deploy the mesh from a button on a screen, reporting to that screen's progress modal
  * (PL-59 phase 2, rule R1). Pattern B: it answers with the outcome; the modal is
- * told as it goes. One deploy at a time, shared with the palette command.
+ * told as it goes. The lock and the mesh prompt are the deploy's own (`deployMeshWithFeedback`).
  *
  * @param operationId - the id the screen named the operation by
  */
@@ -101,22 +101,16 @@ export async function deployMeshFromScreen(
     context: HandlerContext,
     operationId: string,
 ): Promise<HandlerResponse> {
-    if (meshDeployLock.isLocked()) {
-        return { success: false, error: 'A mesh deploy is already running.' };
-    }
     const project = await context.stateManager.getCurrentProject();
     if (!project) {
         return { success: false, error: 'No project found', code: ErrorCode.PROJECT_NOT_FOUND };
     }
-    return meshDeployLock.run(async () => {
-        const result = await deployMeshWithFeedback(meshDeps(context, project), {
-            progress: 'modal',
-            operationId,
-        });
-        if (result.success) {
-            await vscode.commands.executeCommand('demoBuilder._internal.meshActionTaken');
-            return { success: true, data: deployedData(result) };
-        }
-        return { success: false, error: result.error };
+    const result = await deployMeshWithFeedback(meshDeps(context, project), {
+        progress: 'modal',
+        operationId,
     });
+    if (result.success) {
+        return { success: true, data: deployedData(result) };
+    }
+    return { success: false, error: result.error };
 }

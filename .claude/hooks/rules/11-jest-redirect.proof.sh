@@ -1,4 +1,7 @@
 #!/bin/bash
+# Markers this run's router drops go to a folder of its own, removed on exit (PL-86): in the
+# shared temp folder they outlived the run, and a later session of the same name went silent.
+PROOF_TMP="$(mktemp -d)"; export TMPDIR="$PROOF_TMP"; trap 'rm -rf "$PROOF_TMP"' EXIT
 # Proves 11-jest-redirect.rule fires on the wrong order and stays silent otherwise.
 # Cases live in a file because the hook inspects the OUTER bash command — writing
 # these literals on the command line trips the very rules under test.
@@ -18,7 +21,7 @@ STDERR_DUP='2>&1 >&2'
 # the rule it is named after.
 _IDLE_PS=$(mktemp)
 printf '%s\n' "99999 /bin/zsh -l" > "$_IDLE_PS"
-trap 'rm -f "$_IDLE_PS"' EXIT
+trap 'rm -f "$_IDLE_PS"; rm -rf "$PROOF_TMP"' EXIT
 
 run() {
   local cmd="$1" label="$2" expect="$3"

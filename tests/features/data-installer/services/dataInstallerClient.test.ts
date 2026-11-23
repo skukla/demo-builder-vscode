@@ -160,6 +160,50 @@ describe('DataInstallerClient', () => {
             expect(typeof item.records).toBe('object');
         });
 
+        // 2026-11-05: Demo Builder's store answers a large item in pages under App Builder's 1 MB result.
+        it('reads an item a page at a time from a store that pages it, joining the pages in order', async () => {
+            const pageOf = (rows: number[], next: number | null) => ({
+                ok: true,
+                status: 200,
+                statusText: 'OK',
+                text: async () => JSON.stringify({ count: 1, data: JSON.stringify(rows), next_row: next }),
+            });
+            const f = jest.fn().mockResolvedValueOnce(pageOf([1, 2], 2)).mockResolvedValueOnce(pageOf([3], null));
+
+            const item = await makeClient(f).getDataItem({ name: 'luma', version: 'main' }, 'products');
+
+            expect(item.records).toEqual([1, 2, 3]);
+            expect(callArgs(f, 0).url).toContain('rows_from=0');
+            expect(callArgs(f, 1).url).toContain('rows_from=2');
+        });
+
+        it("joins an Import API body's pages into one body, its items in order", async () => {
+            const body = (items: string[]) => ({ source: { entity: 'catalog_product', items } });
+            const pageOf = (items: string[], next: number | null) => ({
+                ok: true,
+                status: 200,
+                statusText: 'OK',
+                text: async () => JSON.stringify({ count: 1, data: JSON.stringify(body(items)), next_row: next }),
+            });
+            const f = jest.fn().mockResolvedValueOnce(pageOf(['a', 'b'], 2)).mockResolvedValueOnce(pageOf(['c'], null));
+
+            const item = await makeClient(f).getDataItem({ name: 'luma', version: 'import-form' }, 'product_export');
+
+            expect(item.records).toEqual(body(['a', 'b', 'c']));
+        });
+
+        it('takes a whole answer in one call from a store that does not page, and never pages backwards', async () => {
+            const whole = jsonFetch(load('get-data-item.json'));
+            const backwards = jsonFetch({ count: 1, data: '[1]', next_row: 0 });
+
+            await makeClient(whole).getDataItem({ name: 'citisignal_new', version: 'main' }, 'categories');
+            const item = await makeClient(backwards).getDataItem({ name: 'luma', version: 'main' }, 'products');
+
+            expect(whole).toHaveBeenCalledTimes(1);
+            expect(backwards).toHaveBeenCalledTimes(1);
+            expect(item.records).toEqual([1]);
+        });
+
         it('reads a job status as a per-type map with hasRecord', async () => {
             const snap = await makeClient(jsonFetch(load('datapack-process-status-complete.json'))).getJobStatus('a');
             expect(snap.hasRecord).toBe(true);
@@ -290,7 +334,7 @@ describe('DataInstallerClient', () => {
 
             const page = await makeClient(f).getInstalledDatapacks({
                 commerceInstance: 'instance-04',
-                datapackName: 'AFREEN-LG-DEMO',
+                datapackName: 'SCRATCH-LG-DEMO',
                 version: 'dev',
                 limit: 10,
                 skip: 5,
@@ -299,7 +343,7 @@ describe('DataInstallerClient', () => {
             const { url } = callArgs(f);
             expect(url).toContain('/get-installed-datapacks');
             expect(url).toContain('commerce_instance=instance-04');
-            expect(url).toContain('datapack_name=AFREEN-LG-DEMO');
+            expect(url).toContain('datapack_name=SCRATCH-LG-DEMO');
             expect(url).toContain('version=dev');
             expect(url).toContain('limit=10');
             expect(url).toContain('skip=5');

@@ -25,6 +25,10 @@ print(','.join(p['id'] for p in d if p.get('tier') == 2))
 ")
 node "$AB/run.mjs" --tier2 --only "$TIER2_IDS" || exit 1
 
+# Both tiers ran: the release check reads this date (PL-107). A red coverage gate
+# below is a finding about the run, not a run that did not happen.
+node "$AB/../../../../scripts/lib/pipelineLast.js" battery
+
 echo
 echo "== sweep: coverage gates =="
 # Never pipe jest (buffering reads as a hang) — redirect, then read the file.

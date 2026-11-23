@@ -109,7 +109,7 @@ export async function runConfigureRepublish(project: Project, deps: ConfigureRep
     const { parts, sendToScreen } = deps;
     if (sendToScreen) startModalRun(CONFIGURE_REPUBLISH_OPERATION_ID, sendToScreen);
     const outcome = await withOperationProgress(
-        { id: CONFIGURE_REPUBLISH_OPERATION_ID, title: 'Republishing storefront', inModal: Boolean(sendToScreen) },
+        { id: CONFIGURE_REPUBLISH_OPERATION_ID, title: 'Republishing Storefront', inModal: Boolean(sendToScreen) },
         (report) => republishOrFail(project, parts, report),
     );
     await recordPublished(project, outcome, parts);

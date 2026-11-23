@@ -45,6 +45,17 @@
  * content and config anyway. Now both stop where `still-live` stops, and say to sign in
  * to DA.live again and delete again.
  *
+ * **It runs on the DA.live sign-in only, and stops without one (PL-104 fix 7).** The
+ * one rule for every door: the delete button, the agent's `delete_project` and
+ * `cleanup_dalive_site`, and Manage DA.live Sites. Three of them used to fall back to
+ * the Adobe IMS token (`firstUsableDaLiveToken`, deleted), which is the token the
+ * 2026-10-25 delete above ran on: Helix refused every unpublish and DA.live deleted
+ * the content. The IMS token also listed zero sites for an org that has many, and was
+ * refused on a site the DA.live token had just written to (measured 2026-09-12). So
+ * there is no fallback to choose: a door hands over the DA.live session, and an empty
+ * one stops the teardown before any step (`STOPPED_NOT_SIGNED_IN`). Asking to sign in
+ * first is the door's surface: the button asks, an agent is told to.
+ *
  * Without a repo there is nothing to unpublish against: the teardown says so in
  * `stillPublished` rather than reporting a clean finish, because "the source is
  * gone" and "the site is down" are different claims. `stillPublished` is false
@@ -115,7 +126,11 @@ export interface StorefrontTeardownTarget {
 }
 
 export interface StorefrontTeardownDeps {
-    tokenProvider: DaLiveTokenProvider;
+    /**
+     * The DA.live sign-in (`DaLiveAuthService`, or its token provider). Never the Adobe
+     * IMS token: see the module docstring. Empty, it stops the teardown before any step.
+     */
+    daLiveSession: DaLiveTokenProvider;
     logger: Logger;
     /** Where the Helix admin key is kept; the unpublish needs it loaded. */
     initKeyStore: () => Promise<void>;
@@ -136,7 +151,7 @@ export interface StorefrontTeardownDeps {
      * {@link teardownSteps} lists them, for a caller that is narrating progress.
      */
     onStep?: (step: string) => void;
-    /** What a step is doing now ("12 files removed"), for the line under it. */
+    /** What a step is doing now ("12 files deleted"), for the line under it. */
     onStepDetail?: (step: string, detail: string) => void;
 }
 
@@ -181,6 +196,10 @@ export const STOPPED_STILL_LIVE =
     'The pages could not be taken off the live site, so nothing else was deleted. ' +
     'Sign in to DA.live again, then try again.';
 
+/** What a teardown with no DA.live sign-in says: nothing ran. */
+export const STOPPED_NOT_SIGNED_IN =
+    'Not signed in to DA.live, so nothing was deleted. Sign in to DA.live, then delete again.';
+
 /** What a teardown stopped by a refused sign-in says. */
 export const STOPPED_SIGN_IN_REFUSED =
     'AEM refused the DA.live sign-in, so nothing else was deleted. ' +
@@ -223,7 +242,7 @@ export async function tearDownStorefront(
     target: StorefrontTeardownTarget,
     deps: StorefrontTeardownDeps,
 ): Promise<StorefrontTeardownResult> {
-    const { logger, tokenProvider, onStep, onStepDetail } = deps;
+    const { logger, daLiveSession: tokenProvider, onStep, onStepDetail } = deps;
     const { daLiveOrg, daLiveSite } = target;
     const result: StorefrontTeardownResult = {
         stillPublished: true,
@@ -232,6 +251,16 @@ export async function tearDownStorefront(
             'No GitHub repository was given, so nothing was taken off the CDN. Anything published is still live.',
         contentDeleted: false,
     };
+
+    if (!(await tokenProvider.getAccessToken())) {
+        logger.warn(`[Teardown] ${daLiveOrg}/${daLiveSite}: ${STOPPED_NOT_SIGNED_IN}`);
+        return {
+            ...result,
+            publishSummary: 'Nothing was taken off the CDN. Anything published is still live.',
+            stopped: STOPPED_NOT_SIGNED_IN,
+            error: STOPPED_NOT_SIGNED_IN,
+        };
+    }
 
     const cdnRepo = repoOf(target);
     if (cdnRepo) {
@@ -301,7 +330,7 @@ export async function tearDownStorefront(
     // surface maps it to a typed non-retryable answer, and swallowing it here
     // turned that into a plain "deletion failed" string.
     const deleted = await contentOps.deleteAllSiteContent(daLiveOrg, daLiveSite, ({ deleted: count }) =>
-        onStepDetail?.(OPERATION_STAGES.clearingDaLiveContent.label, `${itemCount(count, 'file')} removed`),
+        onStepDetail?.(OPERATION_STAGES.clearingDaLiveContent.label, `${itemCount(count, 'file')} deleted`),
     );
     logger.debug(
         `[Teardown] DA.live content deleted: ${deleted.deletedCount} file(s) from ${daLiveOrg}/${daLiveSite}`,

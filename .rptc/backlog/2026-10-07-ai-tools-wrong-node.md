@@ -4,7 +4,7 @@ kind: fix
 area: ai
 needs: []
 value: med
-status: built
+status: shipped
 ---
 
 # The AI tools install and run on whatever Node is first on the PATH
@@ -12,7 +12,7 @@ status: built
 Filed 2026-10-07 from the owner's import test: "I also still see an EBADENGINE issue when
 triggering an AI tools update."
 
-## What the logs show (justrite-copy import, 2026-10-07 13:26)
+## What the logs show (tailspin-copy import, 2026-10-07 13:26)
 
 `aiDefaultsInstaller.ts` runs `npm install` in `<project>/.demo-builder-mcp/` with no
 `useNodeVersion`, so on the owner's machine it ran on Node 18.20.8:
@@ -42,10 +42,11 @@ ERP install the same minute ran "npm install with Node 24" through fnm (`ensureF
 
 ## Shipped so far
 
-- 2026-10-07  2026-10-07 Proven live on justrite-copy: Regenerate AI Files installed on Node 24 via fnm with 0 npm warnings (7 EBADENGINE lines before); .mcp.json launches all three servers as fnm exec --using=24 node; each started from a bare environment and listed its tools (commerce-extensibility 11, Playwright 25, dropins-ai-tools 20). @dropins/mcp replaced by @dropins/ai-tools.
+- 2026-10-07  2026-10-07 Proven live on tailspin-copy: Regenerate AI Files installed on Node 24 via fnm with 0 npm warnings (7 EBADENGINE lines before); .mcp.json launches all three servers as fnm exec --using=24 node; each started from a bare environment and listed its tools (commerce-extensibility 11, Playwright 25, dropins-ai-tools 20). @dropins/mcp replaced by @dropins/ai-tools.
 - 2026-10-07  fix(ai): the AI tools install and run on the Node they need, through fnm (`3737f9b41`)
 - 2026-10-07  docs(backlog): AI-13 reuses the per-integration Node mechanism from AB-3 (`1ec2e103b`)
 - 2026-10-07  docs(backlog): AI-13, the AI tools install and run on the PATH's Node (`47fdf9f71`)
 - 2026-10-07  fix(ai): the AI tools update runs on the same Node as their install (`8c4f266bf`)
 - 2026-10-07  docs(ai): the dropins server lists 20 tools; AI-13 built and proven live (`5ec5d633b`)
 - 2026-10-07  docs(backlog): AI-13 logs the update-path fix (`15a3cac37`)
+- 2026-11-20  Released in v1.0.0-beta.153

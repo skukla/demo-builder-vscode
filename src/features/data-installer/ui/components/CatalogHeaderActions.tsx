@@ -1,60 +1,131 @@
 /**
- * The catalog header's actions (owner, 2026-10-30): Create datapack, Load from file, and, set
- * apart at the end because it deletes, Clear demo data.
+ * The Datapacks header's actions (step-04 S1; decisions Phase 7 and 7b): in a project's Datapacks
+ * the save button, Install from File, then the Clear menu set apart at the end because it deletes;
+ * in the Datapack Library Add from File alone, since the library touches no store (owner,
+ * 2026-11-07).
  *
- * Quiet buttons with icons (`ActionButton isQuiet`, the header's own refresh and view toggles;
- * glyphs from `renderMenuIcon`, so "delete" is one glyph everywhere). They were blue text links,
- * which read as navigation when every one is an action.
+ * Create, once the project and the catalog have answered; until then the header's waiting button
+ * (disabled, a spinner, no words, as its Refresh is while it reads), so its words never change on
+ * screen (7b). Saving the demo's datapack, Update and Save As New, is in that datapack's flyout
+ * (owner, 2026-11-17, walk F219): the header holds what is about no one datapack.
  *
- * Create datapack replaced "Export from this instance" and "Save from this store", which
- * overlapped, and named a store where they read an instance. Its dialog asks the pack type and
- * routes (`CreateDatapackModal`): a Commerce pack with Demo Builder's engine goes to the pick
- * screen, which the view hosts with the save's progress window (`useHeldPack`), so it is raised
- * as `onSaveFromStore`. Clear demo data clears the stores the SC ticks of what Demo Builder did
- * not install (datapack-engine step 10), after its own confirmation, in the screen's progress
- * window.
+ * Install from File adds the file's datapack to My Datapacks, then, after a clean load, opens the
+ * install window on it (step-07 F2, P4-Q7; the screen's `onInstall`); cancelling that window leaves
+ * the datapack in My Datapacks (owner Q8). Add from File, in the Datapack Library, only adds. Clear ▾ holds two items (step 06 C5; decisions J1-1):
+ * Clear Demo Data clears every website the project uses, after its own window
+ * (`ProjectClearWindow`); Clear Commerce Instance clears the websites the SC ticks, whoever put the
+ * data there (`InstanceClearWindow`). Both run in the screen's progress window. The Command Palette
+ * opens either on arrival (P6-Q5): the screen hands it over as `clearRequest`.
  *
- * Each action owns the dialog it opens, so the catalog view carries no dialog's state.
+ * Quiet buttons with icons (`ActionButton isQuiet`, as the header's own Refresh and view toggles;
+ * glyphs from `renderMenuIcon`). Each action owns the dialog it opens, so the catalog view carries no
+ * dialog's state.
  *
  * @module features/data-installer/ui/components/CatalogHeaderActions
  */
 
-import { ActionButton, Divider, Text } from '@adobe/react-spectrum';
-import React, { useCallback, useState } from 'react';
-import type { StorePicks } from '../../pickableKinds';
+import { ActionButton, Divider, Item, Text } from '@adobe/react-spectrum';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useClearDemoData } from '../hooks/useClearDemoData';
-import { ClearDemoDataModal } from './ClearDemoDataModal';
-import { CreateDatapackModal } from './CreateDatapackModal';
-import { LoadDatapackFileModal } from './LoadDatapackFileModal';
+import type { RemovalAnswer } from '../hooks/useSwitchChanges';
+import { type LoadedDatapack, AddDatapackFileModal } from './AddDatapackFileModal';
+import { InstanceClearWindow } from './InstanceClearWindow';
+import { ProjectClearWindow } from './ProjectClearWindow';
+import { CardActionsMenu } from '@/core/ui/components/ui/CardActionsMenu';
 import { renderMenuIcon } from '@/core/ui/components/ui/menuIcons';
-import type { WipeStoreChoice } from '@/types/demoDataWipe';
+import { Spinner } from '@/core/ui/components/ui/Spinner';
+import type { DatapackId } from '@/types/datapack';
+import type { ClearWindowKind } from '@/types/demoDataWipe';
+
+/**
+ * The header's Create (owner, 2026-11-17, walk F219): the header holds what is about no one datapack;
+ * saving the demo's datapack, Update and Save As New, moved to that datapack's flyout. Stable.
+ */
+export interface HeaderSaveActions {
+    /** The project or the catalog has not answered: the header's waiting button, never a label first (7b). */
+    pending: boolean;
+    /** Create: a new datapack from the project's store. */
+    onCreate: () => void;
+}
 
 export interface CatalogHeaderActionsProps {
     /** A file was loaded (or the load modal closed): the catalog may have changed. Stable. */
     onCatalogChanged: () => void;
-    /** The engine chosen, which decides where a Commerce pack is made (`CreateDatapackModal`). */
-    engine?: 'service' | 'demo-builder';
-    /** Demo Builder's engine, a Commerce pack: open the pick screen with no pack. Stable. */
-    onSaveFromStore: (picks: StorePicks) => void;
+    /** A project's Datapacks: the save button, and Install from File and Clear. Absent in the Datapack Library. */
+    save?: HeaderSaveActions;
+    /** The SC's own datapacks in My Datapacks: the file load asks to replace only one of these. */
+    mySaves?: readonly DatapackId[];
+    /** The SC's own datapacks' names: Clear's save question may not name a new one after them. Must be stable. */
+    ownNames?: readonly string[];
+    /** A Clear window the Command Palette asked for (P6-Q5): opened once the header can, then reported taken. */
+    clearRequest?: ClearWindowKind | null;
+    /** The header opened `clearRequest`. Stable. */
+    onClearRequestTaken?: () => void;
+    /** A project's Datapacks: open the install window on a datapack Install from File just added. Stable. */
+    onInstall?: (loaded: LoadedDatapack) => void;
+}
+
+/** Create, or the header's waiting button until the project and the catalog have answered. */
+function CreateButton({ save }: { save: HeaderSaveActions }): React.JSX.Element {
+    if (save.pending) {
+        return (
+            <ActionButton isQuiet isDisabled aria-label="Loading">
+                <Spinner size="S" />
+            </ActionButton>
+        );
+    }
+    return (
+        <ActionButton isQuiet onPress={save.onCreate}>
+            {renderMenuIcon('add')}
+            <Text>Create</Text>
+        </ActionButton>
+    );
 }
 
 /** Which dialog the header has open. */
-type Open = 'create' | 'load' | 'clear' | null;
+type Open = 'load' | 'clear' | 'instance' | null;
 
-export function CatalogHeaderActions({
-    onCatalogChanged,
-    engine,
-    onSaveFromStore,
-}: CatalogHeaderActionsProps): React.JSX.Element {
+/** The Clear menu's item key for each window. */
+const CLEAR_OPENS: Record<ClearWindowKind, Open> = { project: 'clear', instance: 'instance' };
+
+/** Clear ▾: Clear Demo Data, then Clear Commerce Instance (J1-1). */
+function ClearMenu({ onPick }: { onPick: (window: Open) => void }): React.JSX.Element {
+    const pick = useCallback((key: React.Key): void => onPick(CLEAR_OPENS[key === 'instance' ? 'instance' : 'project']), [onPick]);
+    return (
+        <CardActionsMenu label="Clear" ariaLabel="Clear" icon={renderMenuIcon('delete')} onAction={pick}>
+            {[<Item key="project">Clear Demo Data</Item>, <Item key="instance">Clear Commerce Instance</Item>]}
+        </CardActionsMenu>
+    );
+}
+
+/** Open the window the Command Palette asked for, once the header has Clear (a project's Datapacks). */
+function useClearArrivalOpens(
+    canClear: boolean,
+    request: ClearWindowKind | null | undefined,
+    onTaken: (() => void) | undefined,
+    setOpen: (open: Open) => void,
+): void {
+    useEffect(() => {
+        if (!canClear || !request) return;
+        setOpen(CLEAR_OPENS[request]);
+        onTaken?.();
+    }, [canClear, request, onTaken, setOpen]);
+}
+
+export function CatalogHeaderActions(props: CatalogHeaderActionsProps): React.JSX.Element {
+    const { onCatalogChanged, save, mySaves, ownNames, clearRequest, onClearRequestTaken, onInstall } = props;
     const [open, setOpen] = useState<Open>(null);
-    const { clear, progressWindow } = useClearDemoData(onCatalogChanged);
+    const { clear, clearInstance, running, progressWindow } = useClearDemoData(onCatalogChanged);
+    useClearArrivalOpens(save !== undefined, clearRequest, onClearRequestTaken, setOpen);
+    // A Clear window stays until the run begins, so a refusal for an answer about a datapack's
+    // changes is asked there (C3 review); the progress window then takes over.
+    useEffect(() => {
+        if (running) setOpen((current) => (current === 'clear' || current === 'instance' ? null : current));
+    }, [running]);
 
     const close = useCallback((): void => setOpen(null), []);
     const startClear = useCallback(
-        (stores: WipeStoreChoice[], token: string): void => {
-            setOpen(null);
-            clear(stores, token);
-        },
+        (token: string, websites: string[], answer?: RemovalAnswer): Promise<boolean> => clear(token, websites, answer),
         [clear],
     );
     // Stable, because the load modal's effect depends on it.
@@ -62,25 +133,32 @@ export function CatalogHeaderActions({
         setOpen(null);
         onCatalogChanged();
     }, [onCatalogChanged]);
+    // Install from File: the load closes, and the install window opens on what it added (F2).
+    const installLoaded = useCallback(
+        (loaded: LoadedDatapack): void => {
+            closeLoad();
+            onInstall?.(loaded);
+        },
+        [closeLoad, onInstall],
+    );
+    const loadProps = { mySaves, ...(ownNames ? { ownNames } : {}), ...(save && onInstall ? { onInstall: installLoaded } : {}) };
 
     return (
         <>
-            <ActionButton isQuiet onPress={() => setOpen('create')}>
-                {renderMenuIcon('add')}
-                <Text>Create datapack</Text>
-            </ActionButton>
+            {save ? <CreateButton save={save} /> : null}
             <ActionButton isQuiet onPress={() => setOpen('load')}>
                 {renderMenuIcon('openFile')}
-                <Text>Load from file</Text>
+                {save ? <Text>Install from File</Text> : <Text>Add from File</Text>}
             </ActionButton>
-            <Divider orientation="vertical" size="S" />
-            <ActionButton isQuiet onPress={() => setOpen('clear')}>
-                {renderMenuIcon('delete')}
-                <Text>Clear demo data</Text>
-            </ActionButton>
-            {open === 'create' ? <CreateDatapackModal engine={engine} onClose={close} onSaveFromStore={onSaveFromStore} /> : null}
-            {open === 'load' ? <LoadDatapackFileModal onClose={closeLoad} /> : null}
-            {open === 'clear' ? <ClearDemoDataModal onClose={close} onClear={startClear} /> : null}
+            {save ? (
+                <>
+                    <Divider orientation="vertical" size="S" />
+                    <ClearMenu onPick={setOpen} />
+                </>
+            ) : null}
+            {open === 'load' ? <AddDatapackFileModal onClose={closeLoad} {...loadProps} /> : null}
+            {open === 'clear' ? <ProjectClearWindow onClose={close} onClear={startClear} {...(ownNames ? { ownNames } : {})} /> : null}
+            {open === 'instance' ? <InstanceClearWindow onClose={close} onClear={clearInstance} /> : null}
             {progressWindow}
         </>
     );

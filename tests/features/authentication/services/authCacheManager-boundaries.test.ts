@@ -126,6 +126,21 @@ describe('AuthCacheManager - token inspection and the targeted clears', () => {
         expect(cache.getCachedTokenInspection()).toEqual(inspection);
     });
 
+    // A cached "signed in" must not outlive the Adobe CLI's ten-minute margin, or a check served
+    // from the cache lets an `aio` command open a browser sign-in unasked (2026-11-16).
+    it('stops serving a valid inspection when the token reaches the CLI\'s margin', () => {
+        const time = mockTime();
+        try {
+            cache.setCachedTokenInspection({ valid: true, expiresIn: 12, token: 'tok' });
+            time.advance(2 * 60 * 1000 - 1);
+            expect(cache.getCachedTokenInspection()).toBeDefined();
+            time.advance(1);
+            expect(cache.getCachedTokenInspection()).toBeUndefined();
+        } finally {
+            time.restore();
+        }
+    });
+
     it('clearTokenInspectionCache forgets the inspection and nothing else', () => {
         cache.setCachedTokenInspection({ valid: true, expiresIn: 42 });
         cache.setCachedDeveloperPermissions({ hasPermissions: true });

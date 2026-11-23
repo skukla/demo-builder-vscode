@@ -4,7 +4,7 @@
  * The catalog is one row per `(name, version)` — 40 rows for 25 names live — so
  * the view's first job is to render one CARD per name, not per row. Curation is
  * the second: 23 of the 40 live rows are `shared`, the rest developer scratch, so
- * the view asks for shared-only and the community toggle re-asks the SERVICE
+ * the view asks once for every pack and the Show list filters what it holds, with no second request
  * rather than filtering what it already has (the handler owns that filter).
  *
  * `DatapackCard` renders for real here; only the transport is mocked. That is
@@ -14,9 +14,10 @@
  * Strict TDD: written BEFORE the view exists.
  */
 
-import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
+import { act, render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 
 import { change, press, settle } from '../../../../helpers/reactSettle';
+import { webviewClientHandlers } from '../../../../helpers/webviewClientMock';
 import '@testing-library/jest-dom';
 
 import {
@@ -30,6 +31,8 @@ import {
     CATALOG,
     INVENTORY_COMPLETE,
     INVENTORY_WITH_GAP,
+    SOURCE_NOTICE_COPY,
+    showSelect,
 } from './DatapackCatalogView.testUtils';
 
 describe('DatapackCatalogView', () => {
@@ -59,7 +62,7 @@ describe('DatapackCatalogView', () => {
         await waitFor(() =>
             expect(requestOfType('find-datapacks')).toEqual({
                 type: 'find-datapacks',
-                payload: { includeCommunity: false, includeLibrary: true },
+                payload: { includeCommunity: true },
             })
         );
     });
@@ -101,28 +104,103 @@ describe('DatapackCatalogView', () => {
         });
 
         expect(within(cards[0]).getByTestId('spectrum-picker')).toHaveTextContent('tierpricingfix');
-        // The sibling card is untouched — selection is per pack, not global.
-        expect(within(cards[1]).getByTestId('spectrum-picker')).toHaveTextContent('main');
+        // The sibling card is untouched — selection is per pack, not global. wknd, the other pack with
+        // two versions: CitiSignal has one, so no picker (step-07 P4).
+        expect(within(cards[2]).getByTestId('spectrum-picker')).toHaveTextContent('main');
     });
 
-    describe('community toggle', () => {
-        it('re-asks the service instead of filtering locally', async () => {
-            resolveWith(CATALOG);
-
+    // Owner, 2026-11-05: the Show list replaced two switches, each of which asked again and showed
+    // its wait on Refresh. The rules themselves are `catalogShow.test.ts`.
+    describe('the Show list', () => {
+        it('says a choice with nothing in it is empty, and what to do', async () => {
+            resolveWith([makeSummary('mine', 'main', { store: 'library', mine: true })]);
             render(<DatapackCatalogView />);
-            // Mount effects fire requests; settle so their responses commit inside
-            // act() rather than in the next query's wait loop.
             await settle();
             await screen.findAllByTestId('datapack-card');
 
-            await press(screen.getByRole('checkbox', { name: /community/i }));
+            fireEvent.change(showSelect(), { target: { value: 'team' } });
 
-            await waitFor(() =>
-                expect(lastRequest()).toEqual({
-                    type: 'find-datapacks',
-                    payload: { includeCommunity: true, includeLibrary: true },
-                })
-            );
+            expect(await screen.findByText('No Demo Builder Datapacks')).toBeInTheDocument();
+            expect(screen.getByText('Try All Datapacks')).toBeInTheDocument();
+        });
+
+        // Step-07 P1: the Data Installer's packs are one choice away, so an empty Recommended says where.
+        it('opens on an empty Recommended when only the Data Installer has packs, and points at All', async () => {
+            resolveWith([makeSummary('curated', 'main', { shared: true })]);
+            render(<DatapackCatalogView />);
+            await settle();
+
+            expect(await screen.findByText('No Recommended Datapacks')).toBeInTheDocument();
+            expect(screen.getByText('Try All Datapacks')).toBeInTheDocument();
+            expect(screen.queryAllByTestId('datapack-card')).toHaveLength(0);
+        });
+
+        it('reads the catalog again when a setting it depends on changes, with no Refresh', async () => {
+            resolveWith(CATALOG);
+            render(<DatapackCatalogView />);
+            await settle();
+            const asked = () => mockRequest.mock.calls.filter((call) => call[0] === 'find-datapacks').length;
+            const before = asked();
+
+            act(() => webviewClientHandlers.get('datapack-list-changed')?.(undefined));
+            await settle();
+
+            expect(asked()).toBe(before + 1);
+        });
+
+        // F66: a pack changed elsewhere may be the one this project holds.
+        it('reads which pack the project holds again when the packs change, and the library never does', async () => {
+            resolveWith(CATALOG);
+            const { unmount } = render(<DatapackCatalogView />);
+            await settle();
+            const targets = () => mockRequest.mock.calls.filter((call) => call[0] === 'get-datapack-import-target').length;
+            const before = targets();
+
+            act(() => webviewClientHandlers.get('datapack-list-changed')?.(undefined));
+            await settle();
+            expect(targets()).toBe(before + 1);
+            unmount();
+
+            mockRequest.mockClear();
+            render(<DatapackCatalogView library />);
+            await settle();
+            act(() => webviewClientHandlers.get('datapack-list-changed')?.(undefined));
+            await settle();
+            expect(targets()).toBe(0);
+        });
+
+        it('keeps the filter box on an empty view, so choosing one moves nothing', async () => {
+            resolveWith([makeSummary('mine', 'main', { store: 'library', mine: true })]);
+            render(<DatapackCatalogView />);
+            await settle();
+            await screen.findAllByTestId('datapack-card');
+
+            fireEvent.change(showSelect(), { target: { value: 'team' } });
+
+            await screen.findByText('No Demo Builder Datapacks');
+            expect(screen.getByRole('searchbox', { name: 'Filter datapacks' })).toBeInTheDocument();
+        });
+
+        const PACKS = [
+            makeSummary('mine', 'main', { store: 'library', mine: true }),
+            makeSummary('colleague', 'main', { store: 'library' }),
+            makeSummary('curated', 'main', { shared: true }),
+        ];
+        const cardNames = () => screen.getAllByTestId('datapack-card').map((card) => card.textContent);
+
+        // Step-07 P1: Recommended is yours and Demo Builder's; the Data Installer's are one choice away.
+        it('opens on Recommended, leaving Community and the Data Installer out, and switches with no second request', async () => {
+            resolveWith(PACKS);
+            render(<DatapackCatalogView />);
+            await settle();
+            await screen.findAllByTestId('datapack-card');
+            expect(cardNames()).toEqual([expect.stringContaining('mine')]);
+            const asked = mockRequest.mock.calls.filter((call) => call[0] === 'find-datapacks').length;
+
+            fireEvent.change(showSelect(), { target: { value: 'installer' } });
+
+            await waitFor(() => expect(cardNames()).toEqual([expect.stringContaining('curated')]));
+            expect(mockRequest.mock.calls.filter((call) => call[0] === 'find-datapacks')).toHaveLength(asked);
         });
     });
 
@@ -169,6 +247,27 @@ describe('DatapackCatalogView', () => {
             expect(screen.queryAllByTestId('datapack-card')).toHaveLength(0);
             expect(screen.getByText(/no datapacks match/i)).toBeInTheDocument();
         });
+
+        // Clarity 1.13 (step-04 S10): the pack is there, under another Show choice.
+        it('says when the matches sit under another Show choice, and goes there on press', async () => {
+            resolveWith([
+                makeSummary('mine', 'main', { store: 'library', mine: true }),
+                makeSummary('colleague', 'main', { store: 'library' }),
+            ]);
+            render(<DatapackCatalogView />);
+            await settle();
+            await screen.findAllByTestId('datapack-card');
+
+            await change(screen.getByRole('searchbox'), 'colleague');
+
+            expect(screen.queryAllByTestId('datapack-card')).toHaveLength(0);
+            expect(screen.getByText('No matches in Recommended. 1 in Community Datapacks.')).toBeInTheDocument();
+            expect(screen.queryByText(/no datapacks match/i)).not.toBeInTheDocument();
+            await press(screen.getByRole('button', { name: 'Show Community Datapacks' }));
+
+            expect(screen.getAllByTestId('datapack-card')).toHaveLength(1);
+            expect(showSelect().value).toBe('community');
+        });
     });
 
     describe('detail flyout', () => {
@@ -199,7 +298,7 @@ describe('DatapackCatalogView', () => {
             await waitFor(() =>
                 expect(lastRequest()).toEqual({
                     type: 'get-datapack-detail',
-                    payload: { datapackName: 'bodea', version: 'main', store: 'installer' },
+                    payload: { datapackName: 'bodea', version: 'main', store: 'library', why: 'the version its card showed' },
                 })
             );
         });
@@ -236,7 +335,7 @@ describe('DatapackCatalogView', () => {
             await waitFor(() =>
                 expect(lastRequest()).toEqual({
                     type: 'get-datapack-detail',
-                    payload: { datapackName: 'bodea', version: 'tierpricingfix', store: 'installer' },
+                    payload: { datapackName: 'bodea', version: 'tierpricingfix', store: 'library', why: 'the version its card showed' },
                 })
             );
         });
@@ -284,7 +383,7 @@ describe('DatapackCatalogView', () => {
             // the detail time to arrive. Settle explicitly instead of relying on
             // the timing of a query.
             await settle();
-            await press(await screen.findByRole('button', { name: /^import/i }));
+            await press(await screen.findByRole('button', { name: /^install$/i }));
             // The modal is its own component with its own mount requests (its
             // import target and job status). Opening it is one interaction, but
             // its requests are only ISSUED once it has mounted — which the
@@ -303,34 +402,36 @@ describe('DatapackCatalogView', () => {
             const cards = await screen.findAllByTestId('datapack-card');
 
             await press(cards[0]);
-            await screen.findByRole('button', { name: /^import/i });
+            await screen.findByRole('button', { name: /^install$/i });
 
             expect(screen.queryByText('Commerce instance')).not.toBeInTheDocument();
         });
 
-        it('opens when the flyout raises Import', async () => {
+        it('opens when the flyout raises Install', async () => {
             await openImport();
 
             expect(
-                await screen.findByRole('button', { name: /start import/i })
+                await screen.findByText('Install', { selector: '.modal-button' })
             ).toBeInTheDocument();
         });
 
-        // The types on offer are what the service HOLDS, from the detail
-        // inventory — never what the pack declares.
-        it('offers only the data types the service stores', async () => {
+        // The types installed are what the service HOLDS, from the detail
+        // inventory — never what the pack declares. A first install sends the
+        // whole pack (step 03, S4): there are no checkboxes to offer them on.
+        it('installs only the data types the service stores', async () => {
             await openImport();
-            await screen.findByRole('button', { name: /start import/i });
+            await press(await screen.findByText('Install', { selector: '.modal-button' }));
 
-            expect(screen.getByRole('checkbox', { name: 'Products' })).toBeInTheDocument();
-            expect(screen.queryByRole('checkbox', { name: 'Giftcards' })).not.toBeInTheDocument();
+            const start = mockRequest.mock.calls.find((c) => c[0] === 'start-datapack-import');
+            expect(start?.[1]).toMatchObject({ dataTypes: ['products'] });
         });
 
         it('closes without closing the flyout behind it', async () => {
             await openImport();
-            await screen.findByRole('button', { name: /start import/i });
+            await screen.findByText('Install', { selector: '.modal-button' });
 
-            await press(screen.getByRole('button', { name: /^close$/i }));
+            // A first install's summary commits, so its way out is Cancel (step 03, S4).
+            await press(screen.getByRole('button', { name: /^cancel$/i }));
 
             expect(screen.queryByText('Commerce instance')).not.toBeInTheDocument();
             // The flyout is still open — the modal was a sibling, not a child.
@@ -339,7 +440,7 @@ describe('DatapackCatalogView', () => {
     });
 
     describe('states', () => {
-        it('shows an empty state for an empty catalog, keeping the toggle reachable', async () => {
+        it('shows an empty state for an empty catalog, keeping the Show list reachable', async () => {
             resolveWith([]);
 
             render(<DatapackCatalogView />);
@@ -347,8 +448,8 @@ describe('DatapackCatalogView', () => {
             // act() rather than in the next query's wait loop.
             await settle();
 
-            expect(await screen.findByText('No datapacks found')).toBeInTheDocument();
-            expect(screen.getByRole('checkbox', { name: /community/i })).toBeInTheDocument();
+            expect(await screen.findByText('No Datapacks Yet')).toBeInTheDocument();
+            expect(screen.getByRole('button', { name: /show/i })).toBeInTheDocument();
         });
 
         // A refusal from the guard RETURNS rather than throws, so this is the
@@ -365,15 +466,17 @@ describe('DatapackCatalogView', () => {
             // act() rather than in the next query's wait loop.
             await settle();
 
-            expect(await screen.findByText('Adobe sign-in required')).toBeInTheDocument();
+            expect(await screen.findByText('Adobe Sign-In Required')).toBeInTheDocument();
             expect(screen.getByRole('button', { name: /sign in with adobe/i })).toBeInTheDocument();
-            expect(screen.queryByRole('button', { name: /try again/i })).not.toBeInTheDocument();
+            expect(screen.queryByRole('button', { name: /retry/i })).not.toBeInTheDocument();
         });
 
-        it('names the settings for an INVALID_OPERATION refusal', async () => {
+        // The list fails only when Demo Builder's own store fails, so the Data Installer's
+        // settings are not the advice: the title says datapacks, not the Data Installer.
+        it('names datapacks, not the Data Installer\'s settings, when nothing could be listed', async () => {
             mockRequest.mockResolvedValue({
                 success: false,
-                error: 'No Data Installer API URL is configured.',
+                error: 'Could not list the datapack store.',
                 code: 'INVALID_OPERATION',
             });
 
@@ -382,10 +485,8 @@ describe('DatapackCatalogView', () => {
             // act() rather than in the next query's wait loop.
             await settle();
 
-            expect(
-                await screen.findByText('The Data Installer is not configured')
-            ).toBeInTheDocument();
-            expect(screen.getByText(/demoBuilder\.dataInstaller\.apiBaseUrl/)).toBeInTheDocument();
+            expect(await screen.findByText("Datapacks Aren't Available")).toBeInTheDocument();
+            expect(screen.queryByText(/demoBuilder\.dataInstaller\.apiBaseUrl/)).not.toBeInTheDocument();
         });
 
         it('retries a transport failure', async () => {
@@ -396,7 +497,7 @@ describe('DatapackCatalogView', () => {
             // Mount effects fire requests; settle so their responses commit inside
             // act() rather than in the next query's wait loop.
             await settle();
-            const retry = await screen.findByRole('button', { name: /try again/i });
+            const retry = await screen.findByRole('button', { name: /retry/i });
 
             await press(retry);
 
@@ -420,37 +521,74 @@ describe('DatapackCatalogView', () => {
  * prose, which is also what makes them survive the next wording change.
  */
 
-describe('DatapackCatalogView — the datapack library beside the Data Installer', () => {
+describe('DatapackCatalogView — Demo Builder\'s datapacks beside the Data Installer\'s', () => {
     beforeEach(() => {
         mockRequest.mockReset();
     });
 
     it('shows a library pack on its own card even when the Data Installer has one of the same name', async () => {
         resolveWith([
-            makeSummary('bodea', 'main'),
+            makeSummary('bodea', 'main', { shared: true }),
             makeSummary('bodea', 'v1', { store: 'library', shared: false, mine: true }),
         ]);
 
         render(<DatapackCatalogView />);
         await settle();
+        // Recommended leaves the Data Installer's out (step-07 P1); All Datapacks draws both.
+        fireEvent.change(showSelect(), { target: { value: 'all' } });
 
         await waitFor(() => expect(screen.getAllByTestId('datapack-card')).toHaveLength(2));
-        expect(screen.getByText('Yours')).toBeInTheDocument();
+        expect(screen.getAllByTestId('datapack-card')[0]).toHaveTextContent('Mine');
     });
 
-    it('still shows the Data Installer catalog when the library cannot be listed, and says why', async () => {
+    // The banner says what IS on screen, then why the rest is not (owner, 2026-11-03).
+    it.each([
+        ['did not answer', 'no-answer', SOURCE_NOTICE_COPY.noAnswer],
+        ['turned the Adobe account away', 'no-access', SOURCE_NOTICE_COPY.noAccess],
+    ] as const)('still shows Demo Builder\'s datapacks when the Data Installer %s, and says which', async (_how, missing, line) => {
         mockRequest.mockResolvedValue({
             success: true,
-            data: { items: [makeSummary('bodea', 'main')], count: 1, libraryError: 'Adobe sign-in is required.' },
+            data: {
+                items: [makeSummary('bodea', 'v1', { store: 'library', mine: true })],
+                count: 1,
+                installerMissing: missing,
+            },
         });
 
         render(<DatapackCatalogView />);
         await settle();
 
         await waitFor(() => expect(screen.getAllByTestId('datapack-card')).toHaveLength(1));
-        expect(
-            screen.getByText('The datapack library could not be listed: Adobe sign-in is required.'),
-        ).toBeInTheDocument();
+        const notice = screen.getByTestId('datapack-source-notice');
+        expect(notice).toHaveTextContent(SOURCE_NOTICE_COPY.ownOnly);
+        expect(notice).toHaveTextContent(line);
+        expect(notice).toHaveClass('inline-notice--info');
+    });
+
+    // Owner, 2026-11-17 (walk F215): nothing switches for the SC; the banner offers both ways on.
+    it("says Demo Builder's datapacks are missing, staying put, with Try Again and the Data Installer's one click away", async () => {
+        mockRequest.mockResolvedValue({
+            success: true,
+            data: { items: [makeSummary('bodea', 'main')], count: 1, storeMissing: true },
+        });
+
+        render(<DatapackCatalogView />);
+        await settle();
+
+        const notice = await screen.findByTestId('datapack-source-notice');
+        expect(notice).toHaveTextContent(SOURCE_NOTICE_COPY.storeMissing);
+        expect(notice).not.toHaveClass('inline-notice--info');
+        expect(showSelect().value).toBe('recommended');
+        expect(screen.queryAllByTestId('datapack-card')).toHaveLength(0);
+
+        fireEvent.click(within(notice).getByRole('button', { name: 'Show Data Installer Datapacks' }));
+        await waitFor(() => expect(screen.getAllByTestId('datapack-card')).toHaveLength(1));
+        expect(showSelect().value).toBe('installer');
+        expect(within(screen.getByTestId('datapack-source-notice')).queryByRole('button', { name: 'Show Data Installer Datapacks' })).toBeNull();
+
+        const asked = mockRequest.mock.calls.filter((call) => call[0] === 'find-datapacks').length;
+        fireEvent.click(within(screen.getByTestId('datapack-source-notice')).getByRole('button', { name: 'Try Again' }));
+        await waitFor(() => expect(mockRequest.mock.calls.filter((call) => call[0] === 'find-datapacks')).toHaveLength(asked + 1));
     });
 });
 

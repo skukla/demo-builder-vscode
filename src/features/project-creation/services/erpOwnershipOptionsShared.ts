@@ -1,7 +1,7 @@
 /**
  * The store read behind "Add another ERP", kept by the extension so the dialog rarely waits.
  *
- * Reading every product took about 5 s on Justrite (2026-10-18). The read starts when a project
+ * Reading every product took about 5 s on Tailspin (2026-10-18). The read starts when a project
  * screen opens (`warmErpOwnershipOptions`), and it lives here, not in a screen: moving between
  * the dashboard and Integrations, or closing either, does not stop it. A dialog opened while it
  * runs joins it; one opened after it finished gets its answer at once.

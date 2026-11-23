@@ -41,7 +41,7 @@ beforeEach(() => {
     mockDaLiveAuthQuickPick.mockReset().mockResolvedValue({ success: true });
     mockRegisterGlobalMcp.mockReset().mockResolvedValue('/home/sc/.claude.json');
     mockValidateGitHubToken.mockReset().mockResolvedValue({ valid: false, reason: 'no-token' });
-    mockSignInToGitHub.mockReset().mockResolvedValue({ login: 'sayurihanki' });
+    mockSignInToGitHub.mockReset().mockResolvedValue({ login: 'org-j' });
     mockAccess.mockReset().mockResolvedValue(undefined);
 });
 
@@ -55,11 +55,11 @@ const project = (over: Partial<Project> = {}): Project =>
 describe('loadProject', () => {
     it('loads straight away when no demo is running', async () => {
         const h = harness();
-        h.stateManager.loadProjectFromPath.mockResolvedValue(project());
+        h.stateManager.openProject.mockResolvedValue(project());
 
         await h.handlerFor('demoBuilder.loadProject')('/p/bodea');
 
-        expect(h.stateManager.loadProjectFromPath).toHaveBeenCalledWith('/p/bodea');
+        expect(h.stateManager.openProject).toHaveBeenCalledWith('/p/bodea');
         expect(vscode.window.showWarningMessage).not.toHaveBeenCalled();
         expect(vscode.commands.executeCommand).toHaveBeenCalledWith(
             'demoBuilder.showProjectDashboard'
@@ -71,13 +71,13 @@ describe('loadProject', () => {
     it('asks before switching away from a RUNNING demo, and stops it on consent', async () => {
         const h = harness();
         h.stateManager.getCurrentProject.mockResolvedValue(project({ status: 'running' }));
-        h.stateManager.loadProjectFromPath.mockResolvedValue(project({ name: 'other' }));
+        h.stateManager.openProject.mockResolvedValue(project({ name: 'other' }));
         (vscode.window.showWarningMessage as jest.Mock).mockResolvedValue('Stop & Switch');
 
         await h.handlerFor('demoBuilder.loadProject')('/p/other');
 
         expect(vscode.commands.executeCommand).toHaveBeenCalledWith('demoBuilder.stopDemo');
-        expect(h.stateManager.loadProjectFromPath).toHaveBeenCalledWith('/p/other');
+        expect(h.stateManager.openProject).toHaveBeenCalledWith('/p/other');
     });
 
     it('abandons the switch when the user cancels', async () => {
@@ -89,7 +89,7 @@ describe('loadProject', () => {
         await h.handlerFor('demoBuilder.loadProject')('/p/other');
 
         expect((vscode.commands.executeCommand as jest.Mock).mock.calls.map(([id]) => id)).not.toContain('demoBuilder.stopDemo');
-        expect(h.stateManager.loadProjectFromPath).not.toHaveBeenCalled();
+        expect(h.stateManager.openProject).not.toHaveBeenCalled();
     });
 
     // Cancelling with no project left open would otherwise leave an empty
@@ -122,7 +122,7 @@ describe('loadProject', () => {
     it('does not prompt for a project that is merely open', async () => {
         const h = harness();
         h.stateManager.getCurrentProject.mockResolvedValue(project({ status: 'ready' }));
-        h.stateManager.loadProjectFromPath.mockResolvedValue(project());
+        h.stateManager.openProject.mockResolvedValue(project());
 
         await h.handlerFor('demoBuilder.loadProject')('/p/bodea');
 
@@ -131,7 +131,7 @@ describe('loadProject', () => {
 
     it('reports a path that would not load, and opens no dashboard', async () => {
         const h = harness();
-        h.stateManager.loadProjectFromPath.mockResolvedValue(null);
+        h.stateManager.openProject.mockResolvedValue(null);
 
         await h.handlerFor('demoBuilder.loadProject')('/p/missing');
 
@@ -213,14 +213,17 @@ describe('signInAdobe', () => {
         );
     });
 
-    it('runs the login inside a progress notification', async () => {
+    // The one Sign In's own notice, the one every screen's Sign In shows: it says the
+    // sign-in happens in the browser and its Cancel stops it.
+    it('runs the login behind the browser sign-in notice', async () => {
         const h = harness();
 
         await h.handlerFor('demoBuilder.signInAdobe')();
 
         expect((vscode.window.withProgress as jest.Mock).mock.calls[0][0]).toEqual({
             location: vscode.ProgressLocation.Notification,
-            title: 'Signing in to Adobe',
+            title: 'Signing In to Adobe in Your Browser',
+            cancellable: true,
         });
     });
 
@@ -239,7 +242,7 @@ describe('signInAdobe', () => {
             modal: true,
             detail: expect.stringMatching(/lasts about .+ more\. Signing in again can also sign you out of DA\.live\./),
         });
-        expect(actions).toEqual(['Sign in again']);
+        expect(actions).toEqual(['Sign In Again']);
         expect(mockLogin).not.toHaveBeenCalled();
     });
 
@@ -248,7 +251,7 @@ describe('signInAdobe', () => {
     it('omits the expiry when the status does not report one', async () => {
         const h = harness();
         mockGetTokenStatus.mockResolvedValue({ isAuthenticated: true });
-        (vscode.window.showInformationMessage as jest.Mock).mockResolvedValue('Sign in again');
+        (vscode.window.showInformationMessage as jest.Mock).mockResolvedValue('Sign In Again');
 
         await h.handlerFor('demoBuilder.signInAdobe')();
 
@@ -519,14 +522,14 @@ describe('signInGitHub', () => {
     it('offers a fresh sign-in when one is already valid, and forces it', async () => {
         const h = harness();
         mockValidateGitHubToken.mockResolvedValue({ valid: true, user: { login: 'steve' } });
-        (vscode.window.showInformationMessage as jest.Mock).mockResolvedValue('Sign in again');
+        (vscode.window.showInformationMessage as jest.Mock).mockResolvedValue('Sign In Again');
 
         await h.handlerFor('demoBuilder.signInGitHub')();
 
         expect((vscode.window.showInformationMessage as jest.Mock).mock.calls[0]).toEqual([
             'Already signed in to GitHub',
             { modal: true, detail: 'Signed in as steve.' },
-            'Sign in again',
+            'Sign In Again',
         ]);
         expect(mockSignInToGitHub).toHaveBeenCalledWith(expect.anything(), expect.anything(), {
             force: true,
@@ -536,14 +539,14 @@ describe('signInGitHub', () => {
     it('makes the same offer without a name when the valid token carries no user', async () => {
         const h = harness();
         mockValidateGitHubToken.mockResolvedValue({ valid: true });
-        (vscode.window.showInformationMessage as jest.Mock).mockResolvedValue('Sign in again');
+        (vscode.window.showInformationMessage as jest.Mock).mockResolvedValue('Sign In Again');
 
         await h.handlerFor('demoBuilder.signInGitHub')();
 
         expect((vscode.window.showInformationMessage as jest.Mock).mock.calls[0]).toEqual([
             'Already signed in to GitHub',
             { modal: true, detail: undefined },
-            'Sign in again',
+            'Sign In Again',
         ]);
         expect(mockSignInToGitHub).toHaveBeenCalledWith(expect.anything(), expect.anything(), {
             force: true,
@@ -605,7 +608,7 @@ describe('signInGitHub', () => {
 
         expect((vscode.window.withProgress as jest.Mock).mock.calls[0][0]).toEqual({
             location: vscode.ProgressLocation.Notification,
-            title: 'Signing in to GitHub',
+            title: 'Signing In to GitHub',
         });
     });
 });

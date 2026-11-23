@@ -4,12 +4,13 @@ kind: feature
 area: data-installer
 needs: []
 value: high
-status: active
+status: shipped
+plan: datapack-engine
 ---
 
 # Demo Builder installs datapacks itself, beside the service
 
-Filed 2026-10-27. Plan: `.rptc/plans/datapack-engine/overview.md`.
+Filed 2026-10-27. Plan: `.rptc/complete/datapack-engine/overview.md`.
 
 The Data Installer service reads fine but no longer installs for us: since its 2026-10-27
 commit "remove the postman backward compatibility params" it ignores the Commerce credentials
@@ -111,3 +112,13 @@ High value: SCs cannot install any datapack until this exists or the service cha
 - 2026-10-30  feat(data-installer): a pack's Admin step is one quiet line that opens the setup guide's own step (`b368b5062`)
 - 2026-10-30  fix(data-installer): a pack step's Check waits long enough to show its answer (`ed65b0af2`)
 - 2026-10-30  fix(data-installer): the root-category question leads with the step, and a missing pack file names the project (`76b1e57bc`)
+- 2026-11-02  fix(data-installer): an import honours its ticks, and a removal says what goes (`280ad4f81`)
+- 2026-11-02  Clear demo data leaves nothing only the chosen stores use (c8556c19f; its commit names AB-83 by mistake). Settings layer and Save my changes first (50365ceae). Not yet proved live.
+- 2026-11-02  fix(data-installer): the preview stops promising options the store has (`fb59a4903`)
+- 2026-11-02  fix(ai): a question to the agent is not a failure on the SC's screen (`554134a2f`)
+- 2026-11-02  fix(commerce): a write that hit a database deadlock is sent again (`b86d11130`)
+- 2026-11-03  fix(data-installer): products keep installing when a pack's root is not made (`01e13e311`)
+- 2026-11-03  feat(data-installer): datapacks work with or without the Data Installer (`88475c876`)
+- 2026-11-03  feat(data-installer): the "no access" banner can be dismissed, and a team pack is never tagged Yours (`1884a7e2e`)
+- 2026-11-03  fix(data-installer): say what the Datapacks screen lists, and switch the Data Installer on or off (`d116d2f5f`)
+- 2026-11-21  Reconciled 2026-11-21: done. Demo Builder's own engine installs every kind (demoBuilderEngine/runPack.ts, buildDatapackEngine.ts); the one-setting engine choice was replaced by DI-12's decision to delete the service engine. d116d2f5f is in v1.0.0-beta.153.

@@ -63,13 +63,13 @@ describe('registerDiscoveryTools', () => {
         const packages = (await server.call('list_demo_packages')) as Array<Record<string, unknown>>;
 
         expect(packages.find((p) => p.id === 'citisignal')).toMatchObject({ source: 'shipped' });
-        const jen = packages.find((p) => p.id === 'added:jen/isle5-demo');
-        expect(jen).toMatchObject({ name: 'Isle5 by Jen', source: 'added', repository: 'jen/isle5-demo' });
-        expect(jen!.availableStacks).toContain('eds-paas');
-        expect(jen!.availableStacks).not.toContain('headless-paas');
+        const robin = packages.find((p) => p.id === 'added:robin/isle5-demo');
+        expect(robin).toMatchObject({ name: 'Isle5 by Robin', source: 'added', repository: 'robin/isle5-demo' });
+        expect(robin!.availableStacks).toContain('eds-paas');
+        expect(robin!.availableStacks).not.toContain('headless-paas');
         const bob = packages.find((p) => p.id === 'added:bob/next-shop');
         expect(bob!.availableStacks).toContain('headless-paas');
-        expect(packages.indexOf(jen!)).toBeGreaterThan(packages.indexOf(packages.find((p) => p.id === 'citisignal')!));
+        expect(packages.indexOf(robin!)).toBeGreaterThan(packages.indexOf(packages.find((p) => p.id === 'citisignal')!));
     });
 
     it('list_components groups components by type with id + name', async () => {

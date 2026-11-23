@@ -53,7 +53,7 @@ re-added it. Both halves of the question came back, and they point opposite ways
 with the site left blank, answered:
 
 ```
-403  GET https://admin.hlx.page/config/kmanns.json   [admin] not authorized
+403  GET https://admin.hlx.page/config/org-e.json   [admin] not authorized
 ```
 
 That is the SAME gate as the config read — `configServiceAccess.ts` says so at the
@@ -102,7 +102,7 @@ Adobe one BEFORE reinstalling, or the role is minted for the wrong address.
 ## Shipped so far
 
 - 2026-09-14  fix(eds): stop sending no-role users to a setup page that cannot grant (`bba76c2a5`)
-- 2026-09-14  Next step handed to the reporter (he installed Code Sync himself): on his second site, re-save the Code Sync installation on GitHub (no-op Save, else remove and re-add the repo) and report whether GitHub opens tools.aem.live/bot/setup with #token=. If it does, note who is already under Site users, add his Adobe email, run Manage Site Access then Repair Site Configuration, and add those steps to the Manage Site Access message. If it does not, remove the GitHub button and point to Adobe. His answer replaces the sacrificial-repo test.
+- 2026-09-14  Next step handed to the reporter, and resolved 2026-09-23 (see "RESOLVED" above; noAdminRoleRemedy.ts, 5dbcf6304) (he installed Code Sync himself): on his second site, re-save the Code Sync installation on GitHub (no-op Save, else remove and re-add the repo) and report whether GitHub opens tools.aem.live/bot/setup with #token=. If it does, note who is already under Site users, add his Adobe email, run Manage Site Access then Repair Site Configuration, and add those steps to the Manage Site Access message. If it does not, remove the GitHub button and point to Adobe. His answer replaces the sacrificial-repo test.
 - 2026-09-15  feat(eds): explain a refusal caused by the GitHub primary email (`069c05647`)
 - 2026-09-15  Merge fix/site-access-remedy: a site that refuses its owner says why and what to do (`ad76d8898`)
 - 2026-09-23  Re-registration measured on a reported site: opens Adobe's admin tools signed in, does not re-mint the role

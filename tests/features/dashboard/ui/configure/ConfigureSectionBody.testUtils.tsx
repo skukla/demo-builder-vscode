@@ -36,14 +36,12 @@ export const COMMERCE: ServiceGroup = {
     ],
 };
 
-/** The ACCS half: the only backend with the brokered OAuth pair. */
+/** The ACCS half. */
 export const ACCS: ServiceGroup = {
     id: 'accs',
     label: 'Adobe Commerce Cloud Service',
     fields: [
         field('ACCS_GRAPHQL_ENDPOINT'),
-        field('ACCS_OAUTH_CLIENT_ID'),
-        field('ACCS_OAUTH_CLIENT_SECRET'),
         field('ACCS_WEBSITE_CODE'),
     ],
 };
@@ -73,6 +71,7 @@ export const blockLibrariesOf = (
     overrides: Partial<BlockLibrariesSectionProps> = {}
 ): BlockLibrariesSectionProps => ({
     choices: {
+        included: [],
         native: [library('bodea-blocks', 'Bodea Blocks')],
         available: [
             library('demo-team-blocks', 'Demo Team Block Collection'),
@@ -123,9 +122,6 @@ export function renderSectionBody(overrides: Partial<ConfigureSectionBodyProps> 
             section={serviceGroupSection(COMMERCE.id, COMMERCE.label)}
             serviceGroups={[COMMERCE, CATALOG]}
             renderFieldRow={recordFieldRow}
-            projectName="p"
-            onProjectNameChange={jest.fn()}
-            projectNameTouched={false}
             authoringExperience="da-live-classic"
             onAuthoringExperienceChange={jest.fn()}
             storeStructureReady={true}

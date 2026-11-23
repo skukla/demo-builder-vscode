@@ -7,12 +7,12 @@
  */
 
 import * as fsPromises from 'fs/promises';
-import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import * as path from 'path';
 import { ProgressTracker } from '../handlers/shared';
 import { installAiDefaultsMcpTools } from './aiBundle/aiDefaultsInstaller';
 import { projectNeedsAppBuilderTooling } from './aiBundle/aiToolingGate';
 import type { CommandExecutor } from '@/core/shell/commandExecutor';
+import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { ComponentManager } from '@/features/components/services/componentManager';
 import type { Project } from '@/types/base';
 import type { TransformedComponentDefinition } from '@/types/components';
@@ -42,6 +42,15 @@ export interface InstallationContext {
 }
 
 /**
+ * Line 2 while components download: the component's name when there is one, else how many.
+ * They download side by side, so no single one is "current" when there are several.
+ */
+export function downloadingLine(definitions: InstallationContext['componentDefinitions']): string {
+    const names = Array.from(definitions.values()).map(({ definition }) => definition.name);
+    return names.length === 1 ? `Downloading ${names[0]}` : `Downloading ${names.length} components`;
+}
+
+/**
  * Phase 1: Clone all components in parallel
  *
  * Downloads source code without running npm install.
@@ -50,7 +59,7 @@ export async function cloneAllComponents(context: InstallationContext): Promise<
     const { project, componentDefinitions, progressTracker, logger, saveProject, componentsDir } =
         context;
 
-    progressTracker(OPERATION_STAGES.downloadingComponents.label, 25, 'Cloning repositories');
+    progressTracker(OPERATION_STAGES.downloadingComponents.label, 25, downloadingLine(componentDefinitions));
     logger.debug('[Project Creation] Phase 1: Downloading components');
 
     // Determine target directory: use override if provided (edit mode), otherwise default
@@ -102,7 +111,6 @@ export async function cloneAllComponents(context: InstallationContext): Promise<
 
     // Save project state after all clones (show components in sidebar)
     await saveProject();
-    progressTracker(OPERATION_STAGES.downloadingComponents.label, 40, 'All components downloaded');
     logger.debug('[Project Creation] Phase 1 complete: All components downloaded');
 }
 
@@ -112,7 +120,7 @@ export async function cloneAllComponents(context: InstallationContext): Promise<
 export async function installAllComponents(context: InstallationContext): Promise<void> {
     const { project, componentDefinitions, progressTracker, logger } = context;
 
-    progressTracker(OPERATION_STAGES.installingComponents.label, 40, 'Installing npm packages');
+    progressTracker(OPERATION_STAGES.installingComponents.label, 40, 'Installing dependencies');
     logger.debug('[Project Creation] Phase 2: Installing components');
 
     const componentManager = new ComponentManager(logger, context.commandManager);
@@ -170,6 +178,5 @@ export async function installAllComponents(context: InstallationContext): Promis
         }
     }
 
-    progressTracker(OPERATION_STAGES.installingComponents.label, 70, 'All components installed');
     logger.debug('[Project Creation] Phase 2 complete: All components installed');
 }

@@ -12,6 +12,7 @@
  * of the 21 current types — reads better for one or two awkward names and then
  * goes stale the moment the service adds a type, showing a raw code again in
  * the one case nobody is watching for. Derivation degrades gracefully instead.
+ * The one exception is a code with no underscore to split on (`giftcards`).
  *
  * This is presentation only. The code stays the value sent.
  *
@@ -24,17 +25,31 @@
  */
 const ACRONYMS: Record<string, string> = {
     b2b: 'B2B',
-    // Adobe Commerce Optimizer's kinds: `aco_price_books` → "ACO price books".
+    // Adobe Commerce Optimizer's kinds: `aco_price_books` → "ACO Price Books".
     aco: 'ACO',
 };
 
 /**
- * A data type's code as a human name — `attribute_sets` → "Attribute sets".
+ * Codes casing alone cannot name: words that run together, or a Commerce name an SC would not
+ * recognise. The code stays the value sent. `source_items` is how many of each product sit in each
+ * warehouse: "Stock Quantities" (owner, 2026-11-09, walk F125), not "Sources" (the warehouses, a kind
+ * of their own) nor "Stocks" (groups of warehouses, also their own).
+ */
+const JOINED_CODES: Record<string, string> = {
+    giftcards: 'Gift Cards',
+    source_items: 'Stock Quantities',
+};
+
+/**
+ * A data type's code as a human name: `attribute_sets` → "Attribute Sets".
  *
- * Sentence case, matching the labels around it ("Target website", "Data
- * types"), not title case.
+ * Title Case, as anything that names a thing is here (dialog design rules).
  */
 export function dataTypeLabel(code: string): string {
+    const joined = JOINED_CODES[code];
+    if (joined) {
+        return joined;
+    }
     const words = code.split('_').filter(Boolean);
     if (words.length === 0) {
         return code;
@@ -42,11 +57,17 @@ export function dataTypeLabel(code: string): string {
     return words.map(renderWord).join(' ');
 }
 
-/** Acronyms stay upper wherever they fall; otherwise only the first word leads. */
+/** Words a Title Case name keeps small unless it leads. */
+const SMALL_WORDS = new Set(['to', 'of', 'and']);
+
+/** Acronyms stay upper wherever they fall; every other word leads with a capital, bar the small ones. */
 function renderWord(word: string, index: number): string {
     const acronym = ACRONYMS[word.toLowerCase()];
     if (acronym) {
         return acronym;
     }
-    return index === 0 ? word.charAt(0).toUpperCase() + word.slice(1) : word;
+    if (index > 0 && SMALL_WORDS.has(word)) {
+        return word;
+    }
+    return word.charAt(0).toUpperCase() + word.slice(1);
 }

@@ -3,7 +3,7 @@
  * apply Adobe's change to Adobe's own lines and the wiring is put back after
  * (`withoutQuickEditWiring`, the inverse of `buildQuickEditScriptsJs`).
  *
- * JustRite's Adobe boilerplate update stopped on scripts.js because Adobe changed the
+ * Tailspin's Adobe boilerplate update stopped on scripts.js because Adobe changed the
  * `loadHeader(...)` line our Sidekick listener sits right above (2026-10-30). Only text that
  * is exactly ours comes out, and only when putting it back gives the same file again.
  */

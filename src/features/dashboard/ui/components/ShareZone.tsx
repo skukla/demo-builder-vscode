@@ -1,3 +1,4 @@
+import SaveFloppy from '@spectrum-icons/workflow/SaveFloppy';
 import ShareIcon from '@spectrum-icons/workflow/Share';
 import Switch from '@spectrum-icons/workflow/Switch';
 import React from 'react';
@@ -7,14 +8,18 @@ import { DashboardZone } from './DashboardZone';
 /**
  * The Share zone — moving a demo between people. Share Demo opens the one
  * dialog for a link or a file (owner, 2026-10-22: Export and Save as Package
- * were two tiles for one job); Change Source points a project built on
- * someone else's demo at another copy.
+ * were two tiles for one job); Save as Package puts the demo on the SC's own
+ * Welcome step, to build new projects from (EDS-72: Share Demo is not the
+ * place for it), present only when the host wires it (EDS projects); Change
+ * Source points a project built on someone else's demo at another copy.
  */
 export function ShareZone({
     handleShareDemo,
+    handleSavePackage,
     handleChangeDemoSource,
 }: {
     handleShareDemo: () => void;
+    handleSavePackage?: () => void;
     handleChangeDemoSource?: () => void;
 }): React.ReactElement {
     return (
@@ -26,6 +31,15 @@ export function ShareZone({
                 action="share-demo"
                 tooltip="Hand this demo to a colleague, as a link or a file"
             />
+            {handleSavePackage && (
+                <DashboardTile
+                    label="Save as Package"
+                    icon={<SaveFloppy size="L" />}
+                    onPress={handleSavePackage}
+                    action="save-package"
+                    tooltip="Put this demo on your Welcome step, to build new projects from"
+                />
+            )}
             {handleChangeDemoSource && (
                 <DashboardTile
                     label="Change Source"

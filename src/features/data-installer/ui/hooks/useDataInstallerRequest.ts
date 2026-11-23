@@ -24,13 +24,15 @@
  */
 
 import { useCallback, useMemo } from 'react';
+import { plainFailure } from '../../plainFailure';
+import { type PlainText } from '@/core/utils/plainText';
 import { useVSCodeRequest } from '@/core/ui/hooks/useVSCodeRequest';
 import type { HandlerResponse } from '@/types/handlers';
 
 /** A refusal or a transport failure, flattened into one shape. */
 export interface DataInstallerFailure {
-    /** Message to show. Handler-authored where there is one. */
-    message: string;
+    /** Message to show, in plain words (walk F221): handler-authored where there is one, via `plainFailure`. */
+    message: PlainText;
     /** `ErrorCode` the guard set, when the failure came back as an envelope. */
     code?: string;
     /**
@@ -39,6 +41,8 @@ export interface DataInstallerFailure {
      * may still have finished on the extension's side.
      */
     unanswered?: true;
+    /** The setting the message sends the SC to, which the failure offers to open (`open-setting`). */
+    setting?: string;
 }
 
 export interface DataInstallerRequest<T> {
@@ -80,12 +84,13 @@ export function useDataInstallerRequest<T>(
 
     const failure = useMemo((): DataInstallerFailure | null => {
         if (error) {
-            return { message: error.message, unanswered: true };
+            return { message: plainFailure(error.message), unanswered: true };
         }
         if (data && data.success === false) {
             return {
-                message: data.error ?? UNSTATED_FAILURE,
+                message: plainFailure(data.error ?? UNSTATED_FAILURE),
                 ...(typeof data.code === 'string' ? { code: data.code } : {}),
+                ...(typeof data.setting === 'string' ? { setting: data.setting } : {}),
             };
         }
         return null;

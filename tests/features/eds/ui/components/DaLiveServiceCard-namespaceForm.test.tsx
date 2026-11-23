@@ -109,9 +109,9 @@ describe('DaLiveServiceCard — namespace options', () => {
     beforeEach(() => jest.clearAllMocks());
 
     it('lists the personal account first, then the orgs alphabetically', () => {
-        renderCard({ githubUser: 'leah', availableOrgs: ['zeta', 'alpha'] });
+        renderCard({ githubUser: 'avery', availableOrgs: ['zeta', 'alpha'] });
 
-        expect(optionLabels()).toEqual(['leah (Personal account)', 'alpha', 'zeta']);
+        expect(optionLabels()).toEqual(['avery (Personal Account)', 'alpha', 'zeta']);
     });
 
     it('offers only the orgs when there is no GitHub user', () => {
@@ -123,15 +123,15 @@ describe('DaLiveServiceCard — namespace options', () => {
     it('offers only the personal account when the user belongs to no orgs', () => {
         // The default for availableOrgs is a shared empty array; anything in it
         // would show up as a namespace the user cannot actually write to.
-        renderCard({ githubUser: 'leah' });
+        renderCard({ githubUser: 'avery' });
 
-        expect(optionLabels()).toEqual(['leah (Personal account)']);
+        expect(optionLabels()).toEqual(['avery (Personal Account)']);
     });
 
     it('selects the personal account by default', () => {
-        renderCard({ githubUser: 'leah', availableOrgs: ['acme'] });
+        renderCard({ githubUser: 'avery', availableOrgs: ['acme'] });
 
-        expect(selectedKey()).toBe('leah');
+        expect(selectedKey()).toBe('avery');
     });
 
     it('falls back to the first org when there is no GitHub user', () => {
@@ -152,7 +152,7 @@ describe('DaLiveServiceCard — namespace options', () => {
                 isAuthenticating={false}
                 isAuthenticated={false}
                 showInput={true}
-                githubUser="leah"
+                githubUser="avery"
                 onSetup={noop}
                 onSubmit={onSubmit}
                 onReset={noop}
@@ -160,14 +160,14 @@ describe('DaLiveServiceCard — namespace options', () => {
             />,
         );
 
-        expect(optionLabels()).toEqual(['leah (Personal account)']);
-        expect(selectedKey()).toBe('leah');
+        expect(optionLabels()).toEqual(['avery (Personal Account)']);
+        expect(selectedKey()).toBe('avery');
     });
 
     it('leaves an explicit pick alone when the effect re-runs', () => {
         // The repair effect fires again on every selection change. It must not
         // pull the user back to the personal account once they have chosen an org.
-        renderCard({ githubUser: 'leah', availableOrgs: ['acme'] });
+        renderCard({ githubUser: 'avery', availableOrgs: ['acme'] });
 
         fireEvent.change(picker(), { target: { value: 'acme' } });
 
@@ -181,7 +181,7 @@ describe('DaLiveServiceCard — namespace options', () => {
     });
 
     it('enables the picker as soon as one namespace exists', () => {
-        renderCard({ githubUser: 'leah' });
+        renderCard({ githubUser: 'avery' });
 
         expect(picker()).toBeEnabled();
     });
@@ -191,7 +191,7 @@ describe('DaLiveServiceCard — the submit gate', () => {
     beforeEach(() => jest.clearAllMocks());
 
     it('stays disabled with a namespace but no token', () => {
-        renderCard({ githubUser: 'leah' });
+        renderCard({ githubUser: 'avery' });
 
         expect(verifyButton()).toBeDisabled();
     });
@@ -205,7 +205,7 @@ describe('DaLiveServiceCard — the submit gate', () => {
     });
 
     it('stays disabled when the token is only whitespace', () => {
-        renderCard({ githubUser: 'leah' });
+        renderCard({ githubUser: 'avery' });
 
         typeToken('   ');
 
@@ -221,7 +221,7 @@ describe('DaLiveServiceCard — the submit gate', () => {
     });
 
     it('enables once both are present', () => {
-        renderCard({ githubUser: 'leah' });
+        renderCard({ githubUser: 'avery' });
 
         typeToken('a-token');
 
@@ -230,22 +230,22 @@ describe('DaLiveServiceCard — the submit gate', () => {
 
     it('hands the trimmed token to onSubmit and clears the field', () => {
         // A pasted DA.live token routinely carries a trailing newline.
-        renderCard({ githubUser: 'leah' });
+        renderCard({ githubUser: 'avery' });
         typeToken('  eyJ.token  \n');
 
         fireEvent.click(verifyButton());
 
-        expect(onSubmit).toHaveBeenCalledWith('leah', 'eyJ.token');
+        expect(onSubmit).toHaveBeenCalledWith('avery', 'eyJ.token');
         expect(tokenField()).toHaveValue('');
     });
 
     it('trims the namespace too — it becomes a repo owner and a DA.live path', () => {
-        renderCard({ githubUser: ' leah ' });
+        renderCard({ githubUser: ' avery ' });
         typeToken('eyJ.token');
 
         fireEvent.click(verifyButton());
 
-        expect(onSubmit).toHaveBeenCalledWith('leah', 'eyJ.token');
+        expect(onSubmit).toHaveBeenCalledWith('avery', 'eyJ.token');
     });
 });
 
@@ -253,7 +253,7 @@ describe('DaLiveServiceCard — the form’s own error and links', () => {
     beforeEach(() => jest.clearAllMocks());
 
     it('renders the error in the error style, not as bare text', () => {
-        const { container } = renderCard({ githubUser: 'leah', error: 'Invalid token' });
+        const { container } = renderCard({ githubUser: 'avery', error: 'Invalid token' });
 
         expect(container.querySelector('.status-text-error')).toHaveTextContent('Invalid token');
     });
@@ -264,12 +264,12 @@ describe('DaLiveServiceCard — the form’s own error and links', () => {
     ] as const)('shows %s only when its handler is supplied', (name, prop) => {
         const handler = jest.fn();
 
-        const { unmount } = renderCard({ githubUser: 'leah', [prop]: handler });
+        const { unmount } = renderCard({ githubUser: 'avery', [prop]: handler });
         fireEvent.click(screen.getByRole('button', { name }));
         expect(handler).toHaveBeenCalledTimes(1);
         unmount();
 
-        renderCard({ githubUser: 'leah' });
+        renderCard({ githubUser: 'avery' });
         expect(screen.queryByRole('button', { name })).not.toBeInTheDocument();
     });
 });

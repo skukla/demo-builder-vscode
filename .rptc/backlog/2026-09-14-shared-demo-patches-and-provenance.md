@@ -5,7 +5,8 @@ area: eds
 parent: EDS-13
 needs: [EDS-13a, EDS-13b]
 value: high
-status: active
+status: backlog
+plan: shareable-demo-patches
 ---
 
 # Shared demos carry their boilerplate, their patches and a way to stay fixed
@@ -19,7 +20,7 @@ A saved demo package ("Save as demo package") records nothing about what its sto
 built from, so a project started from it is treated as a colleague's storefront: patched
 files travel frozen, later fixes never arrive, and the repository is never re-pinned. A
 colleague's storefront built from our boilerplate two versions ago takes five of our seven
-load-bearing and universal fixes exactly (live fit test on `sayurihanki/aistore`,
+load-bearing and universal fixes exactly (live fit test on `org-j/aistore`,
 2026-09-14), yet today it only gets a dry check and a caveat. And nobody records which
 boilerplate, at which version, a storefront was built on.
 
@@ -48,3 +49,5 @@ as open until the 2026-10-04 confirmation. They now agree.)
 - 2026-10-03  2026-10-04 owner confirmed step 05 (version gap) as written: report always, fix what fits, fork sync only for forks, never reset a generated repo, never refuse on age, warn below a floor. Built on loop/2026-10-04-step5 (staged, not committed): floor OLDEST_TESTED_BOILERPLATE = 6.0.0 (the B2B template at the patches repo's b2b/last-known-good), and the warning 'Built on an older boilerplate (N.x); some fixes may not fit.' on the add dialog's Built on row and the storefront report (command, Diagnostics, get_storefront_report). Fork sync was already forks-only. Not built: a fork-sync door on the report.
 - 2026-10-03  feat(eds): warn below the oldest tested boilerplate; Demo Builder Blocks in the library list, off by default (EDS-13f, EDS-24) (`2688a1018`)
 - 2026-10-04  2026-10-04 night3-a (staged, not committed): staleness - both leftovers still unbuilt (no card line; the report had no fork-sync door); built the door: after the Storefront Report opens, if GitHub records the project's OWN repository as a fork of one of our patched templates and it is behind, a modal (default No) offers 'Bring the code up to date with the template', naming the fork, the template and the commit count, then runs the existing merge-upstream (ForkSyncService.syncFork) on its default branch; a conflict changes nothing and says so; a generated repository is never offered it (templateCatchUp.ts); NOT built: the one-line 'Built on' note on the Welcome and projects-list cards - it adds a line to two card grids and needs a visual check this run could not do (no compile).
+- 2026-11-21  Reconciled 2026-11-21: steps 01-05, 07 and the fork-sync door are built (0ee47ed3b, 2688a1018). Left: the 'Built on' line on the Welcome and projects-list cards (no card component has it), the zip pre-create fit display, and the owner's three live checks (aistore by link, a saved Bodea package, the zip path). The report headings item is moot: the report was removed (316903008).
+- 2026-11-22  Paused 2026-11-22: back to backlog, last work 2026-10-04. Where it stopped is the 2026-11-21 reconcile line above.

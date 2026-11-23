@@ -4,7 +4,7 @@ kind: fix
 area: eds
 needs: []
 value: low
-status: built
+status: shipped
 ---
 
 # The B2B template's 404 page renders blank
@@ -13,7 +13,7 @@ Filed 2026-10-15 from the release walk. On a storefront built from
 `adobe-commerce/boilerplate-b2b-template`, any missing page (seen on a product page that had
 not been published) draws nothing: no header, no footer text.
 
-**Cause, read from the page:** the start-up code (`scripts/initializers/index.js:248`) imports
+**Cause, read from the page:** the template's start-up code (`boilerplate-b2b-template/scripts/initializers/index.js:248`) imports
 `@dropins/storefront-company-switcher/api.js`. The site's `head.html` import map names it (18
 dropins), but the template's own `404.html` carries its own import map with only four
 (`storefront-auth`, `storefront-cart`, `storefront-personalization`, `tools`). The browser
@@ -34,3 +34,4 @@ or unpublished link. Check first whether the non-B2B boilerplate has the same ga
 
 - 2026-10-15  fix(eds): a missing page on a B2B storefront shows the site's 404, not a blank page (`e9e76c948`)
 - 2026-10-23  feat(eds): every known fix reaches every storefront; the report is a window (`c75b52793`)
+- 2026-11-20  Released in v1.0.0-beta.153

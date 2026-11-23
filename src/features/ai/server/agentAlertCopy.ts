@@ -15,7 +15,7 @@
  *
  * THE RULES THE TEXT FOLLOWS
  *
- * - `action` completes "Agent · ___?" — a verb phrase, no trailing period.
+ * - `action` completes "Agent: ___?" — a verb phrase, no trailing period.
  * - `consequence` is ONE plain sentence saying what changes. It is not a
  *   description of the tool. The reader has already decided they want the thing;
  *   they are deciding whether they want it NOW, to THIS.
@@ -45,9 +45,11 @@
  * @module features/ai/server/agentAlertCopy
  */
 
+import { type ShownProject, shownClearFor } from '@/features/data-installer/services/demoDataWipe/shownClears';
+
 /** Authored strings for one tool's alerts. */
 export interface AgentAlertCopy {
-    /** Completes "Agent · ___?". Verb phrase, no full stop. */
+    /** Completes "Agent: ___?". Verb phrase, no full stop. */
     action: string;
     /** One sentence: what changes if they allow it. */
     consequence: string;
@@ -70,6 +72,19 @@ export interface AgentAlertCopy {
      * granting and revoking are different decisions.
      */
     target: string[];
+    /**
+     * Argument keys for the choices a call made about the thing (a box ticked, an answer given),
+     * shown beneath the target. For a tool that acts on the open project and still has a choice to
+     * show: `reset_project`'s Uninstall Datapack (step-05 S7), where naming the choice in `target`
+     * would have dropped the line naming the project.
+     */
+    choices?: string[];
+    /**
+     * Lines naming what the call acts on that its arguments cannot: `clear_demo_data` is handed only
+     * a token, so this names the websites the token's check covered (`shownClears.ts`). Shown under
+     * the target; nothing when it answers nothing.
+     */
+    describe?: (args: unknown) => string | undefined;
     /**
      * May the user say "don't ask again this session" for this tool?
      *
@@ -104,12 +119,65 @@ export interface AgentAlertCopy {
  * interrupting, because a prompt on a cheap mutation trains people to click
  * Allow without reading, which costs more than it saves.
  */
+/** "Websites: Bodea, Tailspin" (by name), the datapack uninstalled first, and the shared-website warning, for the check the token names; nothing for one no check answered. */
+function clearedWebsitesLines(args: unknown): string | undefined {
+    const shown = shownClearFor((args as { token?: unknown } | null | undefined)?.token);
+    if (!shown) return undefined;
+    const datapack = shown.datapack ? `Uninstalls first: ${shown.datapack}` : undefined;
+    return [`Websites: ${shown.websites.join(', ')}`, datapack, shown.warning].filter(Boolean).join('\n');
+}
+
+/** "Uninstalls first", "Keep their datapacks and data" and "Also lose their demo data": an instance check's projects by fate. */
+function instanceProjectLines(projects: readonly ShownProject[]): string[] {
+    const uninstalled = projects.filter((p) => p.datapack !== undefined).map((p) => `${p.datapack} (${p.name})`);
+    const kept = projects.filter((p) => p.kept).map((p) => p.name);
+    const losing = projects.filter((p) => !p.kept && p.datapack === undefined).map((p) => p.name);
+    return [
+        uninstalled.length > 0 ? `Uninstalls first: ${uninstalled.join(', ')}` : '',
+        kept.length > 0 ? `Keep their datapacks and data: ${kept.join(', ')}` : '',
+        losing.length > 0 ? `Also lose their demo data: ${losing.join(', ')}` : '',
+    ].filter(Boolean);
+}
+
+/** The call's answers about each project's changes, by project name: "Zz Tester: drop; Neighbour Demo: keep as My Neighbour". */
+function instanceAnswersLine(args: { changes?: unknown; saveAs?: unknown }, projects: readonly ShownProject[]): string | undefined {
+    const changes = args.changes && typeof args.changes === 'object' ? Object.entries(args.changes as Record<string, unknown>) : [];
+    if (changes.length === 0) return undefined;
+    const names = (args.saveAs && typeof args.saveAs === 'object' ? args.saveAs : {}) as Record<string, unknown>;
+    const said = changes.map(([path, answer]) => {
+        const project = projects.find((p) => p.path === path)?.name ?? path;
+        const name = names[path];
+        return answer === 'keep' && typeof name === 'string' ? `${project}: keep as ${name}` : `${project}: ${String(answer)}`;
+    });
+    return `Your changes: ${said.join('; ')}`;
+}
+
+/** The websites and projects the instance check the token names showed, and the call's answers; nothing for one no check answered. */
+function instanceClearLines(args: unknown): string | undefined {
+    const call = (args ?? {}) as { token?: unknown; changes?: unknown; saveAs?: unknown };
+    const shown = shownClearFor(call.token);
+    if (!shown) return undefined;
+    const projects = shown.projects ?? [];
+    return [`Websites: ${shown.websites.join(', ')}`, ...instanceProjectLines(projects), instanceAnswersLine(call, projects)]
+        .filter(Boolean)
+        .join('\n');
+}
+
+/** What a file load's Replace (`update`) or Keep Both (`saveAs`) does, in one sentence; nothing for a plain add. */
+function fileLoadChoiceLine(args: unknown): string | undefined {
+    const call = (args ?? {}) as { update?: unknown; saveAs?: unknown };
+    if (typeof call.saveAs === 'string' && call.saveAs.trim() !== '') {
+        return `Adds it as ${call.saveAs.trim()}, leaving the one already in My Datapacks as it is.`;
+    }
+    return call.update === true ? 'Replaces the datapack of the same version in My Datapacks.' : undefined;
+}
+
 export const AGENT_ALERT_COPY: Record<string, AgentAlertCopy> = {
     delete_project: {
         action: 'Delete this project',
         consequence:
-            "Removes the project from this machine, its GitHub repository and DA.live site if the agent asked or your cleanup setting deletes everything, and its own pack in the datapack library only if the agent asked (Delete Pack below). This can't be undone.",
-        target: ['name', 'deletePack'],
+            "Removes the project from this machine, its GitHub repository and DA.live site if the agent asked or your cleanup setting deletes everything, and its datapack's data from Commerce only if the agent asked (Uninstall Datapack below), your changes in it saved first unless the agent was told to drop them. This can't be undone.",
+        target: ['name', 'removeData', 'changes', 'saveAs'],
         sessionGrant: false,
     },
     delete_github_repo: {
@@ -265,22 +333,35 @@ export const AGENT_ALERT_COPY: Record<string, AgentAlertCopy> = {
     reset_project: {
         action: 'Reset this project',
         consequence:
-            "Puts the project back to its starting point: a storefront's code and content return to the original template, a headless project's components are deleted and installed again. Anything customised there is lost.",
+            "Puts the project back to its starting point: a storefront's code and content return to the original template, a headless project's components are deleted and installed again. Anything customised there is lost, and its datapack's data is removed from Commerce too if the agent asked (Uninstall Datapack below), your changes in it saved first unless the agent was told to drop them.",
         target: [],
+        choices: ['removeData', 'changes', 'saveAs'],
         sessionGrant: false,
     },
-    reset_datapack: {
-        action: 'Remove sample data',
+    uninstall_datapack: {
+        action: 'Uninstall a datapack',
         consequence:
-            "Deletes this data pack's products and categories from the Commerce instance. This can't be undone.",
-        target: ['datapackName', 'version'],
+            "Deletes what this datapack put in Commerce and puts back any store configuration it changed. This can't be undone.",
+        target: ['datapackName', 'version', 'changes'],
         sessionGrant: false,
     },
     clear_demo_data: {
-        action: "Clear these stores' demo data",
+        action: "Clear this project's demo data",
         consequence:
-            "Deletes the products, categories and customers these stores own that Demo Builder did not install, as listed, takes products other websites sell off them, and cancels or refunds their orders and closes their returns (through the ERP integration where one serves the store, then refreshing its ERP). This can't be undone.",
-        target: ['stores'],
+            "Uninstalls this project's datapack first, when Demo Builder installed it (your changes in it saved first unless the agent was told to drop them). Then deletes what only this project's websites use and no other project's datapack lists, as listed: products, categories, customers, cart rules, companies, shared catalogs, customer groups, attribute sets and attributes. Sets the website settings to the default's value, takes products other websites sell off them, cancels or refunds their orders and closes their returns (bringing in line the ERP of an ERP integration that serves these websites, from Commerce). This can't be undone, except the datapack, which installing it again puts back.",
+        target: [],
+        describe: (args) => clearedWebsitesLines(args),
+        // saveAs is a name in an object, which the dialog does not draw (`consentValue`); changes is the decision.
+        choices: ['changes'],
+        sessionGrant: false,
+    },
+    clear_commerce_instance: {
+        action: "Clear this Commerce instance's websites",
+        consequence:
+            "Uninstalls first the datapack of each project named below (its changes saved first unless the agent was told to drop them), then deletes everything on these websites that no kept project's datapack lists, whoever put it there: products, categories, customers, cart rules, companies, shared catalogs, customer groups, attribute sets and attributes. Sets the website settings to the default's value, cancels or refunds their orders and closes their returns. Every project on these websites loses its demo data there, except those that keep theirs. This can't be undone, except the datapacks, which can be installed again from the library.",
+        target: [],
+        // The websites, the projects by fate and the answers by project name: the arguments name only a token and paths.
+        describe: (args) => instanceClearLines(args),
         sessionGrant: false,
     },
     reinstall_integration: {
@@ -452,68 +533,91 @@ export const AGENT_ALERT_COPY: Record<string, AgentAlertCopy> = {
         // the case a grant exists for.
         sessionGrant: true,
     },
-    start_datapack_import: {
-        action: 'Import sample data',
+    install_datapack: {
+        action: 'Install a datapack',
         consequence:
-            'Writes products and categories into the live Commerce instance, and installing again updates or removes what the pack made earlier, keeping anything changed in the Admin. Takes several minutes and cannot be paused.',
-        target: ['datapackName', 'version'],
+            'Writes the chosen data types and what they need into the live Commerce instance, then the datapack\'s store configuration when all of it is chosen. Installing again updates or removes what the datapack made earlier of those types, keeping anything changed in the Admin. Switching to another datapack, or another version of the one this demo uses, uninstalls that one first. Takes several minutes and cannot be paused.',
+        target: ['datapackName', 'version', 'changes'],
         sessionGrant: false,
     },
-    start_datapack_export: {
-        action: 'Export sample data',
+    create_datapack: {
+        action: 'Save to a datapack',
         consequence:
-            "With Demo Builder's engine, saves what was picked from this project's store as a new version of this demo's own pack in the datapack library; nothing in Commerce changes. With the Data Installer service's, captures this instance's data into the shared catalogue, where other people will see it. An ACO pack, with either engine, goes into your own datapack library.",
-        // The pack and the store it is captured FROM. `confirmName` is the
+            "Saves what was picked from this project's Commerce instance into My Datapacks: a new save of the project's datapack when it is yours (the save before it is kept; older ones are deleted), else a new datapack of yours by the name given. Nothing in Commerce changes, and nothing goes into the Data Installer's shared catalog.",
+        // The pack it writes (named only for an ACO pack). `confirmName` is the
         // proof-of-intent echo, not the target.
-        target: ['datapackName', 'version', 'commerceInstance'],
-        sessionGrant: false,
-    },
-    copy_library_datapack_to_installer: {
-        action: 'Copy a library datapack into the Data Installer',
-        consequence:
-            "Adds this pack to the Data Installer's shared catalogue so it can be installed. Other teams will see it, and the extension cannot remove it again.",
         target: ['datapackName', 'version'],
         sessionGrant: false,
     },
     save_store_changes_to_pack: {
-        action: "Save the store's changes to a datapack",
+        action: 'Save Commerce changes to a datapack',
         consequence:
-            "Saves this pack as the project's store now holds it, with anything picked from the store, as a new version of this demo's own pack in the datapack library; the pack installed is kept as it is, and nothing in Commerce changes.",
+            "Saves this datapack as the project's Commerce instance now holds it (or, with no datapack, what was picked from Commerce) into My Datapacks: a new save of the project's datapack when it is yours (the save before it is kept; older ones are deleted), else a new datapack of yours by the name given. The datapack installed is kept as it is, and nothing in Commerce changes.",
         target: ['datapackName', 'version'],
         sessionGrant: false,
     },
     make_aco_pack_from_products: {
         action: 'Save website products as an ACO datapack',
         consequence:
-            'Adds a new ACO pack, made from the products read off the website, to your own datapack library for review; nothing in ACO or Commerce changes, and deleting the pack undoes it.',
+            'Adds a new ACO pack, made from the products read off the website, to My Datapacks for review; nothing in ACO or Commerce changes, and deleting the pack undoes it.',
         target: ['datapackName', 'version'],
+        sessionGrant: false,
+    },
+    undo_last_save: {
+        action: 'Undo the last save of a datapack',
+        consequence:
+            "Puts the live Commerce store back to the datapack's save before the last one and deletes the last save from My Datapacks. Changes made in the Admin since are lost.",
+        target: ['datapackName'],
+        sessionGrant: false,
+    },
+    restore_datapack: {
+        action: 'Restore a datapack',
+        consequence:
+            'Puts the live Commerce store back to a previous state of the datapack: as it ships, or your last save or its original. Changes made in the Admin since are lost, unless you chose to save them first.',
+        target: ['datapackName', 'to'],
+        sessionGrant: false,
+    },
+    update_datapack: {
+        action: 'Update a datapack',
+        consequence:
+            "Writes what a newer version of the datapack changed into the live Commerce store, for the data types named (every type that changed when none are). Records you changed in the Admin are kept as they are.",
+        target: ['datapackName', 'dataTypes'],
         sessionGrant: false,
     },
     delete_library_datapack: {
-        action: 'Delete a library datapack',
+        action: 'Delete a datapack',
         consequence:
-            'Removes this pack and all its data from the datapack library. It cannot be brought back except by loading its file again.',
-        target: ['datapackName', 'version'],
+            'Deletes the datapack from My Datapacks: every save of it when the agent asked for every version, else the one version named. It cannot be brought back except by adding its file again.',
+        target: ['datapackName', 'version', 'everyVersion'],
         sessionGrant: false,
     },
     rename_datapack: {
-        action: 'Rename a library datapack',
+        action: 'Rename a datapack',
         consequence:
-            'Changes the name everyone sees for every version of this pack in the datapack library; its data is untouched.',
+            'Changes the name everyone sees for every version of this datapack in My Datapacks; its data is untouched.',
         target: ['datapackName', 'displayName'],
         sessionGrant: false,
     },
+    mark_demo_builder_datapack: {
+        action: 'Mark a Demo Builder datapack',
+        consequence:
+            'This datapack is listed under Demo Builder Datapacks for everyone it is shared with, and can no longer be deleted. An agent cannot take the mark off.',
+        target: ['datapackName', 'demoBuilder'],
+        sessionGrant: false,
+    },
     share_datapack: {
-        action: 'Share or stop sharing a library datapack',
-        consequence: 'Shared, everyone with access to the datapack library can see and install every version of this pack; stopped, only you can.',
+        action: 'Share or stop sharing a datapack',
+        consequence: 'Shared, everyone using Demo Builder can see and install every version of this datapack, under Community Datapacks; stopped, only you can.',
         target: ['datapackName', 'shared'],
         sessionGrant: false,
     },
-    load_datapack_zip: {
-        action: 'Load a datapack file into a store',
+    add_datapack_from_file: {
+        action: 'Add a datapack from a file',
         consequence:
-            'Adds the pack in this file to the datapack library, or to the Data Installer catalogue other teams share.',
-        target: ['path', 'target'],
+            'Adds the datapack in this file to My Datapacks, private to you until you share it, with any store configuration the file carries.',
+        // Replace and Keep Both change what the call does (step-07 F1): named, each with what it does.
+        target: ['path', 'update', 'saveAs'],
+        describe: (args) => fileLoadChoiceLine(args),
         sessionGrant: false,
     },
 };

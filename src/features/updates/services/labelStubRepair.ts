@@ -4,7 +4,7 @@
  * Until 2026-10-22 creation and reset wrote Demo Builder's one-row stub over every label
  * file the template shipped. The B2B template's `placeholders/checkout.json` carries the two
  * labels its checkout block reads with no fallback, so storefronts made before then show
- * "undefined" for the checkout's item-list heading and its Edit link (measured on JustRite).
+ * "undefined" for the checkout's item-list heading and its Edit link (measured on Tailspin).
  * Creation and reset now keep the template's rows (`placeholderLabelFiles`); a template
  * update keeps the storefront's label files as they are (`DEFAULT_PRESERVE_FILES`), so without
  * this an old storefront would stay broken until it was reset.

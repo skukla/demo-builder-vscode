@@ -12,9 +12,10 @@
 import type { CreatedObject } from '@/features/data-installer/services/demoBuilderEngine/installRecord';
 import { fingerprintRow } from '@/features/data-installer/services/demoBuilderEngine/fingerprint';
 import { attributePackForm } from '@/features/data-installer/services/demoBuilderEngine/packForm';
-import { keptLine } from '@/features/data-installer/services/demoBuilderEngine/repeatInstall';
+import { keptLine, tookOutLine } from '@/features/data-installer/services/demoBuilderEngine/repeatInstall';
 import { installPack } from '@/features/data-installer/services/demoBuilderEngine/runPack';
 import { packedFingerprint } from '@/features/data-installer/services/demoBuilderEngine/storeCopies';
+import { CommerceReadError } from '@/features/app-builder/services/erpFillReaders';
 import type { CommerceProduct } from '@/types/commerceWire';
 import { type SentCall, fakeContext, page } from './demoBuilderEngine.testUtils';
 
@@ -27,7 +28,7 @@ const SETS = { [page('products/attribute-sets/sets/list')]: { items: [{ attribut
 const AS_INSTALLED: CommerceProduct = { id: 11, sku: 'vrrack', name: 'VR Rack', price: 7500, attribute_set_id: 4, type_id: 'simple' };
 /** The same product in pack form, which is what its fingerprint is made from. */
 const AS_INSTALLED_ROW = { product: { sku: 'vrrack', name: 'VR Rack', price: 7500, attribute_set_id: 'Default', type_id: 'simple' } };
-/** The pack's row as it was installed. */
+/** The datapack's row as it was installed. */
 const PACK_ROW = { product: { sku: 'vrrack', name: 'VR Rack', price: 7500, attribute_set_id: 'Default', type_id: 'simple' } };
 
 const recorded = (extra: Partial<CreatedObject> = {}): CreatedObject => ({
@@ -98,6 +99,25 @@ describe('installing a pack again', () => {
         expect(ctx.recorder.has('products', 'vrrack')).toBe(false);
     });
 
+    // Walk F187 (owner, 2026-11-16): the store had it before the datapack, so no install takes it out.
+    it('leaves a product the store had before in the store when the pack no longer has it, off the record', async () => {
+        const ctx = await store(AS_INSTALLED, [recorded({ adopted: true })]);
+
+        await installPack(ctx, { products: [] });
+
+        expect(ctx.sent).toStrictEqual([]);
+        expect(ctx.recorder.byKey('products', 'vrrack')).toBeUndefined();
+    });
+
+    it('CONTROL: installing again sends nothing for a product the store had before, and keeps it on the record', async () => {
+        const ctx = await store(AS_INSTALLED, [recorded({ adopted: true })]);
+
+        await installPack(ctx, { products: [PACK_ROW] });
+
+        expect(ctx.sent).toStrictEqual([]);
+        expect(ctx.recorder.byKey('products', 'vrrack')?.adopted).toBe(true);
+    });
+
     it('keeps a product the pack no longer has when the SC changed it', async () => {
         const ctx = await store({ ...AS_INSTALLED, name: 'VR Rack (demo)' });
 
@@ -113,7 +133,7 @@ describe('installing a pack again', () => {
         const outcome = await installPack(ctx, { products: [PACK_ROW] });
 
         expect(ctx.sent).toStrictEqual([]);
-        expect(outcome.kept).toEqual([{ kind: 'products', key: 'vrrack' }]);
+        expect(outcome.kept).toEqual([{ kind: 'products', key: 'vrrack', deleted: true }]);
         expect(ctx.recorder.has('products', 'vrrack')).toBe(true);
     });
 
@@ -254,7 +274,8 @@ describe('things the SC renamed or deleted in the Admin', () => {
         const outcome = await installPack(ctx, { categories: { categories: [RACKS, CHILD] } });
 
         expect(ctx.sent).toStrictEqual([]);
-        expect(outcome.kept).toEqual([{ kind: 'categories', key: 'Racks' }]);
+        // Kept deleted: told apart from a change, for its own line (owner, 2026-11-14).
+        expect(outcome.kept).toEqual([{ kind: 'categories', key: 'Racks', deleted: true }]);
     });
 
     it('does not make again an attribute the SC deleted', async () => {
@@ -265,7 +286,7 @@ describe('things the SC renamed or deleted in the Admin', () => {
         const outcome = await installPack(ctx, { product_attributes: [ROW] });
 
         expect(ctx.sent).toStrictEqual([]);
-        expect(outcome.kept).toEqual([{ kind: 'product_attributes', key: 'bodea_fabric' }]);
+        expect(outcome.kept).toEqual([{ kind: 'product_attributes', key: 'bodea_fabric', deleted: true }]);
     });
 
     it('adds an option the pack gained to a swatch it made, with its swatch', async () => {
@@ -296,10 +317,140 @@ describe('things the SC renamed or deleted in the Admin', () => {
     });
 });
 
+// 2026-11-06, live: a Luma reinstall took 40 attributes out of their sets, saying the pack no
+// longer had them, and Commerce blanked 271 product values with them. Each was recorded by the
+// set's id ("155/size") and the pack names it by the set's name ("Top/size"), so no row matched.
+describe('an attribute this engine put in a set, installed again', () => {
+    const ROW = { attributeSetId: 'Default', attributeCode: 'bodea_fabric', sortOrder: 10 };
+    const COPY = { attributeSetId: 'Default', attributeCode: 'bodea_fabric' };
+    const GROUPS = page(
+        'products/attribute-sets/groups/list',
+        '&searchCriteria[filter_groups][0][filters][0][field]=attribute_set_id&searchCriteria[filter_groups][0][filters][0][value]=4',
+    );
+
+    async function assigned(key: string) {
+        const ctx = await fakeContext({
+            ...SETS,
+            'products/attribute-sets/4/attributes': [{ attribute_code: 'bodea_fabric' }],
+            [GROUPS]: { items: [{ attribute_group_id: 7, attribute_group_name: 'General' }] },
+        });
+        await ctx.recorder.record({
+            kind: 'attribute_assign_to_set',
+            id: '4/bodea_fabric',
+            key,
+            fingerprint: fingerprintRow(COPY),
+            wrote: packedFingerprint('attribute_assign_to_set', ROW),
+        });
+        return ctx;
+    }
+
+    it('is left in its set while the pack still has it', async () => {
+        const ctx = await assigned('Default/bodea_fabric');
+
+        await installPack(ctx, { attribute_assign_to_set: [ROW] });
+
+        expect(ctx.sent).toStrictEqual([]);
+        expect(ctx.recorder.has('attribute_assign_to_set', '4/bodea_fabric')).toBe(true);
+    });
+
+    it('is left in its set when an earlier version recorded it by the set\'s id', async () => {
+        const ctx = await assigned('4/bodea_fabric');
+
+        await installPack(ctx, { attribute_assign_to_set: [ROW] });
+
+        expect(ctx.sent).toStrictEqual([]);
+        expect(ctx.recorder.has('attribute_assign_to_set', '4/bodea_fabric')).toBe(true);
+    });
+
+    it('is taken out once the pack no longer has it, and the outcome says so', async () => {
+        const ctx = await assigned('4/bodea_fabric');
+
+        const outcome = await installPack(ctx, { attribute_assign_to_set: [] });
+
+        expect(writes(ctx.sent)).toEqual(['DELETE products/attribute-sets/4/attributes/bodea_fabric']);
+        expect(tookOutLine(outcome.tookOut)).toBe('Took out 1 item the datapack no longer has: attribute assign to set (1).');
+    });
+
+    it('is left in its set, and on the record, when Commerce will not take it out; the install carries on', async () => {
+        const ctx = await assigned('Default/bodea_fabric');
+        const refuse = ctx.send;
+        ctx.send = async (method, path, body) => {
+            if (method === 'DELETE') throw new CommerceReadError(`Commerce answered 400 for ${path}: {"message":"Attribute is locked."}`, 400);
+            return refuse(method, path, body);
+        };
+
+        const outcome = await installPack(ctx, { attribute_assign_to_set: [] });
+
+        expect(outcome.notTakenOut).toEqual([{ kind: 'attribute_assign_to_set', key: 'Default/bodea_fabric', reason: 'Attribute is locked.' }]);
+        expect(outcome.tookOut).toStrictEqual([]);
+        expect(ctx.recorder.has('attribute_assign_to_set', '4/bodea_fabric')).toBe(true);
+    });
+});
+
+// The same mismatch, found by the audit after it (2026-11-06): a link was recorded by the stock's
+// id ("7/east") and the pack names it by the stock's name ("Bodea Stock/east").
+describe('a source this engine linked to a stock, installed again', () => {
+    const ROW = { stockSourceLink: { stock_id: 'Bodea Stock', source_code: 'east', priority: 1 } };
+    const INVENTORY = {
+        'inventory/stocks?searchCriteria[pageSize]=200': { items: [{ stock_id: 7, name: 'Bodea Stock' }] },
+        'inventory/sources?searchCriteria[pageSize]=200': { items: [{ source_code: 'east', enabled: true }] },
+        'inventory/stock-source-links?searchCriteria[pageSize]=200': { items: [{ stock_id: 7, source_code: 'east', priority: 1 }] },
+    };
+
+    async function linked(key: string) {
+        const ctx = await fakeContext(INVENTORY);
+        await ctx.recorder.record({
+            kind: 'stock_source_links',
+            id: '7/east',
+            key,
+            fingerprint: fingerprintRow(ROW),
+            wrote: packedFingerprint('stock_source_links', ROW),
+        });
+        return ctx;
+    }
+
+    it.each(['Bodea Stock/east', '7/east'])('stays linked while the pack still has it (recorded as %s)', async (key) => {
+        const ctx = await linked(key);
+
+        await installPack(ctx, { stock_source_links: { stockSourceLinks: [ROW] } });
+
+        expect(ctx.sent).toStrictEqual([]);
+        expect(ctx.recorder.has('stock_source_links', '7/east')).toBe(true);
+    });
+});
+
+describe('tookOutLine', () => {
+    it('counts what was taken out by kind, and says nothing when nothing was', () => {
+        expect(tookOutLine([])).toBeUndefined();
+        expect(tookOutLine([{ kind: 'products', id: 'a' }, { kind: 'products', id: 'b' }, { kind: 'categories', id: '9' }])).toBe(
+            'Took out 3 items the datapack no longer has: products (2) and categories (1).',
+        );
+    });
+});
+
 describe('keptLine', () => {
     it('says what was kept in one plain line', () => {
         expect(keptLine([])).toBeUndefined();
-        expect(keptLine([{ kind: 'products', key: 'vrrack' }])).toBe('Kept 1 thing you had changed in the Admin.');
-        expect(keptLine([{ kind: 'products', key: 'a' }, { kind: 'categories', key: 'b' }])).toBe('Kept 2 things you had changed in the Admin.');
+        expect(keptLine([{ kind: 'products', key: 'vrrack' }])).toBe('Kept 1 item changed in the Admin.');
+        expect(keptLine([{ kind: 'products', key: 'a' }, { kind: 'categories', key: 'b' }])).toBe('Kept 2 items changed in the Admin.');
+    });
+
+    // Owner, 2026-11-14: deletions are counted on their own line, each line only when it applies.
+    it('counts what the SC deleted on its own line', () => {
+        expect(keptLine([{ kind: 'products', key: 'a', deleted: true }])).toBe('Left out 1 item deleted in the Admin.');
+        expect(keptLine([{ kind: 'products', key: 'a', deleted: true }, { kind: 'categories', key: 'b', deleted: true }])).toBe(
+            'Left out 2 items deleted in the Admin.',
+        );
+    });
+
+    it('says both, changes first, when the SC changed some and deleted others', () => {
+        const kept = [
+            { kind: 'products', key: 'a' },
+            { kind: 'products', key: 'b' },
+            { kind: 'categories', key: 'c' },
+            { kind: 'products', key: 'd', deleted: true as const },
+        ];
+
+        expect(keptLine(kept)).toBe('Kept 3 items changed in the Admin. Left out 1 item deleted in the Admin.');
     });
 });

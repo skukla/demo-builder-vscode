@@ -18,7 +18,7 @@ jest.mock('@/features/app-builder/services/appConfigPackages', () => ({
 
 import { addAppBuilderComponent } from '@/features/app-builder/services/appBuilderAddRun';
 import { deployAppBuilderComponent } from '@/features/app-builder/services/appBuilderRedeployRun';
-import { INTEGRATION_ENTRY, createDeps, createProject } from './appBuilderComponentRunner.testUtils';
+import { INTEGRATION_ENTRY, MESH_ENTRY, createDeps, createProject } from './appBuilderComponentRunner.testUtils';
 
 const ID = INTEGRATION_ENTRY.id;
 const PATH = `/proj/components/${ID}`;
@@ -41,6 +41,34 @@ function deployedProject(deployedCommit?: string): Project {
         },
     });
 }
+
+// Measured 2026-11-02, updating a real mesh: only an app recorded this. An update stamps the commit it
+// moved from, so a mesh that never overwrote it read as running older code, and was offered forever.
+describe('a mesh deploy records the commit it shipped too', () => {
+    const MESH_PATH = `/proj/components/${MESH_ENTRY.id}`;
+
+    function meshProject(deployedCommit: string): Project {
+        return createProject({
+            componentInstances: {
+                [MESH_ENTRY.id]: { id: MESH_ENTRY.id, name: MESH_ENTRY.name, status: 'deployed', path: MESH_PATH },
+            },
+            appBuilderComponents: {
+                [MESH_ENTRY.id]: { kind: 'mesh', status: 'deployed', source: MESH_ENTRY.source, deployedCommit },
+            },
+        });
+    }
+
+    it('reading the clone at the mesh path', async () => {
+        const deps = createDeps({ catalog: [MESH_ENTRY], readCloneCommit: jest.fn(async () => 'newer12') });
+        const project = meshProject('older12');
+
+        const result = await deployAppBuilderComponent(project, MESH_ENTRY.id, deps);
+
+        expect(result.success).toBe(true);
+        expect(deps.readCloneCommit).toHaveBeenCalledWith(MESH_PATH);
+        expect(project.appBuilderComponents?.[MESH_ENTRY.id]?.deployedCommit).toBe('newer12');
+    });
+});
 
 describe('a deploy records the commit it shipped', () => {
     it('on an add', async () => {

@@ -240,6 +240,29 @@ describe('AuthenticationService - Login/Logout Operations', () => {
 
             await expect(authService.logout()).rejects.toThrow('Logout failed');
         });
+
+        it('tells every sign-out listener once it is done, so open screens re-check', async () => {
+            mockCommandExecutor.execute.mockResolvedValue(createSuccessResult('Logged out'));
+            const heard = jest.fn();
+            const gone = jest.fn();
+            authService.onDidSignOut(heard);
+            authService.onDidSignOut(gone).dispose();
+
+            await authService.logout();
+
+            expect(heard).toHaveBeenCalledTimes(1);
+            expect(gone).not.toHaveBeenCalled();
+        });
+
+        it('tells nobody when the sign-out fails', async () => {
+            mockCommandExecutor.execute.mockRejectedValue(new Error('Logout failed'));
+            const heard = jest.fn();
+            authService.onDidSignOut(heard);
+
+            await expect(authService.logout()).rejects.toThrow('Logout failed');
+
+            expect(heard).not.toHaveBeenCalled();
+        });
     });
 
     describe('loginAndRestoreProjectContext', () => {

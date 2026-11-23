@@ -4,7 +4,7 @@ kind: feature
 area: app-builder
 needs: []
 value: med
-status: built
+status: shipped
 parent: AB-16
 ---
 
@@ -42,3 +42,4 @@ the web store. The ERP takes the web order's prices as sold and does not reprice
 - 2026-10-03  Built 2026-10-03 (overnight loop): each order line carries the web shop's discount; the ERP stores and shows it on orders, invoices and credit memos, returns take their share to the cent (demo-erp 4457097, contract v17; integration 030bc88 adds items[].base_discount_amount to the Order Saved subscription — a redeploy and reinstall are owed). Owner decisions listed in .rptc/handoff/2026-10-03-loop-report.md.
 - 2026-10-03  2026-10-03 (staged): docs/systems/erp-integration.md now tells the SC that a catalog price rule reaches the ERP as a lower line price and a cart price rule as a line discount (needs integration 030bc88 redeployed), plus the lowest-wins / Apply Catalog Price Rule on Grouped Price note; no setup step changed.
 - 2026-10-03  Reconciled 2026-10-03 (second pass): the 'uncommitted / staged' wording above is stale: the work is committed (6817f5486, f0b4705e3, b7bc129d2, 844afae69) and on feature/erp-integration.
+- 2026-11-20  Released in v1.0.0-beta.153

@@ -94,7 +94,7 @@ describe('handleRenameAdobeProject', () => {
 
         expect(result).toStrictEqual({
             success: false,
-            error: 'Adobe did not rename the project. Details are in Debug Logs.',
+            error: 'Adobe did not rename the project.',
         });
     });
 

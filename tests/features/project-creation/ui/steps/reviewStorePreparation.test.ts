@@ -6,12 +6,12 @@
  * first and leaves what is already done.
  */
 
-import { preparesStoreOnAdd } from '@/features/app-builder/services/storePreparation/fixReach';
+import { preparesStoreOnAdd } from '@/features/app-builder/services/storePreparation/setupReach';
 import { getAppBuilderComponentEntry } from '@/features/components/services/appBuilderComponentCatalogLoader';
 import { storePreparationOnReview } from '@/features/project-creation/ui/steps/reviewStorePreparation';
 import type { AppBuilderComponentCatalogEntry, SetupStep } from '@/types/appBuilderComponents';
 
-const step = (id: string, label: string, fix?: SetupStep['fix']): SetupStep => ({ id, title: label, label, why: 'w', where: 'Admin', ...(fix ? { fix } : {}) });
+const step = (id: string, label: string, fix?: SetupStep['setup']): SetupStep => ({ id, title: label, label, why: 'w', where: 'Admin', ...(fix ? { setup: fix } : {}) });
 const ERP_INTEGRATION = {
     id: 'erp-integration',
     name: 'ERP Integration',

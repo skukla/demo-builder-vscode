@@ -3,19 +3,15 @@ import * as semver from 'semver';
 import * as vscode from 'vscode';
 import { isRepoCollaborator } from './collaboratorGate';
 import { ComponentRepositoryResolver } from './componentRepositoryResolver';
-import { GITHUB_API_BASE, buildGitHubHeaders, fetchWithTimeout } from './githubApiClient';
-import { selectLatestForChannel } from './releaseTrack';
-import type {
-    ReleaseInfo,
-    UpdateCheckResult,
-    GitHubRelease,
-    GitHubReleaseAsset,
-    UpdateChannel,
-} from './types';
-import { isMeshComponentId } from '@/core/constants';
+import { buildGitHubHeaders } from './githubApiClient';
+import type { ReleaseInfo, UpdateCheckResult } from './types';
+import { COMPONENT_IDS, isMeshComponentId } from '@/core/constants';
+import { channelFor } from '@/core/releases/componentRelease';
+import { readNewestComponentRelease, readNewestRelease } from '@/core/releases/readNewestRelease';
 import { validateGitHubDownloadURL } from '@/core/validation/URLValidator';
-import { Project } from '@/types/base';
+import { ComponentInstance, Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
+import type { GitHubReleaseAsset, UpdateChannel } from '@/types/releases';
 import { getComponentInstanceEntries, getComponentVersion } from '@/types/typeGuards';
 
 export type { UpdateCheckResult };
@@ -37,6 +33,19 @@ export interface MultiProjectUpdateResult {
     }>;
 }
 
+/**
+ * Whether a release archive can update this component. Applying one replaces the
+ * folder and deploys nothing, so it only suits a Headless storefront, which runs
+ * from that folder. A mesh or App Builder component would lose its git history and
+ * leave the live app as it was, and an EDS storefront's repoUrl is the SC's own
+ * repository. A project old enough to record no type still gets its update.
+ */
+function takesReleaseArchive(componentId: string, instance: ComponentInstance): boolean {
+    if (isMeshComponentId(componentId)) return false;
+    if (componentId === COMPONENT_IDS.EDS_STOREFRONT) return false;
+    return instance.type === undefined || instance.type === 'frontend';
+}
+
 export class UpdateManager {
     private logger: Logger;
     private context: vscode.ExtensionContext;
@@ -56,7 +65,9 @@ export class UpdateManager {
      */
     async checkExtensionUpdate(): Promise<UpdateCheckResult> {
         const currentVersion = this.context.extension.packageJSON.version;
-        const channel = await this.resolveEffectiveChannel(this.getUpdateChannel());
+        const channel = await channelFor(this.getUpdateChannel(), () =>
+            isRepoCollaborator(this.context.secrets, this.logger),
+        );
 
         const latestRelease = await this.fetchLatestRelease(this.EXTENSION_REPO, channel);
 
@@ -91,11 +102,9 @@ export class UpdateManager {
      * @returns Array of components with updates, each containing list of affected projects
      */
     async checkAllProjectsForUpdates(projects: Project[]): Promise<MultiProjectUpdateResult[]> {
-        // Components ship no -alpha.* builds; early-access collapses to beta for
-        // component checks so EA users don't silently skip component updates.
-        const configuredChannel = this.getUpdateChannel();
-        const channel: UpdateChannel =
-            configuredChannel === 'early-access' ? 'beta' : configuredChannel;
+        const channel = await channelFor(this.getUpdateChannel(), () =>
+            isRepoCollaborator(this.context.secrets, this.logger),
+        );
 
         // Collect all unique component IDs across all projects
         const componentProjectMap = new Map<
@@ -105,8 +114,7 @@ export class UpdateManager {
 
         for (const project of projects) {
             for (const [componentId, component] of getComponentInstanceEntries(project)) {
-                // A mesh updates from its branch, by the integration update check.
-                if (isMeshComponentId(componentId)) continue;
+                if (!takesReleaseArchive(componentId, component)) continue;
 
                 // RESILIENCE: Skip components whose paths don't exist on filesystem
                 // This handles cases where a component was deleted but still registered in state
@@ -179,53 +187,24 @@ export class UpdateManager {
     }
 
     /**
-     * Fetch latest release from GitHub based on channel
-     * Stable: Latest non-prerelease
-     * Beta: Latest release (including prereleases)
+     * Fetch the newest release the channel accepts. A component reads every track on early
+     * access; the extension reads only alphas there, because a build graduates from one.
      */
     private async fetchLatestRelease(
         repo: string,
         channel: UpdateChannel,
     ): Promise<ReleaseInfo | null> {
         try {
-            // For stable: use /releases/latest (non-prereleases only)
-            // For beta: use /releases?per_page=20 (includes prereleases, need to sort)
-            const url =
-                channel === 'stable'
-                    ? `${GITHUB_API_BASE}/repos/${repo}/releases/latest`
-                    : `${GITHUB_API_BASE}/repos/${repo}/releases?per_page=20`;
-
+            const isExtension = repo === this.EXTENSION_REPO;
+            const read = isExtension ? readNewestRelease : readNewestComponentRelease;
             const headers = await buildGitHubHeaders(this.context.secrets);
+            const release = await read(repo, channel, { headers, logger: this.logger });
 
-            const response = await fetchWithTimeout(url, { headers });
-
-            // HTTP status validation
-            if (!response.ok) {
-                if (response.status === 404) {
-                    return null;
-                }
-                if (response.status === 403) {
-                    throw new Error('GitHub rate limit exceeded. Try again later.');
-                }
-                if (response.status >= 500) {
-                    throw new Error(`GitHub server error: HTTP ${response.status}`);
-                }
-                throw new Error(`GitHub API error: HTTP ${response.status}`);
-            }
-
-            const data: GitHubRelease | GitHubRelease[] = await response.json();
-
-            // Stable returns a single object; beta/early-access return an array.
-            // For arrays, pick the highest release the channel ACCEPTS by track
-            // (beta excludes -alpha.*, early-access takes -alpha.* only).
-            const release = Array.isArray(data) ? selectLatestForChannel(data, channel) : data;
-
-            if (!release || release.message === 'Not Found') {
+            if (!release) {
                 return null;
             }
 
             // Find VSIX asset for extension, or source archive for components
-            const isExtension = repo === this.EXTENSION_REPO;
             const downloadUrl = isExtension
                 ? release.assets.find((a: GitHubReleaseAsset) => a.name.endsWith('.vsix'))
                       ?.browser_download_url
@@ -247,6 +226,7 @@ export class UpdateManager {
 
             return {
                 version,
+                tag: release.tag_name,
                 downloadUrl,
                 releaseNotes: release.body || 'No release notes available',
                 publishedAt: release.published_at,
@@ -283,23 +263,6 @@ export class UpdateManager {
         return vscode.workspace
             .getConfiguration('demoBuilder')
             .get<UpdateChannel>('updateChannel', 'stable');
-    }
-
-    /**
-     * Resolve the channel actually used for fetching. early-access is honored
-     * only for verified repo collaborators; otherwise it falls back to beta.
-     * Never throws (the gate itself fails closed).
-     */
-    private async resolveEffectiveChannel(configured: UpdateChannel): Promise<UpdateChannel> {
-        if (configured !== 'early-access') return configured;
-        try {
-            const allowed = await isRepoCollaborator(this.context.secrets, this.logger);
-            return allowed ? 'early-access' : 'beta';
-        } catch {
-            // Defensive: the gate fails closed internally, but never let an
-            // unexpected error block the update check — fall back to beta.
-            return 'beta';
-        }
     }
 
     private isNewerVersion(latest: string, current: string): boolean {

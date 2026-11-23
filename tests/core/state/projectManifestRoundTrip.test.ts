@@ -17,6 +17,7 @@
  */
 
 import type { Project } from '@/types/base';
+import { DATAPACK_INSTALL_FAILURE } from '../../helpers/datapackInstallFailureFixtures';
 import { ProjectFileLoader } from '@/core/state/projectFileLoader';
 import {
     ProjectConfigWriter,
@@ -51,7 +52,16 @@ const FIELDS: { [K in keyof Required<Project>]: Decision<Project[K]> } = {
     componentConfigs: { ownSuite: 'an entry the selections no longer name is dropped (projectFileLoader-orphanConfigs)' },
     commerceStoreStructure: { ownSuite: 'projectConfigWriter-storeStructure' },
     selectedPackage: { roundTrips: 'citisignal' },
-    demo: { roundTrips: { kind: 'demo', version: 1, name: 'Isle5', source: { owner: 'jen', repo: 'isle5' }, storefrontKind: 'eds' } },
+    demo: { roundTrips: { kind: 'demo', version: 1, name: 'Isle5', source: { owner: 'robin', repo: 'isle5' }, storefrontKind: 'eds' } },
+    // EDS-72: Reset reads the import's commit off the saved project.
+    importedFrom: {
+        roundTrips: {
+            bundleName: 'Bodea Summit',
+            sourceRepository: 'sender/kukla-bodea',
+            commit: 'import-commit',
+            contentSource: { org: 'sender', site: 'kukla-bodea', indexPath: '/query-index.json' },
+        },
+    },
     datapack: {
         roundTrips: {
             name: 'acme-demo-1a2b3c',
@@ -60,14 +70,20 @@ const FIELDS: { [K in keyof Required<Project>]: Decision<Project[K]> } = {
             origin: { name: 'bodea', version: '1.0.0', store: 'installer' },
         },
     },
-    ownDatapack: { roundTrips: { name: 'acme-demo-1a2b3c', renamed: true } },
+    datapackInstallFailure: { roundTrips: DATAPACK_INSTALL_FAILURE },
+    finishSetup: {
+        roundTrips: {
+            'republish-code': { files: ['scripts/commerce.js'], state: 'done', lastCheck: 'passed', checkedAt: '2026-11-17T10:00:00.000Z' },
+            'pack-root-category': { state: 'dismissed' },
+        },
+    },
+    commerceAdminExperience: { roundTrips: 'classic' },
     selectedStack: { roundTrips: 'eds-accs' },
     selectedAddons: { roundTrips: ['adobe-commerce-aco'] },
     demoPackage: { roundTrips: { fileSha: 'abc123', savedAt: '2026-10-29T10:00:00.000Z' } },
     selectedBlockLibraries: { roundTrips: ['isle5'] },
     customBlockLibraries: { roundTrips: [{ name: 'Mine', source: { owner: 'me', repo: 'blocks', branch: 'main' } }] },
     installedBlockLibraries: { ownSuite: 'projectFileLoader.test.ts' },
-    installedInspectorSdk: { notWritten: 'nothing in src/ sets it' },
     meshStatusSummary: { notWritten: 'recomputed from the keyed components on load' },
     appStatusSummary: { notWritten: 'recomputed from the keyed components on load' },
     edsStorefrontState: { roundTrips: { envVars: { A: '1' }, lastPublished: '2026-10-29T10:00:00.000Z' } },

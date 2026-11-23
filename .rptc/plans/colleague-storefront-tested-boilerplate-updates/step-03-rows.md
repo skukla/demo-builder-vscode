@@ -5,7 +5,7 @@
 - New `PendingUpdateKind` `'boilerplate'`, worded "Adobe boilerplate" with detail
   "Newer tested version".
 - The existing template row, for an added demo only, is worded by its source:
-  "Changes from kmanns/justrite". A shipped storefront keeps "EDS template".
+  "Changes from org-e/tailspin". A shipped storefront keeps "EDS template".
 - Both start ticked (neither deploys; Apply asks on a conflict).
 
 ## Where

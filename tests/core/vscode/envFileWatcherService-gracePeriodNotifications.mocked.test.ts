@@ -166,23 +166,28 @@ describe('EnvFileWatcherService - Grace Period and Notifications (Mocked)', () =
             expect(vscode.window.showInformationMessage).not.toHaveBeenCalled();
         });
 
-        it('should stop then start the demo when the SC picks Restart Demo', async () => {
-            mockStateManager.getCurrentProject.mockResolvedValue(
-                createMockProject({ status: 'running' })
-            );
+        // PL-104 fix 12 (F268): the one restart, for this project, not a hand-rolled stop
+        // and start with no pause between them and no project named.
+        it('should run the one restart, for the running project, when the SC picks Restart Demo', async () => {
+            const running = createMockProject({ status: 'running', path: '/projects/running-demo' });
+            mockStateManager.getCurrentProject.mockResolvedValue(running);
             (vscode.window.showInformationMessage as jest.Mock).mockResolvedValueOnce(
                 'Restart Demo'
             );
 
             await changeAfterHashing();
-            // The restart is two chained commands behind the notification's promise.
+            // The restart is a command behind the notification's promise.
             await settleFileChange();
 
+            expect(vscode.commands.executeCommand).toHaveBeenCalledWith(
+                'demoBuilder.restartDemo',
+                '/projects/running-demo'
+            );
             const executed = (vscode.commands.executeCommand as jest.Mock).mock.calls.map(
                 (call) => call[0]
             );
-            expect(executed).toContain('demoBuilder.stopDemo');
-            expect(executed).toContain('demoBuilder.startDemo');
+            expect(executed).not.toContain('demoBuilder.stopDemo');
+            expect(executed).not.toContain('demoBuilder.startDemo');
         });
 
         it('should do nothing when the notification is dismissed', async () => {
@@ -197,8 +202,7 @@ describe('EnvFileWatcherService - Grace Period and Notifications (Mocked)', () =
             const executed = (vscode.commands.executeCommand as jest.Mock).mock.calls.map(
                 (call) => call[0]
             );
-            expect(executed).not.toContain('demoBuilder.stopDemo');
-            expect(executed).not.toContain('demoBuilder.startDemo');
+            expect(executed).not.toContain('demoBuilder.restartDemo');
         });
     });
 

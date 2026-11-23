@@ -21,6 +21,10 @@ import type { DatapackId, DatapackStoreName } from '@/types/datapack';
 interface SaveResult {
     path?: string;
     cancelled?: boolean;
+    /** The pack's settings layer went in the file too (step 09). */
+    settingsLayer?: { settings: number };
+    /** Why the file may lack one: the library could not be asked. */
+    settingsLayerNote?: string;
 }
 
 export interface SaveDatapackFileButtonProps {
@@ -59,7 +63,7 @@ export function SaveDatapackFileButton({
         <div className="datapack-save-file">
             {/* Spectrum's busy button, not a "-ing" label (owner, 2026-10-31). */}
             <Button variant="secondary" onPress={start} isPending={saving}>
-                Save as file
+                Save as File
             </Button>
             {note}
         </div>
@@ -72,10 +76,16 @@ function renderSaveNote(
     error: string | undefined,
 ): React.JSX.Element | null {
     if (error) {
-        return <p className="datapack-export-note">The file could not be saved: {error}</p>;
+        return <p className="dialog-problem text-negative">The file could not be saved: {error}</p>;
     }
     if (value?.path) {
-        return <p className="datapack-export-note">Saved to {value.path}</p>;
+        return (
+            <p className="datapack-export-note">
+                Saved to {value.path}
+                {value.settingsLayer ? ', with its store configuration' : ''}
+                {value.settingsLayerNote ? `. ${value.settingsLayerNote}` : ''}
+            </p>
+        );
     }
     return null;
 }

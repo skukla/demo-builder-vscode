@@ -198,7 +198,7 @@ extension now does it: `fnm install 24`, then `npm install -g @adobe/aio-cli` (1
 
 | Check | Result |
 |---|---|
-| headless-commerce-mesh: npm install, build, deploy, query | PASS. Built; provisioned in a throwaway workspace (zzNode24Mesh2, Kukla Justrite); a custom resolver answered and a catalog query reached the Commerce search service |
+| headless-commerce-mesh: npm install, build, deploy, query | PASS. Built; provisioned in a throwaway workspace (zzNode24Mesh2, Kukla Tailspin); a custom resolver answered and a catalog query reached the Commerce search service |
 | commerce-eds-mesh: same | PASS. Provisioned; `storeConfig` answered with real store data |
 | citisignal-nextjs (headless storefront): npm install, `next dev` | PASS. Ready in 1.3s, home page served (HTTP 200) |
 | Cleanup | Both meshes deleted; the workspace deleted by a script that refused any other name; the project's three real workspaces untouched |

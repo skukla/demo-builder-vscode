@@ -15,10 +15,11 @@ jest.mock('@/features/updates/services/githubApiClient', () => ({
 
 jest.mock('@/features/eds/services/patches/lkgReader', () => ({
     readLkgSha: jest.fn(),
+    readLatestPatchesRelease: jest.fn(),
 }));
 
 import { COMPONENT_IDS } from '@/core/constants';
-import { readLkgSha } from '@/features/eds/services/patches/lkgReader';
+import { readLatestPatchesRelease, readLkgSha } from '@/features/eds/services/patches/lkgReader';
 import { compareCommits, getLatestBranchCommit } from '@/features/updates/services/githubApiClient';
 import type { Project } from '@/types/base';
 import { createMockProject } from '../../../helpers/projectFake';
@@ -28,6 +29,7 @@ export { TemplateUpdateChecker } from '@/features/updates/services/templateUpdat
 export const mockGetLatestBranchCommit = getLatestBranchCommit as jest.Mock;
 export const mockCompareCommits = compareCommits as jest.Mock;
 export const mockReadLkgSha = readLkgSha as jest.Mock;
+export const mockReadLatestPatchesRelease = readLatestPatchesRelease as jest.Mock;
 
 export const OLD_SHA = 'a'.repeat(40);
 export const NEW_SHA = 'b'.repeat(40);

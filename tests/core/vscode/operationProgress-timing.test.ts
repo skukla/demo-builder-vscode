@@ -7,6 +7,7 @@
  */
 
 import { pushOperationProgress, startModalRun } from '@/core/vscode/operationProgress';
+import { plain } from '@/core/utils/plainText';
 
 const ID = 'timing-run';
 const T0 = new Date('2026-10-16T10:00:00Z').getTime();
@@ -45,7 +46,7 @@ describe('the run timing on progress pushes', () => {
     });
 
     it('adds no timing to an end that no running push came before', async () => {
-        await pushOperationProgress({ id: ID, state: 'failed', error: 'No project found' });
+        await pushOperationProgress({ id: ID, state: 'failed', error: plain('No project found') });
 
         expect(lastSent()).toEqual({ id: ID, state: 'failed', error: 'No project found' });
     });

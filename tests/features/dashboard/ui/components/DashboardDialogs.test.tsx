@@ -7,8 +7,8 @@
  * mounted, and each dialog receives the right data and the right close.
  */
 
-import { mockPostMessage } from '../../../../helpers/webviewClientMock';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { mockPostMessage, mockRequest } from '../../../../helpers/webviewClientMock';
+import { act, fireEvent, render, renderHook, screen } from '@testing-library/react';
 import React from 'react';
 import '@testing-library/jest-dom';
 import {
@@ -16,13 +16,20 @@ import {
     type AiCapabilityState,
     type DashboardDialogsProps,
 } from '@/features/dashboard/ui/components/DashboardDialogs';
+import type { FinishSetupControls } from '@/features/dashboard/ui/hooks/useFinishSetup';
 import type { HandoverDialogs } from '@/features/dashboard/ui/hooks/useHandoverDialogs';
 import type { OperationRunnerControls, ScreenOperation } from '@/core/ui/hooks/useOperationRunner';
+import { asDisplayName } from '@/core/utils/projectDisplayName';
+import {
+    useProjectsBatch,
+    type ProjectsBatchControls,
+} from '@/features/projects-dashboard/ui/hooks/useProjectsBatch';
 
 const mockAddDemoModal = jest.fn();
 const mockShareModal = jest.fn();
 const mockProgressModal = jest.fn();
 const mockCapabilitiesModal = jest.fn();
+const mockBatchModal = jest.fn();
 
 jest.mock('@adobe/react-spectrum', () => ({
     DialogContainer: ({ children, onDismiss }: { children: React.ReactNode; onDismiss: () => void }) => (
@@ -43,6 +50,13 @@ jest.mock('@/features/project-creation/ui/components/add-demo/AddDemoModal', () 
         );
     },
 }));
+const mockSavePackageModal = jest.fn();
+jest.mock('@/features/dashboard/ui/components/share/SavePackageModal', () => ({
+    SavePackageModal: (props: { onClose: () => void }) => {
+        mockSavePackageModal(props);
+        return <div role="dialog" aria-label="Save as Package" />;
+    },
+}));
 jest.mock('@/features/dashboard/ui/components/share/ShareModal', () => ({
     ShareModal: (props: { onClose: () => void }) => {
         mockShareModal(props);
@@ -53,6 +67,12 @@ jest.mock('@/core/ui/components/feedback/OperationProgressModal', () => ({
     OperationProgressModal: (props: unknown) => {
         mockProgressModal(props);
         return null;
+    },
+}));
+jest.mock('@/features/projects-dashboard/ui/components/ProjectsBatchModal', () => ({
+    ProjectsBatchModal: (props: unknown) => {
+        mockBatchModal(props);
+        return <div role="dialog" aria-label="Batch window" />;
     },
 }));
 jest.mock('@/features/dashboard/ui/components/AiCapabilitiesModal', () => ({
@@ -68,19 +88,21 @@ jest.mock('@/features/dashboard/ui/components/AiCapabilitiesModal', () => ({
 }));
 
 const DEMO: NonNullable<DashboardDialogsProps['changeSourceDemo']> = {
-    name: 'Isle5 by Jen',
-    source: { owner: 'jen', repo: 'isle5-demo' },
+    name: 'Isle5 by Robin',
+    source: { owner: 'robin', repo: 'isle5-demo' },
     storefrontKind: 'eds',
     demoPackageName: 'Isle5',
 };
 
-const RESET_OPERATION: ScreenOperation = {
-    id: 'reset-project',
+// A sync: the progress modal no longer narrates a reset here (step-05 S4, the batch window does).
+const SYNC_OPERATION: ScreenOperation = {
+    id: 'sync-storefront',
     name: 'My Demo',
-    message: 'resetProject',
-    title: 'Resetting My Demo',
-    failureTitle: "Couldn't reset My Demo",
-    successTitle: 'My Demo reset',
+    message: 'syncStorefront',
+    title: 'Syncing the Storefront',
+    failureTitle: "Couldn't Sync the Storefront",
+    successTitle: 'Storefront Synced',
+    thing: 'Storefront',
     run: 1,
     resume: false,
 };
@@ -90,13 +112,16 @@ function handover(overrides: Partial<HandoverDialogs> = {}): HandoverDialogs {
         shareOpen: false,
         openShare: jest.fn(),
         closeShare: jest.fn(),
+        savePackageOpen: false,
+        openSavePackage: jest.fn(),
+        closeSavePackage: jest.fn(),
         ...overrides,
     };
 }
 
 function operations(): OperationRunnerControls {
     return {
-        open: RESET_OPERATION,
+        open: SYNC_OPERATION,
         start: jest.fn(),
         startWhenItBegins: jest.fn(),
         show: jest.fn(),
@@ -104,6 +129,16 @@ function operations(): OperationRunnerControls {
         retry: jest.fn(),
         close: jest.fn(),
     };
+}
+
+/** The real batch controls, closed, or open on a reset of one project (its read never answers). */
+function batchControls(open = false): ProjectsBatchControls {
+    mockRequest.mockImplementation(() => new Promise(() => undefined));
+    const { result } = renderHook(() => useProjectsBatch(jest.fn()));
+    if (open) {
+        act(() => result.current.start('reset', [{ path: '/p/kukla', name: asDisplayName('Kukla Luma') }]));
+    }
+    return result.current;
 }
 
 function ai(overrides: Partial<AiCapabilityState> = {}): AiCapabilityState {
@@ -129,10 +164,23 @@ function props(overrides: Partial<DashboardDialogsProps> = {}): DashboardDialogs
         onCloseChangeSource: jest.fn(),
         handover: handover(),
         operations: operations(),
+        batch: batchControls(),
         capabilitiesOpen: false,
         onCloseCapabilities: jest.fn(),
         ai: ai(),
+        finishSetup: finishSetupClosed(),
+        projectName: 'Scratch',
         ...overrides,
+    };
+}
+
+/** The Finish Setup guide's controls, closed (PL-101): at rest the dashboard mounts no guide. */
+function finishSetupClosed(): FinishSetupControls {
+    return {
+        isOpen: false,
+        open: jest.fn(),
+        close: jest.fn(),
+        openAdmin: jest.fn().mockResolvedValue(undefined),
     };
 }
 
@@ -147,9 +195,26 @@ describe('DashboardDialogs', () => {
 
         expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
         expect(mockProgressModal).toHaveBeenCalledWith({
-            operation: RESET_OPERATION,
+            operation: SYNC_OPERATION,
             onRetry: given.operations.retry,
             onClose: given.operations.close,
+        });
+    });
+
+    describe('the Reset batch window (step-05 S4)', () => {
+        it('mounts nothing while closed', () => {
+            render(<DashboardDialogs {...props()} />);
+
+            expect(screen.queryByRole('dialog', { name: 'Batch window' })).not.toBeInTheDocument();
+            expect(mockBatchModal).not.toHaveBeenCalled();
+        });
+
+        it('mounts the window while open, handed the screen\'s controls', () => {
+            const batch = batchControls(true);
+            render(<DashboardDialogs {...props({ batch })} />);
+
+            expect(screen.getByRole('dialog', { name: 'Batch window' })).toBeInTheDocument();
+            expect(mockBatchModal).toHaveBeenCalledWith({ controls: batch });
         });
     });
 
@@ -203,6 +268,21 @@ describe('DashboardDialogs', () => {
 
         it('mounts nothing while closed', () => {
             render(<DashboardDialogs {...props({ handover: handover() })} />);
+            expect(mockShareModal).not.toHaveBeenCalled();
+            expect(mockSavePackageModal).not.toHaveBeenCalled();
+        });
+    });
+
+    describe('Save as Package', () => {
+        it('opens with its own close', () => {
+            const given = props({ isEds: true, handover: handover({ savePackageOpen: true }) });
+            render(<DashboardDialogs {...given} />);
+
+            expect(screen.getByRole('dialog', { name: 'Save as Package' })).toBeInTheDocument();
+            expect(mockSavePackageModal).toHaveBeenCalledWith({
+                isOpen: true,
+                onClose: given.handover.closeSavePackage,
+            });
             expect(mockShareModal).not.toHaveBeenCalled();
         });
     });

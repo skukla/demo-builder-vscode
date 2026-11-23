@@ -1,0 +1,262 @@
+/**
+ * SOP: one set of words for datapacks (datapack simplification, Phase 1, owner 2026-11-10).
+ *
+ * A datapack is INSTALLED into Commerce and UNINSTALLED from it (D1); the dry run stays DRY RUN,
+ * never "Check First" (D6, kept by the owner 2026-11-10: SCs know the term); a datapack's settings are
+ * its STORE CONFIGURATION, as Commerce Admin's Stores > Configuration names them, never "Store
+ * Settings" (owner 2026-11-10); the thing is a "datapack", never a "pack" on its own; a setting is named in words, never by
+ * its raw `demoBuilder.` key; and a sentence breaks with a colon or a full stop, not a long dash.
+ * The repeated phrases live in `src/features/data-installer/datapackWords.ts`.
+ *
+ * It reads every string literal, template literal and JSX text in the data installer and the
+ * three wait files, with the TypeScript parser, and skips what never reaches a screen: comments
+ * (not literals at all), module paths, type names, property keys, comparisons, identifier-shaped
+ * tokens (`'import'`, `'dryRun'`, `'demoBuilder.dataInstaller'`) and log lines. A string that
+ * looks like a sentence but only an agent reads is marked where it stands with a
+ * `datapack-words: not on screen` comment, or listed in the ledger with its reason.
+ */
+
+import { readdirSync, readFileSync, statSync } from 'fs';
+import { join, relative } from 'path';
+import * as ts from 'typescript';
+import { CommerceReadError } from '@/features/app-builder/services/erpFillReaders';
+import { plainFailure } from '@/features/data-installer/plainFailure';
+import { plainSkipped } from '@/features/data-installer/plainRows';
+
+const ROOT = join(__dirname, '..', '..');
+
+const SCANNED_DIRS = ['src/features/data-installer'];
+const SCANNED_FILES = [
+    'src/core/utils/waitStages.ts',
+    'src/core/utils/datapackStages.ts',
+    'src/core/utils/creationStages.ts',
+];
+
+/** The marker that says a sentence is read by an agent or a log, never drawn on a screen. */
+const NOT_ON_SCREEN = 'datapack-words: not on screen';
+
+interface Finding {
+    file: string;
+    line: number;
+    rule: string;
+    text: string;
+}
+
+const RULES: ReadonlyArray<{ rule: string; test: (text: string) => boolean }> = [
+    { rule: 'Install, not Import', test: (text) => /\bimport(s|ing|ed)?\b/i.test(text) },
+    { rule: 'Dry Run, not Check First', test: (text) => /\bcheck first\b/i.test(text) },
+    { rule: 'Store Configuration, not Store Settings', test: (text) => /\bstore settings?\b/i.test(text) },
+    { rule: 'datapack, not pack', test: (text) => /\bpacks?\b/i.test(text) },
+    { rule: 'no raw setting key', test: (text) => /\bdemoBuilder\.\w/.test(text) },
+    { rule: 'no long dash in a sentence', test: (text) => text.includes('—') && text.trim() !== '—' },
+    // Walk F221 (owner 2026-11-17): failure words an SC can read. Raw text stays for logs and agents.
+    { rule: 'no API route', test: (text) => /\bV1\/|\/rest\//.test(text) },
+    { rule: 'no Debug Logs', test: (text) => /\bdebug logs\b/i.test(text) },
+    { rule: 'no raw status code', test: (text) => RAW_STATUS.test(text) },
+    { rule: 'no kind key before a name', test: (text) => KIND_KEY.test(text) },
+];
+
+/**
+ * A string the rules do not apply to, by file and its exact text, with why. Shrink only.
+ */
+const LEDGER: ReadonlyArray<{ file: string; text: string; reason: string }> = [];
+
+/** A status code as Commerce or HTTP gives it: "answered 404", "HTTP 502", "status: 500", "409 Conflict". */
+const RAW_STATUS =
+    /\b(answered|status|HTTP|code)\s*:?\s*[1-5]\d\d\b|\b[45]\d\d (Bad Request|Unauthorized|Forbidden|Not Found|Conflict|Unprocessable)/i;
+
+/**
+ * A data type's lower-case plural key followed by a row's key, as code names a row: "products p2",
+ * "categories Default Category/Racks", "products ${sku}". The Admin says "Product p2".
+ */
+const KIND_KEY =
+    /\b(products|categories|attribute_sets|attributes|customer_groups|customers|giftcards|gift cards|cart_rules|cart rules|coupons|stocks|sources|companies) (\$\{\}|[a-z0-9][\w./-]*\d[\w./-]*|[A-Z][\w/-]*)/;
+
+/** A token with no space that starts lower case: an id, a key, a path, a mode. Never a sentence. */
+const IDENTIFIER_SHAPED = /^[a-z@./_][\w.\-/:@*]*$/;
+
+const LOG_CALLEE = /(^|\.)(log|logger|debugLogger|console|info|debug|warn|trace|error)\b/i;
+
+function listFiles(dir: string): string[] {
+    return readdirSync(dir).flatMap((entry) => {
+        const full = join(dir, entry);
+        if (statSync(full).isDirectory()) return listFiles(full);
+        return /\.tsx?$/.test(entry) && !entry.endsWith('.d.ts') ? [full] : [];
+    });
+}
+
+function scannedFiles(): string[] {
+    return [...SCANNED_DIRS.flatMap((dir) => listFiles(join(ROOT, dir))), ...SCANNED_FILES.map((file) => join(ROOT, file))];
+}
+
+function isLogCall(node: ts.Node): boolean {
+    for (let at: ts.Node | undefined = node.parent; at; at = at.parent) {
+        if (ts.isCallExpression(at) && LOG_CALLEE.test(at.expression.getText())) {
+            const callee = at.expression.getText();
+            // `logger.error(…)`, `this.logger.info(…)`, `console.warn(…)`: the object is a logger.
+            if (/(^|\.)(logger|debugLogger|console|log)(\.|$)/i.test(callee)) return true;
+        }
+        if (ts.isStatement(at) || ts.isFunctionLike(at)) break;
+    }
+    return false;
+}
+
+function isMarkedNotOnScreen(node: ts.Node, source: ts.SourceFile): boolean {
+    const text = source.getFullText();
+    for (let at: ts.Node | undefined = node; at && !ts.isSourceFile(at); at = at.parent) {
+        const ranges = ts.getLeadingCommentRanges(text, at.getFullStart()) ?? [];
+        if (ranges.some((range) => text.slice(range.pos, range.end).includes(NOT_ON_SCREEN))) return true;
+        if (ts.isStatement(at) && !ts.isBlock(at) && !ts.isReturnStatement(at)) {
+            // Stop at the statement, but let a marker on a whole declaration cover everything in it.
+            if (!ts.isVariableStatement(at)) break;
+        }
+    }
+    return false;
+}
+
+/** Whether this literal sits where nothing is drawn: a path, a type, a key, a comparison. */
+function isStructural(node: ts.Node): boolean {
+    const parent = node.parent;
+    if (!parent) return true;
+    if (ts.isImportDeclaration(parent) || ts.isExportDeclaration(parent) || ts.isExternalModuleReference(parent)) return true;
+    if (ts.isLiteralTypeNode(parent)) return true;
+    if ((ts.isPropertyAssignment(parent) || ts.isPropertySignature(parent) || ts.isPropertyDeclaration(parent) || ts.isMethodDeclaration(parent)) && parent.name === node) return true;
+    if (ts.isElementAccessExpression(parent) && parent.argumentExpression === node) return true;
+    if (ts.isCaseClause(parent)) return true;
+    if (ts.isJsxAttribute(parent) && /^(className|key|id|data-[\w-]+|aria-controls|htmlFor|role)$/.test(parent.name.getText())) return true;
+    if (ts.isBinaryExpression(parent) && [ts.SyntaxKind.EqualsEqualsEqualsToken, ts.SyntaxKind.ExclamationEqualsEqualsToken, ts.SyntaxKind.EqualsEqualsToken, ts.SyntaxKind.ExclamationEqualsToken].includes(parent.operatorToken.kind)) return true;
+    if (ts.isCallExpression(parent) && /^(require|jest\.mock|import)$/.test(parent.expression.getText())) return true;
+    return false;
+}
+
+/** The words a literal puts on screen, with `${}` where a value goes. */
+function wordsOf(node: ts.Node): string | undefined {
+    if (ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node)) return node.text;
+    if (ts.isTemplateExpression(node)) {
+        return [node.head.text, ...node.templateSpans.map((span) => `\${}${span.literal.text}`)].join('');
+    }
+    if (ts.isJsxText(node)) return node.getText().replace(/\s+/g, ' ').trim();
+    return undefined;
+}
+
+export function scanSource(source: ts.SourceFile, file: string): Finding[] {
+    const findings: Finding[] = [];
+    const visit = (node: ts.Node): void => {
+        const text = wordsOf(node);
+        if (text !== undefined && text.trim() !== '' && !IDENTIFIER_SHAPED.test(text.trim())) {
+            const failed = RULES.filter((rule) => rule.test(text));
+            if (failed.length > 0 && !isStructural(node) && !isLogCall(node) && !isMarkedNotOnScreen(node, source)) {
+                const line = source.getLineAndCharacterOfPosition(node.getStart(source)).line + 1;
+                for (const { rule } of failed) findings.push({ file, line, rule, text });
+            }
+        }
+        // A template's spans are read as part of it, not again on their own.
+        if (!ts.isTemplateExpression(node)) ts.forEachChild(node, visit);
+        else node.templateSpans.forEach((span) => ts.forEachChild(span.expression, visit));
+    };
+    visit(source);
+    return findings;
+}
+
+function parse(fileName: string, text: string): ts.SourceFile {
+    return ts.createSourceFile(fileName, text, ts.ScriptTarget.Latest, true, fileName.endsWith('.tsx') ? ts.ScriptKind.TSX : ts.ScriptKind.TS);
+}
+
+function scanAll(): { findings: Finding[]; strings: number } {
+    let strings = 0;
+    const findings = scannedFiles().flatMap((full) => {
+        const source = parse(full, readFileSync(full, 'utf8'));
+        const count = (node: ts.Node): void => {
+            if (wordsOf(node) !== undefined) strings += 1;
+            ts.forEachChild(node, count);
+        };
+        count(source);
+        return scanSource(source, relative(ROOT, full));
+    });
+    return { findings, strings };
+}
+
+const ledgered = (finding: Finding): boolean =>
+    LEDGER.some((entry) => entry.file === finding.file && entry.text === finding.text);
+
+describe('SOP: one set of words for datapacks', () => {
+    const { findings, strings } = scanAll();
+
+    it('CONTROL: catches a planted string for every rule, and passes what is not on screen', () => {
+        const planted = parse(
+            'planted.tsx',
+            [
+                "const a = 'Import My Luma';",
+                "const b = <Button>Check First</Button>;",
+                "const b2 = 'Deletes its store settings.';",
+                "const c = `Every data type in the pack`;",
+                "const d = 'Set demoBuilder.dataInstaller.apiBaseUrl first.';",
+                "const e = 'Saved — it is ready.';",
+                // Walk F221's four, each from a real failure line.
+                "const l = `It stopped at Products: Commerce did not respond to V1/products: ${reason}`;",
+                "const m = `Skipped 25 rows; and 15 more, each named in Debug Logs.`;",
+                "const n = 'Commerce answered 404 for the category.';",
+                "const o = `Skipped 1 row: products ${sku} (Invalid SKU).`;",
+                // None of these reach a screen.
+                "import { x } from './importModal';",
+                "if (mode === 'import') {}",
+                "const f = { import: 1 };",
+                "const g = 'dryRun';",
+                "logger.info('Import finished for the pack');",
+                `// ${NOT_ON_SCREEN}`,
+                "const h = 'Imports a datapack into Commerce.';",
+                "type T = 'import' | 'Check First';",
+                "const i = 'Install My Luma';",
+                "const j = <Button>Dry Run</Button>;",
+                "const k = 'Delete Store Configuration';",
+            ].join('\n'),
+        );
+        const caught = scanSource(planted, 'planted.tsx');
+
+        expect(caught.map((finding) => finding.rule)).toStrictEqual(RULES.map((rule) => rule.rule));
+        expect(caught.map((finding) => finding.line)).toStrictEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+    });
+
+    // The door itself (walk F221): whatever raw text arrives, what reaches a screen breaks no rule.
+    it('the plain-words door turns real raw failures into words that break no rule', () => {
+        const raw = [
+            new CommerceReadError('Commerce did not respond to V1/products: timed out'),
+            new CommerceReadError('Commerce answered 503 for V1/products: {"message":"down"}', 503),
+            new CommerceReadError('Commerce answered 400 for categories: {"message":"URL key for specified store already exists."}', 400),
+            'Commerce answered 404 for POST categories',
+            'Request to /rest/V1/products failed with HTTP 502',
+        ];
+        const said = [
+            ...raw.map((error) => plainFailure(error, { kind: 'products' })),
+            ...plainSkipped([
+                { kind: 'products', key: 'p2', reason: 'Invalid SKU' },
+                { kind: 'categories', key: 'Default Category/Racks/Wall', reason: 'x', cause: { by: 'needs', kind: 'categories', name: 'Racks' } },
+            ]),
+        ];
+
+        const broken = said.flatMap((text) => RULES.filter((rule) => rule.test(text)).map((rule) => `${rule.rule}: ${text}`));
+
+        expect(broken).toStrictEqual([]);
+        // CONTROL: the same rules catch the raw text the door was handed.
+        expect(raw.filter((error) => RULES.some((rule) => rule.test(error instanceof Error ? error.message : error)))).toHaveLength(raw.length);
+    });
+
+    it('CONTROL: reads the real files, not an empty list', () => {
+        expect(scannedFiles().length).toBeGreaterThan(100);
+        expect(strings).toBeGreaterThan(1500);
+    });
+
+    it('finds no datapack word off the convention', () => {
+        const report = findings
+            .filter((finding) => !ledgered(finding))
+            .map((finding) => `${finding.file}:${finding.line} [${finding.rule}] ${JSON.stringify(finding.text)}`);
+
+        expect(report).toStrictEqual([]);
+    });
+
+    it('keeps no ledger entry for a string that is gone', () => {
+        const stale = LEDGER.filter((entry) => !findings.some((finding) => finding.file === entry.file && finding.text === entry.text));
+
+        expect(stale).toStrictEqual([]);
+    });
+});

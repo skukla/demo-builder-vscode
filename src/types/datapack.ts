@@ -55,20 +55,35 @@ export interface DatapackReference {
 export type ProjectDatapack = DatapackReference & { version: string };
 
 /**
- * This demo's own pack (step 07): the library pack every save from this project
- * goes into, made at the first save. Never in a project file, so a copy or an
- * import starts from the original's pack and makes its own at its first save.
+ * A creation-time install of the project's datapack that did not end in success (step-04 S7).
+ *
+ * Kept on the PROJECT, never on `ProjectDatapack`, which travels in project files: a failure
+ * belongs to this store, not to a copy. Rules in `features/data-installer/services/installFailure.ts`.
  */
-export interface OwnDatapack {
-    /** The pack's name in the library. Immutable there. */
-    name: string;
-    /** What the SC sees it called, as last saved or renamed. */
-    displayName?: string;
-    /**
-     * True once the SC renamed the pack themselves; until then its display name
-     * follows the project's.
-     */
-    renamed?: boolean;
+export interface DatapackInstallFailure extends DatapackId {
+    /** Why the run did not succeed, in the run's own words. */
+    reason: string;
+    /** When the latest failed run ended, ISO. */
+    at: string;
+    /** Installs of the same datapack tried since, all failed. */
+    retries: number;
+}
+
+/** What `get-datapack-import-target` says about a failed install of the project's datapack. */
+export type DatapackInstallFailed = Pick<DatapackInstallFailure, 'reason' | 'retries'>;
+
+/**
+ * What `get-datapack-line` answers: the dashboard Datapacks card's line, and whether the project's
+ * datapack failed to install (step-04 S9). The failure travels beside the name, never inside it:
+ * the card shows it as a dot whose hover is the words (J6-4).
+ */
+export interface DatapackLine {
+    /** The pack's name ("My Luma", "Luma, eds-compatible"), "None", or whose data it is. */
+    line: string;
+    /** Present only when the project's datapack failed to install. */
+    failed?: true;
+    /** A newer version of the project's datapack waits, or an update left data types behind (walk F218). */
+    newer?: true;
 }
 
 /**
@@ -114,3 +129,12 @@ export type RecordedPackCheck =
  * SC reads; the library, shared; the library, where only its owner can read it; or nowhere.
  */
 export type DatapackAvailability = 'installer' | 'library-shared' | 'library-yours-only' | 'missing';
+
+/**
+ * Where a pack is, with the name the store shows for it when one was found (absent for `missing`),
+ * so a sentence about it names the pack rather than its code (walk F227).
+ */
+export interface DatapackWhereabouts {
+    where: DatapackAvailability;
+    displayName?: string;
+}

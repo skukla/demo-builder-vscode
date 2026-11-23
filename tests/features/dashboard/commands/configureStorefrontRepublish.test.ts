@@ -219,7 +219,8 @@ describe('republishFromConfigure — the last word', () => {
         mockRepublishConfig.mockResolvedValue({ success: true, cdnPublished: true });
     });
 
-    it('says what the libraries did as its note, and what went wrong as its warning', async () => {
+    // Walk F212: what it did is a list, one line each, which the success window shows as lines.
+    it('lists what the libraries did, one line each, and says what went wrong as its warning', async () => {
         mockRunPendingBlockLibraryWork.mockResolvedValue([
             { level: 'info', text: 'Added 9 blocks from Demo Team Block Collection to shop.' },
             { level: 'warning', text: 'Left 1 in place: hero.' },
@@ -229,9 +230,10 @@ describe('republishFromConfigure — the last word', () => {
 
         expect(outcome).toMatchObject({
             success: true,
-            note: 'Added 9 blocks from Demo Team Block Collection to shop.',
+            details: ['Added 9 blocks from Demo Team Block Collection to shop.'],
             warning: 'Left 1 in place: hero.',
         });
+        expect(outcome).not.toHaveProperty('note');
     });
 
     it('warns that the live storefront still serves the old config when only GitHub took it', async () => {

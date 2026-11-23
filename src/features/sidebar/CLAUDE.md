@@ -13,7 +13,7 @@ sidebar/
 └── ui/
     ├── Sidebar.tsx                the container
     ├── components/AiZone.tsx      Chat (a menu) + Prompts
-    └── views/UtilityBar.tsx       Tools · Help · Settings · Logs
+    └── views/UtilityBar.tsx       Tools, Datapacks, Help, Settings, Logs
 ```
 
 ## One layout, every context
@@ -28,8 +28,9 @@ that used to be context-specific moved out — the wizard's progress timeline li
 in the wizard webview's own left column, and Configure is a self-contained tab with
 its own Cancel footer. Neither is a sidebar context.
 
-Six tiles total: two in `AiZone`, four in `UtilityBar`. No dividers, no project
-name, no nav list.
+Seven tiles total: two in `AiZone`, five in `UtilityBar`. No dividers, no project
+name, no nav list. Datapacks, added 2026-11-07, opens the Datapack Library: the packs
+themselves, with no project, the way Prompts opens the prompt list (owner).
 
 *Safety net:* closing the Project Dashboard tab inside a project workspace
 auto-reopens the projects list, so the user is never left without a Demo Builder
@@ -106,15 +107,14 @@ for the arithmetic, so it lives here:
 ```
 content = 32 (padding) + per zone: 18 (label) + 8 + rows*64 + (rows-1)*8, + 24 between zones
 
-6 tiles -> 1-up 524px | 2-up 308px      <- TODAY
-7 tiles -> 1-up 600px | 2-up 380px
+6 tiles -> 1-up 524px | 2-up 308px
+7 tiles -> 1-up 600px | 2-up 380px      <- TODAY
 8 tiles -> 1-up 672px | 2-up 384px
 ```
 
-**The breakpoint is currently conservative by one tile.** It was derived when there
-were seven tiles and needed 600px; the Workbench left and nobody recomputed. Six
-tiles need 524px, so the panel wraps to 2-up earlier than it has to. Safe, but if
-you add a tile, recompute from the table rather than assuming 640 still fits.
+**The breakpoint fits seven tiles again.** It was derived when there were seven tiles
+and needed 600px; the Workbench left, and Datapacks (2026-11-07) made seven again. An
+eighth needs 672px, past 640: recompute from the table before adding one.
 
 **Fixed px, deliberately — do NOT make tiles viewport-relative.**
 `clamp(40px, 7.5vh, 64px)` was tried and reverted on 2026-08-24. `vh` measures the
@@ -138,6 +138,7 @@ Handlers follow Pattern B: they return a result, never push a message back.
 | `navigate` | UI → Extension | `{ target }` |
 | `openAiChat` | UI → Extension | routes to `demoBuilder.openAiExperience` |
 | `showPrompts` | UI → Extension | routes to `demoBuilder.showPromptsPicker` |
+| `openDatapackLibrary` | UI → Extension | routes to `demoBuilder.showDatapackLibrary` |
 | `openLogs` | UI → Extension | routes to `toggleLogsPanel` |
 
 ## Related

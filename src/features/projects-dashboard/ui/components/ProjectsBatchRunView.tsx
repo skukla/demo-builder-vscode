@@ -1,0 +1,252 @@
+/**
+ * ProjectsBatchRunView — the batch window while its projects are reset or deleted (owner,
+ * 2026-11-04): one row per project, drawn as the Updates run draws its rows (`WorkRow`, its icons
+ * from `UpdatesRunView`), in the order the extension runs them. The running row says the step it
+ * is on; once a row ends, what it has to say takes that line's room (rule 15): where its changes
+ * were saved, or its problem as one line, red when it failed and orange when it finished around
+ * something, its whole text on hover; a question the run is paused on is asked under the running
+ * row, or above the list before any row runs.
+ *
+ * One project under way with nothing asked is the progress window's three rows instead, centred
+ * (`OneRunning`, owner 2026-11-15). Once it ends, the outcome sits over the rows under its large mark
+ * (the shared `ResultBody`), with "Took …" under them, and only a row with something to read keeps a
+ * line under its name (owner, 2026-11-17, walk F222). One project's end has no row at all: what it
+ * has to say sits under the outcome (owner, 2026-11-20).
+ *
+ * @module features/projects-dashboard/ui/components/ProjectsBatchRunView
+ */
+
+import React from 'react';
+import type { BatchRowStatuses, BatchRowTimings, BatchRunRow } from '../hooks/useProjectsBatch';
+import { ICON_OF, RunQuestion } from './runWindowParts';
+import type { RunOutcome } from '@/core/ui/components/feedback/OperationProgressBody';
+import { ResultBody } from '@/core/ui/components/feedback/ResultBody';
+import { RunFoot, type RunFootProps } from '@/core/ui/components/feedback/RunFoot';
+import { StageRows } from '@/core/ui/components/feedback/StageWait';
+import { WorkRow } from '@/core/ui/components/feedback/WorkRow';
+import { spanValue, useRunClock } from '@/core/ui/hooks/useRunClock';
+import { PREPARING } from '@/core/utils/runStage';
+import type { UpdateRowState } from '@/types/pendingUpdates';
+import type { OperationProgressPayload, OperationPrompt } from '@/types/webviewPayloads';
+
+/** The run has no clock of its own (each row keeps one): the foot only holds the Took line's room. */
+const NOT_TIMED: NonNullable<RunFootProps['running']> = {};
+
+interface RunViewProps {
+    rows: BatchRunRow[];
+    /** Paths in the order the extension first told them. */
+    order: string[];
+    statuses: BatchRowStatuses;
+    timings: BatchRowTimings;
+    progress: OperationProgressPayload | null;
+    onTyped: (values: Record<string, string>) => void;
+    /** Once the run has ended: the mark and the outcome over the rows. */
+    ending?: RunOutcome;
+}
+
+/** The rows in the run's order; any not told yet keep the order they were asked in, after them. */
+export function inRunOrder(rows: BatchRunRow[], order: string[]): BatchRunRow[] {
+    const byPath = new Map(rows.map((row) => [row.path, row]));
+    const told = order.flatMap((path) => byPath.get(path) ?? []);
+    return [...told, ...rows.filter((row) => !order.includes(row.path))];
+}
+
+interface RowProps {
+    row: BatchRunRow;
+    statuses: BatchRowStatuses;
+    timing?: BatchRowTimings[string];
+    asking?: OperationPrompt;
+    onTyped: RunViewProps['onTyped'];
+    /** The run has ended, so a problem shows whole. */
+    ended: boolean;
+}
+
+/**
+ * The line under a project's name: every row has one while the run goes, so none changes height
+ * (owner, 2026-11-04). Where a finished project's changes were saved takes Finished's place. Once
+ * the run ends, a finished row with nothing to read has none (walk F222).
+ */
+function lineOf(state: UpdateRowState, message: string | undefined, ended: boolean): string | undefined {
+    if (state === 'waiting') return 'Waiting';
+    if (state === 'running') return message ?? PREPARING;
+    if (state === 'done') return message ?? (ended ? undefined : 'Finished');
+    return undefined;
+}
+
+/**
+ * What an ended row has to say that is a problem, as ONE line in the room its working line held
+ * (rules 13 to 15, step-07 follow-up; the house `WorkRow.problem`): a failed project's reason, red,
+ * with what became of its datapack after it; a finished project's warnings (the code not published,
+ * a datapack that stayed), orange, with where its changes were saved. The whole text is on hover.
+ */
+function problemOf(state: UpdateRowState, status: BatchRowStatuses[string]): { text: string; failed: boolean } | undefined {
+    const warnings = status?.warnings ?? [];
+    if (state === 'failed') return { text: [status?.message ?? 'Failed', ...warnings].join(' '), failed: true };
+    // Where its changes were saved is its own line (`savedLineOf`): run into the warning, it was cut
+    // off behind it (live run 6, 2026-11-15).
+    if (state === 'done' && warnings.length > 0) return { text: warnings.join(' '), failed: false };
+    return undefined;
+}
+
+/** A finished row with a warning: where its changes were saved, under it, in plain text. */
+function savedLineOf(state: UpdateRowState, status: BatchRowStatuses[string]): string | undefined {
+    return state === 'done' && (status?.warnings?.length ?? 0) > 0 ? status?.message : undefined;
+}
+
+function RunRow({ row, statuses, timing, asking, onTyped, ended }: RowProps) {
+    const status = statuses[row.path];
+    const state = status?.state ?? 'waiting';
+    // The single progress window's clock, per row (owner, 2026-11-04).
+    const clock = useRunClock(state === 'running' ? timing?.startedAt : undefined);
+    const question = state === 'running' ? asking : undefined;
+    const problem = problemOf(state, status);
+    const saved = savedLineOf(state, status);
+    const detail = question || problem ? undefined : lineOf(state, status?.message, ended);
+    // A row left alone says why under its name, in place of a working line it never had.
+    const note = state === 'skipped' ? status?.message : undefined;
+    // A done row with a warning turns amber; a failed one stays red.
+    const amber = question || (state === 'done' && problem !== undefined);
+    return (
+        <WorkRow
+            status={amber ? 'warning' : ICON_OF[state]}
+            label={row.name}
+            detail={detail}
+            note={note}
+            {...(problem ? { problem } : {})}
+            whole={ended}
+            state={state}
+            time={state === 'running' ? clock : spanValue(timing?.startedAt, timing?.endedAt)}
+        >
+            {question && <RunQuestion prompt={question} onTyped={onTyped} />}
+            {saved && <div className="work-row-note">{saved}</div>}
+        </WorkRow>
+    );
+}
+
+/** Why the run failed, above the list, unless a row already says the same under its name. */
+function failureLine(progress: OperationProgressPayload | null, rows: BatchRunRow[], statuses: BatchRowStatuses): string | undefined {
+    if (progress?.state !== 'failed') return undefined;
+    const saidOnARow = rows.some((row) => statuses[row.path]?.message === progress.error);
+    return saidOnARow ? undefined : progress.error;
+}
+
+/** The heading of a project whose file records no org, when the run is headed by org at all. */
+const UNKNOWN_ORG = 'Organization Unknown';
+
+/**
+ * The rows in run order, an org's heading before each org's first row, when the run spans two or
+ * more KNOWN orgs. A project that records no org is not a second org (owner, 2026-11-04: one org
+ * beside one unrecorded drew a heading over half the list); under headings it is headed as unknown.
+ */
+function withOrgHeadings(rows: BatchRunRow[]): Array<{ heading: string } | { row: BatchRunRow }> {
+    const known = new Set(rows.flatMap((row) => (row.org ? [row.org] : [])));
+    if (known.size < 2) return rows.map((row) => ({ row }));
+    return rows.flatMap((row, index) => {
+        const starts = index === 0 || rows[index - 1].org !== row.org;
+        if (!starts) return [{ row }];
+        return [{ heading: row.org ?? UNKNOWN_ORG }, { row }];
+    });
+}
+
+/**
+ * One project's run as the progress window shows a single operation (owner, 2026-11-15): the three
+ * rows, centred and large, what it is doing, what on, and how long that usually takes with its
+ * clock. A list of one row read as a run of several with one in it.
+ */
+function OneRunning({ status, timing }: { status: BatchRowStatuses[string] | undefined; timing?: BatchRowTimings[string] }) {
+    const clock = useRunClock(timing?.startedAt);
+    const running = status?.state === 'running';
+    return (
+        <div className="modal-wait modal-wait-progress">
+            <StageRows
+                clock={clock}
+                lines={{
+                    label: (running && status?.message) || PREPARING,
+                    ...(running && status?.step ? { detail: status.step } : {}),
+                    ...(running && status?.expectation ? { expectation: status.expectation } : {}),
+                }}
+            />
+        </div>
+    );
+}
+
+/** Whether the run is one project still under way with nothing asked: the centred view. */
+function oneUnderWay(rows: BatchRunRow[], statuses: BatchRowStatuses, ended: boolean, question: OperationPrompt | undefined): boolean {
+    if (rows.length !== 1 || ended || question) return false;
+    const state = statuses[rows[0].path]?.state ?? 'waiting';
+    return state === 'waiting' || state === 'running';
+}
+
+/** Every project of the run and where it is. */
+export function ProjectsBatchRunView({ rows, order, statuses, timings, progress, onTyped, ending }: RunViewProps): React.ReactElement {
+    const ended = progress?.state === 'failed' || progress?.state === 'succeeded';
+    const question = ended ? undefined : progress?.prompt;
+    if (oneUnderWay(rows, statuses, ended, question)) {
+        return <OneRunning status={statuses[rows[0].path]} timing={timings[rows[0].path]} />;
+    }
+    const shown = inRunOrder(rows, order);
+    // Under the running row only when one is running; with several side by side it is about no
+    // one row we can tell, so it is asked once, above the list (owner, 2026-11-04).
+    const runningCount = shown.filter((row) => statuses[row.path]?.state === 'running').length;
+    const underRow = runningCount === 1;
+    const failure = failureLine(progress, rows, statuses);
+    const list = (
+        <div className="projects-batch-run">
+            {question && !underRow && <RunQuestion prompt={question} onTyped={onTyped} />}
+            {withOrgHeadings(shown).map((item) =>
+                'heading' in item ? (
+                    <p key={`org:${item.heading}`} className="projects-batch-org">{item.heading}</p>
+                ) : (
+                    <RunRow
+                        key={item.row.path}
+                        row={item.row}
+                        statuses={statuses}
+                        timing={timings[item.row.path]}
+                        asking={underRow ? question : undefined}
+                        onTyped={onTyped}
+                        ended={ended}
+                    />
+                ),
+            )}
+            {/* The Took line's room, held while the run goes, so it never grows the held window. */}
+            {ended ? null : <RunFoot running={NOT_TIMED} className="projects-batch-took" />}
+        </div>
+    );
+    if (!ended || !ending) return list;
+    const took = progress?.tookMs === undefined ? {} : { tookMs: progress.tookMs };
+    // One project's end has no row: under the large mark it repeated the outcome, the name and the
+    // time, and what it had to say sits under the outcome instead (owner, 2026-11-20, over walk
+    // F222's row for a project with something to read).
+    if (rows.length === 1) {
+        return <ResultBody {...ending} lines={[failure, ...oneProjectLines(statuses[rows[0].path])]} {...took} />;
+    }
+    // Several that all finished with nothing to say: a list of green ticks adds nothing, and the
+    // result is a small window (owner, 2026-11-20).
+    if (progress?.state === 'succeeded' && everyRowSaysNothing(rows, statuses)) {
+        return <ResultBody {...ending} lines={[failure]} {...took} />;
+    }
+    return (
+        <ResultBody {...ending} lines={[failure]} {...took}>
+            {list}
+        </ResultBody>
+    );
+}
+
+/** Every project finished, with no warning and no line of its own ("Saved to …" is a line). */
+export function everyRowSaysNothing(rows: BatchRunRow[], statuses: BatchRowStatuses): boolean {
+    return rows.every((row) => {
+        const status = statuses[row.path];
+        return status?.state === 'done' && !status.message && (status.warnings?.length ?? 0) === 0;
+    });
+}
+
+/**
+ * What one project's ended run has to say, under the outcome: a failure's reason, or a finish's
+ * warnings, then where its changes were saved.
+ */
+function oneProjectLines(status: BatchRowStatuses[string]): Array<string | undefined> {
+    const state = status?.state ?? 'waiting';
+    const problem = problemOf(state, status);
+    if (problem?.failed) return [problem.text];
+    return [problem?.text, state === 'done' ? status?.message : undefined];
+}

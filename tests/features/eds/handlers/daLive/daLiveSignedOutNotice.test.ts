@@ -46,9 +46,9 @@ describe('tellDaLiveSignedOut', () => {
         await flush();
 
         expect(mockShowWarningMessage).toHaveBeenCalledWith(
-            'Signed out of DA.live',
+            'Signed Out of DA.live',
             { modal: true, detail: MESSAGE },
-            'Sign in to DA.live',
+            'Sign In to DA.live',
         );
         expect(mockExecuteCommand).toHaveBeenCalledWith('demoBuilder.signInDaLive');
     });
@@ -74,7 +74,7 @@ describe('tellDaLiveSignedOut', () => {
 
         expect(phases).toStrictEqual([MESSAGE]);
         expect(mockShowWarningMessage).toHaveBeenCalledWith(
-            'Signed out of DA.live',
+            'Signed Out of DA.live',
             { modal: true, detail: MESSAGE },
             SIGN_IN_TO_DA_LIVE,
         );
@@ -102,7 +102,7 @@ describe('registerDaLiveForcedSignInWatch', () => {
         await after();
 
         expect(mockShowWarningMessage).toHaveBeenCalledWith(
-            'Signed out of DA.live',
+            'Signed Out of DA.live',
             { modal: true, detail: MESSAGE },
             SIGN_IN_TO_DA_LIVE,
         );

@@ -173,7 +173,7 @@ describe('payment-on-account-enabled', () => {
     });
 });
 
-// Read live on Justrite 2026-10-02: sales/magento_rma/enabled had no value at the default or on
+// Read live on Tailspin 2026-10-02: sales/magento_rma/enabled had no value at the default or on
 // the website (Commerce's default is No), so a buyer could not ask for a return on the
 // storefront; staff could still enter one in the Admin.
 describe('storefront-returns-enabled', () => {
@@ -213,7 +213,7 @@ describe('storefront-returns-enabled', () => {
     });
 });
 
-// Read live on Justrite 2026-10-02: payment/payment_services/active stored "0" on the website.
+// Read live on Tailspin 2026-10-02: payment/payment_services/active stored "0" on the website.
 // Payment Services is Commerce as a Cloud Service's own card payments, powered by PayPal.
 describe('card-payments-enabled', () => {
     const SETTING = 'payment/payment_services/active';

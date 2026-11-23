@@ -23,7 +23,7 @@ import type { RenameAdobeProjectRequestPayload } from '@/types/webviewRequests';
 const MAX_TITLE_LENGTH = 100;
 
 /** A refusal Adobe gave that has no plainer reading of its own. */
-const RENAME_FALLBACK = 'Adobe did not rename the project. Details are in Debug Logs.';
+const RENAME_FALLBACK = 'Adobe did not rename the project.';
 
 /** The first thing wrong with a rename request, or `undefined` when it is usable. */
 function invalidRename(

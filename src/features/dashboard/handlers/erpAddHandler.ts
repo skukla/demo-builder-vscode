@@ -218,7 +218,7 @@ async function planErpAdd(
  * a refusal when that read did not go through. An attribute rule reads nothing: the catch-all
  * keeps what the attribute does not claim. That holds because the list sync before this step
  * pinned the first ERP's rule on its own entry when the list grew from it (`syncErpList`);
- * without the pin the integration reads it as `erp_owner=<its id>` (Justrite, 2026-10-22).
+ * without the pin the integration reads it as `erp_owner=<its id>` (Tailspin, 2026-10-22).
  */
 async function ownershipToSave(
     plan: ErpAddPlan,
@@ -311,7 +311,7 @@ function assignOffer(plan: ErpAddPlan, applied: ApplyOwnershipOutcome): { offer?
             id: plan.integrationId,
             erp: plan.entry.id,
             name: plan.name,
-            message: `Next: ${plan.name} owns no products yet. Assign products to it.`,
+            message: `Next: ${plan.name} owns no products yet. Assign Products to it.`,
         },
     };
 }
@@ -399,7 +399,7 @@ async function listAndFill(
     const offer = assignOffer(plan, applied);
     if (applied.status === 'applied') {
         // The offer says the new ERP owns nothing yet, so its note would say it twice, and as
-        // a warning on an add that went right (Justrite, 2026-10-18).
+        // a warning on an add that went right (Tailspin, 2026-10-18).
         // By the name the pass wrote it under, the one its list gives the new ERP.
         const listedAs = applied.erps.find((erp) => erp.erp === plan.entry.id)?.name ?? plan.name;
         const said = offer.offer ? assignProductsNote(listedAs) : undefined;

@@ -113,7 +113,7 @@
           "status": "success"
         }
       },
-      "datapack_name": "AFREEN-LG-DEMO",
+      "datapack_name": "SCRATCH-LG-DEMO",
       "operation_mode": "import",
       "scenario": "DATAPACK_SPECIFIC_ITEMS",
       "site_type": "accs",
@@ -128,7 +128,7 @@
           "status": "success"
         }
       },
-      "datapack_name": "AFREEN-LG-DEMO",
+      "datapack_name": "SCRATCH-LG-DEMO",
       "operation_mode": "delete",
       "scenario": "DATAPACK_SPECIFIC_ITEMS",
       "site_type": "accs",
@@ -143,7 +143,7 @@
           "status": "success"
         }
       },
-      "datapack_name": "AFREEN-LG-DEMO",
+      "datapack_name": "SCRATCH-LG-DEMO",
       "operation_mode": "import",
       "scenario": "DATAPACK_SPECIFIC_ITEMS",
       "site_type": "accs",
@@ -158,7 +158,7 @@
           "status": "success"
         }
       },
-      "datapack_name": "AFREEN-LG-DEMO",
+      "datapack_name": "SCRATCH-LG-DEMO",
       "operation_mode": "delete",
       "scenario": "DATAPACK_SPECIFIC_ITEMS",
       "site_type": "accs",
@@ -173,7 +173,7 @@
           "status": "success"
         }
       },
-      "datapack_name": "AFREEN-LG-DEMO",
+      "datapack_name": "SCRATCH-LG-DEMO",
       "operation_mode": "import",
       "scenario": "DATAPACK_SPECIFIC_ITEMS",
       "site_type": "accs",
@@ -188,7 +188,7 @@
           "status": "success"
         }
       },
-      "datapack_name": "AFREEN-LG-DEMO",
+      "datapack_name": "SCRATCH-LG-DEMO",
       "operation_mode": "delete",
       "scenario": "DATAPACK_SPECIFIC_ITEMS",
       "site_type": "accs",

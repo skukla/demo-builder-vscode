@@ -11,7 +11,7 @@
 import * as vscode from 'vscode';
 import { hasAdobeWorkspaceContext, hasAdobeProjectContext } from './meshStatusHelpers';
 import { openInIncognito } from '@/core/utils/browserUtils';
-import { openCommerceAdmin } from '@/core/utils/commerceAdmin';
+import { openCommerceAdmin, resolveAdminPanelUrl } from '@/core/utils/commerceAdmin';
 import { validateURL } from '@/core/validation/URLValidator';
 import {
     validateOrgId,
@@ -27,7 +27,6 @@ import type { Project } from '@/types/base';
 import { ErrorCode } from '@/types/errorCodes';
 import { MessageHandler, HandlerContext } from '@/types/handlers';
 import {
-    getAdminPanelUrl,
     getEdsDaLiveUrl,
     getEdsLiveUrl,
     getProjectFrontendPort,
@@ -112,7 +111,7 @@ export const handleOpenDaLive: MessageHandler = async (context, data) => {
 /**
  * Handle 'openAdminPanel' message - Open the Commerce admin panel in the browser
  *
- * The admin URL resolves via getAdminPanelUrl: an explicit
+ * The admin URL resolves via resolveAdminPanelUrl: an explicit
  * ADOBE_COMMERCE_ADMIN_URL (PaaS Configure field / override) wins, otherwise
  * SaaS projects derive it from the ACCS tenant endpoint. When unresolvable,
  * a notification offers a jump to Configure instead of failing.
@@ -120,7 +119,7 @@ export const handleOpenDaLive: MessageHandler = async (context, data) => {
 export const handleOpenAdminPanel: MessageHandler<{ notify?: boolean }> = async (context, payload) => {
     const project = await context.stateManager.getCurrentProject();
     // Validated before it opens (a user-supplied URL), in a private window; shared with a
-    // datapack install's "Open the Admin" (`openCommerceAdmin`). No URL in the log. Answered once
+    // datapack install's "Open Admin" (`openCommerceAdmin`). No URL in the log. Answered once
     // Chrome's window is likely up, so a button shows its spinner until then; a link with no
     // spinner of its own asks for the notification instead (`notify`, owner 2026-10-31).
     const opening = await openCommerceAdmin(project, { notify: payload?.notify === true });
@@ -385,8 +384,8 @@ export const handleGetProjectUrls: MessageHandler = async (context) => {
     );
     if (daLive) urls.daLive = daLive;
 
-    // Commerce admin — the pure getter (explicit field or derived ACCS URL); no prompt.
-    const commerceAdmin = getAdminPanelUrl(project);
+    // Commerce admin: an explicit field, or the ACCS URL in the chosen interface; no prompt.
+    const commerceAdmin = resolveAdminPanelUrl(project);
     if (commerceAdmin) urls.commerceAdmin = commerceAdmin;
 
     // Developer Console — always resolvable (deep link or generic fallback).

@@ -4,7 +4,7 @@ kind: feature
 area: app-builder
 needs: []
 value: med
-status: built
+status: shipped
 ---
 
 # Integrations in the extension update check
@@ -28,7 +28,7 @@ opened the Integrations screen was never told, other projects were never checked
 **What was built.**
 
 - The startup check and Check for Updates list every deployed pair with newer code, across
-  all projects, one row per pair ("Justrite: ERP Integration and Justrite ERP"), using the
+  all projects, one row per pair ("Tailspin: ERP Integration and Tailspin ERP"), using the
   Integrations screen's own rule (`checkIntegrationUpdates`, with AB-71's deployed-commit
   rule) and recording `updateAvailable` where the card badge reads it. The check runs
   alongside the other project checks, so the extension's own update notice does not wait on
@@ -61,3 +61,4 @@ Integrations card badge (unchanged, same `updateAvailable`).
 
 - 2026-10-09  feat(updates): integration updates in the startup check and Check for Updates (`8cf36fb43`)
 - 2026-10-11  fix(updates): the update check on load never opens a browser to sign in (`5c67dc0cd`)
+- 2026-11-20  Released in v1.0.0-beta.153

@@ -12,15 +12,21 @@ jest.mock('@/features/data-installer/services/demoBuilderEngine/saveStore', () =
     ...jest.requireActual('@/features/data-installer/services/demoBuilderEngine/saveStore'),
     saveStoreChanges: jest.fn(),
     listPickable: jest.fn(),
+    countPickable: jest.fn(),
 }));
 jest.mock('@/features/data-installer/services/demoBuilderEngine/installRecord', () => ({
     ...jest.requireActual('@/features/data-installer/services/demoBuilderEngine/installRecord'),
     readInstallRecord: jest.fn(),
 }));
-jest.mock('@/features/data-installer/handlers/dataInstallerHandlers', () => ({
-    ...jest.requireActual('@/features/data-installer/handlers/dataInstallerHandlers'),
-    resolveDataInstallerAccess: jest.fn(),
-}));
+jest.mock('@/features/data-installer/handlers/dataInstallerHandlers', () => {
+    const resolveDataInstallerAccess = jest.fn();
+    return {
+        ...jest.requireActual('@/features/data-installer/handlers/dataInstallerHandlers'),
+        resolveDataInstallerAccess,
+        // The write path's door, as it answers with the Data Installer's address set.
+        resolveDatapackAccess: (context: unknown) => resolveDataInstallerAccess(context),
+    };
+});
 jest.mock('@/features/data-installer/services/datapackStoreWriter');
 
 import { makeImportHarness } from './importHandlers.testUtils';
@@ -29,15 +35,16 @@ import { resolveDataInstallerAccess } from '@/features/data-installer/handlers/d
 import { exportHandlers } from '@/features/data-installer/handlers/exportHandlers';
 import { storeChangesHandlers } from '@/features/data-installer/handlers/storeChangesHandlers';
 import { DataInstallerClient } from '@/features/data-installer/services/dataInstallerClient';
-import { selectedDatapackEngine } from '@/features/data-installer/services/dataInstallerConfig';
 import { type InstallRecord, readInstallRecord } from '@/features/data-installer/services/demoBuilderEngine/installRecord';
-import { type SaveResult, listPickable, saveStoreChanges } from '@/features/data-installer/services/demoBuilderEngine/saveStore';
+import { type SaveResult, countPickable, listPickable, saveStoreChanges } from '@/features/data-installer/services/demoBuilderEngine/saveStore';
+import { StoreChangesError } from '@/features/data-installer/services/demoBuilderEngine/storeAccess';
 import type { StoreItemPage } from '@/features/data-installer/pickableKinds';
 import type { Project } from '@/types/base';
 import { ErrorCode } from '@/types/errorCodes';
 
 const mockedSave = saveStoreChanges as jest.MockedFunction<typeof saveStoreChanges>;
 const mockedList = listPickable as jest.MockedFunction<typeof listPickable>;
+const mockedCount = countPickable as jest.MockedFunction<typeof countPickable>;
 const mockedRecord = readInstallRecord as jest.MockedFunction<typeof readInstallRecord>;
 
 const LIBRARY = 'https://example-namespace.adobeioruntime.net/api/v1/web/datapack-store';
@@ -57,7 +64,7 @@ function project(): Partial<Project> {
 const RECORD: InstallRecord = { format: 1, pack: BODEA, engine: 'demo-builder', startedAt: '2026-10-30T00:00:00.000Z', created: [] };
 
 function saved(target: { saveAs: { id: { name: string; version: string } } }): SaveResult {
-    return { saved: target.saveAs.id, counts: { products: 1 }, sentence: 'Saved to the acme pack.', unnamed: [], leftOut: [] };
+    return { saved: target.saveAs.id, counts: { products: 1 }, sentence: 'Saved to the acme pack.', unnamed: [], details: [], leftOut: [] };
 }
 
 const PICKS = { products: { sku: ['VR-Rack'] }, cart_rules: { rule_id: [7] } };
@@ -65,7 +72,6 @@ const PICKS = { products: { sku: ['VR-Rack'] }, cart_rules: { rule_id: [7] } };
 beforeEach(() => {
     jest.clearAllMocks();
     (orgGuard as jest.Mock).mockResolvedValue(undefined);
-    (selectedDatapackEngine as jest.Mock).mockReturnValue('demo-builder');
     mockedRecord.mockResolvedValue(undefined);
     mockedSave.mockImplementation(async (_deps, target) => saved(target));
     (resolveDataInstallerAccess as jest.Mock).mockResolvedValue({
@@ -74,13 +80,37 @@ beforeEach(() => {
         getToken: async () => 'tok',
         client: new DataInstallerClient({ baseUrl: LIBRARY, getToken: async () => 'tok' }),
     });
+    // The library's two reads a Save makes: whose the pack is, and what it is called.
+    jest.spyOn(DataInstallerClient.prototype, 'findDatapacks').mockResolvedValue({ items: [], count: 0 });
+    jest.spyOn(DataInstallerClient.prototype, 'getDatapackDetail').mockResolvedValue({ id: BODEA, displayName: 'Bodea', shared: true, dataTypes: [], art: {} });
 });
 
-describe('save-store-changes-to-pack with picks', () => {
-    it('hands the save the picks, by kind, as strings', async () => {
-        await storeChangesHandlers['save-store-changes-to-pack'](makeImportHarness(project()).context, { datapackName: 'bodea', version: 'main', selections: PICKS, confirm: true });
+/** Save As, which every save here is: the project's pack is a team pack, never the SC's. */
+const SAVE_AS = { displayName: 'Hand Built' };
 
-        expect(mockedSave.mock.calls[0][1]).toMatchObject({ pack: BODEA, picks: { products: ['VR-Rack'], cart_rules: ['7'] } });
+describe('save-store-changes-to-pack with picks', () => {
+    it('hands a save from nothing the picks, by kind, as strings', async () => {
+        await storeChangesHandlers['save-store-changes-to-pack'](makeImportHarness(project()).context, { selections: PICKS, saveAs: SAVE_AS, confirm: true });
+
+        expect(mockedSave.mock.calls[0][1]).toMatchObject({ picks: { products: ['VR-Rack'], cart_rules: ['7'] } });
+    });
+
+    // Overview 7b (2026-11-10): Add Unused Items is removed. A save from a datapack takes everything
+    // the demo uses, so there is nothing left to pick.
+    it('refuses picks with a datapack named, saving nothing', async () => {
+        const result = await storeChangesHandlers['save-store-changes-to-pack'](makeImportHarness(project()).context, { datapackName: 'bodea', version: 'main', selections: PICKS, saveAs: SAVE_AS, confirm: true });
+
+        expect(result).toMatchObject({ success: false, code: ErrorCode.INVALID_OPERATION, error: expect.stringMatching(/selections cannot be sent/u) });
+        expect(mockedSave).not.toHaveBeenCalled();
+    });
+
+    it("refuses picks with the project's own datapack, when Demo Builder installed it", async () => {
+        mockedRecord.mockResolvedValue(RECORD);
+
+        const result = await storeChangesHandlers['save-store-changes-to-pack'](makeImportHarness(project()).context, { selections: PICKS, saveAs: SAVE_AS, confirm: true });
+
+        expect(result).toMatchObject({ success: false, code: ErrorCode.INVALID_OPERATION });
+        expect(mockedSave).not.toHaveBeenCalled();
     });
 
     it('refuses a kind that cannot be picked, asking nothing of the store', async () => {
@@ -90,26 +120,91 @@ describe('save-store-changes-to-pack with picks', () => {
         expect(mockedSave).not.toHaveBeenCalled();
     });
 
-    it("with no pack named, saves the project's own pack when Demo Builder installed it", async () => {
+    it("with no pack named, saves the project's pack when Demo Builder installed it", async () => {
         mockedRecord.mockResolvedValue(RECORD);
 
-        await storeChangesHandlers['save-store-changes-to-pack'](makeImportHarness(project()).context, { selections: PICKS, confirm: true });
+        await storeChangesHandlers['save-store-changes-to-pack'](makeImportHarness(project()).context, { saveAs: SAVE_AS, confirm: true });
 
         expect(mockedRecord).toHaveBeenCalledWith(expect.anything(), '/nonexistent/projects/acme', BODEA);
         expect(mockedSave.mock.calls[0][1]).toMatchObject({ pack: BODEA, source: 'library' });
     });
 
-    it('with no pack named and none Demo Builder installed, saves the picks alone and records only the own pack', async () => {
+    it('with no pack named and none Demo Builder installed, saves the picks alone as the new pack the project uses', async () => {
         const { context } = makeImportHarness(project());
 
-        const result = await storeChangesHandlers['save-store-changes-to-pack'](context, { selections: PICKS, confirm: true });
+        const result = await storeChangesHandlers['save-store-changes-to-pack'](context, { selections: PICKS, saveAs: SAVE_AS, confirm: true });
 
         expect(mockedSave.mock.calls[0][1]).not.toHaveProperty('pack');
         const recorded = (context.stateManager.saveProject as jest.Mock).mock.calls[0][0] as Project;
-        // The pack the project installs from is left as it was: the store is not the new version.
-        expect(recorded.datapack).toEqual({ ...BODEA, store: 'library' });
-        expect(recorded.ownDatapack).toEqual({ name: expect.stringMatching(/^acme-[0-9a-f]{6}$/u), displayName: 'acme' });
+        expect(recorded.datapack).toEqual({ name: expect.stringMatching(/^hand-built-[0-9a-f]{6}$/u), version: expect.any(String), store: 'library' });
         expect(result).toMatchObject({ success: true, data: expect.not.objectContaining({ previous: expect.anything() }) });
+    });
+});
+
+// step-07 E2 (S3-a): a kind ticked whole is sent as wholeKinds and listed inside the save, never read
+// on Next. Unknown kinds are refused; a save from a datapack takes everything the demo uses already.
+describe('save-store-changes-to-pack with whole kinds', () => {
+    const save = (payload: Record<string, unknown>) =>
+        storeChangesHandlers['save-store-changes-to-pack'](makeImportHarness(project()).context, { saveAs: SAVE_AS, confirm: true, ...payload });
+
+    it('hands a save from nothing the whole kinds beside the picks', async () => {
+        await save({ selections: PICKS, wholeKinds: ['categories', 'customers'] });
+
+        expect(mockedSave.mock.calls[0][1]).toMatchObject({ picks: { products: ['VR-Rack'], cart_rules: ['7'] }, wholeKinds: ['categories', 'customers'] });
+    });
+
+    it('refuses a kind that cannot be picked, naming those that can, saving nothing', async () => {
+        const result = await save({ wholeKinds: ['orders'] });
+
+        expect(result).toMatchObject({ success: false, error: expect.stringMatching(/^orders cannot be picked/u) });
+        expect(mockedSave).not.toHaveBeenCalled();
+    });
+
+    it('refuses wholeKinds that is not a list of kinds', async () => {
+        const result = await save({ wholeKinds: 'products' });
+
+        expect(result).toMatchObject({ success: false, error: expect.stringMatching(/wholeKinds is a list/u) });
+        expect(mockedSave).not.toHaveBeenCalled();
+    });
+
+    it("refuses whole kinds with the project's own datapack, when Demo Builder installed it", async () => {
+        mockedRecord.mockResolvedValue(RECORD);
+
+        const result = await save({ wholeKinds: ['products'] });
+
+        expect(result).toMatchObject({ success: false, code: ErrorCode.INVALID_OPERATION });
+        expect(mockedSave).not.toHaveBeenCalled();
+    });
+
+    it('passes them through the export door too', async () => {
+        await exportHandlers['start-datapack-export'](makeImportHarness(project()).context, { wholeKinds: ['products'], saveAs: SAVE_AS, confirm: true });
+
+        expect(mockedSave.mock.calls[0][1]).toMatchObject({ wholeKinds: ['products'] });
+    });
+});
+
+// Decisions Phase 7b (J3-1): Save As New refuses a name the SC already has, on screen and here, so an
+// agent and a stale list are refused too. Only the SC's own count, as the screen counts them
+// (`ownedOf`): a colleague's may share the name.
+describe("Save As's name", () => {
+    const row = (displayName: string, extra: { mine?: boolean; team?: boolean }) => ({ id: { name: `${displayName.toLowerCase()}-1a2b3c`, version: '1' }, displayName, shared: false, dataTypes: [], art: {}, ...extra });
+
+    it('refuses a name the SC already has, whatever its capitals, saving nothing', async () => {
+        jest.spyOn(DataInstallerClient.prototype, 'findDatapacks').mockResolvedValue({ items: [row('Hand Built', { mine: true })], count: 1 });
+
+        const result = await storeChangesHandlers['save-store-changes-to-pack'](makeImportHarness(project()).context, { saveAs: { displayName: ' hand built ' }, selections: PICKS, confirm: true });
+
+        expect(result).toMatchObject({ success: false, code: ErrorCode.INVALID_OPERATION, error: 'You already have a datapack named hand built.' });
+        expect(mockedSave).not.toHaveBeenCalled();
+    });
+
+    it("takes a name only a colleague's datapack has", async () => {
+        jest.spyOn(DataInstallerClient.prototype, 'findDatapacks').mockResolvedValue({ items: [row('Hand Built', {})], count: 1 });
+
+        const result = await storeChangesHandlers['save-store-changes-to-pack'](makeImportHarness(project()).context, { saveAs: SAVE_AS, selections: PICKS, confirm: true });
+
+        expect(result).toMatchObject({ success: true });
+        expect(mockedSave).toHaveBeenCalled();
     });
 });
 
@@ -117,7 +212,7 @@ describe('the export door with Demo Builder engine', () => {
     it('saves what is picked through the same save, confirmed by the same flag', async () => {
         const { context } = makeImportHarness(project());
 
-        const result = await exportHandlers['start-datapack-export'](context, { selections: PICKS, confirm: true });
+        const result = await exportHandlers['start-datapack-export'](context, { selections: PICKS, saveAs: SAVE_AS, confirm: true });
 
         expect(result.success).toBe(true);
         expect(mockedSave.mock.calls[0][1]).toMatchObject({ picks: { products: ['VR-Rack'], cart_rules: ['7'] } });
@@ -153,5 +248,63 @@ describe('the export door with Demo Builder engine', () => {
 
         expect(result).toMatchObject({ success: false, error: expect.stringMatching(/^Choose what to list: one of products, giftcards, categories/u) });
         expect(mockedList).not.toHaveBeenCalled();
+    });
+});
+
+describe('a list that fails', () => {
+    it('names the kind as a person reads it, not by its code', async () => {
+        mockedList.mockRejectedValue(new Error('boom'));
+
+        const result = await exportHandlers['list-datapack-export-items'](makeImportHarness(project()).context, { dataType: 'giftcards' });
+
+        expect(result).toMatchObject({ success: false, error: expect.stringMatching(/^Commerce's gift cards could not be listed\./u) });
+    });
+});
+
+describe('count-datapack-export-items', () => {
+    it("counts the project's store, pointed where the list reads: the project's own pack", async () => {
+        mockedRecord.mockResolvedValue(RECORD);
+        mockedCount.mockResolvedValue({ products: 139, giftcards: 0 });
+        const { context } = makeImportHarness(project());
+
+        const result = await exportHandlers['count-datapack-export-items'](context, {});
+
+        // The store it is held in too, so the count can start the pack's read there (walk F82).
+        expect(mockedCount).toHaveBeenCalledWith(expect.objectContaining({ projectPath: '/nonexistent/projects/acme' }), BODEA, 'library');
+        expect(result).toEqual({ success: true, data: { products: 139, giftcards: 0 } });
+    });
+
+    it('counts for the pack named when one is', async () => {
+        mockedCount.mockResolvedValue({});
+
+        await exportHandlers['count-datapack-export-items'](makeImportHarness(project()).context, { datapackName: 'other', version: 'v2' });
+
+        expect(mockedCount).toHaveBeenCalledWith(expect.anything(), { name: 'other', version: 'v2' }, undefined);
+    });
+
+    it('with no pack Demo Builder installed, counts for none', async () => {
+        mockedCount.mockResolvedValue({});
+
+        await exportHandlers['count-datapack-export-items'](makeImportHarness(project()).context, {});
+
+        expect(mockedCount).toHaveBeenCalledWith(expect.anything(), undefined, undefined);
+    });
+
+    it('writes nothing to the project', async () => {
+        mockedCount.mockResolvedValue({ products: 1 });
+        const { context } = makeImportHarness(project());
+
+        await exportHandlers['count-datapack-export-items'](context, {});
+
+        expect(context.stateManager.saveProject).not.toHaveBeenCalled();
+        expect(mockedSave).not.toHaveBeenCalled();
+    });
+
+    it("answers a failure when the store cannot be opened, for the list's read to report", async () => {
+        mockedCount.mockRejectedValue(new StoreChangesError('Choose the website and store view to install into first.'));
+
+        const result = await exportHandlers['count-datapack-export-items'](makeImportHarness(project()).context, {});
+
+        expect(result).toEqual({ success: false, error: 'Choose the website and store view to install into first.' });
     });
 });

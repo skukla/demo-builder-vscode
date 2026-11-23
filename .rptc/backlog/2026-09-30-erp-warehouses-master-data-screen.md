@@ -10,7 +10,7 @@ parent: AB-26
 
 # A Warehouses master-data screen in the ERP
 
-Built 2026-09-30. The ERP masters stock, so the SC (and a JustRite reviewer) expects a
+Built 2026-09-30. The ERP masters stock, so the SC (and a Tailspin reviewer) expects a
 first-class list of warehouses under MASTER DATA — there was none; warehouses only showed
 embedded in a product, a shipment, or the Settings structure card. Owner asked for a proper
 screen where the SC renames and manages them, moved out of Settings.

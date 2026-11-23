@@ -1,0 +1,41 @@
+/**
+ * .progress-bar-* — the labelled bar `StepProgressBar` draws ("Step 2/3: Installing Node.js 20").
+ *
+ * REACHES ONLY THE BUNDLES THAT IMPORT IT (ADR-017 §6): `wizard` (Prerequisites) and
+ * `projectsList` (the Updates run). Moved verbatim from prerequisites.css on 2026-11-19, when the
+ * Updates run became the bar's second user.
+ *
+ * `.animate-fade-in`, the bar's fade, came from wizard-misc.css the same day, in the same layer.
+ */
+
+@layer theme {
+.animate-fade-in { animation: fadeIn var(--spectrum-global-animation-duration-600) ease; }
+
+/* Progress bar customizations */
+.progress-bar-small-label [class*="spectrum-ProgressBar-label"] {
+    font-size: 12px;
+    font-weight: 400;
+    color: var(--spectrum-global-color-gray-700);
+}
+
+.progress-bar-full-width {
+    width: 100%;
+    max-width: none;
+}
+
+.progress-bar-full-width [class*="spectrum-ProgressBar"] {
+    width: 100%;
+}
+
+/* What the step is doing, on its own line under the bar: the bar's label, quieter. */
+.step-progress-detail {
+    font-size: 12px;
+    line-height: 16px;
+    color: var(--spectrum-global-color-gray-700);
+}
+
+/* Progress bar spacing */
+.progress-bar-spacing {
+    margin-bottom: 8px;
+}
+}

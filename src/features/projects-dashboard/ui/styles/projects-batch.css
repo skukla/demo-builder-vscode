@@ -1,0 +1,254 @@
+/**
+ * Selection mode on the projects list, and the Reset Selected / Delete Selected window (owner,
+ * 2026-11-04): .projects-select-bar (the count row while selecting), .project-select-box (a tile's
+ * box), .batch-delete-* (Delete Selected's table), .batch-confirm (each confirm's sentence and table) and
+ * .projects-batch-run (the run's rows).
+ *
+ * FEATURE-SCOPED (ADR-017 §6). Imported by the `projectsList` entry alone (ui/index.tsx), the one
+ * bundle that draws them. The rows' own look is the house `checkbox-row.css` and `work-row.css`.
+ */
+
+@layer theme {
+    /* Select All, the count and the buttons, on the count row's one line. */
+    .projects-select-bar {
+        display: flex;
+        align-items: center;
+        gap: var(--spectrum-global-dimension-size-150);
+    }
+
+    /* On this row Select All sits beside the count, not over a list, so it takes no rule under it. */
+    .projects-select-bar .select-all-row {
+        padding: 0;
+        margin: 0;
+        border-bottom: 0;
+    }
+
+    /* Nor the list row's padding: with it the row stood taller than a button, and entering
+       selection mode dropped every card (owner, 2026-11-04). */
+    .projects-select-bar .select-all-row .checkbox-row {
+        padding: 0;
+    }
+
+    .project-select-box {
+        display: inline-flex;
+        flex-shrink: 0;
+    }
+
+    /* Delete Selected: a project per row, a column per online resource. Stacked when too narrow. */
+    .batch-delete {
+        container-type: inline-size;
+    }
+
+    .batch-delete-table {
+        border-collapse: collapse;
+        width: 100%;
+    }
+
+    .batch-delete-table th,
+    .batch-delete-table td {
+        padding: 0 var(--spectrum-global-dimension-size-150) 0 0;
+        text-align: left;
+        font-weight: normal;
+        white-space: nowrap;
+        vertical-align: middle;
+    }
+
+    /* The name column takes what is left; a project's name never wraps (owner, 2026-11-05). Every
+       other cell keeps its own width too, nothing in it wrapping: a cell that may wrap is squeezed
+       to its narrowest by this column, and "skukla/my-commerce-demo" broke at its hyphen beside
+       an empty half-window (owner, 2026-11-05). The window is extra-wide for that; a name too
+       long even for it scrolls the list sideways, and a window too narrow stacks (below). */
+    .batch-delete-table tbody th {
+        width: 100%;
+    }
+
+    /* Delete Selected, extra-wide: the names' column takes a quarter (more only if a name needs it)
+       and the box columns share the rest evenly (owner, 2026-11-05). It had taken all the spare
+       width, a hole beside short names; then only its names' width, boxes 12px from them. A share,
+       not a measure of the text, as the dialog rules have widths. Reset's one box column stays at
+       the right edge. */
+    .batch-delete-spread tbody th {
+        width: 25%;
+    }
+
+    /* A name with its line under it (owner, 2026-11-04): rows the run's rows' distance apart,
+       a hairline between them. */
+    .batch-delete-table tbody th,
+    .batch-delete-table tbody td {
+        padding-top: 8px;
+        padding-bottom: 8px;
+    }
+
+    .batch-delete-table tbody tr + tr > th,
+    .batch-delete-table tbody tr + tr > td {
+        border-top: 1px solid var(--spectrum-global-color-gray-200);
+    }
+
+    .batch-delete-table thead th {
+        padding-bottom: 4px;
+        border-bottom: 1px solid var(--spectrum-global-color-gray-300);
+    }
+
+    /* A box's own label: the column header says it while there are columns. */
+    .batch-delete-option-label {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip-path: inset(50%);
+        white-space: nowrap;
+    }
+
+    /* What a box deletes, beside it: the repository, the site, the pack (owner, 2026-11-05). */
+    .batch-option-what {
+        font-size: 12px;
+        line-height: 16px;
+        color: var(--spectrum-global-color-gray-600);
+    }
+
+    @container (max-width: 520px) {
+        .batch-delete-table,
+        .batch-delete-table thead,
+        .batch-delete-table tbody,
+        .batch-delete-table tr,
+        .batch-delete-table th,
+        .batch-delete-table td {
+            display: block;
+            width: auto;
+        }
+
+        /* The column Select Alls on their own lines, the rule under the last. */
+        .batch-delete-table thead {
+            padding-bottom: 4px;
+            margin-bottom: 8px;
+            border-bottom: 1px solid var(--spectrum-global-color-gray-300);
+        }
+
+        .batch-delete-table thead th {
+            padding-bottom: 0;
+            border-bottom: 0;
+        }
+
+        /* Each project's boxes under its name, each with its label. */
+        .batch-delete-table tbody tr {
+            margin-bottom: 8px;
+        }
+
+        .batch-delete-table tbody td {
+            padding-left: 28px;
+        }
+
+        .batch-delete-table tbody td:empty {
+            display: none;
+        }
+
+        .batch-delete-option-label {
+            position: static;
+            width: auto;
+            height: auto;
+            overflow: visible;
+            clip-path: none;
+        }
+
+        /* Stacked, the box's label says what it is, and what it deletes goes under it, wrapping
+           as it must: a stacked cell has the whole width and squeezes nothing. */
+        .batch-option-what {
+            display: block;
+            white-space: normal;
+            overflow-wrap: anywhere;
+        }
+
+        .batch-project-head {
+            display: none;
+        }
+    }
+
+    /* Each confirm, Delete Selected's and Reset Selected's (owner, 2026-11-04), and the
+       Updates list (F50): the sentence, then the table, 24 apart, the dialog rules' gap between
+       groups. */
+    .batch-confirm {
+        display: flex;
+        flex-direction: column;
+        gap: 24px;
+        min-height: 0;
+    }
+
+    /* ONE scroller: the table. In a short window the whole dialog body scrolled, its sentence cut
+       off, while the table had room to scroll itself (owner, 2026-11-07). So the body holding a
+       confirm does not scroll, and the table shrinks to the height the dialog has left (still at
+       most its `scroll-fade--capped` limit) and scrolls there, its header fixed. The dialog bounds
+       its own height against the window, so this holds at any window size and zoom, with no number
+       to measure. The API picker's single scroller is the same idea (`modal.css`). */
+    .modal-body:has(.batch-confirm) {
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+    }
+
+    /* The two boxes `SteadyHeight` puts between the body and the confirm, then the confirm and its
+       table: each passes the height it is given down, rather than its content's height up. */
+    .modal-body:has(.batch-confirm) > *,
+    .modal-body:has(.batch-confirm) > * > *,
+    .modal-body .batch-confirm {
+        display: flex;
+        flex-direction: column;
+        flex: 1 1 auto;
+        min-height: 0;
+    }
+
+    /* The table's scroller shrinks with the rest and scrolls; it stays a block, so its table keeps
+       its own layout. */
+    .batch-confirm > .scroll-fade--capped {
+        flex: 1 1 auto;
+        min-height: 0;
+    }
+
+    .batch-confirm > .lead-text {
+        margin: 0;
+    }
+
+    /* A batch table's column names (Project; the save question's Datapack and Save As), as the
+       label style a field carries (J7-2). */
+    .batch-changes-head {
+        padding-bottom: 4px;
+        border-bottom: 1px solid var(--spectrum-global-color-gray-300);
+        font-size: 12px;
+        color: var(--spectrum-global-color-gray-700);
+    }
+
+    /* The save question (`BatchSaveTable`): the pack keeps a third of the row, its Save As name
+       the rest. */
+    .batch-changes-table tbody th {
+        width: 36%;
+    }
+
+    .batch-changes-table tbody td:nth-child(2) {
+        width: 100%;
+    }
+
+    /* A reset's org, over its projects, when the run spans several: the Updates window's group
+       name, 24 above its group. */
+    .projects-batch-org {
+        margin: 24px 0 4px;
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--spectrum-global-color-gray-900);
+    }
+
+    .projects-batch-org:first-child {
+        margin-top: 0;
+    }
+
+    /* "Took 7 minutes, 20 seconds" under the run's rows, set off from the last one. */
+    .projects-batch-took {
+        margin-top: 12px;
+    }
+
+    /* The run: a row per project, as tall as its rows, then it scrolls, as the Updates run does. */
+    .projects-batch-run {
+        display: flex;
+        flex-direction: column;
+        max-height: min(440px, 55vh);
+        overflow-y: auto;
+    }
+}

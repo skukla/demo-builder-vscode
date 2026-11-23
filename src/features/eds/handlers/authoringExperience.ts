@@ -12,6 +12,9 @@ import * as vscode from 'vscode';
 import { COMPONENT_IDS } from '@/core/constants';
 import type { AuthoringExperience, Project } from '@/types/base';
 
+/** What a project uses until someone chooses otherwise (owner, 2026-11-02). */
+export const DEFAULT_AUTHORING_EXPERIENCE: AuthoringExperience = 'experience-workspace';
+
 const AUTHORING_EXPERIENCES: ReadonlySet<string> = new Set<AuthoringExperience>([
     'da-live-classic',
     'experience-workspace',
@@ -23,8 +26,8 @@ const AUTHORING_EXPERIENCES: ReadonlySet<string> = new Set<AuthoringExperience>(
  * Precedence (mirrors resolveByomOverlayConfig):
  * 1. Per-project metadata value — if it is a recognized union member, it wins.
  * 2. Global setting demoBuilder.daLive.authoringExperience (default
- *    'da-live-classic').
- * Any unrecognized result coerces to 'da-live-classic' (fail-safe), so a
+ *    `DEFAULT_AUTHORING_EXPERIENCE`).
+ * Any unrecognized result coerces to the default (fail-safe), so a
  * corrupted setting or stray metadata can never break the Author button.
  *
  * @param metadataValue - The per-project `authoringExperience` metadata value
@@ -37,17 +40,17 @@ export function resolveAuthoringExperience(metadataValue: string | undefined): A
 
     const globalValue = vscode.workspace
         .getConfiguration('demoBuilder.daLive')
-        .get<string>('authoringExperience', 'da-live-classic');
+        .get<string>('authoringExperience', DEFAULT_AUTHORING_EXPERIENCE);
 
     return AUTHORING_EXPERIENCES.has(globalValue)
         ? (globalValue as AuthoringExperience)
-        : 'da-live-classic';
+        : DEFAULT_AUTHORING_EXPERIENCE;
 }
 
 /**
  * Resolve the authoring experience for a project by reading its EDS
  * component-instance `authoringExperience` metadata, then applying the
- * resolveAuthoringExperience precedence (per-project → global → UE).
+ * resolveAuthoringExperience precedence (per-project, then global).
  *
  * @param project - The project (any project; non-EDS yields the global default)
  * @returns The resolved authoring experience

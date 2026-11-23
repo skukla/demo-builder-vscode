@@ -4,7 +4,7 @@
  * Main dashboard screen for a demo project. Displays project status, a grid of
  * action buttons, and the integrations SUMMARY TILE (count + worst status). The
  * integrations card grid itself lives on its own surface — it needs room this
- * band does not have (`.rptc/plans/integrations-surface/overview.md`).
+ * band does not have (`.rptc/complete/integrations-surface/overview.md`).
  *
  * @module features/dashboard/ui/ProjectDashboardScreen
  */
@@ -14,11 +14,14 @@ import { ActionGrid } from './components/ActionGrid';
 import { DashboardDialogs } from './components/DashboardDialogs';
 import { DashboardStatusHeader } from './components/DashboardStatusHeader';
 import { DemoSourceNotice } from './components/DemoSourceNotice';
+import { FinishSetupLine } from './components/FinishSetupLine';
 import { OrgContextNotice } from './components/OrgContextNotice';
 import { isStartActionDisabled } from './dashboardPredicates';
 import { useDashboardActions } from './hooks/useDashboardActions';
 import { useDashboardOperations } from './hooks/useDashboardOperations';
+import { useDashboardResetDelete } from './hooks/useDashboardResetDelete';
 import { useDashboardStatus, isMeshBusy } from './hooks/useDashboardStatus';
+import { useFinishSetup } from './hooks/useFinishSetup';
 import { useHandoverDialogs } from './hooks/useHandoverDialogs';
 import { useInlineRename } from './hooks/useInlineRename';
 import { useLiveDaLiveUrl } from './hooks/useLiveDaLiveUrl';
@@ -61,10 +64,9 @@ export function ProjectDashboardScreen({
     edsDaLiveUrl,
     initialEdsStorefrontStatus,
     hasAdobeContext,
-    dataInstallerAvailable,
-    ownDatapackName,
     appBuilderComponents,
     demo,
+    openFinishSetup,
 }: ProjectDashboardScreenProps) {
     // Capture isEds on first render and never change it (project type doesn't change)
     const isEdsRef = useRef(isEds);
@@ -95,7 +97,7 @@ export function ProjectDashboardScreen({
     // change mode (rendered by DashboardDialogs).
     const [changeSourceOpen, setChangeSourceOpen] = useState(false);
     const openChangeSource = demo ? () => setChangeSourceOpen(true) : undefined;
-    const handover = useHandoverDialogs(); // the Share dialog
+    const handover = useHandoverDialogs(); // Share Demo and Save as Package
     // Inline title rename commit (null = success; string = inline error).
     const renameInline = useInlineRename();
 
@@ -164,18 +166,27 @@ export function ProjectDashboardScreen({
     // Derived values
     const displayName = statusDisplayName || project?.name || 'Demo Project';
 
-    // The five actions measured in minutes, and the modal they narrate into.
+    // The three storefront actions measured in minutes, and the modal they narrate into.
     const {
         controls: operations,
-        handleResetProject,
-        handleDeleteProject,
         handleSyncStorefront,
         handleRefreshBlockLibrary,
         handleRepublishContent,
     } = useDashboardOperations(displayName);
+    // Reset: the batch window here, on this project (step-05 S4). The latest status names the
+    // folder, which a rename moves. Delete: the projects list's window on it.
+    const { batch, handleResetProject, handleDeleteProject } = useDashboardResetDelete(
+        displayName,
+        projectStatus?.path ?? project?.path,
+    );
 
-    // Build subtitle from package/stack (e.g., "CitiSignal · Headless + PaaS")
-    const brandStackSubtitle = [packageName, stackName].filter(Boolean).join(' · ') || undefined;
+    // Republish is a storefront's (EDS only): the tile, and Apply on the Finish Setup code step.
+    const republish = isEdsStable ? handleRepublishContent : undefined;
+    // What a run left to finish (PL-101): the line, its guide, and Apply's Republish.
+    const finishSetup = useFinishSetup(projectStatus?.finishSetup, openFinishSetup, republish);
+
+    // Build subtitle from package/stack (e.g., "CitiSignal, Headless + PaaS")
+    const brandStackSubtitle = [packageName, stackName].filter(Boolean).join(', ') || undefined;
 
     const isStartDisabled = isStartActionDisabled(isTransitioning, meshStatus, status || 'ready');
     // Only consulted while `isRunning` — the Stop tile is the Start tile
@@ -242,12 +253,16 @@ export function ProjectDashboardScreen({
                             <DemoSourceNotice
                                 issue={demoSourceIssue}
                                 onChangeSource={openChangeSource}
-                                onKeepAsOwn={isEdsStable ? handover.openShare : undefined}
+                                onKeepAsOwn={isEdsStable ? handover.openSavePackage : undefined}
                             />
                         </>
                     }
                     primary={
                         <>
+                            <FinishSetupLine
+                                status={finishSetup.status}
+                                onOpen={finishSetup.open}
+                            />
                             <div className="dashboard-grid-container">
                                 <ActionGrid
                                     isEds={isEdsStable}
@@ -259,8 +274,6 @@ export function ProjectDashboardScreen({
                                     openingTile={openingTile}
                                     demoStatus={demoStatusDisplay}
                                     handleRestartDemo={handleRestartDemo}
-                                    dataInstallerAvailable={dataInstallerAvailable}
-                                    ownDatapackName={ownDatapackName}
                                     appBuilderComponents={appBuilderComponents}
                                     hasMesh={hasMesh}
                                     meshStatus={meshStatus}
@@ -274,18 +287,18 @@ export function ProjectDashboardScreen({
                                     handleRefreshBlockLibrary={
                                         isEdsStable ? handleRefreshBlockLibrary : undefined
                                     }
-                                    handleRepublishContent={
-                                        isEdsStable ? handleRepublishContent : undefined
-                                    }
+                                    handleRepublishContent={republish}
                                     handleConfigure={handleConfigure}
                                     handleOpenAemAssets={handleOpenAemAssets}
                                     handleOpenSiteAccess={isEdsStable ? handleOpenSiteAccess : undefined}
                                     needsReset={projectStatus?.storefrontNeedsReset === true}
                                     handleEditProject={handleEditProject}
                                     handleShareDemo={handover.openShare}
+                                    handleSavePackage={isEdsStable ? handover.openSavePackage : undefined}
                                     handleChangeDemoSource={openChangeSource}
                                     handleResetProject={handleResetProject}
                                     handleDeleteProject={handleDeleteProject}
+                                    finishSetup={finishSetup.status}
                                 />
                             </div>
                         </>
@@ -299,9 +312,12 @@ export function ProjectDashboardScreen({
                 onCloseChangeSource={() => setChangeSourceOpen(false)}
                 handover={handover}
                 operations={operations}
+                batch={batch}
                 capabilitiesOpen={showCapabilities}
                 onCloseCapabilities={() => setShowCapabilities(false)}
                 ai={dashboardStatus}
+                finishSetup={finishSetup}
+                projectName={displayName}
             />
         </div>
     );

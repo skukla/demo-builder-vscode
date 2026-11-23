@@ -4,12 +4,12 @@ kind: feature
 area: app-builder
 needs: []
 value: med
-status: active
+status: backlog
 ---
 
 # One place for store setup
 
-Filed 2026-10-26, from release test row 4.19 on Justrite.
+Filed 2026-10-26, from release test row 4.19 on Tailspin.
 
 ## What is wrong
 
@@ -58,7 +58,7 @@ The setup guide becomes the one place.
 
 ### Doors and names
 
-Measured on Justrite (2026-10-26): four ways in, three names, two destinations.
+Measured on Tailspin (2026-10-26): four ways in, three names, two destinations.
 
 | Door | Where | Opens |
 |---|---|---|
@@ -92,7 +92,7 @@ What stays:
 ## Also in this item: re-applying the warehouse after an undo
 
 Commerce cannot delete a source, so undoing the warehouse step DISABLES the source it made
-(`warehouseFix.undo`). Applying the step again then finds that source by its code or name
+(`warehouseSetup.undo`). Applying the step again then finds that source by its code or name
 (`planFor`), treats it as existing, and links it without enabling it. The check now
 reports a disabled warehouse as not done ("Test Warehouse is disabled."), so the step
 stays at Will apply after every apply: the SC can never finish it from Demo Builder.
@@ -100,12 +100,12 @@ stays at Will apply after every apply: the SC can never finish it from Demo Buil
 The fix: when the warehouse an ERP needs exists but is disabled, the apply enables it
 (`PUT inventory/sources/{code}` with `enabled: true`), the preview says so ("Switch Test
 Warehouse back on"), and the record notes it was re-enabled, so the undo disables it
-again rather than leaving it on. Walked on Justrite as part of row 4.19: undo, then apply
+again rather than leaving it on. Walked on Tailspin as part of row 4.19: undo, then apply
 again, then the step reads Done.
 
 ## Also in this item: the result, and a link priority
 
-**The result read as centred paragraphs (fixed the same day).** After Apply on Justrite
+**The result read as centred paragraphs (fixed the same day).** After Apply on Tailspin
 (2026-10-26) the progress modal's success view listed "ERP warehouse:", its raw lines, "By
 hand: …", then "Card payments:" and `payment/payment_services/active at the website scope:
 0 → 1`, every line centred and the last cut off. The owner: it "looks awful and does not
@@ -116,8 +116,8 @@ Yes", from each config item's `field` and `values`), and warehouse lines name wa
 stocks rather than codes. Apply all lands on that view and needs nothing more from it.
 
 **A new warehouse takes priority 1 beside the ERP that already has it.** The same apply
-linked `test_warehouse` to Justrite Stock at priority 1, which `justrite` already held
-(read back the same day: justrite 1, accuform 2, test_warehouse 1). `warehouseFix.apply`
+linked `test_warehouse` to Tailspin Stock at priority 1, which `tailspin` already held
+(read back the same day: tailspin 1, accuform 2, test_warehouse 1). `warehouseSetup.apply`
 numbers the links it adds from 1 (`i + 1`); it should start after the stock's highest.
 
 ## Done when
@@ -148,3 +148,7 @@ These landed first and this item builds on them:
 - 2026-10-27  feat(dashboard): the setup guide applies and undoes the demo setup in place (`92970b746`)
 - 2026-10-27  chore: the setup guide is AB-82; AB-81 was already the ERP invoice item (`9798e5b51`)
 - 2026-10-28  fix(setup-guide): steady layout, green Done, plain step copy, named undo refusal (`0aa3116be`)
+- 2026-11-03  fix(setup-guide): Check All Steps empties the steps it will check, then fills each in as it answers (`763d64ddf`)
+- 2026-11-03  fix(setup-guide): Check All Steps sits in the footer, under the list, where a long list cannot clip it (`ba9765a04`)
+- 2026-11-21  Reconciled 2026-11-21: Apply All is built and the old Prepare window is gone (92970b746, 0aa3116be, ba9765a04). Left: re-walk release row 4.19 after its layout fix, capture the visual baseline, decide the 'Add and Prepare the Store?' title (PrepareOnAddConfirm.tsx), and fix the stale comment at ErpConfirmDialogs.tsx:11.
+- 2026-11-22  Paused 2026-11-22: back to backlog, last work 2026-11-03. Where it stopped is the 2026-11-21 reconcile line above.

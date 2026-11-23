@@ -1,9 +1,10 @@
-import { View, Flex, Text, Button, ProgressBar } from '@adobe/react-spectrum';
+import { View, Flex, Text, Button } from '@adobe/react-spectrum';
 import React, { useRef, useCallback, useMemo } from 'react';
 import { isMeshComponentId } from '@/core/constants';
+import { StepProgressBar } from '@/core/ui/components/feedback/StepProgressBar';
 import { StepStatusIcon } from '@/core/ui/components/feedback/StepStatusIcon';
 import { cn } from '@/core/ui/utils/classNames';
-import { getProgressValue, renderPluginStatusIcon, renderPrerequisiteMessage, shouldShowPluginDetails } from '@/features/prerequisites/ui/steps/hooks/prerequisiteRenderers';
+import { renderPluginStatusIcon, renderPrerequisiteMessage, shouldShowPluginDetails } from '@/features/prerequisites/ui/steps/hooks/prerequisiteRenderers';
 import { usePrerequisiteAutoScroll } from '@/features/prerequisites/ui/steps/hooks/usePrerequisiteAutoScroll';
 import { usePrerequisiteNavigation } from '@/features/prerequisites/ui/steps/hooks/usePrerequisiteNavigation';
 import { usePrerequisiteState } from '@/features/prerequisites/ui/steps/hooks/usePrerequisiteState';
@@ -49,7 +50,7 @@ export function PrerequisitesStep({ state, setCanProceed, currentStep }: Prerequ
     } = usePrerequisiteState(scrollToTop, state.selectedStack, selectedMeshDeps);
 
     // Auto-scroll hook with actual checks (pass the shared ref)
-    const { itemRefs, resetAutoScroll } = usePrerequisiteAutoScroll(
+    const { createItemRef, resetAutoScroll } = usePrerequisiteAutoScroll(
         checks,
         setCanProceed,
         scrollContainerRef,
@@ -71,16 +72,15 @@ export function PrerequisitesStep({ state, setCanProceed, currentStep }: Prerequ
                 Checking required tools. Missing tools can be installed automatically.
             </Text>
 
-            <div ref={scrollContainerRef} className="prerequisites-container">
+            <div ref={scrollContainerRef} className={cn('prerequisites-container', 'step-tiles')}>
                 <Flex direction="column" gap="size-150">
                     {checks.map((check, index) => (
                         <div
                             key={check.name}
-                            ref={(el) => {
-                                itemRefs.current[index] = el;
-                            }}
+                            ref={createItemRef(index)}
                             className={cn(
                                 'prerequisite-item',
+                                'step-tile',
                                 'prerequisite-item-grid',
                                 index !== checks.length - 1 && 'prerequisite-item-spacing',
                             )}
@@ -125,19 +125,7 @@ export function PrerequisitesStep({ state, setCanProceed, currentStep }: Prerequ
                             <div className="prerequisite-expandable">
                                 {renderPrerequisiteMessage(check)}
                                 {check.status === 'checking' && check.unifiedProgress && (
-                                    <View marginTop="size-100" UNSAFE_className="animate-fade-in">
-                                        <ProgressBar
-                                            label={`Step ${check.unifiedProgress.overall.currentStep}/${check.unifiedProgress.overall.totalSteps}: ${check.unifiedProgress.overall.stepName}${
-                                                check.unifiedProgress.command?.detail
-                                                    ? ` - ${check.unifiedProgress.command.detail}`
-                                                    : ''
-                                            }`}
-                                            value={getProgressValue(check.unifiedProgress)}
-                                            maxValue={100}
-                                            size="S"
-                                            UNSAFE_className="progress-bar-spacing progress-bar-small-label progress-bar-full-width"
-                                        />
-                                    </View>
+                                    <StepProgressBar progress={check.unifiedProgress} />
                                 )}
                                 {check.plugins &&
                                     check.plugins.length > 0 &&

@@ -72,7 +72,7 @@
             "id": "@playwright/mcp",
             "from": "npm",
             "ref": "@playwright/mcp@~0.0.79",
-            "range": ">=18"
+            "range": ">=20"
         },
         {
             "id": "@dropins/ai-tools",

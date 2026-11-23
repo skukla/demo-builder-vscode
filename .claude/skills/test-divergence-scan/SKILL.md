@@ -38,18 +38,32 @@ look like, and the next one will be different again.
 Watch **shapes used exactly once** — a shape with one user is a shape nobody
 agreed to.
 
-## Baseline (measured 2026-08-28, 1,288 files)
+## Baseline (measured 2026-11-21, 2,922 files)
 
 | Collaborator | shared | inline | distinct shapes | most common covers | used once |
 |---|---|---|---|---|---|
-| HandlerContext | 165 | 4 | 3 | 78% | 2 |
-| CommandExecutor | 80 | 81 | 5 | 54% | 2 |
-| Logger | 210 | 341 | 30 | 33% | 9 |
-| StateManager | 47 | 48 | 26 | 14% | 17 |
-| Project fixture | 78 | 38 | 32 | 13% | 25 |
+| HandlerContext | 269 | 1 | 1 | 100% | 1 |
+| CommandExecutor | 181 | 31 | 6 | 68% | 4 |
+| Logger | 565 | 6 | 8 | 30% | 7 |
+| StateManager | 232 | 11 | 10 | 23% | 8 |
+| Project fixture | 417 | 30 | 31 | 16% | 24 |
 
-**HandlerContext is the proof the cure works.** 165 suites import
-`createMockHandlerContext`; four hand-roll. Not because those authors were more
+The 2026-08-28 baseline (1,288 files) was HandlerContext 165/4, CommandExecutor
+80/81, Logger 210/341, StateManager 47/48 and Project fixture 78/38.
+
+**Overrides to a builder are not hand-rolled.** Until 2026-11-21 the scan counted
+a literal handed straight into a builder (`createMockStateManager({ saveProject })`)
+as a hand-built fake. That read 21 hand-rolled HandlerContexts where there were
+none: 12 were overrides to `createMockHandlerContext`, and 18 literals in 9 files
+were the webview message channel (`{ sendMessage }` or `{ on, sendMessage }`, a
+command's communicationManager), which the HandlerContext probe now sets aside and
+counts on its own line. The one HandlerContext row left is
+`projectFinalizationService-meshEndpoint.test.ts`, the finalization service's
+inputs, which already builds its context with the builder: a variant, not a
+context. Read the override and set-aside lines before reading the inline count.
+
+**HandlerContext is the proof the cure works.** 269 suites import
+`createMockHandlerContext`; none hand-rolls one. Not because those authors were more
 disciplined, but because a shared builder exists, is findable, and covers the
 need. Where that is true, divergence collapses on its own.
 
@@ -82,7 +96,7 @@ actually works: **provide the builder, put it where the suites already look, and
 make it cover the real shape.** Suites converge on it without being told.
 
 Order by shapes-used-once, since those are the least considered:
-Project fixture (25), StateManager (17), Logger (9).
+Project fixture (24), StateManager (8), Logger (7).
 
 ## Relationship to the other scans
 

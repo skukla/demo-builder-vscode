@@ -2,7 +2,7 @@
 
 **Status:** Draft. Root cause confirmed via field data; UX decisions locked; ready to implement.
 **Filed:** 2026-06-11
-**Origin:** Field issue with Leah Rayard. Her CitiSignal storefront created successfully but the DA.live Library never showed the AEM Assets entry. Steve's reset-of-his-own-storefront works (Library shows AEM Assets). Both flows go through the same code (`executeEdsPipeline` → `applyDaLiveOrgConfigSettings` → `DaLiveContentOperations.applyOrgConfig`), so the divergence had to be at runtime, not in the code path. Diagnostic confirmed it.
+**Origin:** Field issue with Avery. Her CitiSignal storefront created successfully but the DA.live Library never showed the AEM Assets entry. Steve's reset-of-his-own-storefront works (Library shows AEM Assets). Both flows go through the same code (`executeEdsPipeline` → `applyDaLiveOrgConfigSettings` → `DaLiveContentOperations.applyOrgConfig`), so the divergence had to be at runtime, not in the code path. Diagnostic confirmed it.
 
 ## Root cause
 
@@ -14,7 +14,7 @@ The code at lines 2418-2446 handles the GET response with three branches:
 - **404** → "No existing config — safe to create fresh" (because there are no permissions to lose if nothing exists)
 - **anything else** → bail out with `{ success: false }` and a generic error string
 
-The caller (`applyDaLiveOrgConfigSettings` in `edsHelpers.ts:634`) treats failure as non-fatal — logs a warn and the pipeline continues — so the storefront create succeeds even when the binding write fails. Which is why Leah's storefront shipped but her DA.live Library has no AEM Assets entry.
+The caller (`applyDaLiveOrgConfigSettings` in `edsHelpers.ts:634`) treats failure as non-fatal — logs a warn and the pipeline continues — so the storefront create succeeds even when the binding write fails. Which is why Avery's storefront shipped but her DA.live Library has no AEM Assets entry.
 
 **The actual DA.live behavior:** when `/config/<org>/` has never been written for a user, DA.live returns **401, not 404**. Most likely because the endpoint requires owner-auth and a non-existent config has no owner record to authenticate against — so DA.live can't distinguish "not allowed" from "not yet created" and defaults to 401.
 
@@ -22,7 +22,7 @@ The existing 404 branch was correct in spirit (handle "config doesn't exist yet"
 
 **Diagnostic confirmation:**
 - Steve has a prior DA.live presence from earlier projects. His `GET /config/skukla/` → 200 with existing JSON. Read-modify-write succeeds. Binding lands. Library shows AEM Assets. ✓
-- Leah was a first-time DA.live user when she created. Her `GET /config/leahrayard/` → 401 (verified by Leah herself opening the URL in her browser). Extension bailed at line 2434. Binding never wrote. Library has no AEM Assets. ✗
+- Avery was a first-time DA.live user when she created. Her `GET /config/avery/` → 401 (verified by Avery herself opening the URL in her browser). Extension bailed at line 2434. Binding never wrote. Library has no AEM Assets. ✗
 - Her `demoBuilder.daLive.aemAuthorUrl` setting is populated (confirmed by Steve), so the precondition for the binding to write was met — only the read failed.
 
 This pattern almost certainly applies to **every first-time DA.live SC** who's joining the team. Maddie too, once she gets past her own auth gap from earlier in this thread.

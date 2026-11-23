@@ -45,7 +45,7 @@ export async function checkGitHubAppForExistingRepo(
         phase: 'storefront-code',
         // Part of setting up the repository, whatever its phase has always said.
         stage: OPERATION_STAGES.settingUpRepository.label,
-        message: 'Verifying GitHub App installation',
+        message: 'Verifying AEM Code Sync',
         progress: 28,
     } satisfies StorefrontSetupProgressPayload);
 
@@ -56,7 +56,7 @@ export async function checkGitHubAppForExistingRepo(
         awaitRegistration: options.afterReset === true,
     });
 
-    // An inner 400 says nothing either way (EDS-23): skukla/kukla-justrite read
+    // An inner 400 says nothing either way (EDS-23): skukla/kukla-tailspin read
     // 400 before the App covered it and after. Phase 3 asks the code endpoint,
     // whose x-error does say, so this gate hands the question on instead of
     // failing a setup that may be fine.
@@ -164,7 +164,7 @@ export async function checkGitHubAppForExistingRepo(
     // the GitHub App is installed and the repo is code-synced. It says nothing
     // about the Configuration Service admin role, which is a separate grant.
     // On 2026-08-13 this exact line printed immediately before a 403 on
-    // leah-b2b-demo, and the false reassurance is why the real blocker went
+    // avery-b2b-demo, and the false reassurance is why the real blocker went
     // unexamined. `logConfigAccessState` reports the role separately.
     logger.info(
         `[Storefront Setup] AEM Code Sync app installed on ${repoInfo.repoOwner}/${repoInfo.repoName} ` +
@@ -249,7 +249,7 @@ export async function pauseForGitHubApp(
     await context.sendMessage('storefront-setup-progress', {
         phase: options.phase,
         ...(options.stage ? { stage: options.stage } : {}),
-        message: 'AEM Code Sync verified — resuming setup',
+        message: 'Resuming',
         progress: options.progress,
     } satisfies StorefrontSetupProgressPayload);
     return null;

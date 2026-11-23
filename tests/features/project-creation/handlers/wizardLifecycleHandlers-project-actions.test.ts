@@ -10,6 +10,7 @@ import * as vscode from 'vscode';
 import { swapWebviewSurface } from '@/core/base/swapWebviewSurface';
 import {
     handleBackToProject,
+    handleFinishSetup,
     handleOpenProject,
 } from '@/features/project-creation/handlers/wizardLifecycleHandlers';
 import { createWizardLifecycleContext } from './wizardLifecycleHandlers.testUtils';
@@ -57,6 +58,21 @@ describe('lifecycleHandlers - Project Actions', () => {
                 'demoBuilderWizard',
                 'demoBuilder.showProjectDashboard',
             );
+            expect(result).toEqual({ success: true });
+        });
+    });
+
+    // PL-101: the end screen's Finish Setup opens the new project's dashboard with its guide.
+    describe('handleFinishSetup', () => {
+        it("replaces the wizard with the project's dashboard, asking it to open Finish Setup", async () => {
+            const context = createWizardLifecycleContext();
+
+            const result = await handleFinishSetup(context);
+
+            expect(swapWebviewSurface).toHaveBeenCalledWith('demoBuilderWizard', {
+                id: 'demoBuilder.showProjectDashboard',
+                args: [{ openFinishSetup: true }],
+            });
             expect(result).toEqual({ success: true });
         });
     });

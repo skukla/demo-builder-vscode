@@ -5,12 +5,12 @@ area: eds
 parent: EDS-13
 needs: []
 value: med
-status: active
+status: backlog
 ---
 
 # A storefront copied from a colleague's demo loses the demo's label sheets
 
-Filed 2026-10-12, from a project built on `sayurihanki/jenhankib2bbodea`.
+Filed 2026-10-12, from a project built on `org-j/org-k`.
 
 ## What was measured
 
@@ -73,10 +73,12 @@ in the stub list now (`ea374381d`).
 - 2026-10-12  docs(research): the complete copy, proven on bodea; two enrichment pages still unpublished (`65833f045`)
 - 2026-10-19  fix(eds): creation's own content copy reads the storefront's code paths (`32615a1a2`)
 - 2026-10-23  feat(eds): every known fix reaches every storefront; the report is a window (`c75b52793`)
+- 2026-11-21  Reconciled 2026-11-21: the title goal is done and in v1.0.0-beta.153 (5bc8251b1, 98b5c88b0, 8cd987437, 32615a1a2). Left: stub areas chosen from the storefront's own code rather than PLACEHOLDER_STUB_PATHS, and keep-current-content resets with the source unreachable (placeholderStubs.ts still stubs every area).
+- 2026-11-22  Paused 2026-11-22: back to backlog, last work 2026-10-23. Where it stopped is the 2026-11-21 reconcile line above.
 
 ## The stub list cannot know an added demo's code (owner, 2026-10-12)
 
-`company-switcher` was not Jen's own addition and not missing from the list by oversight: it
+`company-switcher` was not Robin's own addition and not missing from the list by oversight: it
 is what Adobe's boilerplate asked for until template #1213 (2026-04-22), and her repository
 was made on 4.0.1 in February. The list was measured on the template Demo Builder creates
 from, which is 6.0.0 and asks for `quick-order` instead.

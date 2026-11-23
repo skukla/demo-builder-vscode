@@ -45,7 +45,7 @@ export const handleSyncStorefront: MessageHandler<StorefrontActionPayload> = nar
         withOperationProgress(
             {
                 id: payload?.id ?? SYNC_OPERATION_ID,
-                title: 'Syncing the storefront',
+                title: 'Syncing the Storefront',
                 inModal: progressSurfaceOf(payload) === 'modal',
             },
             async () => {
@@ -99,7 +99,7 @@ export const handleRefreshBlockLibrary: MessageHandler<StorefrontActionPayload> 
             return withOperationProgress(
                 {
                     id: payload?.id ?? BLOCK_LIBRARY_OPERATION_ID,
-                    title: 'Refreshing the block library',
+                    title: 'Refreshing the Block Library',
                     inModal: progressSurfaceOf(payload) === 'modal',
                 },
                 async () => {
@@ -224,6 +224,7 @@ export const handleRepublishContent: MessageHandler<StorefrontActionPayload> =
                 }
 
                 context.logger.info(`[Dashboard] Content republished for ${repoFullName}`);
+                // The Finish Setup code step was checked by the republish itself (PL-104 fix 10).
                 // Push the new storefront status so the Republish tile drops its
                 // amber dot. `buildStatusPayload` carries `edsStorefrontStatus`,
                 // and without this the open dashboard keeps rendering whatever it
@@ -231,8 +232,9 @@ export const handleRepublishContent: MessageHandler<StorefrontActionPayload> =
                 // reason — the title also comes from that payload.
                 await handleRequestStatus(context);
                 // After a store change, the run ends with what the new store got (EDS-44).
-                return contentResult.storePages
-                    ? { success: true, note: contentResult.storePages }
+                // One line each, a list of what was done (walk F212).
+                return contentResult.storePageLines?.length
+                    ? { success: true, details: contentResult.storePageLines }
                     : { success: true };
             } catch (error) {
                 const errorMessage = error instanceof Error ? error.message : String(error);

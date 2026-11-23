@@ -4,7 +4,8 @@ kind: feature
 area: app-builder
 needs: []
 value: med
-status: built
+status: shipped
+plan: integration-settings-on-tile
 ---
 
 # An integration's settings live on its tile, not on Configure Project
@@ -16,7 +17,7 @@ integration**: "Keep Configure Project for the project itself."
 Today every App Builder catalog entry's settings (`envSchema`) appear as tabs on Configure
 Project. For the ERP pair that is two tabs, each with its own "ERP name".
 
-Plan: `.rptc/plans/integration-settings-on-tile/overview.md`.
+Plan: `.rptc/complete/integration-settings-on-tile/overview.md`.
 
 ## Found while surveying (2026-09-18)
 
@@ -36,3 +37,4 @@ Plan: `.rptc/plans/integration-settings-on-tile/overview.md`.
 
 - 2026-09-18  feat(integrations): an integration's settings live on its tile, not Configure Project (`807c5b704`)
 - 2026-09-18  test(ai): configure_project suites share one setup file (`fb9db3d75`)
+- 2026-11-20  Released in v1.0.0-beta.153

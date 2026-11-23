@@ -44,7 +44,7 @@ export abstract class BundledPanelCommand<TInitialData> extends BaseWebviewComma
      * For a screen shown FOR one project: it acts on the project current NOW, and keeps
      * acting on it after the current project moves (AI-15). Call it first in `execute`:
      * from then on `this.stateManager`, and every handler context built from it, answers
-     * for this project. On 2026-10-09 the Integrations screen showed JustRite while an
+     * for this project. On 2026-10-09 the Integrations screen showed Tailspin while an
      * agent's create made a scratch project current, and its next add ran on the scratch.
      *
      * @param projectPath - the project to open for, when a screen named one (another
@@ -57,15 +57,10 @@ export abstract class BundledPanelCommand<TInitialData> extends BaseWebviewComma
             this.stateManager = createWorkingProjectStateManager(this.projectStateReal, () => this.ownProjectPath);
         }
         const project = typeof projectPath === 'string' && projectPath
-            ? ((await this.projectStateReal.loadProjectFromPath(projectPath, undefined, { persistAfterLoad: false })) ?? undefined)
+            ? ((await this.projectStateReal.loadProjectFromPath(projectPath)) ?? undefined)
             : await this.projectStateReal.getCurrentProject();
         this.ownProjectPath = project?.path;
         return project;
-    }
-
-    /** The screen's project moved folder (a rename): keep acting on it at its new path. */
-    protected followOwnProject(newPath: string): void {
-        if (this.projectStateReal) this.ownProjectPath = newPath;
     }
 
     /** The HTML `<title>`. The tab title is `getWebviewTitle()`; the wizard differs. */

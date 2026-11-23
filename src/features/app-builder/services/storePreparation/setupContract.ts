@@ -1,0 +1,70 @@
+/**
+ * What each demo-setup step's Apply runs (AB-77), one contract so the Apply drives a step set up
+ * by settings (`configSetup`) and one set up by code (`erpAttributesSetup`,
+ * `warehouseSetup`, `sharedCatalogsSetup`) the same way: PREVIEW reads Commerce and says what
+ * would change, APPLY writes and answers what it changed and what Commerce refused, with the
+ * record the undo needs, and UNDO puts that record back.
+ *
+ * Pure over the Commerce client it is handed; nothing here fetches.
+ *
+ * @module features/app-builder/services/storePreparation/setupContract
+ */
+
+import type { CommerceGet, CommerceSend } from '@/types/commerceWire';
+import type { StorePreparationStepRecord } from '@/types/storePreparation';
+
+/** What a setup is handed: the signed Commerce client and the project's store. */
+export interface SetupDeps {
+    commerce: { get: CommerceGet; send: CommerceSend };
+    /** The project's Commerce website code; a website-scoped setup needs it. */
+    websiteCode?: string;
+    /** The names of the ERPs the integration serves, for a setup that makes one thing per ERP. */
+    erpNames: readonly string[];
+}
+
+/** What a setup would change: one line per change, in an SC's words. */
+export interface SetupPreview {
+    changes: string[];
+    /** One plain sentence naming what `changes` lists, when the step's title is too general. */
+    summary?: string;
+    /** What stays by hand, whatever the setup writes. */
+    manual?: string;
+}
+
+/** What a setup changed, what Commerce refused, and what the undo needs. */
+export interface SetupApplied {
+    changes: string[];
+    rejected: string[];
+    /** Absent when nothing was written, so nothing is recorded. */
+    record?: StorePreparationStepRecord;
+    manual?: string;
+}
+
+/** What an undo put back, what Commerce refused, and what it kept. */
+export interface SetupUndone {
+    changes: string[];
+    rejected: string[];
+    /**
+     * One line naming what the undo left as it is because it changed since the setup (step 06,
+     * AB-83): a setting set again, a catalog or a stock holding someone else's things. Not a
+     * refusal. Absent when nothing was kept.
+     */
+    kept?: string;
+    /**
+     * What stays on the step's record: a catalog or stock the undo kept, so a later undo takes
+     * it once it is empty (owner 2026-10-29, as step 05's container rule). Absent when nothing
+     * stays; a kept setting or source is the SC's now and leaves the record.
+     */
+    remaining?: StorePreparationStepRecord;
+}
+
+export interface StepSetup {
+    preview: (deps: SetupDeps) => Promise<SetupPreview>;
+    apply: (deps: SetupDeps) => Promise<SetupApplied>;
+    undo: (deps: SetupDeps, record: StorePreparationStepRecord) => Promise<SetupUndone>;
+}
+
+/** An error's words. */
+export function errorText(error: unknown): string {
+    return error instanceof Error ? error.message : String(error);
+}

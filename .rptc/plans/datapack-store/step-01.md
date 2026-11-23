@@ -22,7 +22,7 @@ Everything runs in a SCRATCH workspace of the discovery service's Console projec
 
 1. Deploy `render-pdp` as it is, plus `probe-sleep` (a web action that holds an activation
    open for `ms` milliseconds; `actions/probe-sleep/index.js`, step-01 instrument only).
-2. **Baseline.** Time 20 sequential `GET render-pdp?org=skukla&site=kukla-justrite` with a
+2. **Baseline.** Time 20 sequential `GET render-pdp?org=skukla&site=kukla-tailspin` with a
    PDP path. Record p50 / p95 / max and the status codes.
 3. **Load like a well-behaved store.** Hold 5 `probe-sleep` activations open for 50 s each
    and repeat the timing while they run. Expect: no change.

@@ -169,8 +169,13 @@ export function useDashboardActions({
         webviewClient.postMessage('navigateBack');
     }, []);
 
+    // The one Sign In (`authenticate`, every screen's); then the dashboard re-reads
+    // its own status, also when the sign-in turned out not to be needed.
     const handleReAuthenticate = useCallback(() => {
-        webviewClient.postMessage('reAuthenticate');
+        void webviewClient
+            .request('authenticate')
+            .catch(() => undefined)
+            .then(() => webviewClient.postMessage('requestStatus'));
     }, []);
 
     // A status request re-runs every re-runnable on-open check, the org check

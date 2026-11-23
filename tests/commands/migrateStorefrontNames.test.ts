@@ -61,7 +61,7 @@ describe('MigrateStorefrontNamesCommand', () => {
             expect(migrateMock).not.toHaveBeenCalled();
         });
 
-        // Scanning is an inspection. `persistAfterLoad: true` would rewrite the
+        // Scanning is an inspection. Opening each project would rewrite the
         // manifest of every project on disk just for opening the palette command,
         // and the component callback returning anything but an empty list would
         // reconcile instances against a catalog the scan never asked for.
@@ -70,9 +70,7 @@ describe('MigrateStorefrontNamesCommand', () => {
 
             await migrateCommand(sm).execute();
 
-            expect(sm.loadProjectFromPath).toHaveBeenCalledWith('/a', expect.any(Function), {
-                persistAfterLoad: false,
-            });
+            expect(sm.loadProjectFromPath).toHaveBeenCalledWith('/a', expect.any(Function));
             const componentsCallback = (sm.loadProjectFromPath as jest.Mock).mock.calls[0][1];
             expect(componentsCallback()).toStrictEqual([]);
         });

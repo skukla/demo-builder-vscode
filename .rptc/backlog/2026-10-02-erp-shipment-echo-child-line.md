@@ -32,7 +32,7 @@ when every ERP that failed refused the request itself (4xx other than 429) the d
 with the ERP's reason on the Admin page's Activity; a down ERP is still asked again.
 
 ## Shipped so far
-- 2026-10-02  commerce-erp-integration c84a116, deployed to Justrite 07:34Z
+- 2026-10-02  commerce-erp-integration c84a116, deployed to Tailspin 07:34Z
 - 2026-10-02  docs(handoff): the loop report gains AB-38, AB-57 and the deploy at c84a116 (`38f16e9b8`)
 - 2026-10-02  docs(backlog): AB-38 built with two checks open; AB-57 filed and fixed (shipment echoes refused for hours) (`624ee3379`)
 - 2026-10-03  Shipped 2026-10-03 by the owner's finish line for work that lives only in the ERP and integration repositories: on their main branch and deployed (they carry no release tags). Any live proof this item still names is a check, not a reason to hold it open.

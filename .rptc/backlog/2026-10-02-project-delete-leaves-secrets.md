@@ -4,7 +4,7 @@ kind: fix
 area: platform
 needs: []
 value: med
-status: built
+status: shipped
 ---
 
 # Deleting a project leaves its secrets in SecretStorage
@@ -55,3 +55,4 @@ never throws, and logs a kind that would not delete by name only. It runs from
 ## Shipped so far
 - 2026-10-01  fix(projects): deleting a project deletes its secrets from SecretStorage (`252484b7b`)
 - 2026-10-02  fix(projects): a project's secrets follow it through rename and integration removal (`109da5799`)
+- 2026-11-20  Released in v1.0.0-beta.153

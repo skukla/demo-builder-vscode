@@ -4,7 +4,7 @@
  * so a shape the wipe reads cannot be invented here.
  *
  * **None of these bodies is captured.** The website codes and the shared root are facts of
- * scratch-1028's store (`justrite_test_website` shows JustRite's root 119, recorded in step 09 and 10's
+ * scratch-1028's store (`tailspin_test_website` shows Tailspin's root 119, recorded in step 09 and 10's
  * plans); every id, name and SKU below is made up for the test, and Bodea's second store
  * (`bodea_outlet`) is invented to give a website that is only partly chosen. The field names are the
  * ones the engine already reads live (`storeScopeOf`, Assign products' `website_ids`, step 08's
@@ -16,14 +16,14 @@ import type { CommerceCustomer, CommerceOrder, CommerceProduct } from '@/types/c
 
 /** The test website a wipe is pointed at, and the website ids of the demos beside it. */
 export const TEST_SITE_ID = 5;
-export const JUSTRITE_ID = 2;
+export const TAILSPIN_ID = 2;
 export const BODEA_ID = 3;
 
 export const SANDBOX_WEBSITES: CommerceWebsite[] = [
     { id: 1, code: 'base', name: 'Main Website' },
-    { id: JUSTRITE_ID, code: 'justrite', name: 'JustRite' },
+    { id: TAILSPIN_ID, code: 'tailspin', name: 'Tailspin' },
     { id: BODEA_ID, code: 'bodea', name: 'Bodea' },
-    { id: TEST_SITE_ID, code: 'justrite_test_website', name: 'JustRite Test' },
+    { id: TEST_SITE_ID, code: 'tailspin_test_website', name: 'Tailspin Test' },
 ];
 
 /**
@@ -35,22 +35,22 @@ export const ADMIN_WEBSITE: CommerceWebsite = { id: 0, code: 'admin', name: 'Adm
 export const ADMIN_GROUP: CommerceStoreGroup = { id: 0, code: 'default', name: 'Default', website_id: 0, root_category_id: 0 };
 export const ADMIN_VIEW: CommerceStoreView = { id: 0, code: 'admin', name: 'Admin', store_group_id: 0, website_id: 0, is_active: 1 };
 
-/** `justrite_test_store` shows JustRite's root 119; Bodea's two stores have roots of their own, 150 and 160. */
+/** `tailspin_test_store` shows Tailspin's root 119; Bodea's two stores have roots of their own, 150 and 160. */
 export const SANDBOX_GROUPS: CommerceStoreGroup[] = [
     { id: 1, code: 'main_website_store', name: 'Main Website Store', website_id: 1, root_category_id: 2 },
-    { id: 2, code: 'justrite_store', name: 'JustRite Store', website_id: JUSTRITE_ID, root_category_id: 119 },
+    { id: 2, code: 'tailspin_store', name: 'Tailspin Store', website_id: TAILSPIN_ID, root_category_id: 119 },
     { id: 3, code: 'bodea_store', name: 'Bodea Store', website_id: BODEA_ID, root_category_id: 150 },
-    { id: 6, code: 'justrite_test_store', name: 'JustRite Test Store', website_id: TEST_SITE_ID, root_category_id: 119 },
+    { id: 6, code: 'tailspin_test_store', name: 'Tailspin Test Store', website_id: TEST_SITE_ID, root_category_id: 119 },
     { id: 7, code: 'bodea_outlet', name: 'Bodea Outlet', website_id: BODEA_ID, root_category_id: 160 },
 ];
 
 /** One store view per store; the ids are what orders and customers name in `store_id`. */
 export const SANDBOX_VIEWS: CommerceStoreView[] = [
     { id: 1, code: 'default', name: 'Default Store View', store_group_id: 1, website_id: 1, is_active: 1 },
-    { id: 2, code: 'justrite_us', name: 'JustRite US', store_group_id: 2, website_id: JUSTRITE_ID, is_active: 1 },
+    { id: 2, code: 'tailspin_us', name: 'Tailspin US', store_group_id: 2, website_id: TAILSPIN_ID, is_active: 1 },
     { id: 3, code: 'bodea_en', name: 'Bodea English', store_group_id: 3, website_id: BODEA_ID, is_active: 1 },
     { id: 4, code: 'bodea_outlet_en', name: 'Bodea Outlet English', store_group_id: 7, website_id: BODEA_ID, is_active: 1 },
-    { id: 6, code: 'justrite_test_view', name: 'JustRite Test View', store_group_id: 6, website_id: TEST_SITE_ID, is_active: 1 },
+    { id: 6, code: 'tailspin_test_view', name: 'Tailspin Test View', store_group_id: 6, website_id: TEST_SITE_ID, is_active: 1 },
 ];
 
 /** Commerce's visibility: 1 not visible individually, 4 catalog and search. */
@@ -72,7 +72,7 @@ function product(id: number, sku: string, websites: number[], visibility: number
 /** The products a `website_id` filter on the test website answers. */
 export const TEST_SITE_PRODUCTS: CommerceProduct[] = [
     product(900, 'ZZ-ONLY-HERE', [TEST_SITE_ID], 4),
-    product(901, 'ZZ-SHARED-WITH-JUSTRITE', [JUSTRITE_ID, TEST_SITE_ID], 4),
+    product(901, 'ZZ-SHARED-WITH-TAILSPIN', [TAILSPIN_ID, TEST_SITE_ID], 4),
     product(902, 'ZZ-JACKET', [TEST_SITE_ID], 4, { links: [903] }),
     product(903, 'ZZ-JACKET-RED', [TEST_SITE_ID], 1),
     product(904, 'ZZ-LONE-VARIANT', [TEST_SITE_ID], 1),
@@ -95,7 +95,7 @@ export const TEST_SITE_CUSTOMERS: CommerceCustomer[] = [
     { id: 70, email: 'zz.shopper@example.com', firstname: 'Zz', lastname: 'Shopper', website_id: TEST_SITE_ID, extension_attributes: { company_attributes: { company_id: 0 } } },
     { id: 71, email: 'zz.admin@example.com', firstname: 'Zz', lastname: 'Admin', website_id: TEST_SITE_ID, extension_attributes: { company_attributes: { customer_id: 71, company_id: 28 } } },
     { id: 72, email: 'zz.made@example.com', firstname: 'Zz', lastname: 'Made', website_id: TEST_SITE_ID },
-    { id: 80, email: 'justrite.buyer@example.com', firstname: 'Jr', lastname: 'Buyer', website_id: JUSTRITE_ID },
+    { id: 80, email: 'tailspin.buyer@example.com', firstname: 'Jr', lastname: 'Buyer', website_id: TAILSPIN_ID },
 ];
 
 /** Bodea's customers: made in each of its two stores, one with an order in the other, one made in the Admin. */
@@ -147,9 +147,9 @@ export const EDGE_ORDERS: CommerceOrder[] = [
 /** An order of customer 92 in Bodea's outlet store, so 92 belongs to a store not chosen as well. */
 export const BODEA_OUTLET_ORDER: CommerceOrder = { entity_id: 600, increment_id: '000000600', state: 'new', status: 'pending', store_id: 4, customer_id: 92, items: [line(9, 1)] };
 
-/** The category tree, as `categories/list` answers it: JustRite's root 119 and Bodea's roots 150 and 160. */
+/** The category tree, as `categories/list` answers it: Tailspin's root 119 and Bodea's roots 150 and 160. */
 export const SANDBOX_CATEGORIES = [
-    { id: 119, name: 'JustRite Root', path: '1/119' },
+    { id: 119, name: 'Tailspin Root', path: '1/119' },
     { id: 120, name: 'Safety Cans', path: '1/119/120' },
     { id: 150, name: 'Bodea Root', path: '1/150' },
     { id: 151, name: 'Racks', path: '1/150/151' },

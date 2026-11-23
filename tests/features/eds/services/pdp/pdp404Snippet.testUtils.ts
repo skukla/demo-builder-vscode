@@ -96,7 +96,7 @@ async function settle(): Promise<void> {
 export async function visitSmart404(
     pathname: string,
     answer: Smart404Answer,
-    site: { org: string; site: string } = { org: 'skukla', site: 'kukla-justrite' },
+    site: { org: string; site: string } = { org: 'skukla', site: 'kukla-tailspin' },
     search = '',
 ): Promise<Smart404Visit> {
     const requests: Smart404Visit['requests'] = [];

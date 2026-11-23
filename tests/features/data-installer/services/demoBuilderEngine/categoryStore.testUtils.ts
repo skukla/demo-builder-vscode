@@ -3,8 +3,8 @@
  * step 12), so a pack's root can be installed, the SC's Admin step done (the test changes a store's
  * `root_category_id`, as the Admin would) and the pack removed back to zero.
  *
- * The structure is the wipe's sandbox (`commerceWipeFixtures.ts`): `justrite_test_store` shows
- * JustRite's root 119, `bodea_store` has root 150 of its own. Category answers are shaped as
+ * The structure is the wipe's sandbox (`commerceWipeFixtures.ts`): `tailspin_test_store` shows
+ * Tailspin's root 119, `bodea_store` has root 150 of its own. Category answers are shaped as
  * `GET categories/{id}` and `categories/list` answer (`StoreCategory`: id, name, parent_id, path,
  * children); the store lists as `GET store/websites`, `storeGroups`, `storeViews` answer.
  */
@@ -28,7 +28,7 @@ export const FRESCOPA = {
 };
 
 /** The two install targets: one whose store shares its root, one whose store has its own. */
-export const SHARED_TARGET = { websiteCode: 'justrite_test_website', storeCode: 'justrite_test_view' };
+export const SHARED_TARGET = { websiteCode: 'tailspin_test_website', storeCode: 'tailspin_test_view' };
 export const OWN_TARGET = { websiteCode: 'bodea', storeCode: 'bodea_en' };
 
 type Row = Record<string, unknown>;
@@ -54,7 +54,7 @@ export function categoryStore(): CategoryStore {
     const categories = new Map<number, StoreCategory>([
         [1, { id: 1, name: 'Root Catalog', path: '1', children: '2,119,150' }],
         [2, { id: 2, name: 'Default Category', parent_id: 1, path: '1/2', children: '' }],
-        [119, { id: 119, name: 'Justrite', parent_id: 1, path: '1/119', children: '' }],
+        [119, { id: 119, name: 'Tailspin', parent_id: 1, path: '1/119', children: '' }],
         [150, { id: 150, name: 'Bodea Root', parent_id: 1, path: '1/150', children: '' }],
     ]);
     const groups = [ADMIN_GROUP, ...SANDBOX_GROUPS].map((g) => ({ ...g }));

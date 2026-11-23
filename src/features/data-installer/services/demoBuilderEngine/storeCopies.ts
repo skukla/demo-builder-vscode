@@ -21,13 +21,26 @@ import { fingerprintRow } from './fingerprint';
 import type { CreatedObject } from './installRecord';
 import { eachCopy, type KindContext, segment } from './kindContext';
 import { attributePackForm, categoryPackForm, keyOf, productPackForm } from './packForm';
+import { PRODUCT_EXPORT_KIND } from './productExportKind';
 import type { ProductLookups } from './productLookups';
+import { runInBatches } from '@/core/utils/promiseUtils';
 import { readAllPages } from '@/features/app-builder/services/erpFillReaders';
-import { type Inventory, readInventory } from '@/features/app-builder/services/storePreparation/warehouseFix';
+import { type Inventory, readInventory } from '@/features/app-builder/services/storePreparation/warehouseSetup';
 import type { CommerceProduct, CommerceSetAttribute } from '@/types/commerceWire';
 
-/** SKUs per search: short enough for any address, long enough to be few calls. */
-const SKUS_PER_READ = 20;
+/**
+ * SKUs per search: short enough for any address (50 SKUs of 64 characters, the longest Commerce takes,
+ * make about 4 KB), long enough to be few calls. Measured 2026-11-06: a page of 50 products took about
+ * 1.7 s and a page of 20 about 1.1 s, so 50 reads Luma's 2,048 in about two thirds of the time.
+ */
+const SKUS_PER_READ = 50;
+
+/**
+ * Pages of SKUs read at once. One after another, the read-back after Luma's 2,046 products took over
+ * three minutes of a twelve-minute install, and as long again checking for edits before removal
+ * (2026-11-06).
+ */
+const READS_AT_ONCE = 5;
 
 /** The pack data kind a recorded kind's rows live under. Options live in their attributes. */
 export function packKindOf(kind: string): string {
@@ -35,16 +48,36 @@ export function packKindOf(kind: string): string {
 }
 
 /**
+ * The pack kind a recorded kind's rows live under in these items: a product or gift card comes from
+ * `product_export` (the service's import form, `productExportKind.ts`) when the pack carries its
+ * products that way.
+ */
+export function packKindIn(kind: string, items: Record<string, unknown>): string {
+    if ((kind === 'products' || kind === 'giftcards') && !(kind in items) && PRODUCT_EXPORT_KIND in items) return PRODUCT_EXPORT_KIND;
+    return packKindOf(kind);
+}
+
+/**
+ * An import body's store-wide rows as product rows (`{ product: row }`, so they are keyed and hashed as
+ * products are), gift cards apart from the rest; undefined for anything else.
+ */
+function importRowsOf(kind: string, records: unknown): unknown[] | undefined {
+    if (kind !== 'products' && kind !== 'giftcards') return undefined;
+    const items = (records as { source?: { items?: unknown } } | null)?.source?.items;
+    if (!Array.isArray(items)) return undefined;
+    return (items as Row[]).filter((r) => !r.store_view_code && (r.product_type === 'giftcard') === (kind === 'giftcards')).map((r) => ({ product: r }));
+}
+
+/**
  * Every row a search route holds for these SKUs, a page of SKUs at a time: products from
  * `products`, quantities from `inventory/source-items`.
  */
 export async function readBySku<T>(ctx: KindContext, route: string, skus: readonly string[]): Promise<T[]> {
-    const found: T[] = [];
     // A comma would split one SKU into two in an "in" search; such a SKU is read on its own.
     const plain = skus.filter((sku) => !sku.includes(','));
-    for (let start = 0; start < plain.length; start += SKUS_PER_READ) {
-        found.push(...(await readAllPages<T>(ctx.get, route, filterIn('sku', plain.slice(start, start + SKUS_PER_READ)))));
-    }
+    const groups = Array.from({ length: Math.ceil(plain.length / SKUS_PER_READ) }, (_, i) => plain.slice(i * SKUS_PER_READ, (i + 1) * SKUS_PER_READ));
+    const pages = await runInBatches(groups, READS_AT_ONCE, (group) => readAllPages<T>(ctx.get, route, filterIn('sku', group)));
+    const found: T[] = pages.flat();
     for (const sku of skus.filter((s) => s.includes(','))) {
         found.push(...(await readAllPages<T>(ctx.get, route, filterBy('sku', sku))));
     }
@@ -56,8 +89,22 @@ export function readProducts(ctx: KindContext, skus: readonly string[]): Promise
     return readBySku<CommerceProduct>(ctx, 'products', skus);
 }
 
+/**
+ * The products of these SKUs: those already read, and a read of the rest (Commerce matches a SKU in
+ * any case). A save's capture passes the website's products it read whole (walk F90); the install
+ * check, the products the install's read-back read moments before (`recordFingerprints`).
+ */
+export async function productsOf(ctx: KindContext, skus: readonly string[], known: readonly CommerceProduct[]): Promise<CommerceProduct[]> {
+    const have = new Map(known.map((p) => [p.sku.toLowerCase(), p]));
+    const found = skus.map((sku) => have.get(sku.toLowerCase())).filter((p): p is CommerceProduct => p !== undefined);
+    const missing = skus.filter((sku) => !have.has(sku.toLowerCase()));
+    return missing.length > 0 ? [...found, ...(await readProducts(ctx, missing))] : found;
+}
+
 type Copies = Map<string, unknown>;
-type Reader = (ctx: KindContext, lk: ProductLookups, objects: readonly CreatedObject[], inventory: () => Promise<Inventory>) => Promise<Copies>;
+/** Told of the products a read-back read, as the store holds them, so a later check need not read them again. */
+export type ProductsSeen = (products: readonly CommerceProduct[]) => void;
+type Reader = (ctx: KindContext, lk: ProductLookups, objects: readonly CreatedObject[], inventory: () => Promise<Inventory>, seen: ProductsSeen) => Promise<Copies>;
 
 /** The attribute by code, or undefined when the store no longer has it. */
 async function attributeOrNone(lk: ProductLookups, code: string) {
@@ -68,12 +115,25 @@ async function attributeOrNone(lk: ProductLookups, code: string) {
     }
 }
 
+/**
+ * The lookups, naming a product by id from products already read. A configurable names its children by
+ * id, and the pages just read hold most of them: asked for one at a time, Luma's 1,900 children took
+ * two minutes of the read-back (2026-11-06). Only an id not read costs a request.
+ */
+export function knowingSkus(lk: ProductLookups, products: readonly CommerceProduct[]): ProductLookups {
+    const skuOfId = new Map(products.map((p) => [String(p.id), p.sku]));
+    return { ...lk, productSku: async (id) => skuOfId.get(String(id)) ?? lk.productSku(id) };
+}
+
 /** Products by SKU, a page of SKUs at a time; a gift card is one too (step 11). */
-const productReader: Reader = async (ctx, lk, objects) => {
-    const bySku = new Map((await readProducts(ctx, objects.map((o) => o.id))).map((p) => [p.sku, p]));
+const productReader: Reader = async (ctx, lk, objects, _inventory, seen) => {
+    const products = await readProducts(ctx, objects.map((o) => o.id));
+    seen(products);
+    const bySku = new Map(products.map((p) => [p.sku, p]));
+    const known = knowingSkus(lk, products);
     return eachCopy(objects, async (o) => {
         const raw = bySku.get(o.id);
-        return raw ? productPackForm(lk, raw) : undefined;
+        return raw ? productPackForm(known, raw) : undefined;
     });
 };
 
@@ -161,10 +221,16 @@ export async function readCopies(
     kind: string,
     objects: readonly CreatedObject[],
     inventory: () => Promise<Inventory> = onceInventory(ctx),
+    seen: ProductsSeen = () => undefined,
 ): Promise<Copies> {
     const reader = READERS[kind];
     if (!reader || objects.length === 0) return new Map();
-    return reader(ctx, lk, objects, inventory);
+    // How long each kind takes to read back, in Debug Logs: the read-back and removal's check for
+    // edits each took two to three minutes for Luma, and which kind spent it was not known.
+    const started = Date.now();
+    const copies = await reader(ctx, lk, objects, inventory, seen);
+    ctx.log(`read back ${objects.length} ${kind} in ${((Date.now() - started) / 1000).toFixed(1)}s`);
+    return copies;
 }
 
 /** The inventory's three lists, read once however many kinds ask. */
@@ -181,7 +247,7 @@ const list = (value: unknown, field?: string): unknown[] => {
 
 /** A pack kind's rows, as a list of single rows. */
 function rowsOf(kind: string, records: unknown): unknown[] {
-    const assignments = b2bRowsOf(kind, records);
+    const assignments = b2bRowsOf(kind, records) ?? importRowsOf(kind, records);
     if (assignments) return assignments;
     switch (kind) {
         case 'categories': {

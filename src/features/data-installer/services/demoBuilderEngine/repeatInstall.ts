@@ -25,6 +25,8 @@
  * @module features/data-installer/services/demoBuilderEngine/repeatInstall
  */
 
+import { dataTypeLabel } from '../../ui/dataTypeLabel';
+import { leaveAdopted } from './adoptedObjects';
 import { addMissingOptions, parseAttributeRows } from './attributesKind';
 import { updateCartRule } from './cartRulesKind';
 import { updateCompany } from './companiesKind';
@@ -32,12 +34,19 @@ import { updateCoupon } from './couponsKind';
 import { updateCustomer, updateCustomerGroup } from './customerKinds';
 import { fingerprintRow } from './fingerprint';
 import type { CreatedObject } from './installRecord';
-import { type KindContext, ownedKey, segment } from './kindContext';
+import { type KindContext, ownedId, ownedKey, segment } from './kindContext';
+import { keyOf } from './packForm';
+import { type ExportRow, PRODUCT_EXPORT_KIND, updateProductRows } from './productExportKind';
+import { PRODUCT_KINDS } from './productKinds';
 import { productLookups } from './productLookups';
 import { parseProductRows, toCommerceProduct } from './productsKind';
+import { inLanes } from './readLanes';
 import { tryRow } from './refusedRows';
-import { type KeptContainer, decideRemovals, takeBack } from './removers';
-import { READABLE_KINDS, packKindOf, packedFingerprint, readCopies, rowsByKey } from './storeCopies';
+import { type RefusedRemoval, takeBackAll } from './removalRuns';
+import { type KeptContainer, decideRemovals } from './removers';
+import { counted } from './rowCount';
+import { READABLE_KINDS, packKindIn, packedFingerprint, readCopies, rowsByKey } from './storeCopies';
+import { andList } from '@/core/utils/andList';
 import { type OwnedChange, decideOwnedChange } from '@/core/utils/ownedChange';
 
 /** What becomes of one recorded object. `create` from the rule means the SC deleted it. */
@@ -46,11 +55,19 @@ export interface PlannedObject {
     outcome: OwnedChange;
     /** The pack's row for it, when the pack still has one. */
     row?: unknown;
+    /**
+     * The object hashed afresh from the store's copy, under the pack's name for it, when that copy moved
+     * since the record and is now the pack's row (`refreshedOf`): what the record should say once a move
+     * onto this version has shown the store already matches it (walk F223).
+     */
+    refreshed?: CreatedObject;
 }
 
 /** One recorded kind's objects, and the pack's rows of that kind no object was made for yet. */
 export interface KindPlan {
     kind: string;
+    /** The pack kind its rows came from: a product's is `products`, or `product_export` (`packKindIn`). */
+    packKind: string;
     objects: PlannedObject[];
     added: string[];
 }
@@ -59,6 +76,8 @@ export interface KindPlan {
 export interface KeptThing {
     kind: string;
     key: string;
+    /** The SC deleted it in the Admin, so it stays deleted: counted on its own line (`keptLine`). */
+    deleted?: true;
 }
 
 type Items = Record<string, unknown>;
@@ -71,16 +90,46 @@ function wantedOf(kind: string, object: CreatedObject, row: unknown, current: st
     return packed === object.wrote && current !== undefined ? current : packed;
 }
 
-async function planKind(ctx: KindContext, kind: string, objects: CreatedObject[], records: unknown): Promise<KindPlan> {
-    const copies = await readCopies(ctx, productLookups(ctx), kind, objects);
+/**
+ * The record's object under the pack's name for it. Two kinds were recorded by a store id until
+ * 2026-11-06, an attribute in a set ("155/size", where the pack says "Top/size") and a stock's
+ * source link ("7/east", where it says "Bodea Stock/east"), so a reinstall found no row and took
+ * every one out. Any record whose name the pack does not use is matched by the name the store's
+ * copy gives it, since taking out is the one decision that cannot be undone.
+ */
+function packKeyOf(kind: string, object: CreatedObject, copy: unknown, rows: ReadonlyMap<string, unknown>): CreatedObject {
+    if (object.key === undefined || rows.has(object.key) || copy === undefined) return object;
+    const named = keyOf(kind, copy);
+    return named !== undefined && rows.has(named) ? { ...object, key: named } : object;
+}
+
+/**
+ * The object as the record should hold it once the store is known to match this pack: the pack's name,
+ * the store copy's hash and the row's, every other field kept. Only for a copy that moved since the
+ * record (one that did not needs nothing) and IS the row now (hashed whole, or as the record keeps a
+ * row, without a customer's password); an object the SC edited away from the row keeps its hashes, as
+ * it is a change.
+ */
+function refreshedOf(kind: string, object: CreatedObject, current: string | undefined, row: unknown): CreatedObject | undefined {
+    if (object.key === undefined || current === undefined || row === undefined || current === object.fingerprint) return undefined;
+    const wrote = packedFingerprint(kind, row);
+    if (current !== wrote && current !== fingerprintRow(row)) return undefined;
+    return { ...object, fingerprint: current, wrote };
+}
+
+async function planKind(ctx: KindContext, kind: string, recorded: CreatedObject[], records: unknown): Promise<Omit<KindPlan, 'packKind'>> {
+    const copies = await readCopies(ctx, productLookups(ctx), kind, recorded);
     const rows = rowsByKey(kind, records);
+    const objects = recorded.map((object) => packKeyOf(kind, object, copies.get(object.id), rows));
     const planned = objects.map((object): PlannedObject => {
         const row = object.key === undefined ? undefined : rows.get(object.key);
-        if (object.key === undefined || object.fingerprint === undefined) return { object, outcome: 'leave-not-ours', row };
         const copy = copies.get(object.id);
         const current = copy === undefined ? undefined : fingerprintRow(copy);
+        const refreshed = refreshedOf(kind, object, current, row);
+        const fresh = refreshed ? { refreshed } : {};
+        if (object.key === undefined || object.fingerprint === undefined) return { object, outcome: 'leave-not-ours', row, ...fresh };
         const outcome = decideOwnedChange({ recorded: object.fingerprint, current, wanted: wantedOf(kind, object, row, current) });
-        return { object, outcome, row };
+        return { object, outcome, row, ...fresh };
     });
     const known = new Set(objects.map((o) => o.key).filter((k): k is string => k !== undefined));
     return { kind, objects: planned, added: [...rows.keys()].filter((key) => !known.has(key)) };
@@ -91,13 +140,26 @@ async function planKind(ctx: KindContext, kind: string, objects: CreatedObject[]
  * kinds the request installs. Reads only.
  */
 export async function planRepeat(ctx: KindContext, items: Items, created: readonly CreatedObject[]): Promise<KindPlan[]> {
-    const plans: KindPlan[] = [];
-    for (const kind of READABLE_KINDS) {
-        const packKind = packKindOf(kind);
-        if (!(packKind in items)) continue;
-        plans.push(await planKind(ctx, kind, created.filter((o) => o.kind === kind), items[packKind]));
-    }
-    return plans;
+    // Products beside the rest (walk F160): they were most of a minute, read after everything else.
+    const kinds = READABLE_KINDS.filter((kind) => packKindIn(kind, items) in items);
+    const plans = await inLanes(kinds, async (kind): Promise<KindPlan> => {
+        const packKind = packKindIn(kind, items);
+        return { ...(await planKind(ctx, kind, created.filter((o) => o.kind === kind), items[packKind])), packKind };
+    });
+    return [...plans.values()];
+}
+
+const objectSlot = (object: CreatedObject): string => JSON.stringify([object.kind, object.id]);
+
+/**
+ * The record's objects with each one the plans hashed afresh (`PlannedObject.refreshed`) in its place,
+ * in the record's order; an object of a kind not planned stays as it is. What a move onto the planned
+ * version records when that version changed nothing in the store (walk F223).
+ */
+export function rebasedRecord(created: readonly CreatedObject[], plans: readonly KindPlan[]): CreatedObject[] {
+    const fresh = new Map<string, CreatedObject>();
+    for (const { object, refreshed } of plans.flatMap((plan) => plan.objects)) if (refreshed) fresh.set(objectSlot(object), refreshed);
+    return created.map((object) => fresh.get(objectSlot(object)) ?? object);
 }
 
 /** The ids a kind's install should use for the pack's rows, and the ones the SC deleted. */
@@ -115,7 +177,7 @@ type Updater = (ctx: KindContext, object: CreatedObject, row: unknown) => Promis
 
 /** A product brought up to its row with `PUT products/{sku}`; a gift card too (step 11). */
 const updateProduct: Updater = async (ctx, object, row) => {
-    if (ctx.session.websiteId === undefined) throw new Error('The install target names no website, so the pack\'s products have nowhere to be sold.');
+    if (ctx.session.websiteId === undefined) throw new Error('The install target names no website, so the datapack\'s products have nowhere to be sold.');
     const [product] = parseProductRows([row]);
     const { stock_item: _stock, ...ext } = (product.extension_attributes ?? {}) as Row;
     // Quantities are the source items' business; a stock block would reset them.
@@ -153,17 +215,64 @@ const UPDATERS: Record<string, Updater> = {
  * ends (`recordFingerprints`), and its pack hash moves to the row it now matches.
  */
 export async function applyUpdates(ctx: KindContext, plans: readonly KindPlan[], packKind: string): Promise<void> {
-    for (const plan of plans.filter((p) => packKindOf(p.kind) === packKind)) {
+    if (packKind === PRODUCT_EXPORT_KIND) return updateByImport(ctx, plans.filter((p) => p.packKind === packKind));
+    for (const plan of plans.filter((p) => p.packKind === packKind)) {
         const update = UPDATERS[plan.kind];
         for (const { object, outcome, row } of plan.objects) {
-            if (outcome !== 'update' || !update) continue;
-            // Step 14 item 3: an update Commerce refuses is skipped, named, and tried again next install.
-            const done = await tryRow(ctx, { kind: object.kind, key: object.key ?? object.id }, async () => (await update(ctx, object, row), true));
-            if (!done) continue;
-            await ctx.recorder.update({ kind: object.kind, id: object.id, fingerprint: undefined, wrote: packedFingerprint(plan.kind, row) });
-            ctx.log(`brought ${object.kind} ${object.key ?? object.id} up to the pack`);
+            if (outcome !== 'update') continue;
+            // Counted in the kind's rows (`rowsToCount`) whatever the update did; the install leaves it be.
+            if (update) await counted(ctx, plan.kind, object.key ?? [], () => updateOne(ctx, plan.kind, update, object, row));
+            else ctx.count?.settled(plan.kind, object.key);
         }
     }
+}
+
+/** Bring one object up to its row, and record that it was. */
+async function updateOne(ctx: KindContext, kind: string, update: Updater, object: CreatedObject, row: unknown): Promise<void> {
+    // Step 14 item 3: an update Commerce refuses is skipped, named, and tried again next install.
+    const done = await tryRow(ctx, { kind: object.kind, key: object.key ?? object.id }, async () => (await update(ctx, object, row), true));
+    if (!done) return;
+    await ctx.recorder.update({ kind: object.kind, id: object.id, fingerprint: undefined, wrote: packedFingerprint(kind, row) });
+    ctx.log(`brought ${object.kind} ${object.key ?? object.id} up to the pack`);
+}
+
+/** Pack kinds that say their own count (`bulkProducts.ts`, `sourceItemsKind.ts`), so none is started for them here. */
+const OWN_COUNT: ReadonlySet<string> = new Set([...PRODUCT_KINDS, PRODUCT_EXPORT_KIND, 'source_items']);
+
+/**
+ * The pack's rows of one kind this install will handle, by the pack's name for each, for the kind's
+ * count (`rowCount.ts`): a row nothing was made for yet, and one the plan brings up to the pack. A row
+ * this engine made, unchanged or kept as the SC left it, is not handled, so installing again with
+ * nothing to write counts nothing. An attribute the store had counts until an install has added one of
+ * the pack's options to it; one whose options the store already had all of counts on every install, as
+ * nothing records it. None for a kind that keeps no record by key: one that writes rows
+ * counts its own (`customersExportKind.ts`, `storeConfigKind.ts`).
+ */
+export function rowsToCount(ctx: KindContext, plans: readonly KindPlan[], packKind: string, records: unknown): string[] {
+    if (OWN_COUNT.has(packKind)) return [];
+    const updating = new Set(plans.filter((p) => p.kind === packKind).flatMap((p) => p.objects.filter((o) => o.outcome === 'update').map((o) => o.object.key)));
+    const recorded = new Set(ctx.recorder.created.map((o) => ownedKey(o.kind, o.key ?? o.id)));
+    const made = (kind: string, key: string): boolean => ownedId(ctx.session, kind, key) !== undefined || recorded.has(ownedKey(kind, key));
+    const rows = rowsByKey(packKind, records);
+    // The store's own attribute: an earlier install that added an option to it handled it (the store
+    // may have had the rest, which nothing records).
+    const optionsMade = (key: string): boolean =>
+        packKind === 'product_attributes' && [...rowsByKey('attribute_options', [rows.get(key)]).keys()].some((option) => made('attribute_options', option));
+    return [...rows.keys()].filter((key) => updating.has(key) || !(made(packKind, key) || optionsMade(key)));
+}
+
+/**
+ * A `product_export` pack's updates: every product to bring up to the pack in one set of import calls
+ * (`updateProductRows`), not one `PUT` each, then each recorded as a product updated is.
+ */
+async function updateByImport(ctx: KindContext, plans: readonly KindPlan[]): Promise<void> {
+    const todo = plans.flatMap((plan) => plan.objects.filter((o) => o.outcome === 'update' && o.row !== undefined).map((o) => ({ plan, ...o })));
+    if (todo.length === 0) return;
+    const rows = todo.map((t) => (t.row as { product: ExportRow }).product);
+    const updated = new Set(await updateProductRows(ctx, rows));
+    const done = todo.filter((t) => updated.has((t.row as { product: ExportRow }).product.sku));
+    await ctx.recorder.update(...done.map((t) => ({ kind: t.object.kind, id: t.object.id, fingerprint: undefined, wrote: packedFingerprint(t.plan.kind, t.row) })));
+    for (const t of done) ctx.log(`brought ${t.object.kind} ${t.object.key ?? t.object.id} up to the pack`);
 }
 
 /** Install order, so removal can run it backwards. */
@@ -182,33 +291,71 @@ export function removalsOf(plans: readonly KindPlan[]): CreatedObject[] {
     return ordered.flatMap((plan) => [...plan.objects].reverse().filter((o) => o.outcome === 'remove').map((o) => o.object));
 }
 
+/** What taking out what the pack no longer has did. */
+export interface Removals {
+    /** Containers kept because they hold what this engine did not make. */
+    containers: KeptContainer[];
+    /** What was taken out. */
+    tookOut: CreatedObject[];
+    /** What Commerce would not take out: still in the store and on the record (`takeBackAll`). */
+    refused: RefusedRemoval[];
+}
+
 /**
  * Take out what the pack no longer has, keeping a category or set that holds what this engine
  * did not make (`decideRemovals`, the rule a whole-pack removal applies too), and drop from the
  * record what is gone from both.
- *
- * @returns the containers kept
  */
-export async function applyRemovals(ctx: KindContext, plans: readonly KindPlan[]): Promise<KeptContainer[]> {
+export async function applyRemovals(ctx: KindContext, plans: readonly KindPlan[]): Promise<Removals> {
     for (const { object } of plans.flatMap((p) => p.objects).filter((o) => o.outcome === 'gone')) await ctx.recorder.drop(object);
-    const { take, kept } = await decideRemovals(ctx.get, removalsOf(plans));
-    for (const object of take) {
-        await takeBack(ctx, object);
-        await ctx.recorder.drop(object);
-        ctx.log(`took out ${object.kind} ${object.key ?? object.id}: the pack no longer has it`);
-    }
-    return kept;
+    // What the store had before stays there, off the record (walk F187).
+    const { take, kept } = await decideRemovals(ctx.get, await leaveAdopted(ctx.recorder, removalsOf(plans)));
+    const tookOut: CreatedObject[] = [];
+    const said = (objects: readonly CreatedObject[]): void => {
+        tookOut.push(...objects);
+        for (const o of objects) ctx.log(`took out ${o.kind} ${o.key ?? o.id}: the pack no longer has it`);
+    };
+    // As a removal takes things back, with as few calls as Commerce allows (`removalRuns.ts`).
+    const refused = await takeBackAll(ctx, ctx.recorder, take, said);
+    return { containers: kept, tookOut, refused };
+}
+
+/**
+ * The one line a repeat install says about what it took out, by kind, or nothing. Said because a
+ * removal is the one change an install makes that the SC may not expect (2026-11-06: 40 attributes
+ * left their sets with nothing in the outcome to say so).
+ */
+export function tookOutLine(tookOut: readonly CreatedObject[]): string | undefined {
+    if (tookOut.length === 0) return undefined;
+    const counts = new Map<string, number>();
+    for (const o of tookOut) counts.set(o.kind, (counts.get(o.kind) ?? 0) + 1);
+    const kinds = [...counts].map(([kind, n]) => `${dataTypeLabel(kind).toLowerCase()} (${n.toLocaleString('en-US')})`);
+    const count = tookOut.length === 1 ? '1 item' : `${tookOut.length.toLocaleString('en-US')} items`;
+    return `Took out ${count} the datapack no longer has: ${andList(kinds)}.`;
 }
 
 /** What the plan keeps because the SC changed or deleted it. */
 export function keptOf(plans: readonly KindPlan[]): KeptThing[] {
     return plans.flatMap(({ kind, objects }) =>
-        objects.filter((o) => o.outcome === 'leave-edited' || o.outcome === 'create').map((o) => ({ kind, key: o.object.key ?? o.object.id })),
+        objects
+            .filter((o) => o.outcome === 'leave-edited' || o.outcome === 'create')
+            .map((o) => ({ kind, key: o.object.key ?? o.object.id, ...(o.outcome === 'create' ? { deleted: true as const } : {}) })),
     );
 }
 
-/** The one line a repeat install says about what it kept, or nothing when it kept nothing. */
+const items = (n: number): string => (n === 1 ? '1 item' : `${n.toLocaleString('en-US')} items`);
+
+/**
+ * What a repeat install says about what it kept, or nothing when it kept nothing: what the SC changed,
+ * then what they deleted, each line only when it applies (owner, 2026-11-14): "Kept 3 items changed in
+ * the Admin. Left out 1 item deleted in the Admin."
+ */
 export function keptLine(kept: readonly KeptThing[]): string | undefined {
-    if (kept.length === 0) return undefined;
-    return `Kept ${kept.length} ${kept.length === 1 ? 'thing' : 'things'} you had changed in the Admin.`;
+    const deleted = kept.filter((thing) => thing.deleted).length;
+    const changed = kept.length - deleted;
+    const lines = [
+        changed > 0 ? `Kept ${items(changed)} changed in the Admin.` : undefined,
+        deleted > 0 ? `Left out ${items(deleted)} deleted in the Admin.` : undefined,
+    ];
+    return lines.filter(Boolean).join(' ') || undefined;
 }

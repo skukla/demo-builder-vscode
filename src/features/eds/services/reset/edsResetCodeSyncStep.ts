@@ -18,7 +18,7 @@ import type { GitHubFileOperations } from '../github/githubFileOperations';
 import type { GitHubTokenService } from '../github/githubTokenService';
 import { HelixService } from '../helix/helixService';
 import { previewCodeAwaitingAdminRole } from '../helix/previewCodeAwaitingAdminRole';
-import { confirmStorefrontCodeServed } from '../storefront/codeServed';
+import { type CodeServedResult, confirmStorefrontCodeServed } from '../storefront/codeServed';
 import type { EdsResetParams } from './edsResetParams';
 import { RESET_STEP } from '@/core/utils/resetStages';
 import type { HandlerContext } from '@/types/handlers';
@@ -133,26 +133,28 @@ export async function republishCodeIfMissed(
  * Confirm the site serves everything the reset committed after its own commit (the
  * build step's fixes, the blocks, the smart 404 handler), publishing again any file it
  * does not (`codeServed.ts`). The publish before it reads AEM's copy of the repository,
- * which can lag the last few commits: on 2026-10-23 JustRite's reset left the site on
+ * which can lag the last few commits: on 2026-10-23 Tailspin's reset left the site on
  * the old code for all three of its fixes.
  *
  * @param params - reset parameters (the repository)
  * @param resetCommitSha - the reset's own commit
  * @param clients - credentials, the repository reader and logger
  * @param report - progress reporter
- * @returns a sentence for the SC when some code still did not reach the site, else undefined
+ * @returns the files the site still does not serve, and the SC's sentence when there are any
  */
 export async function confirmResetCodeServed(
     params: Pick<EdsResetParams, 'repoOwner' | 'repoName'>,
     resetCommitSha: string,
     clients: RepublishClients & { githubFileOps: GitHubFileOperations },
     report: (step: number, message: string) => void,
-): Promise<string | undefined> {
+): Promise<CodeServedResult> {
     const { githubFileOps, githubTokenService, tokenProvider, logger } = clients;
-    report(RESET_STEP.publishingCodeAndSettings, 'Checking the site serves the new code');
+    // On the last step, where the live site is checked: it runs after the content, so on step 2
+    // the run read "10 of 11", "2 of 11", "11 of 11" (owner, 2026-11-04).
+    report(RESET_STEP.checkingSettings, 'Checking the site serves the new code');
     const helix = new HelixService(logger, githubTokenService, tokenProvider);
     const site = { owner: params.repoOwner, repo: params.repoName };
-    const sentence = await confirmStorefrontCodeServed(githubFileOps, helix, site, resetCommitSha, logger);
-    if (sentence) report(RESET_STEP.publishingCodeAndSettings, `⚠️ ${sentence}`);
-    return sentence;
+    const served = await confirmStorefrontCodeServed(githubFileOps, helix, site, resetCommitSha, logger);
+    if (served.sentence) report(RESET_STEP.checkingSettings, `⚠️ ${served.sentence}`);
+    return served;
 }

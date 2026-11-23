@@ -15,7 +15,7 @@ jest.mock('@/features/project-creation/services/addedDemoSettings', () => ({
     rememberAddedDemo: jest.fn(async (demo: unknown) => [demo]),
 }));
 
-const JEN = makeAddedDemo();
+const ROBIN = makeAddedDemo();
 
 function ctx() {
     return createMockHandlerContext({
@@ -31,14 +31,14 @@ describe('handleAddSharedDemo', () => {
     });
 
     it('remembers the row as given and hands it back', async () => {
-        const result = await handleAddSharedDemo(ctx(), { demo: JEN });
+        const result = await handleAddSharedDemo(ctx(), { demo: ROBIN });
 
-        expect(result).toEqual({ success: true, result: { demo: JEN } });
-        expect(rememberAddedDemo).toHaveBeenCalledWith(JEN);
+        expect(result).toEqual({ success: true, result: { demo: ROBIN } });
+        expect(rememberAddedDemo).toHaveBeenCalledWith(ROBIN);
     });
 
     it('keeps the zip record the dialog put on a card made from a zip', async () => {
-        const zip = { ...JEN, createdFromZip: true as const };
+        const zip = { ...ROBIN, createdFromZip: true as const };
 
         await handleAddSharedDemo(ctx(), { demo: zip });
 
@@ -50,7 +50,7 @@ describe('handleAddSharedDemo', () => {
             success: false,
             error: expect.stringMatching(/source is required/),
         });
-        const bad = { ...JEN, source: { owner: 'jen', repo: 'x;rm' } };
+        const bad = { ...ROBIN, source: { owner: 'robin', repo: 'x;rm' } };
         expect(await handleAddSharedDemo(ctx(), { demo: bad })).toEqual({
             success: false,
             error: expect.stringMatching(/Invalid GitHub repo/),

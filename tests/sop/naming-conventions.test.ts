@@ -38,8 +38,6 @@ const srcDir = path.join(repoRoot, 'src');
  * shape: a file named for its SUBJECT rather than for one export.
  */
 const COMPONENT_NAME_EXEMPTIONS: Record<string, string> = {
-    'src/core/ui/components/feedback/ApiCatalogFeedback.tsx':
-        'exports renderApiCatalogFeedback + ApiCatalogFeedbackState — a render helper for the subject, not a component of that name',
     'src/features/authentication/ui/components/AdobeEntityFields.tsx':
         'plural: holds the AdobeProjectField and AdobeWorkspaceField family, so no single export can carry the filename',
 };

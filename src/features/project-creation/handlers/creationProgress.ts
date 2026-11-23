@@ -27,6 +27,7 @@ import { stageLine, stepUnder } from '@/core/utils/stageLine';
 import type { Project } from '@/types/base';
 import type { HandlerContext } from '@/types/handlers';
 import { isEdsStackId } from '@/types/typeGuards';
+import type { CreationPause } from '@/types/webview';
 import type { CreationProgressPayload } from '@/types/webviewPayloads';
 import type { ProjectCreationConfig } from '@/types/webviewRequests';
 
@@ -67,6 +68,11 @@ export interface CreationReporter {
     report: ProgressTracker;
     /** Number each step from now on by its place in `steps`. */
     numberFrom: (steps: readonly string[]) => void;
+    /**
+     * Pause on a failed step, or take the pause down (undefined). The step is named
+     * because it can fail before it reports anything.
+     */
+    pause: (pause?: CreationPause, stage?: string) => void;
 }
 
 /**
@@ -79,14 +85,29 @@ export interface CreationReporter {
  *
  * @param sendMessage - the wizard's channel
  * @param startedAt - when the run began, for the screen's clock
+ * @param stop - the run's stop: once stopped, the step still finishing reports nothing, so
+ *   the screen keeps saying it is stopping (`creationRun.ts`, F274)
  * @returns the reporter
  */
 export function creationReporter(
     sendMessage: HandlerContext['sendMessage'],
     startedAt: number = Date.now(),
+    stop?: AbortSignal,
 ): CreationReporter {
     let steps: readonly string[] = [];
-    const report: ProgressTracker = (stage, progress, message, position, note) => {
+    let last: CreationProgressPayload | undefined;
+    // One push for both: the step, and the same step paused or resumed.
+    const send = (payload: CreationProgressPayload, remember = true): void => {
+        if (remember) last = payload;
+        void sendMessage('creationProgress', payload);
+    };
+    const onStep = (from: CreationProgressPayload, stage: string): CreationProgressPayload => {
+        const at = stepPosition(steps, stage);
+        const { position: _was, ...rest } = from;
+        return { ...rest, currentOperation: stage, message: detailFor(stage) ?? '', ...(at ? { position: at } : {}) };
+    };
+    const report: ProgressTracker = (stage, progress, message, position, stepsRemaining) => {
+        if (stop?.aborted) return;
         const line = stepUnder(stage, message) ?? detailFor(stage) ?? '';
         const at = position ?? stepPosition(steps, stage);
         const payload: CreationProgressPayload = {
@@ -96,9 +117,9 @@ export function creationReporter(
             logs: [],
             ...(at ? { position: at } : {}),
             startedAt,
-            ...(note ? { note } : {}),
+            ...(stepsRemaining !== undefined ? { stepsRemaining } : {}),
         };
-        void sendMessage('creationProgress', payload);
+        send(payload);
         // ...and to an AGENT, which has no wizard screen to send to. A `create_project`
         // used to announce itself and then say nothing for two minutes (PL-59 R3).
         reportPhase(line ? `${stageLine(stage, at)} — ${line}` : stageLine(stage, at));
@@ -107,6 +128,15 @@ export function creationReporter(
         report,
         numberFrom: (list) => {
             steps = list;
+        },
+        // The failed step and line 2, with the pause or without it (F307). A step that
+        // failed before reporting is put on screen first, so the pause names it.
+        pause: (pause, stage) => {
+            if (stop?.aborted || !last) return;
+            if (stage && stage !== last.currentOperation) last = onStep(last, stage);
+            const { pause: _shown, ...step } = last;
+            send(pause ? { ...step, pause } : step, false);
+            if (pause) reportPhase(`${stageLine(step.currentOperation, step.position)} — ${pause.reason}`);
         },
     };
 }

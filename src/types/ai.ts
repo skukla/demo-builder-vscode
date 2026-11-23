@@ -40,7 +40,7 @@ export const DEMO_BUILDER_ALWAYS_ON_SKILLS = [
     // Diagnosis
     'diagnose-demo',
     // Sample data
-    'import-datapack',
+    'datapacks',
     'author-commerce-data',
     // ACO datapack from the products on a website (PL-60 slice A)
     'scrape-products-to-aco',

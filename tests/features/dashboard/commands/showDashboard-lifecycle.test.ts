@@ -21,6 +21,7 @@ import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockProject } from '../../../helpers/projectFake';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
 import { createMockWebviewPanel } from '../../../helpers/webviewPanelFake';
+import { announceDatapacksChanged } from '@/features/data-installer/services/datapackChanges';
 
 const mockAccess = jest.fn();
 jest.mock('fs/promises', () => ({
@@ -257,6 +258,19 @@ describe('ProjectDashboardWebviewCommand - lifecycle and push channels', () => {
             // The AI handlers matter: without them the dashboard's AI Ready badge
             // has nothing to call and stays on "Verifying" forever.
             expect(registered).toEqual(['requestStatus', 'openExternal', 'verify-ai-setup']);
+        });
+
+        // Release test 1.10 (2026-11-16): the dashboard's Datapacks card kept "None" after an install.
+        it('tells its webview when the packs change, so the Datapacks card reads its line again', () => {
+            const { command } = commandFor(createMockProject());
+            const sendSpy = jest
+                .spyOn(command as unknown as { sendMessage: (t: string, d?: unknown) => Promise<void> }, 'sendMessage')
+                .mockResolvedValue(undefined);
+            internals(command).initializeMessageHandlers({ onStreaming: () => undefined });
+
+            announceDatapacksChanged();
+
+            expect(sendSpy).toHaveBeenCalledWith('datapack-list-changed');
         });
 
         it('builds ONE complete handler context from the shared factory', async () => {

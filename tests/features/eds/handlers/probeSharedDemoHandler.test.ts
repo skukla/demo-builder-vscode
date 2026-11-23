@@ -37,7 +37,7 @@ jest.mock('@/features/eds/handlers/edsGitHubHandlers', () => ({
 
 const READ = {
     outcome: 'read',
-    fullName: 'jen/isle5-demo',
+    fullName: 'robin/isle5-demo',
     defaultBranch: 'main',
     isTemplate: false,
     kind: 'eds',
@@ -68,7 +68,7 @@ describe('handleProbeSharedDemo', () => {
         adopt.mockResolvedValueOnce({ account: { label: 'steve' } });
         probe.mockResolvedValue(READ);
 
-        const adopted = await handleProbeSharedDemo(ctx(), { owner: 'jen', repo: 'isle5-demo' });
+        const adopted = await handleProbeSharedDemo(ctx(), { owner: 'robin', repo: 'isle5-demo' });
 
         expect(adopt).toHaveBeenCalledWith(tokenService);
         expect(adopted.success).toBe(true);
@@ -76,7 +76,7 @@ describe('handleProbeSharedDemo', () => {
         // GitHub has stopped accepting.
         expect(probe).toHaveBeenCalledWith(
             expect.objectContaining({ fileOps: fileOperations, repoOps: repoOperations, publicReaders: expect.anything() }),
-            'jen',
+            'robin',
             'isle5-demo',
             expect.anything(),
         );
@@ -90,7 +90,7 @@ describe('handleProbeSharedDemo', () => {
         adopt.mockResolvedValue(undefined);
         probe.mockResolvedValue(READ);
 
-        const result = await handleProbeSharedDemo(ctx(), { owner: 'jen', repo: 'isle5-demo' });
+        const result = await handleProbeSharedDemo(ctx(), { owner: 'robin', repo: 'isle5-demo' });
 
         expect(result).toEqual({ success: true, result: READ });
         const deps = probe.mock.calls.at(-1)![0] as Record<string, unknown>;
@@ -102,7 +102,7 @@ describe('handleProbeSharedDemo', () => {
     it('answers the read as the probe gave it, with no other GitHub call', async () => {
         probe.mockResolvedValue(READ);
 
-        const result = await handleProbeSharedDemo(ctx(), { owner: 'jen', repo: 'isle5-demo' });
+        const result = await handleProbeSharedDemo(ctx(), { owner: 'robin', repo: 'isle5-demo' });
 
         expect(result).toEqual({ success: true, result: READ });
         expect(repoOperations.getRepository).not.toHaveBeenCalled();
@@ -112,26 +112,26 @@ describe('handleProbeSharedDemo', () => {
     it('returns the probe result for a well-formed request', async () => {
         probe.mockResolvedValue({ outcome: 'unreadable', reason: 'nope' });
 
-        const result = await handleProbeSharedDemo(ctx(), { owner: 'jen', repo: 'isle5-demo' });
+        const result = await handleProbeSharedDemo(ctx(), { owner: 'robin', repo: 'isle5-demo' });
 
         expect(result).toEqual({ success: true, result: { outcome: 'unreadable', reason: 'nope' } });
         expect(probe).toHaveBeenCalledWith(
             expect.objectContaining({ fileOps: fileOperations, repoOps: repoOperations }),
-            'jen',
+            'robin',
             'isle5-demo',
             expect.anything(),
         );
     });
 
     it('refuses a request without both names', async () => {
-        const result = await handleProbeSharedDemo(ctx(), { owner: 'jen' });
+        const result = await handleProbeSharedDemo(ctx(), { owner: 'robin' });
 
         expect(result).toEqual({ success: false, error: 'owner and repo are required' });
         expect(probe).not.toHaveBeenCalled();
     });
 
     it('refuses names outside the safe charset before anything reaches GitHub', async () => {
-        const result = await handleProbeSharedDemo(ctx(), { owner: 'jen', repo: 'x;rm -rf' });
+        const result = await handleProbeSharedDemo(ctx(), { owner: 'robin', repo: 'x;rm -rf' });
 
         expect(result).toEqual({ success: false, error: expect.stringMatching(/Invalid GitHub repo/) });
         expect(probe).not.toHaveBeenCalled();
@@ -148,15 +148,15 @@ describe('handleProbeSharedDemo — a link instead of owner and repo', () => {
     });
 
     it('reads a GitHub link and a site address to the repository', async () => {
-        await handleProbeSharedDemo(ctx(), { link: 'https://github.com/jen/isle5-demo' });
-        expect(probe).toHaveBeenLastCalledWith(expect.anything(), 'jen', 'isle5-demo', expect.anything());
+        await handleProbeSharedDemo(ctx(), { link: 'https://github.com/robin/isle5-demo' });
+        expect(probe).toHaveBeenLastCalledWith(expect.anything(), 'robin', 'isle5-demo', expect.anything());
 
-        await handleProbeSharedDemo(ctx(), { link: 'https://main--isle5-demo--jen.aem.live' });
-        expect(probe).toHaveBeenLastCalledWith(expect.anything(), 'jen', 'isle5-demo', expect.anything());
+        await handleProbeSharedDemo(ctx(), { link: 'https://main--isle5-demo--robin.aem.live' });
+        expect(probe).toHaveBeenLastCalledWith(expect.anything(), 'robin', 'isle5-demo', expect.anything());
     });
 
     it('lets owner and repo win over a link, and refuses a link it cannot read', async () => {
-        await handleProbeSharedDemo(ctx(), { owner: 'bob', repo: 'shop', link: 'https://github.com/jen/isle5-demo' });
+        await handleProbeSharedDemo(ctx(), { owner: 'bob', repo: 'shop', link: 'https://github.com/robin/isle5-demo' });
         expect(probe).toHaveBeenLastCalledWith(expect.anything(), 'bob', 'shop', expect.anything());
 
         const result = await handleProbeSharedDemo(ctx(), { link: 'not a link' });
@@ -165,7 +165,7 @@ describe('handleProbeSharedDemo — a link instead of owner and repo', () => {
 });
 
 describe('handleProbeSharedDemo — can the SC read the authored DA.live site? (EDS-22)', () => {
-    const WITH_SITE = { ...READ, contentSource: { org: 'kmanns', site: 'justrite', indexPath: '/query-index.json' } };
+    const WITH_SITE = { ...READ, contentSource: { org: 'org-e', site: 'tailspin', indexPath: '/query-index.json' } };
 
     beforeEach(() => {
         jest.clearAllMocks();
@@ -176,11 +176,11 @@ describe('handleProbeSharedDemo — can the SC read the authored DA.live site? (
         probe.mockResolvedValue(WITH_SITE);
         accessProbe.mockResolvedValue({ level: 'authored' });
 
-        const response = await handleProbeSharedDemo(ctx(), { owner: 'kmanns', repo: 'justrite' });
+        const response = await handleProbeSharedDemo(ctx(), { owner: 'org-e', repo: 'tailspin' });
 
         expect(accessProbe).toHaveBeenCalledTimes(1);
         const [target, deps] = accessProbe.mock.calls[0];
-        expect(target).toEqual({ org: 'kmanns', site: 'justrite' });
+        expect(target).toEqual({ org: 'org-e', site: 'tailspin' });
         await deps.getAccessToken();
         expect(daAuth.getAccessToken).toHaveBeenCalled();
         expect(response.result).toEqual({ ...WITH_SITE, contentAccess: { level: 'authored' } });
@@ -190,19 +190,19 @@ describe('handleProbeSharedDemo — can the SC read the authored DA.live site? (
         probe.mockResolvedValue(WITH_SITE);
         accessProbe.mockResolvedValue({ level: 'published-only', reader: 'sc@example.com' });
 
-        const response = await handleProbeSharedDemo(ctx(), { owner: 'kmanns', repo: 'justrite' });
+        const response = await handleProbeSharedDemo(ctx(), { owner: 'org-e', repo: 'tailspin' });
 
         const read = response.result as typeof WITH_SITE & { contentAccess: unknown; warnings: string[] };
         expect(read.contentAccess).toEqual({ level: 'published-only', reader: 'sc@example.com' });
         expect(read.warnings).toEqual([
-            expect.stringContaining('ask the owner of kmanns on DA.live to let sc@example.com read justrite'),
+            expect.stringContaining('ask the owner of org-e on DA.live to let sc@example.com read tailspin'),
         ]);
     });
 
     it('asks nothing when the repository mounts no content site', async () => {
         probe.mockResolvedValue(READ);
 
-        const response = await handleProbeSharedDemo(ctx(), { owner: 'jen', repo: 'isle5-demo' });
+        const response = await handleProbeSharedDemo(ctx(), { owner: 'robin', repo: 'isle5-demo' });
 
         expect(accessProbe).not.toHaveBeenCalled();
         expect(response.result).toEqual(READ);

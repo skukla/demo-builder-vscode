@@ -1,6 +1,4 @@
 /**
- * ProjectFileLoader
- *
  * Loads project data from the filesystem by reading the .demo-builder.json manifest
  * and discovering components in the components/ directory.
  */
@@ -94,8 +92,11 @@ export interface ProjectManifest {
     edsStorefrontStatusSummary?: Project['edsStorefrontStatusSummary'];
     selectedPackage?: string;
     demo?: Project['demo'];
+    importedFrom?: Project['importedFrom'];
     datapack?: Project['datapack'];
-    ownDatapack?: Project['ownDatapack'];
+    datapackInstallFailure?: Project['datapackInstallFailure'];
+    finishSetup?: Project['finishSetup'];
+    commerceAdminExperience?: Project['commerceAdminExperience'];
     selectedStack?: string;
     selectedAddons?: string[];
     selectedBlockLibraries?: string[];
@@ -197,8 +198,11 @@ export class ProjectFileLoader {
                 edsStorefrontStatusSummary: manifest.edsStorefrontStatusSummary,
                 selectedPackage: normalizePackageId(manifest.selectedPackage),
                 demo: manifest.demo,
+                importedFrom: manifest.importedFrom,
                 datapack: manifest.datapack,
-                ownDatapack: manifest.ownDatapack,
+                datapackInstallFailure: manifest.datapackInstallFailure,
+                finishSetup: manifest.finishSetup,
+                commerceAdminExperience: manifest.commerceAdminExperience,
                 selectedStack: manifest.selectedStack,
                 selectedAddons: manifest.selectedAddons,
                 selectedBlockLibraries: manifest.selectedBlockLibraries,

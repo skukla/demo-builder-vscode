@@ -22,7 +22,7 @@
  *   NEGATIVE — a module nothing imports must still get an empty one, or the fallback is
  *              handing back the whole test tree and every score after it is inflated.
  *
- * Full reasoning: `.rptc/plans/unmeasured-fifth/attribution-design.md`.
+ * Full reasoning: `.rptc/complete/unmeasured-fifth/attribution-design.md`.
  */
 import { readFileSync } from 'fs';
 

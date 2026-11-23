@@ -19,9 +19,10 @@ import Beaker from '@spectrum-icons/workflow/Beaker';
 import Clock from '@spectrum-icons/workflow/Clock';
 import Copy from '@spectrum-icons/workflow/Copy';
 import DataAdd from '@spectrum-icons/workflow/DataAdd';
+import DataDownload from '@spectrum-icons/workflow/DataDownload';
+import DataRemove from '@spectrum-icons/workflow/DataRemove';
 import DataUpload from '@spectrum-icons/workflow/DataUpload';
 import Delete from '@spectrum-icons/workflow/Delete';
-import Deselect from '@spectrum-icons/workflow/Deselect';
 import Duplicate from '@spectrum-icons/workflow/Duplicate';
 import Edit from '@spectrum-icons/workflow/Edit';
 import Export from '@spectrum-icons/workflow/Export';
@@ -36,7 +37,7 @@ import Play from '@spectrum-icons/workflow/Play';
 import Refresh from '@spectrum-icons/workflow/Refresh';
 import Revert from '@spectrum-icons/workflow/Revert';
 import SaveFloppy from '@spectrum-icons/workflow/SaveFloppy';
-import SelectBoxAll from '@spectrum-icons/workflow/SelectBoxAll';
+import SelectionChecked from '@spectrum-icons/workflow/SelectionChecked';
 import Settings from '@spectrum-icons/workflow/Settings';
 import Share from '@spectrum-icons/workflow/Share';
 import Stop from '@spectrum-icons/workflow/Stop';
@@ -52,6 +53,7 @@ const MENU_ICONS: Record<string, React.ReactElement> = {
     edit: <Edit size="S" />,
     copy: <Copy size="S" />,
     duplicate: <Duplicate size="S" />,
+    /** Go back or go again: a reset, a retry, Undo Last Assignment, Undo Last Save. */
     reset: <Revert size="S" />,
     republish: <Globe size="S" />,
     export: <Export size="S" />,
@@ -76,16 +78,21 @@ const MENU_ICONS: Record<string, React.ReactElement> = {
     downtime: <Clock size="S" />,
     /** Keep a copy as a file the SC chooses where to put (a datapack's Save as file). */
     saveFile: <SaveFloppy size="S" />,
-    /** Open a file the SC picks (a datapack's Load from file). */
+    /** Open a file the SC picks (a datapack's Add from File). */
     openFile: <FolderOpen size="S" />,
+    /** Put something kept into a store (a datapack's Install). */
+    install: <DataDownload size="S" />,
+    /**
+     * Take what something put into a store back out, the pair of `install` (a datapack's Uninstall).
+     * Not `delete`'s trash can: an uninstall is undone by installing again (owner, 2026-11-17).
+     */
+    uninstall: <DataRemove size="S" />,
     /** Take what is in a store into something kept (Save store changes to this pack). */
     capture: <DataUpload size="S" />,
     /** Let others see and use it (a library pack's Share and Stop sharing). */
     share: <Share size="S" />,
-    /** Tick every box in a list (a datapack form's Select all). */
-    selectAll: <SelectBoxAll size="S" />,
-    /** Untick every box in a list (the same button's Clear all). */
-    clearAll: <Deselect size="S" />,
+    /** Pick several at once (the projects list's Select Projects). */
+    selectSeveral: <SelectionChecked size="S" />,
 };
 
 /**

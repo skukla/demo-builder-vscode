@@ -1,6 +1,6 @@
 # Step 03 — Block port waves (external: skukla/bodea-source)
 
-Never copy Jen's vendored `scripts/__dropins__/` or import map. Ported blocks must compile
+Never copy Robin's vendored `scripts/__dropins__/` or import map. Ported blocks must compile
 against the b2b LKG's dropin generation (CI from step 02.3 enforces). Verify each wave live
 via `aem up` (fstab at the curated DA content) before merging.
 
@@ -13,12 +13,12 @@ newsletter, form (base only), store-locator (Maps key from the vip-config-style 
 degrade to list view when absent — never bundled).
 Include per-block `_<name>.json` model files with entries merged into this repo's
 component-definition/filters/models.json (the installer merges them into user repos at
-create time — do NOT copy Jen's regenerated 6738-line component-models wholesale).
+create time — do NOT copy Robin's regenerated 6738-line component-models wholesale).
 
 ## Wave 2 — native commerce blocks (one PR per block, smallest dropin surface first)
 
 product-teaser (bake the citisignal product-teaser-* fixes in at source), search-bar,
-customer-segment-personalization-block, vip-hero (de-MCCS'd), commerce-account-hub,
+customer-segment-personalization-block, vip-hero (de-ORG C'd), commerce-account-hub,
 live-block (+live-block-premium), vip-member-block-real-v2.
 Per block: rewrite `@dropins/*` 3.x imports/calls to the LKG generation APIs, verify the real
 journey live (sign-in, segments, quotes, POs, req lists as applicable).
@@ -39,5 +39,5 @@ bodea/ ledger — decision recorded here.
 
 ## Doc pages
 
-`.da/library/blocks/` doc page per shipped block (copy Jen's where they exist) — feeds the
+`.da/library/blocks/` doc page per shipped block (copy Robin's where they exist) — feeds the
 bodea-blocks library contentSource at create time.

@@ -29,7 +29,7 @@ import type { CommerceWebsite } from '@/types/commerceStore';
  * The store views the rows are made for, whether the SC picked them, and each view's ACO locale.
  *
  * A row's `source.locale` is the view's LOCALE (`en-US`), not its code (owner, 2026-10-31, the ACO
- * audit): the storefront asks ACO for a locale, so a pack stamped with `justrite_us` never showed
+ * audit): the storefront asks ACO for a locale, so a pack stamped with `acme_us` never showed
  * on a storefront Demo Builder set up, and the install warned about it. The service stamps the
  * code; we read the view's own locale from the store configs instead.
  */
@@ -146,7 +146,7 @@ function currencyOf(
     const code = (configs.get(view) ?? '').trim().toUpperCase();
     if (/^[A-Z]{3}$/u.test(code)) return code;
     throw new Error(
-        `Could not tell the currency of website ${website.id} (${website.code}): its store view ${view} names none.`,
+        `Could not tell the currency of the website ${website.name || website.code}: its store view ${view} names none.`,
     );
 }
 

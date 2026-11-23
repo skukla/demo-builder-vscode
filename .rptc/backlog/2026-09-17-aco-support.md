@@ -4,7 +4,8 @@ kind: feature
 area: platform
 needs: []
 value: high
-status: active
+status: backlog
+plan: aco-support
 ---
 
 # Finish Adobe Commerce Optimizer (ACO) support
@@ -72,7 +73,7 @@ waits on it, and `EDS-1` (multisite) specifies ACO catalog views per locale.
 
 ## The ACO pack kinds, and why Demo Builder's engine does not install them (2026-10-30)
 
-Decided in datapack-engine step 11 (`.rptc/plans/datapack-engine/step-11-later.md`): the eight
+Decided in datapack-engine step 11 (`.rptc/complete/datapack-engine/step-11-later.md`): the eight
 `aco_<brand>` packs (`aco_bodea`, `aco_carvello`, `aco_citisignal_new`, `aco_citisignal_original`,
 `aco_frescopa`, `aco_healthbeauty`, `aco_wecafe`, `aco_wknd`, all `main`) stay refused by Demo
 Builder's engine, before anything is written, until this item is planned. Rows read from
@@ -173,3 +174,6 @@ Catalog form shows for these fields today, and when the credential can be made g
 - 2026-11-01  fix(aco): sale prices are the price they come to, and every pack has shoppers' books (`fad12e0fb`)
 - 2026-11-01  feat(aco): MCP tools for a project's ACO instance (`75d6630b2`)
 - 2026-11-01  fix(aco): a project can reach its instance before it has a catalog view (`4c30298e0`)
+- 2026-11-03  feat(data-installer): hold ACO datapacks back until ACO support ships (`29e5644fd`)
+- 2026-11-21  Reconciled 2026-11-21: ACO is still held back on develop (29e5644fd). The build sits on branch loop/2026-10-31-aco-clear, 59 commits not in develop, last 2026-11-02. Left: finish and merge that branch, then the owner's live check on an ACO tenant.
+- 2026-11-22  Paused 2026-11-22: back to backlog, last work 2026-11-03. Where it stopped is the 2026-11-21 reconcile line above. The owner named ACO as the next item to work (2026-11-22).

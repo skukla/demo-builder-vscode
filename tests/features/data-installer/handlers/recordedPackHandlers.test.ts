@@ -90,7 +90,7 @@ describe('check-recorded-datapack', () => {
 
         const result = await recordedPackHandlers['check-recorded-datapack'](context(), { datapack: { name: 'gone', version: '1', store: 'library' } });
 
-        expect(result).toEqual({ success: true, data: { verdict: 'none', note: expect.stringContaining("can't be read") } });
+        expect(result).toEqual({ success: true, data: { verdict: 'none', note: expect.stringContaining("isn't available to you") } });
     });
 
     it('refuses half a pack, or a store that is not one of the two', async () => {

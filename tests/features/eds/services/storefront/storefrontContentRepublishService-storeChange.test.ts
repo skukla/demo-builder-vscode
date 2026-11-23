@@ -82,7 +82,7 @@ function storefront(pending: boolean): Project {
 
 const stateManager = createMockStateManager();
 const logger = createMockLogger();
-const githubFiles = { getFileContent: jest.fn(async () => null) };
+const githubFiles = { getFileContent: jest.fn(async () => null), getLatestCommitSha: jest.fn(async () => 'head') };
 const persist = jest.fn(async () => undefined);
 
 function run(project: Project, over: Partial<Parameters<typeof republishStorefrontContent>[0]> = {}) {

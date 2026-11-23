@@ -91,6 +91,9 @@ import {
     row,
 } from './IntegrationsStep.testUtils';
 
+/** The window on screen now: a taller stage opens a new one (step-07 Win3); never hold an old one. */
+const currentDialog = (): HTMLElement => screen.getByRole('dialog');
+
 async function renderStep(state: WizardState, updateState = jest.fn()) {
     const ui = (next: WizardState) => (
         <Provider theme={defaultTheme}>
@@ -163,15 +166,14 @@ describe('IntegrationsStep — re-deriving from the catalog', () => {
 });
 
 describe('IntegrationsStep — the pre-built gallery excludes the blank starter', () => {
-    it('offers the catalog integrations and NOT the "Build custom" template', async () => {
+    it('offers the catalog integrations and NOT the "Build Custom" template', async () => {
         await renderStep(baseState());
         await press(screen.getByRole('button', { name: 'Add Integration' }));
-        const dialog = screen.getByRole('dialog');
 
-        await press(within(dialog).getByRole('button', { name: /Pre-built integration/ }));
-        await press(within(dialog).getByRole('button', { name: 'Continue' }));
+        await press(within(currentDialog()).getByRole('button', { name: /Pre-Built Integration/ }));
+        await press(within(currentDialog()).getByRole('button', { name: 'Continue' }));
 
-        const offered = Array.from(dialog.querySelectorAll('.choice-card-name')).map(
+        const offered = Array.from(currentDialog().querySelectorAll('.choice-card-name')).map(
             (el) => el.textContent
         );
         // The blank starter is the "Build custom" template, not a pre-built option,
@@ -186,34 +188,32 @@ describe('IntegrationsStep — the pre-built gallery excludes the blank starter'
         await rerenderWith(baseState({ selectedPackage: 'retired' }));
 
         await press(screen.getByRole('button', { name: 'Add Integration' }));
-        const dialog = screen.getByRole('dialog');
-        await press(within(dialog).getByRole('button', { name: /Pre-built integration/ }));
-        await press(within(dialog).getByRole('button', { name: 'Continue' }));
+        await press(within(currentDialog()).getByRole('button', { name: /Pre-Built Integration/ }));
+        await press(within(currentDialog()).getByRole('button', { name: 'Continue' }));
 
         // With nothing to pick, the journey never opens a gallery at all — the kind
         // stage is still the one on screen.
-        const offered = Array.from(dialog.querySelectorAll('.choice-card-name')).map(
+        const offered = Array.from(currentDialog().querySelectorAll('.choice-card-name')).map(
             (el) => el.textContent
         );
-        expect(offered).toEqual(['Pre-built integration', 'Build custom', 'Import a repo']);
+        expect(offered).toEqual(['Pre-Built Integration', 'Build Custom', 'Import Repository']);
     });
 
-    it('commits a "Build custom" instance against the blank template repo', async () => {
+    it('commits a "Build Custom" instance against the blank template repo', async () => {
         const { updateState } = await renderStep(baseState({ ...SIGNED_IN, ...COMMITTED_DEST }));
         await press(screen.getByRole('button', { name: 'Add Integration' }));
-        const dialog = screen.getByRole('dialog');
 
-        await press(within(dialog).getByRole('button', { name: /Build custom/ }));
-        await press(within(dialog).getByRole('button', { name: 'Continue' }));
-        await change(within(dialog).getByLabelText(/Name \(optional\)/), 'My Widget');
+        await press(within(currentDialog()).getByRole('button', { name: /Build Custom/ }));
+        await press(within(currentDialog()).getByRole('button', { name: 'Continue' }));
+        await change(within(currentDialog()).getByLabelText(/Name \(Optional\)/), 'My Widget');
 
         // Walk the rest of the journey to its terminal stage, whatever length it is.
         for (let step = 0; step < 4; step += 1) {
-            const next = within(dialog).queryByRole('button', { name: 'Continue' });
+            const next = within(currentDialog()).queryByRole('button', { name: 'Continue' });
             if (!next) break;
             await press(next);
         }
-        await press(within(dialog).getByRole('button', { name: 'Add Integration' }));
+        await press(within(currentDialog()).getByRole('button', { name: 'Add Integration' }));
 
         const sourceWrite = updateState.mock.calls
             .map((c) => c[0])
@@ -239,7 +239,7 @@ describe('IntegrationsStep — the results shell', () => {
     });
 
     it('drops the empty modifier and prints the destination once a row exists', async () => {
-        await renderStep(baseState({ selectedAppBuilderComponents: [MESH_ID] }));
+        await renderStep(baseState({ selectedAppBuilderComponents: [MESH_ID], ...COMMITTED_DEST }));
 
         expect(areaView()).not.toHaveClass('int-results--empty');
         expect(document.querySelectorAll('.int-destination')).toHaveLength(1);
@@ -327,16 +327,15 @@ describe('IntegrationsStep — the reserved-id domain a new instance is minted a
 
     async function addCustomNamed(updateState: jest.Mock, label: string) {
         await press(screen.getByRole('button', { name: 'Add Integration' }));
-        const dialog = screen.getByRole('dialog');
-        await press(within(dialog).getByRole('button', { name: /Build custom/ }));
-        await press(within(dialog).getByRole('button', { name: 'Continue' }));
-        await change(within(dialog).getByLabelText(/Name \(optional\)/), label);
+        await press(within(currentDialog()).getByRole('button', { name: /Build Custom/ }));
+        await press(within(currentDialog()).getByRole('button', { name: 'Continue' }));
+        await change(within(currentDialog()).getByLabelText(/Name \(Optional\)/), label);
         for (let step = 0; step < 4; step += 1) {
-            const next = within(dialog).queryByRole('button', { name: 'Continue' });
+            const next = within(currentDialog()).queryByRole('button', { name: 'Continue' });
             if (!next) break;
             await press(next);
         }
-        await press(within(dialog).getByRole('button', { name: 'Add Integration' }));
+        await press(within(currentDialog()).getByRole('button', { name: 'Add Integration' }));
         return mintedSource(updateState);
     }
 

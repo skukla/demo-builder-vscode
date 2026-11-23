@@ -7,6 +7,7 @@
 
 import { DatapackStoreWriter } from '@/features/data-installer/services/datapackStoreWriter';
 import { DataInstallerApiError } from '@/features/data-installer/services/dataInstallerErrors';
+import { cachedPackRead, forgetPackReads } from '@/features/data-installer/services/packReadCache';
 
 const BASE = 'https://store.example.test/api/v1/web/datapack-store';
 
@@ -18,12 +19,13 @@ function reply(status: number, body: unknown): Response {
     } as Response;
 }
 
-function writer(fetchImpl: jest.Mock, log?: jest.Mock): DatapackStoreWriter {
+function writer(fetchImpl: jest.Mock, log?: jest.Mock, inParts?: boolean): DatapackStoreWriter {
     return new DatapackStoreWriter({
         baseUrl: BASE,
         getToken: async () => 'sc-token',
         fetchImpl: fetchImpl as unknown as typeof fetch,
         ...(log ? { log } : {}),
+        ...(inParts ? { inParts } : {}),
     });
 }
 
@@ -40,8 +42,8 @@ describe('createDatapack', () => {
         const fetchImpl = jest.fn().mockResolvedValue(reply(201, { success: true }));
 
         const result = await writer(fetchImpl).createDatapack({
-            id: { name: 'justrite', version: 'v1' },
-            displayName: 'Justrite B2B',
+            id: { name: 'tailspin', version: 'v1' },
+            displayName: 'Tailspin B2B',
             description: 'Signs',
         });
 
@@ -54,12 +56,20 @@ describe('createDatapack', () => {
             'Content-Type': 'application/json',
         });
         expect(body).toEqual({
-            datapack_name: 'justrite',
+            datapack_name: 'tailspin',
             version: 'v1',
-            display_name: 'Justrite B2B',
+            display_name: 'Tailspin B2B',
             description: 'Signs',
             shared: false,
         });
+    });
+
+    it('creates it shared when the pack it saves into is shared (Phase 2, step-02 slice 1)', async () => {
+        const fetchImpl = jest.fn().mockResolvedValue(reply(201, { success: true }));
+
+        await writer(fetchImpl).createDatapack({ id: { name: 'tailspin', version: '20261112-090000' }, displayName: 'Tailspin B2B', shared: true });
+
+        expect(sent(fetchImpl).body).toMatchObject({ shared: true });
     });
 
     it('answers exists on the store 409, rather than throwing', async () => {
@@ -69,7 +79,7 @@ describe('createDatapack', () => {
 
         await expect(
             writer(fetchImpl).createDatapack({
-                id: { name: 'justrite', version: 'v1' },
+                id: { name: 'tailspin', version: 'v1' },
                 displayName: 'J',
             })
         ).resolves.toBe('exists');
@@ -82,7 +92,7 @@ describe('createDatapack', () => {
 
         await expect(
             writer(fetchImpl).createDatapack({
-                id: { name: 'justrite', version: 'v1' },
+                id: { name: 'tailspin', version: 'v1' },
                 displayName: 'J',
             })
         ).rejects.toThrow('Invalid version');
@@ -96,7 +106,7 @@ describe('addDataItem', () => {
         const rows = [{ category: { name: 'Signs' } }];
 
         await writer(fetchImpl, log).addDataItem(
-            { name: 'justrite', version: 'v1' },
+            { name: 'tailspin', version: 'v1' },
             'categories',
             rows
         );
@@ -104,7 +114,7 @@ describe('addDataItem', () => {
         const { url, body } = sent(fetchImpl);
         expect(url).toBe(`${BASE}/add-data-item`);
         expect(body).toEqual({
-            datapack_name: 'justrite',
+            datapack_name: 'tailspin',
             version: 'v1',
             data_type: 'categories',
             data: JSON.stringify(rows),
@@ -145,11 +155,11 @@ describe('deleteDatapack', () => {
     it('sends DELETE delete-datapack with the identity in the query, under the caller token', async () => {
         const fetchImpl = jest.fn().mockResolvedValue(reply(200, { success: true }));
 
-        const result = await writer(fetchImpl).deleteDatapack({ name: 'justrite', version: 'v1' });
+        const result = await writer(fetchImpl).deleteDatapack({ name: 'tailspin', version: 'v1' });
 
         expect(result).toBe('deleted');
         const [url, init] = fetchImpl.mock.calls[0] as [string, RequestInit];
-        expect(url).toBe(`${BASE}/delete-datapack?datapack_name=justrite&version=v1`);
+        expect(url).toBe(`${BASE}/delete-datapack?datapack_name=tailspin&version=v1`);
         expect(init.method).toBe('DELETE');
         expect(init.headers).toEqual({ Authorization: 'Bearer sc-token' });
         expect(init.body).toBeUndefined();
@@ -227,6 +237,41 @@ describe('updateShared', () => {
     });
 });
 
+/** The `team` mark goes through the same owner-only action; only the store's list of owners may set it. */
+describe('updateTeam', () => {
+    it('sends PUT update-datapack-metadata with the identity and team, as a boolean', async () => {
+        const fetchImpl = jest.fn().mockResolvedValue(reply(200, { success: true }));
+
+        await expect(writer(fetchImpl).updateTeam({ name: 'frescopa', version: '1.0.0' }, true)).resolves.toBe('updated');
+
+        const [url, init] = fetchImpl.mock.calls[0] as [string, RequestInit];
+        expect(url).toBe(`${BASE}/update-datapack-metadata`);
+        expect(init.method).toBe('PUT');
+        expect(JSON.parse(String(init.body))).toEqual({ datapack_name: 'frescopa', version: '1.0.0', team: true });
+    });
+
+    it('sends false to take the mark off', async () => {
+        const fetchImpl = jest.fn().mockResolvedValue(reply(200, { success: true }));
+
+        await writer(fetchImpl).updateTeam({ name: 'frescopa', version: '1.0.0' }, false);
+
+        const [, init] = fetchImpl.mock.calls[0] as [string, RequestInit];
+        expect(JSON.parse(String(init.body))).toEqual({ datapack_name: 'frescopa', version: '1.0.0', team: false });
+    });
+
+    it("answers not-found on the 404 for a pack that is not the caller's", async () => {
+        const fetchImpl = jest.fn().mockResolvedValue(reply(404, { success: false, error: 'not found' }));
+
+        await expect(writer(fetchImpl).updateTeam({ name: 'x', version: '1' }, true)).resolves.toBe('not-found');
+    });
+
+    it('throws on any other refusal, so one from the list of owners is not read as done', async () => {
+        const fetchImpl = jest.fn().mockResolvedValue(reply(403, { success: false, error: 'Only team pack owners can do this.' }));
+
+        await expect(writer(fetchImpl).updateTeam({ name: 'x', version: '1' }, true)).rejects.toThrow('Only team pack owners can do this.');
+    });
+});
+
 /**
  * With Adobe's gateway check on for the store's actions, a request that names no org is refused,
  * so every write names the caller's org as every read already does (DI-5).
@@ -241,9 +286,69 @@ describe('the org a write names', () => {
             fetchImpl: fetchImpl as unknown as typeof fetch,
         });
 
-        await signed.deleteDatapack({ name: 'justrite', version: 'v1' });
+        await signed.deleteDatapack({ name: 'tailspin', version: 'v1' });
 
         const [, init] = fetchImpl.mock.calls[0] as [string, RequestInit];
         expect(init.headers).toEqual({ Authorization: 'Bearer sc-token', 'x-gw-ims-org-id': 'ORG@AdobeOrg' });
+    });
+});
+
+// 2026-11-05: App Builder takes at most 1 MB a request; Luma's products are about 5 MB.
+describe('a list too large for one request', () => {
+    const big = Array.from({ length: 40 }, (_, i) => ({ product: { sku: `s${i}`, description: 'd'.repeat(60 * 1024) } }));
+    const id = { name: 'luma', version: 'main' };
+
+    it('goes to a store that takes parts as several requests, each after the first appending, rows in order', async () => {
+        const fetchImpl = jest.fn().mockResolvedValue(reply(201, { success: true }));
+
+        await writer(fetchImpl, undefined, true).addDataItem(id, 'products', big);
+
+        const bodies = fetchImpl.mock.calls.map((_, n) => sent(fetchImpl, n).body);
+        expect(bodies.length).toBeGreaterThan(1);
+        expect(bodies[0]).not.toHaveProperty('append');
+        expect(bodies.slice(1).every((b) => b.append === true)).toBe(true);
+        expect(bodies.flatMap((b) => JSON.parse(String(b.data)) as unknown[])).toEqual(big);
+        expect(bodies.every((b) => Buffer.byteLength(JSON.stringify(b)) < 1024 * 1024)).toBe(true);
+    });
+
+    it('goes whole to a store that does not, and is named by oversized before anything is sent', async () => {
+        const fetchImpl = jest.fn().mockResolvedValue(reply(201, { success: true }));
+        const items = [{ dataType: 'products', records: big }, { dataType: 'categories', records: [] }];
+
+        await writer(fetchImpl).addDataItem(id, 'products', big);
+
+        expect(fetchImpl).toHaveBeenCalledTimes(1);
+        expect(writer(fetchImpl).oversized(items)).toEqual(['products']);
+        expect(writer(fetchImpl, undefined, true).oversized(items)).toStrictEqual([]);
+    });
+});
+
+// Walk F82, 2026-11-09: reads of a pack's rows are kept a few minutes; a write here changes them.
+describe('a write forgets the kept read of that pack', () => {
+    const PACK_ID = { name: 'acme', version: '1.0.0' };
+    beforeEach(() => forgetPackReads());
+
+    async function readTwiceAround(write: () => Promise<unknown>): Promise<number> {
+        const read = jest.fn(async () => ({ products: [] }));
+        await cachedPackRead(PACK_ID, 'library', read);
+        await write();
+        await cachedPackRead(PACK_ID, 'library', read);
+        return read.mock.calls.length;
+    }
+
+    it.each([
+        ['adding rows', (w: DatapackStoreWriter) => w.addDataItem(PACK_ID, 'products', [])],
+        ['creating the pack', (w: DatapackStoreWriter) => w.createDatapack({ id: PACK_ID, displayName: 'Acme' })],
+        ['deleting it', (w: DatapackStoreWriter) => w.deleteDatapack(PACK_ID)],
+    ])('reads again after %s', async (_what, write) => {
+        const fetchImpl = jest.fn().mockResolvedValue(reply(200, { success: true }));
+
+        await expect(readTwiceAround(() => write(writer(fetchImpl)))).resolves.toBe(2);
+    });
+
+    it('CONTROL: a change of display name leaves the rows, and the kept read, alone', async () => {
+        const fetchImpl = jest.fn().mockResolvedValue(reply(200, { success: true }));
+
+        await expect(readTwiceAround(() => writer(fetchImpl).updateDisplayName(PACK_ID, 'Acme 2'))).resolves.toBe(1);
     });
 });

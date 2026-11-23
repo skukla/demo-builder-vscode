@@ -4,7 +4,7 @@ kind: feature
 area: app-builder
 needs: []
 value: high
-status: built
+status: shipped
 parent: AB-16
 ---
 
@@ -41,3 +41,4 @@ read neutrally, both ERP cards say they are linked to that name, and one ERP loo
 ## Shipped so far
 
 - 2026-09-28  2026-09-28 built and deployed: integration main 0deb4b8 (INTEGRATION_DISPLAY_NAME names the page and app, default 'ERP Integration'; grid column 'ERP order'; action 'Move stock between ERP warehouses'; app version 0.9.2; 851 tests), Demo Builder cb8231288 (own-name input, nameSuffix removed, existing projects keep their recorded name, rename sets the input and says Commerce follows on the next update). On Bodea: renamed to 'ERP Integration', integration updated 40017f1 -> 0deb4b8. Not yet seen in Commerce Admin (the check hit a sign-in page; not signed in on the owner's behalf). Open: whether Commerce needs 'Refresh registrations' for the column label; naming at add time.
+- 2026-11-20  Released in v1.0.0-beta.153

@@ -12,7 +12,7 @@ import {
 } from '@/features/eds/services/daLive/authoredContentAccess';
 import { createMockLogger } from '../../../../helpers/loggerFake';
 
-const TARGET = { org: 'kmanns', site: 'justrite' };
+const TARGET = { org: 'org-e', site: 'tailspin' };
 
 function deps(overrides: Partial<AuthoredAccessDeps> & { status?: number } = {}): AuthoredAccessDeps & {
     fetchImpl: jest.Mock;
@@ -34,7 +34,7 @@ describe('probeAuthoredContentAccess', () => {
 
         expect(d.fetchImpl).toHaveBeenCalledTimes(1);
         const [url, init] = d.fetchImpl.mock.calls[0];
-        expect(url).toBe('https://admin.da.live/list/kmanns/justrite/');
+        expect(url).toBe('https://admin.da.live/list/org-e/tailspin/');
         expect(init).toEqual(
             expect.objectContaining({
                 method: 'GET',
@@ -94,7 +94,7 @@ describe('authoredAccessWarning', () => {
 
         expect(text).toBe(
             "You can copy this demo's published pages only. To copy its block library and unpublished " +
-                'pages too, ask the owner of kmanns on DA.live to let sc@example.com read justrite. ' +
+                'pages too, ask the owner of org-e on DA.live to let sc@example.com read tailspin. ' +
                 'In Demo Builder that is Manage Site Access, then "Let someone read the authored content".',
         );
     });
@@ -102,7 +102,7 @@ describe('authoredAccessWarning', () => {
     it('falls back to "you" when the SC\'s address is unknown', () => {
         const text = authoredAccessWarning({ level: 'published-only', reader: null }, TARGET);
 
-        expect(text).toContain('to let you read justrite');
+        expect(text).toContain('to let you read tailspin');
     });
 
     it('says nothing for any other level', () => {

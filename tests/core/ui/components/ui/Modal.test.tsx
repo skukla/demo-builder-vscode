@@ -10,16 +10,8 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Provider, defaultTheme } from '@adobe/react-spectrum';
 import '@testing-library/jest-dom';
-import { Modal, ActionButton } from '@/core/ui/components/ui/Modal';
-
-// Helper to render with Spectrum Provider
-const renderWithProvider = (ui: React.ReactElement) => {
-    return render(
-        <Provider theme={defaultTheme}>
-            {ui}
-        </Provider>
-    );
-};
+import { Modal, type ActionButton, renderWithProvider } from './Modal.testUtils';
+import { WAIT_STAGES } from '@/core/utils/waitStages';
 
 describe('Modal', () => {
     const defaultProps = {
@@ -197,7 +189,8 @@ describe('Modal', () => {
             expect(button).toHaveClass('modal-button-secondary');
         });
 
-        it('applies secondary CSS class to negative variant', () => {
+        // It was mapped to the outline style, so no removal in any house dialog showed red.
+        it('draws the negative variant solid red', () => {
             const actionButtons: ActionButton[] = [
                 { label: 'Negative Action', variant: 'negative', onPress: jest.fn() },
             ];
@@ -207,7 +200,15 @@ describe('Modal', () => {
             );
 
             const button = screen.getByRole('button', { name: 'Negative Action' });
-            expect(button).toHaveClass('modal-button-secondary');
+            expect(button).toHaveClass('modal-button-negative');
+        });
+
+        it('draws the quiet variant borderless', () => {
+            const actionButtons: ActionButton[] = [{ label: 'Dry run', variant: 'quiet', onPress: jest.fn() }];
+
+            renderWithProvider(<Modal {...defaultProps} actionButtons={actionButtons} />);
+
+            expect(screen.getByRole('button', { name: 'Dry run' })).toHaveClass('modal-button-quiet');
         });
 
         it('renders with no action buttons (empty array)', () => {
@@ -300,16 +301,17 @@ describe('Modal', () => {
     // The two opt-ins ride on UNSAFE_className, so what lands on the dialog IS
     // the behaviour — including the absence of a class when neither is asked for.
     describe('the size overrides', () => {
-        it('gives the dialog no class at all when neither is opted into', () => {
+        // `modal-dialog` pins every house dialog near the top and eases its width.
+        it('gives the dialog only its own class when neither is opted into', () => {
             renderWithProvider(<Modal {...defaultProps} />);
 
-            expect(screen.getByRole('dialog')).not.toHaveAttribute('class');
+            expect(screen.getByRole('dialog')).toHaveAttribute('class', 'modal-dialog');
         });
 
         it('marks the dialog wide when only wide is opted into', () => {
             renderWithProvider(<Modal {...defaultProps} wide />);
 
-            expect(screen.getByRole('dialog')).toHaveAttribute('class', 'modal-wide');
+            expect(screen.getByRole('dialog')).toHaveAttribute('class', 'modal-dialog modal-wide');
         });
 
         it('carries both, in order, when both are opted into', () => {
@@ -317,8 +319,29 @@ describe('Modal', () => {
 
             expect(screen.getByRole('dialog')).toHaveAttribute(
                 'class',
-                'modal-fit-content modal-wide',
+                'modal-dialog modal-fit-content modal-wide',
             );
+        });
+    });
+
+    // The dialog design rules (2026-10-31): how things stand is an icon before the title.
+    describe('the title status', () => {
+        it.each([
+            ['success', 'text-positive'],
+            ['warning', 'text-notice'],
+            ['error', 'text-negative'],
+        ] as const)('puts the %s icon before the title, the wizard\'s own', (status, iconClass) => {
+            renderWithProvider(<Modal {...defaultProps} status={status} />);
+
+            const heading = screen.getByRole('heading');
+            expect(heading.querySelector(`.modal-status-icon .${iconClass}`)).not.toBeNull();
+            expect(heading).toHaveTextContent(defaultProps.title);
+        });
+
+        it('draws no icon for a title without a status — control', () => {
+            renderWithProvider(<Modal {...defaultProps} />);
+
+            expect(screen.getByRole('heading').querySelector('.modal-status-icon')).toBeNull();
         });
     });
 
@@ -486,5 +509,59 @@ describe('Modal', () => {
             expect(second).toHaveBeenCalledTimes(1);
             expect(first).not.toHaveBeenCalled();
         });
+    });
+});
+
+describe('Modal: a wait shows nothing else, and says what it waits for', () => {
+    const action: ActionButton = { label: 'Install', variant: 'accent', onPress: jest.fn() };
+
+    it('shows the title, the wait and the way out, and neither the content nor the actions', () => {
+        renderWithProvider(
+            <Modal title="Install" actionButtons={[action]} onClose={jest.fn()} waiting={WAIT_STAGES.readingDemoData}>
+                <p>The form</p>
+            </Modal>,
+        );
+
+        expect(screen.getByRole('heading', { name: 'Install' })).toBeInTheDocument();
+        expect(screen.getByRole('progressbar')).toBeInTheDocument();
+        expect(screen.queryByText('The form')).not.toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: 'Install' })).not.toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Close' })).toBeInTheDocument();
+    });
+
+    it("says what it is doing in the progress window's three rows: label, detail, expectation", () => {
+        const { container } = renderWithProvider(
+            <Modal title="Clear Demo Data" onClose={jest.fn()} waiting={WAIT_STAGES.readingDemoData}>
+                <p>The form</p>
+            </Modal>,
+        );
+
+        const wait = container.ownerDocument.querySelector('.modal-wait') as HTMLElement;
+        expect(wait).toHaveTextContent('Reading demo data');
+        expect(wait).toHaveTextContent('Querying Commerce');
+        expect(wait).toHaveTextContent('Usually a few seconds');
+    });
+
+    it('holds no blank rows for a wait that gives only its label, so it stays centred', () => {
+        const { container } = renderWithProvider(
+            <Modal title="Install" onClose={jest.fn()} waiting={{ label: 'Starting removal' }}>
+                <p>The form</p>
+            </Modal>,
+        );
+
+        const wait = container.ownerDocument.querySelector('.modal-wait') as HTMLElement;
+        expect(wait.textContent?.trim()).toBe('Starting removal');
+    });
+
+    it('shows the content and the actions when it is not waiting', () => {
+        renderWithProvider(
+            <Modal title="Install" actionButtons={[action]} onClose={jest.fn()} waiting={false}>
+                <p>The form</p>
+            </Modal>,
+        );
+
+        expect(screen.getByText('The form')).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Install' })).toBeInTheDocument();
+        expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
     });
 });

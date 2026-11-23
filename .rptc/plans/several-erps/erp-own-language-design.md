@@ -107,6 +107,6 @@ on the Admin page is never overwritten (the same rule as owner principle 2 for f
    webhook; the order placement send renamed to the references; box journeys pass unchanged
    end to end.
 3. Demo Builder: the mapping pre-fill after each fill.
-4. Deploy demo-erp, demo-erp-2 and the integration on Justrite; rerun the order-to-return
+4. Deploy demo-erp, demo-erp-2 and the integration on Tailspin; rerun the order-to-return
    rehearsal (`rehearse-order-to-return.sh`) and a product name change. All three repos must
    ship together: a v16 ERP talking to a v15 integration breaks every event.

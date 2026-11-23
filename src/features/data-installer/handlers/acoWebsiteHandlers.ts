@@ -24,16 +24,17 @@ import { MAKE_ACO_PACK_ARGS } from '../services/acoWebsite/scrapedProductInput';
 import { scrapeWebsitePrompt } from '../services/acoWebsite/scrapeWebsitePrompt';
 import { writePackToStore } from '../services/datapackTransfer';
 import { openLibraryWriter } from './libraryWriter';
+import { COULDNT_TELL } from '@/core/utils/plainText';
 import { ErrorCode } from '@/types/errorCodes';
 import { defineHandlers, type HandlerContext, type HandlerResponse } from '@/types/handlers';
 
 const LOG_PREFIX = '[Data Installer]';
 
 /** The first few of zod's complaints, each as `path: message`. */
-function inputProblem(issues: ReadonlyArray<{ path: Array<string | number>; message: string }>): string {
+function inputProblem(issues: ReadonlyArray<{ path: ReadonlyArray<PropertyKey>; message: string }>): string {
     return issues
         .slice(0, 3)
-        .map((issue) => `${issue.path.join('.') || 'input'}: ${issue.message}`)
+        .map((issue) => `${issue.path.map(String).join('.') || 'input'}: ${issue.message}`)
         .join('; ');
 }
 
@@ -43,7 +44,7 @@ async function makeAcoPackFromProducts(context: HandlerContext, payload?: unknow
     if (!parsed.success)
         return {
             success: false,
-            error: `These products cannot be made into an ACO pack: ${inputProblem(parsed.error.issues)}.`,
+            error: `These products cannot be made into an ACO datapack: ${inputProblem(parsed.error.issues)}.`,
             code: ErrorCode.INVALID_OPERATION,
         };
     const args = parsed.data;
@@ -73,7 +74,7 @@ async function makeAcoPackFromProducts(context: HandlerContext, payload?: unknow
         );
         return {
             success: false,
-            error: 'The ACO pack could not be saved. Details are in Debug Logs.',
+            error: `The ACO datapack could not be saved. ${COULDNT_TELL}`,
             code: ErrorCode.UNKNOWN,
         };
     }

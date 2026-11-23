@@ -1,12 +1,14 @@
 /**
  * UtilityBar Component
  *
- * A labeled "Utilities" zone — small-caps zone label above three tiles
- * (Tools, Help, Settings), stacked vertically. Mirrors the project
- * dashboard's labeled zones.
+ * A labeled "Utilities" zone — small-caps zone label above its tiles
+ * (Tools, Datapacks, Help, Settings, Logs), stacked vertically. Mirrors the
+ * project dashboard's labeled zones. Datapacks opens the Datapack Library, the
+ * packs themselves with no project (owner, 2026-11-07).
  */
 
 import { Flex, Text, ActionButton } from '@adobe/react-spectrum';
+import Box from '@spectrum-icons/workflow/Box';
 import Help from '@spectrum-icons/workflow/Help';
 import Settings from '@spectrum-icons/workflow/Settings';
 import ViewList from '@spectrum-icons/workflow/ViewList';
@@ -16,6 +18,8 @@ import React from 'react';
 export interface UtilityBarProps {
     /** Callback when user clicks Tools button */
     onOpenTools?: () => void;
+    /** Callback when user clicks Datapacks: the Datapack Library */
+    onOpenDatapacks?: () => void;
     /** Callback when user clicks Help link */
     onOpenHelp?: () => void;
     /** Callback when user clicks Settings */
@@ -30,6 +34,7 @@ export interface UtilityBarProps {
  */
 export function UtilityBar({
     onOpenTools,
+    onOpenDatapacks,
     onOpenHelp,
     onOpenSettings,
     onOpenLogs,
@@ -48,6 +53,18 @@ export function UtilityBar({
                     >
                         <Wrench />
                         <Text UNSAFE_className="icon-label">Tools</Text>
+                    </ActionButton>
+                )}
+
+                {onOpenDatapacks && (
+                    <ActionButton
+                        isQuiet
+                        onPress={onOpenDatapacks}
+                        aria-label="Datapack Library"
+                        UNSAFE_className="sidebar-action-tile"
+                    >
+                        <Box />
+                        <Text UNSAFE_className="icon-label">Datapacks</Text>
                     </ActionButton>
                 )}
 

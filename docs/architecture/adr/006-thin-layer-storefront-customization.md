@@ -255,6 +255,8 @@ Tracked in `.rptc/plans/thin-layer-storefront-adr-006/`. As of 2026-06-10 (live)
 
 ## Reference notes
 
+- `scripts/reanchor.mjs` — lives in the `skukla/eds-demo-patches` repository, beside the drift
+  gate that runs it. This repo is its consumer, so the path does not resolve here.
 - `createOptimizedPicture` — lives in the AEM boilerplate's `aem.js`, not in this
   repository. Naming it is the point: the ADR is about patching canonical upstream code
   rather than forking it.

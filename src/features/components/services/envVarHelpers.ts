@@ -6,8 +6,6 @@
  */
 
 import {
-    ACCS_OAUTH_CLIENT_ID,
-    ACCS_OAUTH_CLIENT_SECRET,
     PAAS_ADMIN_PASSWORD,
     PAAS_ADMIN_USERNAME,
 } from '@/core/config/envVarKeys';
@@ -59,6 +57,18 @@ export function deriveAccsAdminUrl(accsEndpoint: string | undefined): string | u
     const parsed = parseAccsEndpoint(accsEndpoint);
     if (!parsed) return undefined;
     return `https://${parsed.region}.admin.commerce.adobe.com/${parsed.tenantId}/admin/admin/dashboard/`;
+}
+
+/**
+ * The same tenant's Admin in Adobe's Unified Shell, in the form Adobe documents (Experience League,
+ * "Commerce Admin in Adobe Unified Experience"). The organization is its short name.
+ *
+ * @returns The URL, or undefined when the endpoint doesn't match the ACCS tenant shape.
+ */
+export function deriveAccsUnifiedAdminUrl(accsEndpoint: string | undefined, imsOrg: string): string | undefined {
+    const parsed = parseAccsEndpoint(accsEndpoint);
+    if (!parsed) return undefined;
+    return `https://experience.adobe.com/#/@${encodeURIComponent(imsOrg)}/in:${parsed.tenantId}/commerce/cloud-service/admin`;
 }
 
 /**
@@ -130,21 +140,6 @@ export function readPaasAdminPair(
     const username = lookupComponentConfigValue(configs ?? {}, PAAS_ADMIN_USERNAME);
     const password = lookupComponentConfigValue(configs ?? {}, PAAS_ADMIN_PASSWORD);
     return username && password ? { username, password } : undefined;
-}
-
-/**
- * The ACCS OAuth Server-to-Server pair, or nothing.
- *
- * Symmetric with {@link readPaasAdminPair}, including both-halves-or-nothing. The
- * OAuth pair is the ACCS best practice — the IMS model for SaaS — and is read
- * instead of an admin pair rather than in addition to one.
- */
-export function readAccsOAuthPair(
-    configs: ConfigMap,
-): { clientId: string; clientSecret: string } | undefined {
-    const clientId = lookupComponentConfigValue(configs ?? {}, ACCS_OAUTH_CLIENT_ID);
-    const clientSecret = lookupComponentConfigValue(configs ?? {}, ACCS_OAUTH_CLIENT_SECRET);
-    return clientId && clientSecret ? { clientId, clientSecret } : undefined;
 }
 
 /**

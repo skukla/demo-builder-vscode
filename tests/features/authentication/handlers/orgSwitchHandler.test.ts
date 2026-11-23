@@ -31,7 +31,7 @@ jest.mock(
     { virtual: true }
 );
 
-import { handleForcedOrgSwitch } from '@/features/authentication/handlers/orgSwitchHandler';
+import { handleForcedOrgSwitch, signInThroughOrgChooser } from '@/features/authentication/handlers/orgSwitchHandler';
 import type { HandlerContext } from '@/types/handlers';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
 import { createMockLogger } from '../../../helpers/loggerFake';
@@ -129,5 +129,30 @@ describe('handleForcedOrgSwitch', () => {
             }),
             expect.any(Function)
         );
+    });
+});
+
+// The org switch's sign-in on its own, for the doors that switch org without a webview
+// message: the Sign In command's "Sign In Again" over a good session, and the wizard's
+// Switch IMS Org (its `authenticate` with force). Same forced sign-in, same notice.
+describe('signInThroughOrgChooser', () => {
+    it('forces the sign-in with the context it is handed, behind the org-switch notice', async () => {
+        const loginAndRestoreProjectContext = jest.fn().mockResolvedValue(true);
+        const vscodeMock = jest.requireMock('vscode');
+
+        const ok = await signInThroughOrgChooser({ loginAndRestoreProjectContext });
+
+        expect(ok).toBe(true);
+        expect(loginAndRestoreProjectContext).toHaveBeenCalledWith({}, true);
+        expect(vscodeMock.window.withProgress).toHaveBeenCalledWith(
+            expect.objectContaining({ title: expect.stringMatching(/switch organization/i) }),
+            expect.any(Function),
+        );
+    });
+
+    it('reports a cancelled switch as false', async () => {
+        const ok = await signInThroughOrgChooser({ loginAndRestoreProjectContext: jest.fn().mockResolvedValue(false) });
+
+        expect(ok).toBe(false);
     });
 });

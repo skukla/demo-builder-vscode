@@ -16,6 +16,6 @@ Storefront report (step 04) also renders:
 
 Rules: the section is read-only and never writes; a fetch that fails says "could not read",
 never "not present" (the verifying rules); fixtures for its tests come from live answers
-(the fit test on `sayurihanki/aistore` recorded in the research is the first). The agent tool
+(the fit test on `org-j/aistore` recorded in the research is the first). The agent tool
 returns the same section; `mcp-tools.md` regenerates; `docs/systems/debugging.md` gains the
 section's meaning.

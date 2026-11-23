@@ -191,13 +191,28 @@
           "$ref": "#/definitions/AddedDemo",
           "description": "The storefront row for a project built on an added demo (D2): the demo's description and its repository. Read before the catalog by `resolveStorefrontForProject`; absent for a project on a shipped brand."
         },
+        "importedFrom": {
+          "$ref": "#/definitions/ProjectImportedFrom",
+          "description": "Set on a project Import from File made from a demo bundle (EDS-72): the import's commit in the project's own repository, which Reset restores, and where it came from. Such a project has no `demo` row (decision 3)."
+        },
         "datapack": {
           "$ref": "#/definitions/ProjectDatapack",
-          "description": "The datapack this demo's store holds, and the store that holds the pack.\n\nChosen on the wizard's Datapacks step and installed by creation itself (`executeSampleDataPhase`, since 8ab56b934); also set by an import from the Data Installer screen and by \"Save store changes\", and cleared by a reset once it finishes having taken out everything the pack put there (a reset that stops, or keeps containers holding the SC's things, leaves it). `configure_project` records it without installing."
+          "description": "The datapack this demo's store holds, and the store that holds the pack.\n\nChosen on the wizard's Datapacks step and installed by creation itself (`executeSampleDataPhase`, since 8ab56b934); also set by an import from the Data Installer screen and by a save (Save and Save As, `demoPack.ts`), and cleared by a reset once it finishes having taken out everything the pack put there (a reset that stops, or keeps containers holding the SC's things, leaves it). `configure_project` records it without installing."
         },
-        "ownDatapack": {
-          "$ref": "#/definitions/OwnDatapack",
-          "description": "This demo's own library pack, once its first save made one (step 07)."
+        "datapackInstallFailure": {
+          "$ref": "#/definitions/DatapackInstallFailure",
+          "description": "The creation-time install of `datapack` that did not end in success, until a later install of it succeeds or the project stops naming it (`installFailure.ts`). Absent on every project predating it, which shows nothing. Never exported in a project file."
+        },
+        "finishSetup": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/FinishSetupRecord"
+          },
+          "description": "The steps a run left for the SC to finish (PL-101), by step id: Republish the Code (`republish-code`, with the files the live site did not serve yet) and where the SC is on each step the Finish Setup guide lists (Skip, Mark as Done, what its last check found). A finished step is kept, shown done, until the next creation or reset REPLACES the record. Absent when no run left anything. Never exported in a project file."
+        },
+        "commerceAdminExperience": {
+          "$ref": "#/definitions/CommerceAdminExperience",
+          "description": "The Commerce Admin interface chosen on Configure. Absent: the setting's."
         },
         "selectedStack": {
           "type": "string"
@@ -864,6 +879,10 @@
               "type": "string",
               "description": "The version in the clone, when it differs from the installed one."
             },
+            "release": {
+              "type": "string",
+              "description": "The release an update would move to, for a repository that ships by release."
+            },
             "checkedAt": {
               "type": "string",
               "description": "ISO date string of the check."
@@ -872,7 +891,7 @@
           "required": [
             "checkedAt"
           ],
-          "description": "Newer code is available: the source branch on GitHub has commits the clone lacks, the clone is at a commit the last good deploy did not ship (`deployedCommit`), or the clone's app version differs from the one installed in Commerce. Set by the integrations screen's check, removed by a successful update (integrationUpdateCheck)."
+          "description": "Newer code is available: the newest release (or, for a repository the builder does not own, the source branch) has commits the clone lacks, the clone is at a commit the last good deploy did not ship (`deployedCommit`), or the clone's app version differs from the one installed in Commerce. Set by the integrations screen's check, removed by a successful update (integrationUpdateCheck)."
         },
         "deployedCommit": {
           "type": "string",
@@ -1106,7 +1125,7 @@
         "kind",
         "previous"
       ],
-      "description": "What a config fix recorded."
+      "description": "What a config setup recorded."
     },
     "CommerceConfigPrevious": {
       "type": "object",
@@ -1147,7 +1166,7 @@
         "stored",
         "effective"
       ],
-      "description": "One setting as it was before a config fix wrote it."
+      "description": "One setting as it was before a config setup wrote it."
     },
     "ErpAttributesStepRecord": {
       "type": "object",
@@ -1575,6 +1594,10 @@
           },
           "description": "The ledger's patch ids the storefront carries."
         },
+        "patchesRelease": {
+          "type": "string",
+          "description": "The ledger's release the storefront was last built or updated from (its `patchesRelease`), so a colleague's import is offered every release published since (F255)."
+        },
         "boilerplate": {
           "$ref": "#/definitions/StorefrontBoilerplate",
           "description": "Its `package.json` name and version when it was saved."
@@ -1670,6 +1693,32 @@
       },
       "description": "Where a storefront's repository came from, as GitHub records it (EDS-13f decision 1). Both absent is the common case: a repository created empty and pushed, or reset onto a source, carries no record."
     },
+    "ProjectImportedFrom": {
+      "type": "object",
+      "properties": {
+        "commit": {
+          "type": "string",
+          "description": "The commit the bundle's files were pushed as: Reset puts the code back to it (decision 1)."
+        },
+        "contentSource": {
+          "$ref": "#/definitions/DaLiveContentSource",
+          "description": "The sender's content site the pages were copied from, when the bundle names one."
+        },
+        "bundleName": {
+          "type": "string",
+          "description": "The demo's name as the Welcome step shows it: the setup's title, else its project."
+        },
+        "sourceRepository": {
+          "type": "string",
+          "description": "The sender's owner/repo, provenance only (the setup's `source.storefront.githubRepo`)."
+        }
+      },
+      "required": [
+        "bundleName",
+        "commit"
+      ],
+      "description": "What a project imported from a bundle records (EDS-72 decisions 1 and 3): the import, never a `demo` row. Reset reads `commit`; the rest is provenance. The template base and patches release are not kept here: they live in `lastSyncedCommit` and `patchesRelease`, where updates read them."
+    },
     "ProjectDatapack": {
       "type": "object",
       "properties": {
@@ -1692,26 +1741,77 @@
       ],
       "description": "The pack a project holds: a reference whose version is known."
     },
-    "OwnDatapack": {
+    "DatapackInstallFailure": {
       "type": "object",
       "properties": {
         "name": {
-          "type": "string",
-          "description": "The pack's name in the library. Immutable there."
+          "type": "string"
         },
-        "displayName": {
-          "type": "string",
-          "description": "What the SC sees it called, as last saved or renamed."
+        "version": {
+          "type": "string"
         },
-        "renamed": {
-          "type": "boolean",
-          "description": "True once the SC renamed the pack themselves; until then its display name follows the project's."
+        "reason": {
+          "type": "string",
+          "description": "Why the run did not succeed, in the run's own words."
+        },
+        "at": {
+          "type": "string",
+          "description": "When the latest failed run ended, ISO."
+        },
+        "retries": {
+          "type": "number",
+          "description": "Installs of the same datapack tried since, all failed."
         }
       },
       "required": [
-        "name"
+        "at",
+        "name",
+        "reason",
+        "retries",
+        "version"
       ],
-      "description": "This demo's own pack (step 07): the library pack every save from this project goes into, made at the first save. Never in a project file, so a copy or an import starts from the original's pack and makes its own at its first save."
+      "description": "A creation-time install of the project's datapack that did not end in success (step-04 S7).\n\nKept on the PROJECT, never on `ProjectDatapack`, which travels in project files: a failure belongs to this store, not to a copy. Rules in `features/data-installer/services/installFailure.ts`."
+    },
+    "FinishSetupRecord": {
+      "type": "object",
+      "properties": {
+        "state": {
+          "type": "string",
+          "enum": [
+            "done",
+            "dismissed"
+          ],
+          "description": "Absent = still to do."
+        },
+        "note": {
+          "type": "string",
+          "description": "What the last automatic check found, in words (e.g. which companies share a group)."
+        },
+        "lastCheck": {
+          "$ref": "#/definitions/SetupCheckOutcome",
+          "description": "What that check concluded: set up, not set up, or it could not tell (the state is then left as it was, so the state alone cannot say). Absent on records saved before 2026-10-01; `setupChecklistOf` infers it from the state for those."
+        },
+        "checkedAt": {
+          "type": "string",
+          "description": "When that check ran (ISO)."
+        },
+        "files": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Republish the Code: the repository paths the live site did not serve as committed."
+        }
+      },
+      "description": "One Finish Setup step's saved state (PL-101): a setup step's record, and the files a code step is about."
+    },
+    "CommerceAdminExperience": {
+      "type": "string",
+      "enum": [
+        "unified-shell",
+        "classic"
+      ],
+      "description": "Which Commerce Admin interface a Cloud Service project opens. Stored on the project when the SC chooses; absent, the `demoBuilder.commerce.adminExperience` setting decides. Only which link opens changes: nothing in Commerce does, and Adobe's classic links keep opening the classic interface."
     },
     "CustomBlockLibrary": {
       "type": "object",
@@ -1768,6 +1868,10 @@
         "commitSha": {
           "type": "string",
           "description": "Commit SHA of the source repo at installation time"
+        },
+        "version": {
+          "type": "string",
+          "description": "The release it is at, for a repository that ships by release. Commit SHA stays: removal compares at it."
         },
         "blockIds": {
           "type": "array",

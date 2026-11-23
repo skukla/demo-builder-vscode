@@ -323,15 +323,73 @@ export const LAST_UPDATE_CHECK = 'lastUpdateCheck';
 // record points to Clear demo data; a pack can be saved from any store with the items picked;
 // and an ACO pack can be made from the store. Existing projects would keep telling the agent one
 // bad row stops everything and that only a pack the engine installed can be saved.
-// v49 (2026-10-31, PL-60): the scrape-products-to-aco skill (written when the Playwright tools
-// are, like the other browser skills) turns a public listing page into an ACO pack in the SC's
-// library through make_aco_pack_from_products, and the ACO credential is Demo Builder's to make
-// (set_up_aco_credential / remove_aco_credential), never typed. Existing projects would keep
-// lacking the skill and the tools' place in it.
-// v50 (2026-11-01, PL-60): scrape-products-to-aco says the catalog view must allow the store's price
-// books, because an ACO storefront now asks Commerce for each shopper's book. Existing projects would
-// keep leaving SCs with a pack that shows no prices.
-export const AI_CONTEXT_VERSION = 50;
+// v49 (2026-11-02, datapack ticks): import-datapack says Demo Builder's engine installs only the
+// dataTypes named and what they need, and that its removal takes all the record lists, whichever
+// are sent. Existing projects would keep telling the agent removal scope follows dataTypes.
+// v50 (2026-11-02, Experience Workspace default): a project that never chose an authoring experience
+// now opens Experience Workspace. Existing projects' AGENTS.md would keep the DA.live Classic link.
+// v51 (2026-11-03, ACCS credential fields removed): update-credentials stops telling the agent about
+// an OAuth pair nothing reads.
+// v52 (2026-11-03, datapacks without the Data Installer): the enabled setting is gone, and import-datapack
+// and diagnose-demo say datapacks come from Demo Builder's datapack store first, the Data Installer being
+// an extra. Existing projects would keep sending the agent to a setting that no longer exists.
+// Also in v52: a project's storefront git-sync hook is plain POSIX sh (`case`, not bash's `[[`),
+// so it runs on Linux, where /bin/sh is dash. Existing projects would keep a hook that never pushes there.
+// v53 (2026-11-03, datapack Save and Save As): import-datapack says a save goes into the pack the
+// project uses when it is the user's, else asks for a name, and that there is no automatic pack per
+// demo. Existing projects would keep telling the agent saves go to "this demo's own pack".
+// v54 (2026-11-04, no suggested Save As name): import-datapack stops telling the agent to offer
+// `suggestedName`, which the save no longer answers. Existing projects would keep pointing at it.
+// v55 (2026-11-05, Data Installer on and off): import-datapack and diagnose-demo name
+// `dataInstaller.enabled` and the `turned-off` reason. Existing projects would keep telling the agent
+// an address alone decides it.
+// v56 (2026-11-06, install check): import-datapack adds verify_datapack_install after a successful
+// install. Existing projects would keep treating `success` as proof the data came out right.
+// v57 (2026-11-06, the install checks itself): import-datapack reads the install's own `check` and keeps
+// verify_datapack_install for later. Existing projects would keep calling the check after every install.
+// v58 (2026-11-06, a reinstall removed what the pack still had): import-datapack previews before
+// installing a pack again and stops when an unchanged pack would change anything. Existing projects
+// would keep reinstalling blind.
+// v59 (2026-11-06, the service's install engine deleted, DI-12): import-datapack and diagnose-demo
+// describe one engine, and import-datapack says how a pack is copied into the Data Installer.
+// Existing projects would keep telling agents to set an Engine setting that no longer exists.
+// v60 (2026-11-09, walk F85): import-datapack says a save from a pack takes everything the demo uses,
+// picking only what it does not use yet (`unused: true`). Existing projects would keep telling the
+// agent to pick what was added by hand, which the save now takes on its own.
+// v61 (2026-11-09, walk F97): import-datapack says importing another pack or version over the
+// project's removes that one first, asking about the user's changes, and no longer stops another
+// version or a team pack's in-place update as "lost track". Existing projects would keep treating
+// another version as a first install.
+// v62 (2026-11-13, datapack simplification Phase 8): import-datapack speaks the Datapacks screen's
+// words (Install, Uninstall, Switch, Save As New, Add from File, Delete, Demo Builder datapacks), maps
+// each screen action to its tool, gives the save question and the failed-install Retry, says Clear Demo
+// Data uninstalls the datapack first, and drops copy_library_datapack_to_installer, which agents no
+// longer have (D7). Existing projects would keep sending the agent to a tool that is gone, and to the
+// removed `unused` and Data Installer inputs.
+// v63 (2026-11-14, datapack simplification step-07 E1/E2): import-datapack sends a whole data type as
+// `wholeKinds` instead of paging list_datapack_export_items for every id, and asks
+// preview_datapack_changes with `added: true` what a Save takes. Existing projects would keep telling
+// the agent to list and send every id of a type.
+// v64 (2026-11-14, datapack simplification step-07 U1): import-datapack gains update_datapack (a
+// newer version's changes, the user's edits kept, chosen data types) and restore_datapack's points
+// (`to: lastSaved | original`, `changes` for Original over unsaved edits), and maps Update to its tool.
+// Existing projects would keep telling the agent Restore installs the newest save, and never offer Update.
+// v65 (2026-11-14, datapack simplification step-07 F1/F2): import-datapack gives Keep Both (`saveAs` on
+// load_datapack_zip), the exact undo of a load (`keepSettingsLayer` on delete_library_datapack), and
+// reads `check.leftOutDeleted` (products the user deleted, no longer counted as kept as changed).
+// Existing projects would keep offering only Replace for a file already in My Datapacks.
+// v66 (2026-11-14, datapack simplification step-07 A3, owner answer Q5): six datapack tools take the
+// Datapacks screen's words, with no aliases: install_datapack, add_datapack_from_file,
+// read_datapack_file, uninstall_datapack, create_datapack, mark_demo_builder_datapack (input
+// `demoBuilder`). The guide is now `datapacks`; writeSkillFiles removes the old guide's copy by its
+// recorded hash (an edited copy is left and reported). Existing projects would keep naming tools that
+// no longer exist. (The notes above were renamed with the tools; docs/CHANGELOG.md keeps the old names.)
+// v67 (2026-11-22, PL-60 ACO branch brought onto develop): the ACO line's two notes, numbered 49 and 50
+// on its own branch. The scrape-products-to-aco skill turns a public listing page into an ACO pack
+// through make_aco_pack_from_products, the ACO credential is Demo Builder's to make
+// (set_up_aco_credential / remove_aco_credential), and the catalog view must allow the store's price
+// books. Existing projects would keep lacking the skill and leaving SCs with packs that show no prices.
+export const AI_CONTEXT_VERSION = 67;
 
 /**
  * Component IDs for standardized component instance access

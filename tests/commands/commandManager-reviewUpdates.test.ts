@@ -12,6 +12,10 @@
  * part that matters: it takes at least `TIMEOUTS.UI.MIN_LOADING`, and every load
  * replaces the screen, so a screen loaded twice loses the Updates window the first
  * load opened.
+ *
+ * The project dashboard's Delete rides the same mechanism (step-05 S4, owner 2026-11-13,
+ * P5-Q2): it opens the projects list holding an instruction to open the one-row Delete window
+ * on that project, taken once by the page that loads, or pushed to a list already open.
  */
 
 import * as os from 'os';
@@ -45,7 +49,7 @@ jest.mock('@/features/ai/server/headlessHandlerContext', () => ({ createHeadless
 
 const PROJECTS_ROOT = path.join(os.homedir(), '.demo-builder', 'projects');
 const OPEN_PROJECT = createMockProject({ name: 'scratch-1028', path: path.join(PROJECTS_ROOT, 'scratch-1028') });
-const OTHER_PROJECT = createMockProject({ name: 'justrite', path: path.join(PROJECTS_ROOT, 'justrite') });
+const OTHER_PROJECT = createMockProject({ name: 'tailspin', path: path.join(PROJECTS_ROOT, 'tailspin') });
 
 /** Two updates, both for the project that is NOT open. */
 const FOUND: FoundUpdates = {
@@ -58,7 +62,6 @@ const FOUND: FoundUpdates = {
         adobeMcp: [],
         blockLibrary: [],
         blockLibraryInstall: [],
-        inspector: [],
         integration: [],
     },
     currentProjectPath: OPEN_PROJECT.path,
@@ -113,7 +116,7 @@ function fakeChannel(): unknown {
         dispose: jest.fn(),
         sendMessage: jest.fn(async (type: string, payload?: { rows?: PendingUpdateRow[] }) => {
             if (type === 'showUpdates' && payload?.rows?.length) screen.updatesWindow = payload.rows;
-            // WebviewApp renders the app on its first `init`; the app then asks once.
+            // WebviewApp renders the app on its first `init`; the app then asks once for each.
             if (type === 'init' && screen.waitingForInit) {
                 screen.waitingForInit = false;
                 const answer = await handleTakeUpdatesRequest(createMockHandlerContext());
@@ -328,3 +331,9 @@ describe('Review on the update notification', () => {
         });
     });
 });
+
+/**
+ * The dashboard's Delete (step-05 S4): the projects list opens on the one-row Delete window for
+ * the dashboard's project, inside the list command's webview transition, so closing the dashboard
+ * does not open the list a second time.
+ */

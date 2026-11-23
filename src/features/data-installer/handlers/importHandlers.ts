@@ -22,49 +22,69 @@
  * @module features/data-installer/handlers/importHandlers
  */
 
-import { buildDatapackEngine, engineThatInstalled } from '../services/buildDatapackEngine';
-import { selectedDatapackEngine } from '../services/dataInstallerConfig';
-import type { ImportRequest, ImportTarget } from '../services/dataInstallerWriteClient';
+import { announcingChanges } from '../services/datapackChanges';
 import type { DatapackEngine } from '../services/datapackEngine';
-import { resolveInstallTarget } from '../services/sampleDataInstall';
-import type { ImportJobRecord } from '../types';
+import type { ImportRequest } from '../services/importRequest';
+import { rememberedPackName } from '../services/packNames';
+import type { ValidationResult } from '../types';
 import { acoWebsiteHandlers } from './acoWebsiteHandlers';
 import { datapackLibraryHandlers } from './datapackLibraryHandlers';
-import { type DatapackWriteAccess, resolveDatapackWriteAccess } from './datapackWriteGate';
+import { datapackRecordsHandlers } from './datapackRecordsHandlers';
+import { withSavedNote } from './datapackSwitch';
 import { datapackZipHandlers } from './datapackZipHandlers';
 import { demoDataHandlers } from './demoDataHandlers';
 import { exportHandlers } from './exportHandlers';
-import { JOB_KEY, runAndWatch } from './importJobWatch';
+import { exportPackHandlers } from './exportPackHandlers';
+import { importFixWithAiHandlers, recordDryRun } from './importFixHandlers';
+import { skippedPage, waitForJob, waitMsOf } from './importJobWait';
+import { runAndWatch } from './importJobWatch';
+import { type StartImportPayload, afterWait, prepareImport, readInput, startDatapackImport } from './importStart';
 import { importTargetHandlers } from './importTargetHandlers';
-import { SERVICE_INSTALLS_ONLY_ITS_OWN, libraryReads } from './libraryReads';
+import { readJobRecord } from './jobRecordRead';
+import { startingRemovalStage, type SavedFirst, removalChangesHandlers, removalStageReporter, settleChangesBeforeRemoval } from './removalChanges';
+import { restoreDatapackHandlers } from './restoreDatapack';
+import { saveQuestionTipHandlers } from './saveQuestionTip';
 import { storeChangesHandlers } from './storeChangesHandlers';
+import { undoLastSaveHandlers } from './undoLastSave';
+import { updateDatapackHandlers } from './updateDatapack';
 import { TransientStateManager } from '@/core/state/transientStateManager';
-import { handleBackgroundOperation } from '@/core/vscode/operationProgress';
+import { DATAPACK_OPERATION_ID } from '@/core/utils/operationIds';
+import { notYetPlain, plain } from '@/core/utils/plainText';
+import { handleBackgroundOperation, pushOperationProgress } from '@/core/vscode/operationProgress';
 import { handleAnswerOperationPrompt } from '@/core/vscode/operationPrompt';
-import { orgGuard } from '@/features/authentication/services/projectOrgGuard';
-import type { DatapackId, DatapackStoreName } from '@/types/datapack';
 import { ErrorCode } from '@/types/errorCodes';
 import { defineHandlers, type HandlerContext, type HandlerResponse } from '@/types/handlers';
 
-/** Payload for a start request. */
-interface StartImportPayload {
-    datapackName?: string;
-    version?: string;
-    commerceInstance?: string;
-    dataTypes?: string[];
-    /**
-     * Where the pack lands — both codes or neither (see {@link readTarget}).
-     * Omitted means the service's own default, `base`.
-     */
-    websiteCode?: string;
-    storeCode?: string;
-    /** Reset only: must be true. Nothing removes data by default. */
-    confirm?: boolean;
-    /** Which store holds the pack: `installer` (absent) or `library` (DI-5). */
-    source?: string;
-}
+/**
+ * The actions that change the packs or which pack a project holds: each announces it once it
+ * succeeds, so every open Datapacks screen reads its list again (F66, `datapackChanges.ts`). Wrapped
+ * here, where the map is built, so the screens and the agent tools are one path. An import or removal
+ * job announces again when it ends (`importJobWatch`).
+ */
+const CHANGES_PACKS = [
+    'delete-library-datapack',
+    'rename-library-datapack',
+    'share-library-datapack',
+    'mark-team-datapack',
+    'copy-library-datapack-to-installer',
+    'load-datapack-zip',
+    'build-datapack-from-export',
+    'save-store-changes-to-pack',
+    'start-datapack-export',
+    'start-datapack-import',
+    'reset-datapack',
+    'undo-last-save',
+] as const;
 
-export const importHandlers = defineHandlers({
+/**
+ * The actions whose call without `confirm` is a check that writes nothing (step-07 U1): Restore and
+ * Update announce only once confirmed, or every open screen would read everything again for a look.
+ */
+const CHANGES_PACKS_WHEN_CONFIRMED = ['restore-datapack', 'update-datapack'] as const;
+const confirmed = (payload: unknown): boolean =>
+    typeof payload === 'object' && payload !== null && (payload as { confirm?: unknown }).confirm === true;
+
+export const importHandlers = announcingChanges(announcingChanges(defineHandlers({
     // Closing a running import hands it to a notification that keeps narrating
     // (PL-59 R8); this is the channel that says so.
     backgroundOperation: handleBackgroundOperation,
@@ -78,33 +98,33 @@ export const importHandlers = defineHandlers({
     ...importTargetHandlers,
     // Datapack files (save a pack to a zip, load one back), same reason.
     ...datapackZipHandlers,
+    ...exportPackHandlers,
     // Library pack actions: remove your own, copy one into the Data Installer.
     ...datapackLibraryHandlers,
     // What installing again would change, and saving the store's copy as a new version (step 05).
     ...storeChangesHandlers,
+    // The records an install puts in Commerce, for the install window's Review Records (step 03, S4).
+    ...datapackRecordsHandlers,
+    // What a removal would lose, for its confirm (step 05).
+    ...removalChangesHandlers,
+    // The one-time tip once the save question was answered (step 03, S6); webview-only.
+    ...saveQuestionTipHandlers,
     // What a website holds that Demo Builder did not install, and clearing it (step 10).
     ...demoDataHandlers,
     // An ACO pack from a website's products, and the dialog's door to it (PL-60 slice A).
     ...acoWebsiteHandlers,
+    // An import that ended with a problem, handed to the SC's AI (owner, 2026-11-07).
+    ...importFixWithAiHandlers,
+    // Undo Last Save: the save before the newest, installed over it through the import path (Phase 2).
+    ...undoLastSaveHandlers,
+    // Restore: the demo's datapack back to a previous state, over what Commerce holds now (J9).
+    ...restoreDatapackHandlers,
+    // Update: what a newer version changed, over the version installed, the SC's edits kept (step-07 U1).
+    ...updateDatapackHandlers,
     'start-datapack-import': async (
         context: HandlerContext,
         payload?: StartImportPayload,
-    ): Promise<HandlerResponse> => {
-        const prepared = await prepareImport(context, payload);
-        if ('response' in prepared) {
-            return prepared.response;
-        }
-        const { engine, request } = prepared;
-
-        // The sync twin is the only thing that will tell us this request is
-        // malformed. A 202 from the async entry point would not.
-        return runAndWatch(context, engine, request, {
-            operation: 'import',
-            begin: () => engine.startImport(request),
-            rejected: 'The Data Installer rejected this import request.',
-            failed: 'The import could not be started.',
-        });
-    },
+    ): Promise<HandlerResponse> => startDatapackImport(context, payload),
 
     /**
      * The dry run — validate and stop.
@@ -123,28 +143,17 @@ export const importHandlers = defineHandlers({
     ): Promise<HandlerResponse> => {
         const prepared = await prepareImport(context, payload);
         if ('response' in prepared) {
+            await recordDryRun(context, null);
             return prepared.response;
         }
         try {
-            // Access first. If the service cannot sign in to the instance, whether
-            // the request is well-formed is not the answer anyone needs — and
-            // `get-websites-and-stores` answers it without going near
-            // process-datapack, so it cannot start work by accident.
-            const access = await prepared.engine.checkCredentials(prepared.request);
-            if (!access.usable) {
-                return {
-                    success: true,
-                    data: {
-                        valid: false,
-                        reason: access.reason ?? 'The Data Installer could not sign in to that Commerce instance.',
-                    },
-                };
-            }
-            return {
-                success: true,
-                data: await prepared.engine.validateImport(prepared.request),
-            };
+            const verdict = await dryRunVerdict(prepared.engine, prepared.request);
+            // Step 03, S5: recorded, so Fix with AI is built from this answer and not the window's.
+            const { name: datapackName, version } = prepared.request.id;
+            await recordDryRun(context, { datapackName, version, ...verdict });
+            return { success: true, data: verdict };
         } catch (error) {
+            await recordDryRun(context, null);
             return {
                 success: false,
                 error: error instanceof Error ? error.message : 'The request could not be validated.',
@@ -159,6 +168,10 @@ export const importHandlers = defineHandlers({
      * The same shape as a start — validate, then a 202, then the SAME runner
      * watching the same kind of activation id. That the runner needs no changes
      * is the seam working as designed.
+     *
+     * **What it takes is what its install record lists**, so the types sent are not asked for
+     * and the job reports the record's kinds. A pack the Data Installer service installed has
+     * no record, and is answered with Clear Demo Data (`SERVICE_REMOVAL_UNAVAILABLE`).
      *
      * **Confirm-gated.** A reset is destructive and the service has no undo, so it
      * takes the same explicit opt-in the destructive MCP tools use rather than
@@ -176,186 +189,103 @@ export const importHandlers = defineHandlers({
             };
         }
 
-        const prepared = await prepareImport(context, payload, 'remove');
+        const settled = await settleBeforeReset(context, payload);
+        if ('response' in settled) {
+            return settled.response;
+        }
+        const { saved } = settled;
+
+        // Saving moved the install record onto the new version, so that is what gets removed.
+        const prepared = await prepareImport(context, saved ? removalOfSaved(payload, saved) : payload, 'remove');
         if ('response' in prepared) {
-            return prepared.response;
+            return withSavedNote(prepared.response, saved);
         }
         const { engine, request } = prepared;
 
-        return runAndWatch(context, engine, request, {
+        const started = await runAndWatch(context, engine, request, {
             operation: 'reset',
+            purpose: 'uninstall',
+            validate: () => engine.validateRemoval(request),
             begin: () => engine.startDelete(request),
-            rejected: 'The Data Installer rejected this reset request.',
-            failed: 'The reset could not be started.',
+            rejected: 'The Data Installer rejected this uninstall request.',
+            failed: 'The uninstall could not be started.',
         });
+        return withSavedNote(await afterWait(context, started, payload?.waitSeconds), saved);
     },
 
-    'get-datapack-import-status': async (context: HandlerContext): Promise<HandlerResponse> => {
+    /** The running or last job, live while it runs; with `waitSeconds`, once it ends or the wait is up. */
+    'get-datapack-import-status': async (
+        context: HandlerContext,
+        payload?: { waitSeconds?: number; skippedFrom?: number },
+    ): Promise<HandlerResponse> => {
         const transient = new TransientStateManager(context.context);
-        const record = await transient.get<ImportJobRecord | null>(JOB_KEY, null);
-        return { success: true, data: record };
+        const read = () => readJobRecord(transient);
+        const record = await waitForJob(read, waitMsOf(payload?.waitSeconds));
+        return { success: true, data: record ? skippedPage(record, payload?.skippedFrom) : record };
     },
-});
+}), CHANGES_PACKS), CHANGES_PACKS_WHEN_CONFIRMED, confirmed);
 
 /**
- * Everything both write handlers need, or the response to return instead.
- *
- * Extracted at the SECOND caller rather than the third: the two paths have to
- * agree on the guard and the request body byte for byte, or a
- * dry run would check something other than what a start would send — which is the
- * one thing that would make a dry run worse than useless.
+ * Access first. If the service cannot sign in to the instance, whether the request is well-formed
+ * is not the answer anyone needs, and `get-websites-and-stores` answers it without going near
+ * process-datapack, so it cannot start work by accident.
  */
-async function prepareImport(
+async function dryRunVerdict(engine: DatapackEngine, request: ImportRequest): Promise<ValidationResult> {
+    const access = await engine.checkCredentials(request);
+    if (!access.usable) {
+        return {
+            valid: false,
+            reason: access.reason ?? 'The Data Installer could not sign in to that Commerce instance.',
+        };
+    }
+    return engine.validateImport(request);
+}
+
+/**
+ * The SC's changes, before anything is removed (step 05), once the request itself is known to be
+ * good: a save must never land for a removal that was always going to be refused.
+ */
+async function settleBeforeReset(
     context: HandlerContext,
     payload: StartImportPayload | undefined,
-    // A removal goes through the engine that installed the pack; anything else through the
-    // one the setting chooses (DI-5).
-    write: 'install' | 'remove' = 'install',
-): Promise<
-    { engine: DatapackEngine; request: ImportRequest } | { response: HandlerResponse }
-> {
-    const input = readInput(payload);
+): Promise<{ saved?: SavedFirst } | { response: HandlerResponse }> {
+    const input = readInput(payload, 'remove');
     if ('error' in input) {
         return { response: { success: false, error: input.error } };
     }
-
-    const gate = await resolveDatapackWriteAccess(context, 'import');
-    if ('response' in gate) {
-        return gate;
+    const answer = payload?.changes;
+    if (answer !== undefined && answer !== 'keep' && answer !== 'drop') {
+        return { response: { success: false, error: `changes is keep or drop, not ${answer}.` } };
     }
-
-    const pack = { name: input.datapackName, version: input.version };
-    const engine = await engineFor(context, gate, { pack, write, source: input.source });
-    if ('response' in engine) {
-        return engine;
-    }
-    return {
-        engine: engine.engine,
-        request: {
-            id: pack,
-            source: input.source,
-            commerceInstance: input.commerceInstance,
-            dataTypes: input.dataTypes,
-            // A caller that names a scope means it. One that names NONE gets the
-            // project's, because the alternative is the SERVICE's `base`/`default`
-            // — a scope nobody chose. The modal always sends a pair (its pickers
-            // are seeded), so this is really the agent surface: the MCP rows leave
-            // both codes optional and an agent that skips
-            // `list_datapack_import_scopes` would otherwise import, and RESET,
-            // against `base`.
-            //
-            // Half a pair never reaches here — `readTarget` refuses it — so this
-            // cannot complete a partial specification into something the caller
-            // did not ask for.
-            target: input.target ?? resolveInstallTarget(gate.project) ?? undefined,
+    const stage = removalStageReporter(context);
+    const settled = await settleChangesBeforeRemoval(
+        context,
+        {
+            pack: { name: input.datapackName, version: input.version },
+            // As it was sent: with none named, a save looks in the library and then the Data Installer.
+            ...(payload?.source ? { source: input.source } : {}),
+            ...(answer ? { answer } : {}),
+            unanswered: 'refuse',
+            ...(payload?.saveAs ? { saveAs: payload.saveAs } : {}),
         },
-    };
+        stage,
+    );
+    if ('saved' in settled && settled.saved) {
+        const memory = context.context?.globalState;
+        stage(startingRemovalStage(memory ? rememberedPackName(memory, input.datapackName) : undefined));
+    }
+    if ('response' in settled && settled.response.code === ErrorCode.CHANGES_NOT_SAVED) {
+        // A window closed during the save handed it to a notification, which has to hear the end.
+        void pushOperationProgress({
+            id: DATAPACK_OPERATION_ID,
+            state: 'failed',
+            error: settled.response.error ? notYetPlain(settled.response.error) : plain('Your changes could not be saved.'),
+        });
+    }
+    return settled;
 }
 
-
-/**
- * The engine for one write: for a removal the one that installed the pack, otherwise the one
- * the setting chooses (DI-5). The service installs only from its own catalog, so a library pack
- * with the service chosen is refused with what to do instead.
- */
-async function engineFor(
-    context: HandlerContext,
-    gate: DatapackWriteAccess,
-    write: { pack: DatapackId; write: 'install' | 'remove'; source: DatapackStoreName },
-): Promise<{ engine: DatapackEngine } | { response: HandlerResponse }> {
-    const engineId =
-        write.write === 'remove' ? await engineThatInstalled(gate.project.path, write.pack) : selectedDatapackEngine();
-    // Demo Builder's engine writes into the project's own store with the project's credential, so
-    // the sign-in must be in the org that owns that store. Checked before anything is written, with
-    // the extension's one org guard (adobe-org-context): a mismatch says "Switch IMS Org" rather
-    // than failing half way through with Commerce's refusal (owner, 2026-10-28).
-    if (engineId === 'demo-builder' && context.authManager) {
-        const orgFailure = await orgGuard(context, gate.project, context.authManager);
-        if (orgFailure) {
-            return { response: { success: false, error: orgFailure.error, code: ErrorCode.ORG_MISMATCH } };
-        }
-    }
-    if (engineId === 'service' && write.source === 'library') {
-        return {
-            response: {
-                success: false,
-                error: SERVICE_INSTALLS_ONLY_ITS_OWN,
-            },
-        };
-    }
-    return {
-        engine: buildDatapackEngine(
-            engineId,
-            {
-                ...gate,
-                authManager: context.authManager,
-                secrets: context.context?.secrets,
-                libraryCatalog: libraryReads(context),
-            },
-            (line) => context.debugLogger.debug(`[Data Installer] ${line}`),
-        ),
-    };
-}
-
-/** Validate the payload, returning either usable input or the reason it is not. */
-function readInput(
-    payload: StartImportPayload | undefined,
-):
-    | {
-          datapackName: string;
-          version: string;
-          commerceInstance: string;
-          dataTypes: string[];
-          target: ImportTarget | undefined;
-          source: DatapackStoreName;
-      }
-    | { error: string } {
-    const datapackName = payload?.datapackName;
-    const version = payload?.version;
-    if (!datapackName || !version) {
-        return { error: 'A datapack name and version are required.' };
-    }
-    // Required, and deliberately NOT defaulted from the project: an import writes
-    // into whatever instance this names, and a wrong default writes sample data
-    // into someone else's live demo.
-    const commerceInstance = payload?.commerceInstance;
-    if (!commerceInstance) {
-        return { error: 'A Commerce instance is required — it is where the data will be written.' };
-    }
-    const dataTypes = payload?.dataTypes ?? [];
-    if (dataTypes.length === 0) {
-        return { error: 'Select at least one data type to import.' };
-    }
-    const target = readTarget(payload);
-    if ('error' in target) {
-        return target;
-    }
-    const source = payload?.source ?? 'installer';
-    if (source !== 'installer' && source !== 'library') {
-        return { error: `There is no datapack store called ${source}: it is installer or library.` };
-    }
-    return { datapackName, version, commerceInstance, dataTypes, target: target.target, source };
-}
-
-/**
- * The website/store pair, refused here if it is half-supplied.
- *
- * The service takes both or neither and rejects a half pair — but it rejects it
- * in the worker, minutes after the 202 that told the user the import started.
- * Catching it before the request keeps the failure where the user can act on it.
- */
-function readTarget(
-    payload: StartImportPayload | undefined,
-): { target: ImportTarget | undefined } | { error: string } {
-    const websiteCode = payload?.websiteCode;
-    const storeCode = payload?.storeCode;
-    if (!websiteCode && !storeCode) {
-        return { target: undefined };
-    }
-    if (!websiteCode || !storeCode) {
-        return {
-            error: 'Choose both a target website and a store view, or neither — the Data Installer needs the pair.',
-        };
-    }
-    return { target: { websiteCode, storeCode } };
+/** The removal of the version a save just made. */
+function removalOfSaved(payload: StartImportPayload | undefined, saved: SavedFirst): StartImportPayload {
+    return { ...payload, datapackName: saved.id.name, version: saved.id.version, source: 'library', dataTypes: saved.dataTypes };
 }

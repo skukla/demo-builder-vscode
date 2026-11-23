@@ -5,13 +5,14 @@ area: app-builder
 parent: AB-9
 needs: []
 value: high
-status: active
+status: backlog
+plan: erp-programme
 ---
 
 # The ERP programme — every ERP slice, in one order, run by the loop
 
 Filed 2026-09-24. The plan is `.rptc/plans/erp-programme/overview.md`; this epic is its backlog form so the unattended loop
-(`.claude/skills/unattended-loop`) can pick slices with `backlog.mjs next`. Each child is
+(`dev-pipeline:unattended-loop`) can pick slices with `backlog.mjs next`. Each child is
 one slice; `needs` carries the dependency column of the plan's §6; the lane and the
 verification block are in each child.
 
@@ -93,3 +94,4 @@ routing integration) · AB-26r (credit memo) · AB-26s (the payment leg) · AB-2
 - 2026-10-01  2026-10-01: demo-erp price publish of 72 contract prices answers 504 'Response not yet ready' twice (Accuform ERP, AB-53); 37 prices on the sibling ERP publish fine. The prices route is a blocking web action and the publish runs past Runtime's 60 s. Fix in demo-erp: publish in batches under the limit, or return a job id and let the integration poll.
 - 2026-10-01  CORRECTION 2026-10-01: the 504 is Runtime's blocking-call cap, not a failed publish — the action completes in the background (ledger 109 writes). Two fixes: (1) demo-builder's fill polls the activation named in the 504's  instead of calling it a failure; (2) the integration's ownedByErp prefetches the priced SKUs' attributes in one search (or memoizes per SKU across ERPs) instead of one GET per SKU per ERP.
 - 2026-10-02  docs(backlog): clear four stale waiting-on lines; the freeze they named was lifted 2026-09-28 (`77a0eeb80`)
+- 2026-11-22  Paused 2026-11-22: back to backlog, last direct work 2026-10-01; no child is in progress (AB-26aa and AB-26w gated, AB-26ab backlog, AB-60 open).

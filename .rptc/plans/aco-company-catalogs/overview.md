@@ -69,7 +69,7 @@ See `customer-pricing.md`. All test data was removed afterwards.
   the action refused a call with no key.
 - A one-minute alarm fired 11 times, 59 to 61 seconds apart after the first run, and a scheduled action ran and
   succeeded on Node 22 and Node 24. All of it removed afterwards, confirmed by reading the namespace back.
-- Reading Justrite's shared catalogs, their products, companies and 139 products' names and prices took about 3
+- Reading Acme's shared catalogs, their products, companies and 139 products' names and prices took about 3
   seconds, from a local machine and without tier prices.
 
 ## Build
@@ -113,7 +113,7 @@ add it and it sets up, remove it and all of it goes.
 Run on the test website, then back to zero, except as noted.
 
 - **A real order through the mesh** (owner, 2026-11-01). It leaves a test company, a product and an order in that
-  ERP, which has no customer delete route (AB-84); the owner accepted that. Tag the records so they can be found.
+  ERP, which has no customer delete route (AB-93); the owner accepted that. Tag the records so they can be found.
 - Two real buyers from two companies, one after the other, each seeing only their own catalog. The mesh has
   response caching on, and a header-based check showed no bleed, but real buyers are the test that counts.
 - A refused order. Through the mesh, Commerce's top-level error is replaced by "Cannot return null for non-nullable

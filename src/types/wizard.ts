@@ -5,7 +5,7 @@
  * providing a single source of truth for step props patterns.
  */
 
-import type { ProjectFile } from './projectFile';
+import type { ImportedFrom, ProjectFile } from './projectFile';
 import type { SettingsEdsConfig } from './settingsFile';
 import type { WizardState, WizardStep } from './webview';
 
@@ -104,6 +104,8 @@ export interface StepCondition {
 export type ProjectSeed = ProjectFile & {
     /** The project's own repository and DA.live site. Read by edit mode only. */
     edsConfig?: SettingsEdsConfig;
+    /** Set by Import from File for a demo bundle: the project is made from its files (EDS-72). */
+    importedFrom?: ImportedFrom;
 };
 
 /**

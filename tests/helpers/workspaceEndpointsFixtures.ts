@@ -3,7 +3,7 @@
  * written here cannot drift from what `AdobeConsoleExtensionPoints` reads and writes
  * (ADR-016 rule 3: a shape outside a typechecked file WILL be invented). The shape is a
  * BARE map, `{ '<extension point id>': { '<operation>': ... } }`, measured live on
- * 2026-10-08 against the Justrite workspaces; the `{ endpoints: {...} }` wrapper in the
+ * 2026-10-08 against the Tailspin workspaces; the `{ endpoints: {...} }` wrapper in the
  * Console API spec and the CLI's fixtures is the CLI's own and never crosses the wire.
  */
 

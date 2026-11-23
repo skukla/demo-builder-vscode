@@ -23,10 +23,12 @@
  */
 
 import { z } from 'zod';
-import { deleteIfPresent, type KindContext, ownedId, segment } from './kindContext';
+import { adoptedRow } from './adoptedObjects';
+import { deleteIfPresent, eachFewAtOnce, firstOfEach, type KindContext, ownedId, segment } from './kindContext';
 import { keyOf } from './packForm';
 import { createOne } from './pendingCreates';
 import { skipRow, tryRow } from './refusedRows';
+import { counted } from './rowCount';
 import type { CommerceGet, CommerceSend } from '@/types/commerceWire';
 
 export const CATEGORY_KIND = 'categories';
@@ -60,7 +62,7 @@ export interface FoundCategory {
 export function parseCategoryPack(records: unknown): CategoryPack {
     const parsed = packSchema.safeParse(records);
     if (!parsed.success) {
-        throw new Error(`The pack's categories are not in the shape Commerce takes: ${parsed.error.issues[0]?.message}`);
+        throw new Error(`The datapack's categories are not in the shape Commerce takes: ${parsed.error.issues[0]?.message}`);
     }
     return parsed.data;
 }
@@ -103,7 +105,11 @@ async function findOrCreate(
     if (owned === null) return undefined;
     if (owned !== undefined) return Number(owned);
     const existing = await findChild(ctx.get, parentId, category.name);
-    if (existing !== undefined) return Number(existing);
+    if (existing !== undefined) {
+        // Walk F187: the store's own, on the record so a save follows it; no removal takes it.
+        await ctx.recorder.record(adoptedRow(CATEGORY_KIND, String(existing), key));
+        return Number(existing);
+    }
     const made = await createOne(ctx, { kind: CATEGORY_KIND, key, find: { parentId, name: category.name } }, async () => {
         const created = (await ctx.send('POST', 'categories', body(category, parentId))) as FoundCategory | null;
         if (created?.id === undefined) throw new Error(`Commerce made no category ${category.name}.`);
@@ -139,7 +145,8 @@ export async function installCategories(ctx: KindContext, pack: CategoryPack): P
     // Under a category skipped: skipped with it, by name.
     const skipped = new Set<string>();
     if (pack.root_category) {
-        const id = await placed(ctx, pack.root_category, TREE_ROOT_ID, '');
+        const root = pack.root_category;
+        const id = await counted(ctx, CATEGORY_KIND, asRow(root, '').key, () => placed(ctx, root, TREE_ROOT_ID, ''));
         if (id === 'skipped') skipped.add(pack.root_category.name);
         else if (id === undefined) {
             ctx.log(`left the pack's categories out: the SC deleted its root, ${pack.root_category.name}`);
@@ -153,29 +160,58 @@ export async function installCategories(ctx: KindContext, pack: CategoryPack): P
     // A pack with no root of its own names the root of the store it came from first in every
     // path ("Default Category/…"); here that means this store's root, whatever it is called.
     const rootLabel = pack.root_category?.name ?? rows[0]?.category.path.split('/')[0] ?? '';
-    const byPath = new Map<string, number>([[rootLabel, ctx.session.rootCategory.id]]);
-    // Under a category the SC deleted: left out with it.
-    const deleted = new Set<string>();
-    for (const { category } of rows) {
-        const own = `${category.path}/${category.name}`;
-        if (skipped.has(category.path)) {
-            skipped.add(own);
-            skipRow(ctx, { ...asRow(category, category.path), reason: `its parent category ${category.path.split('/').pop()} was skipped` });
-            continue;
-        }
-        if (deleted.has(category.path)) {
-            deleted.add(own);
-            continue;
-        }
-        const parentId = byPath.get(category.path);
-        if (parentId === undefined) {
-            throw new Error(`The category ${category.name} sits under "${category.path}", which the pack does not make.`);
-        }
-        const id = await placed(ctx, category, parentId, category.path);
-        if (id === 'skipped') skipped.add(own);
-        else if (id === undefined) deleted.add(own);
-        else byPath.set(own, id);
+    const tree: Tree = { byPath: new Map([[rootLabel, ctx.session.rootCategory.id]]), skipped, deleted: new Set() };
+    // A level's categories stand alone once the level above is made, so a few go at once.
+    for (const level of levels(rows)) {
+        await eachFewAtOnce(level, ({ category }) => counted(ctx, CATEGORY_KIND, asRow(category, category.path).key, () => placeInTree(ctx, category, tree)));
     }
+}
+
+/** Where the tree has got to: ids by path, and the paths skipped or deleted with everything under them. */
+interface Tree {
+    byPath: Map<string, number>;
+    skipped: Set<string>;
+    deleted: Set<string>;
+}
+
+type CategoryRow = CategoryPack['categories'][number];
+
+/** The rows by depth, shallowest first, each path and name once (a second row found the first). */
+function levels(sorted: readonly CategoryRow[]): CategoryRow[][] {
+    const byDepth = new Map<number, CategoryRow[]>();
+    for (const row of firstOfEach(sorted, ({ category }) => `${category.path}/${category.name}`)) {
+        const at = depth(row.category.path);
+        byDepth.set(at, [...(byDepth.get(at) ?? []), row]);
+    }
+    return [...byDepth.values()];
+}
+
+/** Place one category under its parent, made on the level above, or leave it out with its parent. */
+async function placeInTree(ctx: KindContext, category: CategoryRow['category'], tree: Tree): Promise<void> {
+    const own = `${category.path}/${category.name}`;
+    if (tree.skipped.has(category.path)) {
+        tree.skipped.add(own);
+        const parent = category.path.split('/').pop() ?? category.path;
+        skipRow(ctx, {
+            ...asRow(category, category.path),
+            reason: `its parent category ${parent} was skipped`,
+            cause: { by: 'needs', kind: CATEGORY_KIND, name: parent },
+        });
+        return;
+    }
+    // Under a category the SC deleted: left out with it.
+    if (tree.deleted.has(category.path)) {
+        tree.deleted.add(own);
+        return;
+    }
+    const parentId = tree.byPath.get(category.path);
+    if (parentId === undefined) {
+        throw new Error(`The category ${category.name} sits under "${category.path}", which the datapack does not make.`);
+    }
+    const id = await placed(ctx, category, parentId, category.path);
+    if (id === 'skipped') tree.skipped.add(own);
+    else if (id === undefined) tree.deleted.add(own);
+    else tree.byPath.set(own, id);
 }
 
 /** Take back one category this engine made; Commerce takes its children with it. */

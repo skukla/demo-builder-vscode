@@ -64,6 +64,20 @@ const TARGET_HINTS: Record<(typeof URL_TARGETS)[number], string> = {
 };
 
 /**
+ * Open the Commerce Admin through the dashboard's own Admin door (`openAdminPanel`, which calls
+ * `openCommerceAdmin`): the URL validated, Classic Admin in a private window. With the
+ * notification, since no button shows a spinner for an agent. The answer carries no URL: it may
+ * embed credentials (PL-104 fix 9).
+ */
+async function openCommerceAdminForAgent(context: HandlerContext): Promise<Record<string, string>> {
+    const res = await dispatchHandler(dashboardHandlers, context, 'openAdminPanel', { notify: true });
+    if (!res.success) {
+        return { error: res.error ?? 'The Commerce Admin could not be opened.' };
+    }
+    return { opened: 'commerceAdmin' };
+}
+
+/**
  * Register `open_url` and `edit_project`.
  *
  * @param server     McpServer (typed `any`; see registerProjectTools docstring).
@@ -87,6 +101,8 @@ export function registerLifecycleTools(
             description:
                 "Open one of the CURRENT project's URLs in the browser. The target names which " +
                 'one (see get_project_urls for what is set); arbitrary URLs are not accepted. ' +
+                'commerceAdmin opens the way the dashboard\'s Admin button does, and its answer ' +
+                'carries no URL. ' +
                 'Requires confirm:true — it takes over the screen.',
             inputSchema: {
                 target: z.enum(URL_TARGETS).describe(
@@ -134,6 +150,9 @@ export function registerLifecycleTools(
                 });
             }
 
+            if (target === 'commerceAdmin') {
+                return asText(await openCommerceAdminForAgent(ctxFactory()));
+            }
             await openUrl(url);
             return asText({ opened: target, url });
         },

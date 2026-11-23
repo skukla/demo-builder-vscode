@@ -13,7 +13,7 @@ const LIBRARY = { org: 'skukla', site: 'demo-builder-block-library' };
 
 describe('withDemoContentSource', () => {
     it("adds the demo's own content site after the libraries'", () => {
-        const contentSource = { org: 'kmanns', site: 'justrite', indexPath: '/query-index.json' };
+        const contentSource = { org: 'org-e', site: 'tailspin', indexPath: '/query-index.json' };
         const demo = makeAddedDemo({ contentSource });
 
         expect(withDemoContentSource([LIBRARY], demo)).toStrictEqual([LIBRARY, contentSource]);

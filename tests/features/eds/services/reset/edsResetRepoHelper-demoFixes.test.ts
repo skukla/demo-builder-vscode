@@ -43,7 +43,7 @@ function githubFileOps() {
 async function reset(demo: ReturnType<typeof makeAddedDemo>) {
     const ops = githubFileOps();
     const params = buildParams({
-        templateOwner: 'sayurihanki',
+        templateOwner: 'org-j',
         templateRepo: 'aistore',
         project: createMockProject({ name: 'p', path: '/p', selectedBlockLibraries: [], demo }),
     });
@@ -65,7 +65,7 @@ beforeEach(() => {
 describe('resetRepoToTemplate — an added demo is copied as it is', () => {
     it("writes no fixes to a saved package's storefront, though its ledger fits", async () => {
         const saved = makeAddedDemo({
-            source: { owner: 'sayurihanki', repo: 'aistore' },
+            source: { owner: 'org-j', repo: 'aistore' },
             builtWith: {
                 template: B2B,
                 codePatchSource: { owner: 'skukla', repo: 'eds-demo-patches', path: 'b2b' },
@@ -81,7 +81,7 @@ describe('resetRepoToTemplate — an added demo is copied as it is', () => {
     });
 
     it("writes no fixes to a colleague's storefront made from one of our templates, and offers none", async () => {
-        const colleague = makeAddedDemo({ source: { owner: 'sayurihanki', repo: 'aistore' }, lineage: { templateRepository: B2B } });
+        const colleague = makeAddedDemo({ source: { owner: 'org-j', repo: 'aistore' }, lineage: { templateRepository: B2B } });
 
         const { ops, result } = await reset(colleague);
 
@@ -91,7 +91,7 @@ describe('resetRepoToTemplate — an added demo is copied as it is', () => {
     });
 
     it('reads what the repository is built on after the reset', async () => {
-        const { ops, result } = await reset(makeAddedDemo({ source: { owner: 'sayurihanki', repo: 'aistore' }, lineage: { templateRepository: B2B } }));
+        const { ops, result } = await reset(makeAddedDemo({ source: { owner: 'org-j', repo: 'aistore' }, lineage: { templateRepository: B2B } }));
 
         expect(ops.getFileContent).toHaveBeenCalledWith('me', 'shop', 'package.json', undefined);
         expect(result.boilerplate).toEqual({ name: '@adobe/aem-boilerplate-commerce', version: '4.0.1' });

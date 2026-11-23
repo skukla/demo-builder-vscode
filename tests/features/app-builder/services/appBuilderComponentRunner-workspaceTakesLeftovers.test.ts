@@ -131,7 +131,7 @@ function undeployRefused(deps: ReturnType<typeof createDeps>): void {
 // UNDEPLOY failed, what the deploy published (the Admin UI SDK registration behind a
 // Commerce grid column) is still there, and it is not in the namespace: letting the
 // workspace "take" the leftovers would leave a registration nothing can reach. Found
-// 2026-10-08 on the Justrite sandbox, which showed its ERP columns twice.
+// 2026-10-08 on the Tailspin sandbox, which showed its ERP columns twice.
 describe('leftovers in a workspace of its own, when the undeploy itself failed', () => {
     it('stops and keeps the card, the folder and the workspace', async () => {
         const deps = createDeps(releaseDeps());

@@ -185,7 +185,7 @@ The framing that "the round trip is the unit of cost, therefore removing round
 trips is always the lever" — true for candidate 1, false here. A round trip that
 defers 300k tokens of schema is buying more than it costs. **Removing a round trip
 is only a win when what it defers is cheaper than the turn.** Measure the deferred
-payload before treating any remaining `ToolSearch` call as waste.
+payload before treating any other `ToolSearch` call as waste.
 
 ## 4. Unknown arguments silently dropped on write tools — SHIPPED 2026-08-24
 

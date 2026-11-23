@@ -9,10 +9,20 @@
  *
  * Method (the 2026-08-22 mesh call-path audit, the worked example): find the
  * PRIMITIVE that IS the action — the literal shell command or API call — and
- * assert every occurrence in src/ lives inside the spine module. Entry points
- * may multiply freely; the primitive may not.
+ * assert every occurrence in src/ lives inside the spine module.
  *
- * Each audited action adds one describe block here. A failure means either a
+ * The primitive alone is not enough (2026-11-18): above a pinned primitive, the
+ * doors grew seven callers of the Adobe sign-in, each re-deciding its mode. Entry
+ * points may NOT multiply freely. Every audited action's doors — the files outside
+ * the spine allowed to call into it — are declared in
+ * `tests/templates/action-doors.ledger.json` and checked both directions by
+ * `action-doors.test.ts`: a new caller fails, a listed door that stopped calling
+ * fails, and a door passing a mode the spine decides fails. Modes are parameters
+ * of the one path; a door may not re-decide a mode or add policy the spine should
+ * own. A new door is declared there, with a reason, or it does not ship.
+ *
+ * Each audited action adds one describe block here for its primitive, and one
+ * ledger row for its doors. A failure here means either a
  * second path was just written (move the call into the spine) or the spine
  * legitimately moved (update the allowlist in the same PR that moved it).
  */
@@ -47,15 +57,18 @@ function filesTouchingBoth(a: RegExp, b: RegExp): string[] {
     return hits;
 }
 
+/** Whether any CODE line (not a comment line) of a source matches the pattern. */
+function hasCodeHit(source: string, pattern: RegExp): boolean {
+    return source
+        .split('\n')
+        .some((line) => pattern.test(line) && !/^\s*(\/\/|\*|\/\*)/.test(line));
+}
+
 /** Files whose CODE (not comments) matches the pattern. */
 function filesTouchingPrimitive(pattern: RegExp): string[] {
     const hits: string[] = [];
     for (const file of listSourceFiles(SRC)) {
-        const lines = fs.readFileSync(file, 'utf8').split('\n');
-        const codeHit = lines.some(
-            (line) => pattern.test(line) && !/^\s*(\/\/|\*|\/\*)/.test(line)
-        );
-        if (codeHit) hits.push(path.relative(SRC, file));
+        if (hasCodeHit(fs.readFileSync(file, 'utf8'), pattern)) hits.push(path.relative(SRC, file));
     }
     return hits;
 }
@@ -202,6 +215,39 @@ describe('spine choke-points', () => {
         expect(hits.filter((f) => !spine.includes(f))).toStrictEqual([]);
     });
 
+    it('adobe SIGN-IN entry points: three doors start a sign-in, and nothing else does', () => {
+        // Audited 2026-11-18 (the ENTRY-POINT layer above the pin before this one). The
+        // primitive pin kept `aio auth login` in one file while seven callers above it each
+        // started a sign-in and re-decided its mode and after-steps (a forced dashboard
+        // re-sign-in, the command's own progress, the mesh step's silent login, the agent's
+        // own notices). Outside the auth services, three may call the sign-in:
+        //   - the guard (`ensureAdobeIOAuth`): a flow that needs a sign-in partway asks first;
+        //   - the one Sign In (`signInToAdobe`): a screen's button, the command, the agent;
+        //   - the org switch (`orgSwitchHandler`): the only forced sign-in.
+        // A new door calls one of those. Modes are parameters of the one path; a door may
+        // not re-decide a mode or add policy the shared sign-in should own.
+        const primitive = /\.(login|loginAndRestoreProjectContext)\(/;
+        const services = 'features/authentication/services/';
+        const doors = [
+            'core/auth/adobeAuthGuard.ts',
+            'features/authentication/handlers/orgSwitchHandler.ts',
+            'features/authentication/handlers/signInToAdobe.ts',
+        ];
+
+        // Self-test of the pattern: a planted door call is caught, a comment is not.
+        expect(hasCodeHit('    const ok = await authManager.login();', primitive)).toBe(true);
+        expect(hasCodeHit('    await auth.loginAndRestoreProjectContext({}, true);', primitive)).toBe(true);
+        expect(hasCodeHit('    // authManager.login() used to be called here', primitive)).toBe(false);
+
+        const callers = filesTouchingPrimitive(primitive)
+            .filter((f) => !f.startsWith(services))
+            .sort();
+
+        // Positive control: all three doors register, so a rename cannot green this.
+        expect(callers).toEqual(expect.arrayContaining(doors));
+        expect(callers.filter((f) => !doors.includes(f))).toStrictEqual([]);
+    });
+
     it('manifest WRITE: only the config writer and the MCP agent door write .demo-builder.json', () => {
         // Audited 2026-08-22: TWO doors by design, doing different jobs —
         // ProjectConfigWriter serializes the extension's Project state
@@ -243,6 +289,8 @@ describe('spine choke-points', () => {
         // that sentence mechanical. Added 2026-10-06: the engine-choice warning's
         // "Use Copilot in VS Code" button (engineChoiceWatch) — an SC's click,
         // not a tool, clearing the one setting it warned about.
+        // Removed 2026-11-12 (datapack step 03, S6): dataInstallerConfig, whose removal box wrote
+        // changesOnRemoval. The box is gone; the setting is changed in Settings only.
         const primitive = /\.update\(\s*['"`]|getConfiguration\([^)]*\)\.update\(/;
         const settingsContext = /getConfiguration\(/;
         const spine = [
@@ -277,7 +325,7 @@ describe('spine choke-points', () => {
             'features/eds/services/helix/helixKeyStore.ts',
             'features/eds/services/github/githubTokenService.ts',
             'features/app-builder/services/componentSettingSecrets.ts',
-            'features/components/services/commerceSecretMigration.ts',
+            'features/components/services/declaredSecretStore.ts',
             'features/eds/services/daLive/daLiveTokenMigration.ts',
         ];
 
@@ -463,9 +511,9 @@ describe('spine choke-points', () => {
         // and reports a live-only removal as such.
         //
         // Traced down, every delete door converges on tearDownStorefront: the
-        // delete-project button (edsExternalCleanup, split from projectDeletionService
-        // 2026-10-09), the agent's delete_project
-        // (agentProjectCleanup), cleanup_dalive_site (cloudResourceTools) and the
+        // delete-project button and the agent's delete_project (edsExternalCleanup, split
+        // from projectDeletionService 2026-10-09; the agent runs the button's
+        // runProjectDelete since PL-104 fix 6), cleanup_dalive_site (cloudResourceTools) and the
         // "Manage DA.live Sites" command (cleanupDaLiveSites, since EDS-31: it used to
         // delete content alone and leave every page live). Reset has its own door
         // (edsResetProductPages, called once by executeEdsReset before the content
@@ -485,7 +533,6 @@ describe('spine choke-points', () => {
             'features/eds/services/storefront/storefrontTeardown.ts',
         ]);
         expect(sorted(/\btearDownStorefront\(/)).toStrictEqual([
-            'features/ai/server/agentProjectCleanup.ts',
             'features/ai/server/cloudResourceTools.ts',
             'features/eds/commands/cleanupDaLiveSites.ts',
             'features/eds/services/storefront/storefrontTeardown.ts',
@@ -504,9 +551,9 @@ describe('spine choke-points', () => {
         // and the code removal are one function, `deleteStorefrontRepository`.
         //
         // Traced down, the doors that delete a repository: the delete-project button
-        // (edsExternalCleanup), the agent's delete_project (agentProjectCleanup) and
-        // delete_github_repo (cloudResourceTools), Manage GitHub Repositories, and the
-        // setup cancel (cleanupService; its ARCHIVE keeps the repository and the code).
+        // and the agent's delete_project (both edsExternalCleanup, PL-104 fix 6) and
+        // delete_github_repo (cloudResourceTools), and Manage GitHub Repositories. A setup
+        // stop reaches it through the delete path (edsExternalCleanup, F275).
         // Each hands the primitive to the shared function as a lambda, so each still
         // matches `.deleteRepository(` below. Two doors are NOT storefronts and delete
         // the repository directly: an App Builder app's repository (appRepoPromotion) and
@@ -517,20 +564,16 @@ describe('spine choke-points', () => {
         const sorted = (pattern: RegExp): string[] => filesTouchingPrimitive(pattern).sort();
 
         expect(sorted(/\bdeleteStorefrontRepository\(/)).toStrictEqual([
-            'features/ai/server/agentProjectCleanup.ts',
             'features/ai/server/cloudResourceTools.ts',
             'features/eds/commands/manageGitHubRepos.ts',
-            'features/eds/services/cleanupService.ts',
             'features/eds/services/storefront/storefrontCodeRemoval.ts',
             'features/projects-dashboard/services/edsExternalCleanup.ts',
         ]);
         expect(sorted(/\.deleteRepository\(/)).toStrictEqual([
-            'features/ai/server/agentProjectCleanup.ts',
             'features/ai/server/cloudResourceTools.ts',
             'features/app-builder/services/appRepoPromotion.ts',
             'features/eds/commands/manageGitHubRepos.ts',
             'features/eds/handlers/forgetAddedDemoHandler.ts',
-            'features/eds/services/cleanupService.ts',
             'features/eds/services/storefront/storefrontCodeRemoval.ts',
             'features/projects-dashboard/services/edsExternalCleanup.ts',
         ]);

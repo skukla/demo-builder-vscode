@@ -1,26 +1,33 @@
 /**
- * Clearing a demo's part of the store (datapack-engine step 10): two handlers, which the agent tools
- * and the Data Installer's "Clear demo data" both reach, and which project reset's question uses the
- * same services as. The unit chosen is the STORE (owner, 2026-10-30), by website and store code.
+ * Clearing a demo's data from the store (datapack-engine step 10; datapack-simplification step 06):
+ * two handlers, which the agent tools and the Data Installer's "Clear Demo Data" both reach; no
+ * reset offers it (owner, 2026-11-12). The unit is the WEBSITE, always whole: Clear Demo Data
+ * covers every website the project uses (`readWipeClaims`, project scope).
  *
- * - `check-demo-data`: every website and store to choose from (`choices`), and, when stores are
- *   chosen (or the project names its own), what their install records list and what else they hold
- *   that a clearing would remove, take off, close or leave, with why. Reads only. The plan is kept
- *   here by its token, so the clearing can be held to it. No stores chosen and none of the project's
- *   own: the choices alone.
- * - `clear-demo-data`: confirm-gated, and never defaulted: it names the stores, and is handed the
- *   token of the list the SC (or the agent's user) was shown. It goes ahead only when the store
- *   would clear nothing that list did not hold (`clearShown`). Cannot be undone. From the Data
- *   Installer's button (`progress: 'modal'`) its stages go to the screen's progress window.
+ * - `check-demo-data` (`demoDataCheck.ts`): what clearing the project's websites would do, as one row
+ *   and one full record list per data type (`ClearCheck`), made as if the project's datapack were
+ *   already uninstalled (step 06, C3). Reads only. The check failing as a whole (signed out, offline)
+ *   answers the failure codes the Datapacks failure treatment reads (`renderDataInstallerFailure`).
+ * - `clear-demo-data` (`demoDataClear.ts`): confirm-gated, handed the token of the list shown; it
+ *   uninstalls the datapack first, then clears, held to that list. From the Data Installer's button
+ *   (`progress: 'modal'`) it runs in the screen's progress window, one row per step.
  *
- * Both read every other project on this machine (`readWipeClaims`): a chosen store another project
- * records as its own is refused, naming it, before any product, customer or order is read (the check
- * answers that as a normal answer, `refused`, so an agent explains it, and the picker locks the
- * store); and what any project's install records list on the chosen websites is left.
+ * Both read every other project on this machine (`readWipeClaims`): what any project's install records
+ * list on the chosen websites is left, and so is any company, catalog, group, attribute set or
+ * attribute a record of any website lists.
  *
  * Both find the ERP integration serving the instance, from any local project (`findWipeErp`): the
- * orders of chosen stores whose website it sends to an ERP are closed by it, not here, and its ERP
- * is filled again from Commerce after the clearing ("One action, ERP included", owner 2026-10-30).
+ * clearing closes every order itself, and when the integration sends some chosen websites' orders to
+ * an ERP, its ERP is brought in line and filled again from Commerce after the clearing ("One action,
+ * ERP included", owner 2026-10-30; Commerce is the source system, 2026-11-11).
+ *
+ * Clear Commerce Instance (step 06, C4) goes through the same check, handed `websites` (`[]`: the
+ * instance's websites with the projects using each; codes: the list for clearing them, whoever put
+ * the data there; `demoDataInstanceCheck.ts`), and its own clearing, `clear-commerce-instance`
+ * (`demoDataInstanceClear.ts`), which also needs `understood`. Its plans are kept apart.
+ *
+ * A third, `open-commerce-admin`, opens the project's Commerce Admin through the house opener
+ * (`openCommerceAdmin`): the window's way to a type Commerce refused to read.
  *
  * Both open the project's own signed Commerce access (`projectCommerce`, Store: `all`), after the
  * sign-in is checked against the org that owns the store (`orgGuard`, adobe-org-context).
@@ -28,207 +35,100 @@
  * @module features/data-installer/handlers/demoDataHandlers
  */
 
-import { createAcoSearch, type AcoWipePlan } from '../services/aco/acoWipe';
+import { type AcoWipePlan, createAcoSearch } from '../services/aco/acoWipe';
 import { projectAco, projectCommerce } from '../services/buildDatapackEngine';
-import { type InstallRecord, type RecordFiles, nodeRecordFiles } from '../services/demoBuilderEngine/installRecord';
-import type { RemovalAccess } from '../services/demoBuilderEngine/removers';
-import { claimedStores, projectStoreChoice, readWipeClaims } from '../services/demoDataWipe/wipeClaims';
-import type { WipeErp } from '../services/demoDataWipe/wipeErp';
+import { nodeRecordFiles } from '../services/demoBuilderEngine/installRecord';
 import { findWipeErp } from '../services/demoDataWipe/wipeErpDeps';
-import { type WipePlan, planWipe, planWipeFor } from '../services/demoDataWipe/wipePlan';
-import { WipeScopeError, readWipeStructure } from '../services/demoDataWipe/wipeReads';
-import { WipeChangedError, clearShown, storesInWords } from '../services/demoDataWipe/wipeRun';
-import { choicesOf, resolveWipeScope } from '../services/demoDataWipe/wipeScope';
 import { type AcoDemoDataDeps, checkAco, clearAco } from './acoDemoData';
+import { checkDemoData } from './demoDataCheck';
+import { clearDemoData } from './demoDataClear';
+import { checkInstance, instanceChoices } from './demoDataInstanceCheck';
+import { clearInstance } from './demoDataInstanceClear';
+import { type DemoDataDeps, NO_PROJECT, type ShownPlans } from './demoDataStore';
+import { ownNames } from './ownDatapackNames';
+import { readRemovalChangesOf } from './removalChanges';
 import { loadOtherProjects } from '@/core/state/otherProjects';
-import { DATAPACK_STAGES } from '@/core/utils/datapackStages';
+import { openCommerceAdmin } from '@/core/utils/commerceAdmin';
 import { DEMO_DATA_CLEAR_OPERATION_ID } from '@/core/utils/operationIds';
 import { narrateOutcomeToModal } from '@/core/vscode/operationProgress';
 import { withOperationProgress } from '@/core/vscode/withOperationProgress';
 import { orgGuard } from '@/features/authentication/services/projectOrgGuard';
-import type { Project } from '@/types/base';
-import type { CommerceStoreStructure } from '@/types/commerceStore';
-import type { DemoDataCheck, DemoDataRequest, WipeStoreChoice } from '@/types/demoDataWipe';
+import { removeProjectSampleDataOutcome } from '@/features/eds/services/reset/edsResetDatapack';
+import type { ClearInstanceRequest, DemoDataRequest } from '@/types/demoDataWipe';
 import { ErrorCode } from '@/types/errorCodes';
 import { defineHandlers, type HandlerContext, type HandlerResponse } from '@/types/handlers';
 
-const LOG_PREFIX = '[Data Installer]';
+export type { DemoDataDeps } from './demoDataStore';
 
-/** What the handlers need, handed in so a test drives them against a fake store. */
-export interface DemoDataDeps {
-    commerce: (context: HandlerContext, project: Project) => Promise<RemovalAccess | { refusal: string }>;
-    guard: (context: HandlerContext, project: Project) => Promise<string | undefined>;
-    files: RecordFiles;
-    /** Every other project on this machine, as the projects list reads them. */
-    others: (context: HandlerContext, project: Project) => Promise<Project[]>;
-    /** The ERP integration serving the project's Commerce instance, from any of those projects. */
-    erp: (context: HandlerContext, project: Project, others: readonly Project[]) => WipeErp | undefined;
-    /** The project's ACO access and the storefront search over its view, for `aco: true` (PL-60). */
-    aco: AcoDemoDataDeps['aco'];
-    acoSearch: AcoDemoDataDeps['search'];
+/** What opening the Admin came to, as the window's problem line says it when it did not open. */
+async function openAdmin(deps: DemoDataDeps, context: HandlerContext): Promise<HandlerResponse> {
+    const project = await context.stateManager.getCurrentProject();
+    if (!project) return NO_PROJECT;
+    const opening = await deps.openAdmin(project);
+    if (opening.outcome === 'opened') return { success: true };
+    return { success: false, error: opening.outcome === 'no-url' ? 'No Admin Panel URL is set for this project.' : "This project's Admin Panel URL is not valid." };
+}
+
+const isCodeList = (value: unknown): value is string[] => Array.isArray(value) && value.every((code) => typeof code === 'string' && code !== '');
+
+/** The check, by what it was handed: the project's websites, the instance's websites, or the websites named. */
+function check(deps: DemoDataDeps, plans: { project: ShownPlans; instance: ShownPlans }, context: HandlerContext, payload?: DemoDataRequest): Promise<HandlerResponse> {
+    const websites = payload?.websites;
+    if (websites === undefined) return checkDemoData(deps, plans.project, context);
+    if (!isCodeList(websites)) return Promise.resolve({ success: false, error: 'Name the websites by their codes.', code: ErrorCode.INVALID_OPERATION });
+    return websites.length === 0 ? instanceChoices(deps, context) : checkInstance(deps, plans.instance, context, websites);
+}
+
+/**
+ * The handlers over the deps given: the check, the clearing, and Open Commerce Admin for a type
+ * Commerce refused to read and for what a clearing left to the Admin (step 06, C2b and C3).
+ *
+ * @param deps - Commerce access, the org check, the record files, the other projects and the removal
+ */
+export function createDemoDataHandlers(deps: DemoDataDeps) {
+    const plans = { project: new Map(), instance: new Map() } as const satisfies Record<string, ShownPlans>;
+    const acoPlans = new Map<string, AcoWipePlan>();
+    const clearWebsites = narrateOutcomeToModal<DemoDataRequest>(
+        (context, payload) => clearDemoData(deps, plans.project, context, payload),
+        () => DEMO_DATA_CLEAR_OPERATION_ID,
+    );
+    return defineHandlers({
+        // `aco: true` (PL-60): the project's ACO catalog, never its Commerce websites.
+        'check-demo-data': (context: HandlerContext, payload?: DemoDataRequest) =>
+            payload?.aco ? checkAco(acoDeps(deps), acoPlans, context) : check(deps, plans, context, payload),
+        'clear-demo-data': (context: HandlerContext, payload?: DemoDataRequest) =>
+            payload?.aco ? clearAcoWithProgress(deps, acoPlans, context, payload) : clearWebsites(context, payload),
+        'clear-commerce-instance': narrateOutcomeToModal<ClearInstanceRequest>(
+            (context, payload) => clearInstance(deps, plans.instance, context, payload),
+            () => DEMO_DATA_CLEAR_OPERATION_ID,
+        ),
+        'open-commerce-admin': (context: HandlerContext) => openAdmin(deps, context),
+    });
 }
 
 /** The ACO path's deps, from the handlers' own. */
 const acoDeps = (deps: DemoDataDeps): AcoDemoDataDeps => ({ aco: deps.aco, search: deps.acoSearch, files: deps.files, others: deps.others });
 
-/** The plans shown, by token, newest last; a few is plenty, since one is shown per question. */
-const PLANS_KEPT = 10;
+/** What each ACO clearing stage is called in the progress window. */
+const ACO_STAGES: Record<string, string> = { products: 'Removing products', categories: 'Removing categories' };
 
-function keep(plans: Map<string, WipePlan>, plan: WipePlan): void {
-    plans.set(plan.preview.token, plan);
-    while (plans.size > PLANS_KEPT) plans.delete(plans.keys().next().value as string);
-}
-
-const NO_PROJECT: HandlerResponse = { success: false, error: 'No project is open.' };
-
-/** The project's store, read, with every other local project. */
-interface Opened {
-    project: Project;
-    commerce: RemovalAccess;
-    structure: CommerceStoreStructure;
-    others: Project[];
-    erp?: WipeErp;
-}
-
-/** The open project's store, its structure and the other projects, or the response to answer instead. */
-async function openStore(deps: DemoDataDeps, context: HandlerContext): Promise<Opened | { response: HandlerResponse }> {
-    const project = await context.stateManager.getCurrentProject();
-    if (!project) return { response: NO_PROJECT };
-    const mismatch = await deps.guard(context, project);
-    if (mismatch) return { response: { success: false, error: mismatch, code: ErrorCode.ORG_MISMATCH } };
-    const others = await deps.others(context, project);
-    const commerce = await deps.commerce(context, project);
-    if ('refusal' in commerce) return { response: { success: false, error: commerce.refusal } };
-    const erp = deps.erp(context, project, others);
-    return { project, commerce, others, structure: await readWipeStructure(commerce.get), ...(erp ? { erp } : {}) };
-}
-
-function failure(context: HandlerContext, error: unknown, fallback: string): HandlerResponse {
-    if (error instanceof WipeScopeError) return { success: false, error: error.message };
-    context.logger.warn(`${LOG_PREFIX} ${fallback} ${error instanceof Error ? error.message : String(error)}`);
-    return { success: false, error: `${fallback} Details are in Debug Logs.`, code: ErrorCode.UNKNOWN };
-}
-
-const answer = (data: DemoDataCheck): HandlerResponse => ({ success: true, data });
-
-/** The list for the stores chosen, or the project's own; the choices alone when there are none. */
-async function checkIn(deps: DemoDataDeps, plans: Map<string, WipePlan>, opened: Opened, stores: WipeStoreChoice[] | undefined): Promise<HandlerResponse> {
-    const { project, structure, others } = opened;
-    const claims = claimedStores(structure, project, others);
-    const own = projectStoreChoice(structure, project);
-    const chosen = stores ?? (own ? [own] : []);
-    if (chosen.length === 0) return answer({ choices: choicesOf(structure, undefined, claims) });
-    const scope = resolveWipeScope(structure, chosen);
-    const choices = choicesOf(structure, scope, claims);
-    const wiped = await readWipeClaims(deps.files, project, others, structure, scope);
-    if ('refusal' in wiped) return answer({ choices, refused: wiped.refusal });
-    const plan = await planWipe(opened.commerce.get, structure, scope, { records: wiped.records, erp: opened.erp });
-    keep(plans, plan);
-    return answer({ choices, preview: plan.preview });
-}
-
-async function check(deps: DemoDataDeps, plans: Map<string, WipePlan>, context: HandlerContext, payload?: DemoDataRequest): Promise<HandlerResponse> {
-    try {
-        const opened = await openStore(deps, context);
-        if ('response' in opened) return opened.response;
-        return await checkIn(deps, plans, opened, payload?.stores);
-    } catch (error) {
-        return failure(context, error, 'What the stores hold could not be read.');
-    }
-}
-
-/** The refusal an unconfirmed or unnamed clearing answers: which stores, and that it cannot be undone. */
-function clearRefusal(payload: DemoDataRequest | undefined): string | undefined {
-    if (!payload?.stores?.length) return 'Name the stores to clear (stores). They are never taken from the project.';
-    if (!payload.token) return 'Check what would be removed first (check_demo_data), and hand its token back.';
-    if (payload.confirm !== true) {
-        const named = payload.stores.map((s) => (s.storeCode ? `${s.storeCode} (${s.websiteCode})` : `every store of ${s.websiteCode}`)).join(', ');
-        return (
-            `This removes everything in the stores ${named} that Demo Builder did not install, as listed, ` +
-            'cancels or refunds their orders and closes their returns (through the ERP integration where one serves the store, ' +
-            'then refreshing its ERP from Commerce). It cannot be undone. Confirm to proceed.'
-        );
-    }
-    return undefined;
-}
-
-/** The store would now clear more than was shown: the new list is offered, never acted on. */
-async function offerAgain(plans: Map<string, WipePlan>, opened: Opened, shown: WipePlan, records: InstallRecord[], error: WipeChangedError): Promise<HandlerResponse> {
-    const fresh = await planWipeFor(opened.commerce.get, shown.choices, records, opened.erp);
-    keep(plans, fresh);
-    return { success: false, error: error.message, data: { preview: fresh.preview } };
-}
-
-/** Clear the list shown, from this project, when the stores named are the list's and no other project claims one. */
-async function clearIn(deps: DemoDataDeps, plans: Map<string, WipePlan>, context: HandlerContext, shown: WipePlan, stores: WipeStoreChoice[], report: (stage: string, step?: string) => void): Promise<HandlerResponse> {
-    const opened = await openStore(deps, context);
-    if ('response' in opened) return opened.response;
-    const scope = resolveWipeScope(opened.structure, stores);
-    if (scope.key !== shown.scopeKey) return { success: false, error: `That list is for ${storesInWords(shown.preview)}, not the stores named.` };
-    const claims = await readWipeClaims(deps.files, opened.project, opened.others, opened.structure, scope);
-    plans.delete(shown.preview.token);
-    if ('refusal' in claims) return { success: false, error: claims.refusal, code: ErrorCode.INVALID_OPERATION };
-    try {
-        report(DATAPACK_STAGES.checkingStores.label);
-        const outcome = await clearShown(opened.commerce, shown, claims.records, { report, erp: opened.erp });
-        context.logger.info(`${LOG_PREFIX} ${outcome.sentence}`);
-        return { success: true, note: outcome.sentence, data: outcome };
-    } catch (error) {
-        if (!(error instanceof WipeChangedError)) throw error;
-        return offerAgain(plans, opened, shown, claims.records, error);
-    }
-}
-
-async function clear(deps: DemoDataDeps, plans: Map<string, WipePlan>, context: HandlerContext, payload?: DemoDataRequest): Promise<HandlerResponse> {
-    const refusal = clearRefusal(payload);
-    if (refusal || !payload?.stores) return { success: false, error: refusal, code: ErrorCode.INVALID_OPERATION };
-    const shown = plans.get(payload.token ?? '');
-    if (!shown) return { success: false, error: 'That list is no longer known here. Check what would be removed again.' };
-    const options = { id: DEMO_DATA_CLEAR_OPERATION_ID, title: 'Clearing demo data', inModal: payload.progress === 'modal' };
-    const stores = payload.stores;
-    return withOperationProgress(options, async (report) => {
-        try {
-            return await clearIn(deps, plans, context, shown, stores, (stage, step) => report(stage, step));
-        } catch (error) {
-            return failure(context, error, 'The stores could not be cleared.');
-        }
-    });
-}
-
-/**
- * The two handlers over the deps given.
- *
- * @param deps - Commerce access, the org check, the record files and the other projects
- */
-export function createDemoDataHandlers(deps: DemoDataDeps) {
-    const plans = new Map<string, WipePlan>();
-    const acoPlans = new Map<string, AcoWipePlan>();
-    return defineHandlers({
-        'check-demo-data': (context: HandlerContext, payload?: DemoDataRequest) =>
-            payload?.aco ? checkAco(acoDeps(deps), acoPlans, context) : check(deps, plans, context, payload),
-        'clear-demo-data': narrateOutcomeToModal<DemoDataRequest>(
-            (context, payload) => (payload?.aco ? clearAcoWithProgress(deps, acoPlans, context, payload) : clear(deps, plans, context, payload)),
-            () => DEMO_DATA_CLEAR_OPERATION_ID,
-        ),
-    });
-}
-
-/** The ACO clearing, told in the same progress window as the stores' (PL-60). */
+/** The ACO clearing, told in the same progress window as the websites' (PL-60). */
 function clearAcoWithProgress(deps: DemoDataDeps, acoPlans: Map<string, AcoWipePlan>, context: HandlerContext, payload: DemoDataRequest): Promise<HandlerResponse> {
     const options = { id: DEMO_DATA_CLEAR_OPERATION_ID, title: 'Clearing ACO demo data', inModal: payload.progress === 'modal' };
     return withOperationProgress(options, (report) => clearAco(acoDeps(deps), acoPlans, context, payload, (stage) => report(ACO_STAGES[stage] ?? stage)));
 }
-
-/** What each ACO clearing stage is called in the progress window. */
-const ACO_STAGES: Record<string, string> = { products: 'Removing products', categories: 'Removing categories' };
-
-/** The project's own access, the org check against the store's org, the records on disk, and every other local project. */
+/** The project's own access, the org check against the store's org, the records on disk, every other local project, and the engine's removal. */
 export const DEFAULT_DEMO_DATA_DEPS: DemoDataDeps = {
     commerce: (context, project) => projectCommerce({ project, authManager: context.authManager, secrets: context.context?.secrets })(),
     guard: async (context, project) => (context.authManager ? (await orgGuard(context, project, context.authManager))?.error : undefined),
     files: nodeRecordFiles,
     others: (context, project) => loadOtherProjects(context, project.path),
     erp: findWipeErp,
+    // No button spinner waits on it, so the notification shows Chrome starting (`openCommerceAdmin`).
+    openAdmin: (project) => openCommerceAdmin(project, { notify: true }),
+    remove: (project, context, report, given, leaving) => removeProjectSampleDataOutcome(project, context, report, { given }, leaving),
+    changes: (context, project) => readRemovalChangesOf(context, project),
+    ownNames: (context) => ownNames(context),
     aco: (context, project) => projectAco({ project, secrets: context.context?.secrets })(),
     acoSearch: (settings) => createAcoSearch(settings),
 };

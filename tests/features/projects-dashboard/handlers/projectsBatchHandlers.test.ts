@@ -1,0 +1,327 @@
+/**
+ * `prepareProjectsBatch` and `runProjectsBatch` (owner, 2026-11-04): a refusal for a payload that
+ * names no action or no project, one batch at a time, the run in the window under the batch's own
+ * id, rows pushed as `projectsBatchRow`, and a success with a warning when some did not go through.
+ * The work is `projectsBatch.ts`'s and faked here.
+ */
+
+jest.mock('@/features/projects-dashboard/services/projectsBatch', () => ({
+    prepareDeleteBatch: jest.fn(),
+    prepareResetBatch: jest.fn(),
+    runDeleteBatch: jest.fn(),
+    runResetBatch: jest.fn(),
+    saveNamesOf: jest.fn(),
+}));
+jest.mock('@/features/eds/services/reset/edsResetUI', () => ({ resetEdsProjectWithUI: jest.fn() }));
+jest.mock('@/features/lifecycle/services/projectResetService', () => ({ runProjectResetAnswered: jest.fn() }));
+jest.mock('@/core/di/serviceLocator', () => ({
+    ServiceLocator: { getCommandExecutor: jest.fn(), getAuthenticationService: jest.fn() },
+}));
+jest.mock('@/core/auth/adobeAuthGuard', () => ({ ensureAdobeIOAuth: jest.fn() }));
+jest.mock('@/core/vscode/withOperationProgress', () => ({
+    withOperationProgress: jest.fn(async (_options: unknown, work: (report: jest.Mock) => Promise<unknown>) => work(jest.fn())),
+}));
+
+import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
+import { createMockWebviewPanel } from '../../../helpers/webviewPanelFake';
+import { ensureAdobeIOAuth } from '@/core/auth/adobeAuthGuard';
+import { createMockProject } from '../../../helpers/projectFake';
+import { resetEdsProjectWithUI } from '@/features/eds/services/reset/edsResetUI';
+import { runProjectResetAnswered } from '@/features/lifecycle/services/projectResetService';
+import type { RunReset } from '@/features/projects-dashboard/services/projectsBatch';
+import { PROJECTS_BATCH_OPERATION_ID } from '@/core/utils/operationIds';
+import { withOperationProgress } from '@/core/vscode/withOperationProgress';
+import { handlePrepareProjectsBatch, handleRunProjectsBatch } from '@/features/projects-dashboard/handlers/projectsBatchHandlers';
+import { prepareDeleteBatch, prepareResetBatch, runDeleteBatch, runResetBatch, saveNamesOf } from '@/features/projects-dashboard/services/projectsBatch';
+import type { BatchDeleteAnswer } from '@/types/projectsBatch';
+
+const ANSWER: BatchDeleteAnswer = { path: '/projects/a', deleteGitHubRepo: false, deleteDaLiveSite: false, removeDatapackData: false };
+
+beforeEach(() => {
+    jest.clearAllMocks();
+    (saveNamesOf as jest.Mock).mockResolvedValue({ ownNames: [], alwaysSave: false });
+});
+
+describe('prepareProjectsBatch', () => {
+    // Walk F246: changes that could not be read because Adobe refused the sign-in are not "kept"
+    // on a guess. From a screen the shared guard asks and signs in, then the read runs again.
+    it('from a screen, asks through the shared sign-in guard and reads again once signed in', async () => {
+        const unchecked = [{ path: '/projects/a', name: 'a', datapack: { name: 'Bodea', changes: 'unchecked' } }];
+        const checked = [{ path: '/projects/a', name: 'a', datapack: { name: 'Bodea' } }];
+        (prepareResetBatch as jest.Mock).mockResolvedValueOnce(unchecked).mockResolvedValueOnce(checked);
+        (ensureAdobeIOAuth as jest.Mock).mockResolvedValue({ authenticated: true });
+        const context = createMockHandlerContext({ panel: createMockWebviewPanel() });
+        (context.authManager as unknown as { isAuthenticated: jest.Mock }).isAuthenticated = jest.fn().mockResolvedValue(false);
+
+        const result = await handlePrepareProjectsBatch(context, { action: 'reset', projectPaths: ['/projects/a'] });
+
+        expect(ensureAdobeIOAuth).toHaveBeenCalledWith(expect.objectContaining({ warningMessage: 'Your Adobe sign-in has expired. Sign in to check the datapack for changes.' }));
+        expect(prepareResetBatch).toHaveBeenCalledTimes(2);
+        expect(result).toMatchObject({ success: true, data: { rows: checked } });
+    });
+
+    it('refuses with the reason when the sign-in is dismissed, or headless with no one to ask', async () => {
+        (prepareResetBatch as jest.Mock).mockResolvedValue([{ path: '/projects/a', name: 'a', datapack: { name: 'Bodea', changes: 'unchecked' } }]);
+        (ensureAdobeIOAuth as jest.Mock).mockResolvedValue({ authenticated: false, cancelled: true });
+        const refused = { success: false, code: 'AUTH_REQUIRED', error: 'Your Adobe sign-in has expired. Sign in to check the datapack for changes.' };
+        const fromScreen = createMockHandlerContext({ panel: createMockWebviewPanel() });
+        (fromScreen.authManager as unknown as { isAuthenticated: jest.Mock }).isAuthenticated = jest.fn().mockResolvedValue(false);
+        expect(await handlePrepareProjectsBatch(fromScreen, { action: 'reset', projectPaths: ['/projects/a'] })).toStrictEqual(refused);
+
+        (ensureAdobeIOAuth as jest.Mock).mockClear();
+        const headless = createMockHandlerContext({ panel: undefined });
+        (headless.authManager as unknown as { isAuthenticated: jest.Mock }).isAuthenticated = jest.fn().mockResolvedValue(false);
+        expect(await handlePrepareProjectsBatch(headless, { action: 'reset', projectPaths: ['/projects/a'] })).toStrictEqual(refused);
+        expect(ensureAdobeIOAuth).not.toHaveBeenCalled();
+    });
+
+    it('keeps the datapack as before when signed in and the check still could not read', async () => {
+        const rows = [{ path: '/projects/a', name: 'a', datapack: { name: 'Bodea', changes: 'unchecked' } }];
+        (prepareResetBatch as jest.Mock).mockResolvedValue(rows);
+        const context = createMockHandlerContext();
+        (context.authManager as unknown as { isAuthenticated: jest.Mock }).isAuthenticated = jest.fn().mockResolvedValue(true);
+
+        const result = await handlePrepareProjectsBatch(context, { action: 'reset', projectPaths: ['/projects/a'] });
+
+        expect(result).toMatchObject({ success: true });
+    });
+
+    it('answers the rows for the projects picked', async () => {
+        (prepareDeleteBatch as jest.Mock).mockResolvedValue([{ path: '/projects/a', name: 'a' }]);
+
+        const result = await handlePrepareProjectsBatch(createMockHandlerContext(), { action: 'delete', projectPaths: ['/projects/a'] });
+
+        expect(result).toStrictEqual({ success: true, data: { action: 'delete', rows: [{ path: '/projects/a', name: 'a' }], ownNames: [], alwaysSave: false } });
+    });
+
+    // The save question names a new datapack: it may not take one of the SC's (step-05 S1, J7-2).
+    it("adds the SC's datapacks' names and the save setting, read for the rows it answers", async () => {
+        const rows = [{ path: '/projects/a', name: 'a', datapack: { name: 'Bodea', changes: 'asks' } }];
+        (prepareResetBatch as jest.Mock).mockResolvedValue(rows);
+        (saveNamesOf as jest.Mock).mockResolvedValue({ ownNames: ['My Luma'], alwaysSave: true });
+        const context = createMockHandlerContext();
+
+        const result = await handlePrepareProjectsBatch(context, { action: 'reset', projectPaths: ['/projects/a'] });
+
+        expect(saveNamesOf).toHaveBeenCalledWith(context, rows);
+        expect(result).toStrictEqual({ success: true, data: { action: 'reset', rows, ownNames: ['My Luma'], alwaysSave: true } });
+    });
+
+    it('refuses a batch with no projects, reading nothing', async () => {
+        const context = createMockHandlerContext();
+
+        await expect(handlePrepareProjectsBatch(context, { action: 'reset', projectPaths: [] })).resolves.toStrictEqual({ success: false, error: 'Select at least one project.' });
+        expect(prepareDeleteBatch).not.toHaveBeenCalled();
+    });
+});
+
+describe('runProjectsBatch', () => {
+    it("runs in the window under the batch's id, and pushes each row as projectsBatchRow", async () => {
+        const context = createMockHandlerContext({ sendMessage: jest.fn().mockResolvedValue(undefined) });
+        (runDeleteBatch as jest.Mock).mockImplementation(async (_ctx, _answers, tell) => {
+            tell({ path: '/projects/a', state: 'done' });
+            return 0;
+        });
+
+        const result = await handleRunProjectsBatch(context, { action: 'delete', answers: [ANSWER] });
+
+        expect(withOperationProgress).toHaveBeenCalledWith({ id: PROJECTS_BATCH_OPERATION_ID, title: 'Deleting Projects', inModal: true }, expect.any(Function));
+        expect(context.sendMessage).toHaveBeenCalledWith('projectsBatchRow', { path: '/projects/a', state: 'done' });
+        expect(result).toMatchObject({ success: true });
+        expect(result).not.toHaveProperty('warning');
+    });
+
+    it('ends on a warning naming how many did not go through', async () => {
+        (runResetBatch as jest.Mock).mockResolvedValue(2);
+
+        const result = await handleRunProjectsBatch(createMockHandlerContext(), {
+            action: 'reset',
+            answers: [1, 2, 3].map((n) => ({ path: `/projects/${n}`, removeDatapack: false })),
+        });
+
+        expect(withOperationProgress).toHaveBeenCalledWith(expect.objectContaining({ title: 'Resetting Projects' }), expect.any(Function));
+        expect(result).toMatchObject({ success: true, warning: '2 projects not reset.' });
+    });
+
+    it('runs one batch at a time', async () => {
+        let finish: (failed: number) => void = () => undefined;
+        (runDeleteBatch as jest.Mock).mockImplementationOnce(() => new Promise<number>((resolve) => (finish = resolve)));
+        const context = createMockHandlerContext();
+
+        const first = handleRunProjectsBatch(context, { action: 'delete', answers: [ANSWER] });
+        await Promise.resolve();
+        const second = await handleRunProjectsBatch(context, { action: 'delete', answers: [ANSWER] });
+        finish(0);
+        await first;
+
+        expect(second).toStrictEqual({ success: false, error: 'Projects are already being reset or deleted.' });
+        expect(runDeleteBatch).toHaveBeenCalledTimes(1);
+    });
+
+    it("never moves the open project: the run's state manager does not switch", async () => {
+        const context = createMockHandlerContext();
+        (runDeleteBatch as jest.Mock).mockResolvedValue(0);
+
+        await handleRunProjectsBatch(context, { action: 'delete', answers: [ANSWER] });
+
+        expect((runDeleteBatch as jest.Mock).mock.calls[0][0].stateManager).not.toBe(context.stateManager);
+    });
+});
+
+/**
+ * The reset each project gets, the list's and, since step-05 S4, the project dashboard's: one
+ * reset whichever door. Ported from the dashboard's own reset handler suite, which pinned the same
+ * whole-object call because these flags default to false, and the dashboard once did a lighter
+ * reset than the list for two years (EDS-12, fixed 2026-09-02).
+ */
+describe("runProjectsBatch's reset of a storefront project", () => {
+    it('runs inside the window with the answers given, leaving the block library and the CDN check to the reset', async () => {
+        let runReset: RunReset | undefined;
+        (runResetBatch as jest.Mock).mockImplementation(async (_ctx, _answers, run: { runReset: RunReset }) => {
+            runReset = run.runReset;
+            return 0;
+        });
+        (resetEdsProjectWithUI as jest.Mock).mockResolvedValue({ success: true });
+        await handleRunProjectsBatch(createMockHandlerContext(), { action: 'reset', answers: [{ path: '/projects/a', removeDatapack: true }] });
+        const project = createMockProject({ path: '/projects/a', selectedStack: 'eds-paas' });
+        const context = createMockHandlerContext();
+        const report = jest.fn();
+
+        await runReset?.(context, project, { path: '/projects/a', removeDatapack: true, changes: 'drop' }, report);
+
+        expect(resetEdsProjectWithUI).toHaveBeenCalledWith({
+            meshDeps: { commandManager: undefined, authManager: undefined },
+            project,
+            context,
+            logPrefix: '[ProjectsBatch]',
+            withinEdit: { report },
+            answered: { removeDatapack: true, changes: 'drop' },
+        });
+    });
+});
+
+/** The reset the run wires into the batch, caught from `runResetBatch`'s third argument. */
+async function wiredRunReset(): Promise<RunReset> {
+    let runReset: RunReset | undefined;
+    (runResetBatch as jest.Mock).mockImplementation(async (_ctx, _answers, run: { runReset: RunReset }) => {
+        runReset = run.runReset;
+        return 0;
+    });
+    await handleRunProjectsBatch(createMockHandlerContext(), { action: 'reset', answers: [{ path: '/projects/a', removeDatapack: false }] });
+    if (!runReset) throw new Error('the run wired no reset');
+    return runReset;
+}
+
+// A storefront reset that finished around something said nothing on its row (2026-11-13): the
+// agent tool's caveats, the same lines, now reach the row as its warnings.
+describe("runProjectsBatch's storefront reset, finished around something", () => {
+    it("hands the row the reset's caveats as warnings, in the order the SC reads them", async () => {
+        const runReset = await wiredRunReset();
+        (resetEdsProjectWithUI as jest.Mock).mockResolvedValue({
+            success: true,
+            codeNotPublished: 'The code could not be published.',
+            error: 'The site configuration was not written.',
+            pageWarnings: ['2 pages could not be published.'],
+            pipelineWarnings: ['The block palette is empty.'],
+            datapackRemoval: { kept: 'Its changes could not be saved.' },
+        });
+
+        const result = await runReset(createMockHandlerContext(), createMockProject({ selectedStack: 'eds-paas' }), { path: '/p', removeDatapack: true }, jest.fn());
+
+        expect(result).toStrictEqual({
+            success: true,
+            warnings: [
+                'The code could not be published.',
+                'The site configuration was not written.',
+                '2 pages could not be published.',
+                'The block palette is empty.',
+                'Its datapack was not uninstalled: Its changes could not be saved.',
+            ],
+        });
+    });
+
+    it('hands a clean reset no warnings, and a failed one its reason', async () => {
+        const runReset = await wiredRunReset();
+        const project = createMockProject({ selectedStack: 'eds-paas' });
+        (resetEdsProjectWithUI as jest.Mock).mockResolvedValueOnce({ success: true, filesReset: 3 });
+        (resetEdsProjectWithUI as jest.Mock).mockResolvedValueOnce({ success: false, error: 'Sign in to DA.live.' });
+
+        await expect(runReset(createMockHandlerContext(), project, { path: '/p', removeDatapack: false }, jest.fn())).resolves.toStrictEqual({ success: true });
+        await expect(runReset(createMockHandlerContext(), project, { path: '/p', removeDatapack: false }, jest.fn())).resolves.toStrictEqual({ success: false, error: 'Sign in to DA.live.' });
+    });
+
+    // Owner 2026-11-14 (item 5): changes saved into the SC's own pack first are said on the row.
+    it("says where the changes were saved when the SC's own pack took them", async () => {
+        const runReset = await wiredRunReset();
+        (resetEdsProjectWithUI as jest.Mock).mockResolvedValue({ success: true, datapackRemoval: { savedInto: 'My Luma' } });
+
+        const result = await runReset(createMockHandlerContext(), createMockProject({ selectedStack: 'eds-paas' }), { path: '/p', removeDatapack: true }, jest.fn());
+
+        expect(result).toStrictEqual({ success: true, note: 'Saved to My Luma.' });
+    });
+
+    // Owner walk Q6 (2026-11-13; plan step-07 I3): content kept on purpose is something to know, not
+    // something that went wrong, so it is the row's note, green, beside where the changes were saved.
+    it('says the content was kept as a note, never a warning, on a reset that finished', async () => {
+        const runReset = await wiredRunReset();
+        (resetEdsProjectWithUI as jest.Mock).mockResolvedValue({
+            success: true,
+            contentKept: "Content kept: the demo's pages can't be reached.",
+            datapackRemoval: { savedInto: 'My Luma' },
+        });
+
+        const result = await runReset(createMockHandlerContext(), createMockProject({ selectedStack: 'eds-paas' }), { path: '/p', removeDatapack: true }, jest.fn());
+
+        expect(result).toStrictEqual({ success: true, note: "Saved to My Luma. Content kept: the demo's pages can't be reached." });
+    });
+
+    // Review 2026-11-14 (item 8): a failed reset that kept the content says so too.
+    it('says the content was kept on a reset that failed', async () => {
+        const runReset = await wiredRunReset();
+        (resetEdsProjectWithUI as jest.Mock).mockResolvedValue({ success: false, error: 'pipeline died', contentKept: "Content kept: the demo's pages can't be reached." });
+
+        const result = await runReset(createMockHandlerContext(), createMockProject({ selectedStack: 'eds-paas' }), { path: '/p', removeDatapack: false }, jest.fn());
+
+        expect(result).toStrictEqual({ success: false, error: 'pipeline died', warnings: ["Content kept: the demo's pages can't be reached."] });
+    });
+
+    it('says what became of the datapack on a reset that failed after uninstalling it', async () => {
+        const runReset = await wiredRunReset();
+        (resetEdsProjectWithUI as jest.Mock).mockResolvedValue({ success: false, error: 'pipeline died', datapackRemoval: {} });
+
+        const result = await runReset(createMockHandlerContext(), createMockProject({ selectedStack: 'eds-paas' }), { path: '/p', removeDatapack: true }, jest.fn());
+
+        expect(result).toStrictEqual({ success: false, error: 'pipeline died', warnings: ['Its datapack was uninstalled.'] });
+    });
+});
+
+// A headless reset ignored Uninstall Datapack (step-05 S6, owner 2026-11-13, P5-Q3: "Uninstall it").
+describe("runProjectsBatch's reset of a headless project", () => {
+    it("hands the component reset the batch's Uninstall Datapack and the save question's answer", async () => {
+        const runReset = await wiredRunReset();
+        const outcome = { success: true, warnings: ['Its datapack was not uninstalled: Its changes could not be saved.'] };
+        (runProjectResetAnswered as jest.Mock).mockResolvedValue(outcome);
+        const project = createMockProject({ path: '/projects/h', selectedStack: 'headless-paas' });
+        const context = createMockHandlerContext();
+        const report = jest.fn();
+
+        const result = await runReset(context, project, { path: '/projects/h', removeDatapack: true, changes: { saveAs: 'My Bodea' } }, report);
+
+        expect(resetEdsProjectWithUI).not.toHaveBeenCalled();
+        expect(runProjectResetAnswered).toHaveBeenCalledWith(
+            { commandManager: undefined, authManager: undefined, project, context, logPrefix: '[ProjectsBatch]' },
+            report,
+            { removeDatapack: true, changes: { saveAs: 'My Bodea' } },
+        );
+        expect(result).toBe(outcome);
+    });
+
+    it('sends no answer about changes when the batch gave none', async () => {
+        const runReset = await wiredRunReset();
+        (runProjectResetAnswered as jest.Mock).mockResolvedValue({ success: true });
+
+        await runReset(createMockHandlerContext(), createMockProject({ selectedStack: 'headless-paas' }), { path: '/p', removeDatapack: false }, jest.fn());
+
+        expect((runProjectResetAnswered as jest.Mock).mock.calls[0][2]).toStrictEqual({ removeDatapack: false });
+    });
+});

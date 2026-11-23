@@ -1,0 +1,38 @@
+{
+  ":version": 3,
+  ":names": [
+    "data",
+    "library"
+  ],
+  ":type": "multi-sheet",
+  "data": {
+    "total": 2,
+    "offset": 0,
+    "limit": 2,
+    "data": [
+      {
+        "key": "aem.repositoryId",
+        "value": "author-p00000-e00000.adobeaemcloud.com"
+      },
+      {
+        "key": "editor.path",
+        "value": "/acme/acme-storefront=https://da.live/canvas#"
+      }
+    ]
+  },
+  "library": {
+    "total": 1,
+    "offset": 0,
+    "limit": 1,
+    "data": [
+      {
+        "title": "Blocks",
+        "path": "https://content.da.live/acme/acme-storefront/.da/library/blocks.json",
+        "format": "",
+        "ref": "",
+        "icon": "",
+        "experience": ""
+      }
+    ]
+  }
+}

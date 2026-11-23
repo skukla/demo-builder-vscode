@@ -2,7 +2,7 @@
 
 How an Edge Delivery storefront's nav reaches the Commerce catalog without anyone typing
 the category structure into it (EDS-24), and how each category gets its page from the
-product page overlay (EDS-61). Design: `.rptc/plans/category-pages-overlay/overview.md`.
+product page overlay (EDS-61). Design: `.rptc/complete/category-pages-overlay/overview.md`.
 
 ## What the SC gets
 
@@ -12,7 +12,7 @@ area, off by default) and the product page overlay is on, storefront setup:
 1. publishes a page for every Commerce category with a url path, **at the category's own
    address** (`/signs`, `/signs/danger-signs`; owner decision 2026-10-22). Where nobody
    wrote a page at that address, the shared action that makes product pages (`render-pdp`)
-   makes it from one template page. Where somebody did — Justrite's hand-built `/apparel`,
+   makes it from one template page. Where somebody did — Tailspin's hand-built `/apparel`,
    say — that page is kept and served.
 2. writes that template, **`/categories/default`**, when the site has none: a heading and
    a `product-list-page` block with a `urlPath` row. It is an ordinary DA.live page. To

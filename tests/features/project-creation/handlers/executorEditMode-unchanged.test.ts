@@ -12,9 +12,9 @@ import { createMockHandlerContext } from '../../../helpers/handlerContextTestHel
 import { createMockProject } from '../../../helpers/projectFake';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
 
-const EDIT_PATH = '/p/justrite';
+const EDIT_PATH = '/p/tailspin';
 
-function setup(loaded = createMockProject({ name: 'justrite', path: EDIT_PATH })) {
+function setup(loaded = createMockProject({ name: 'tailspin', path: EDIT_PATH })) {
     const stateManager = createMockStateManager({
         loadProjectFromPath: jest.fn().mockResolvedValue(loaded),
         saveProject: jest.fn().mockResolvedValue(undefined),
@@ -25,7 +25,7 @@ function setup(loaded = createMockProject({ name: 'justrite', path: EDIT_PATH })
 }
 
 function config(overrides: Partial<ProjectCreationConfig> = {}): ProjectCreationConfig {
-    return { projectName: 'justrite', editProjectPath: EDIT_PATH, editChanges: [], ...overrides };
+    return { projectName: 'tailspin', editProjectPath: EDIT_PATH, editChanges: [], ...overrides };
 }
 
 describe('saveUnchangedEdit', () => {

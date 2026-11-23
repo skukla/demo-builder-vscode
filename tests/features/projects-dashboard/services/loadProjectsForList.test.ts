@@ -30,9 +30,7 @@ describe('loadProjectsForList', () => {
         const projects = await loadProjectsForList(stateManager);
 
         expect(projects.map((p: Project) => p.path)).toEqual(['/p/a']);
-        expect(stateManager.loadProjectFromPath).toHaveBeenCalledWith('/p/a', undefined, {
-            persistAfterLoad: false,
-        });
+        expect(stateManager.loadProjectFromPath).toHaveBeenCalledWith('/p/a');
         expect(stateManager.saveProject).not.toHaveBeenCalled();
     });
 
@@ -86,5 +84,28 @@ describe('loadProjectsForList', () => {
         const projects = await whileRunning('/p/new', 'creating', () => loadProjectsForList(stateManager));
 
         expect(projects).toHaveLength(1);
+    });
+
+    // Both paths draw the list from here, so the order is decided here (2026-11-03): only the
+    // screen's own request sorted before, and the reveal refresh redrew the cards in folder order.
+    it('orders the projects pinned first, then by name, whatever order the folder lists them in', async () => {
+        const stateManager = createMockStateManager();
+        const listed = [
+            { name: 'scratch-1028', pinned: false },
+            { name: 'Tailspin', pinned: false },
+            { name: 'patch-canary-b2b', pinned: false },
+            { name: 'Bodea', pinned: true },
+        ];
+        stateManager.getAllProjects.mockResolvedValue(
+            listed.map(({ name }) => ({ name, path: `/p/${name}`, lastModified: new Date(0) })),
+        );
+        stateManager.loadProjectFromPath.mockImplementation(async (path: string) => {
+            const entry = listed.find(({ name }) => path === `/p/${name}`);
+            return entry ? createMockProject({ name: entry.name, path, pinned: entry.pinned, status: 'stopped' }) : null;
+        });
+
+        const projects = await loadProjectsForList(stateManager);
+
+        expect(projects.map((p: Project) => p.name)).toEqual(['Bodea', 'patch-canary-b2b', 'scratch-1028', 'Tailspin']);
     });
 });

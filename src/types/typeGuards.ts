@@ -10,6 +10,7 @@ import { ADMIN_PANEL_URL, ACCS_GRAPHQL_ENDPOINT } from '@/core/config/envVarKeys
 import { COMPONENT_IDS } from '@/core/constants';
 import {
     deriveAccsAdminUrl,
+    deriveAccsUnifiedAdminUrl,
     lookupComponentConfigValue,
 } from '@/features/components/services/envVarHelpers';
 
@@ -438,11 +439,20 @@ export function getEdsLiveUrl(project: Project | undefined | null): string | und
  * @param project - The project (can be undefined/null)
  * @returns The admin panel URL, or undefined if not set and not derivable
  */
-export function getAdminPanelUrl(project: Project | undefined | null): string | undefined {
+export function getAdminPanelUrl(project: Project | undefined | null, unifiedShellOrg?: string): string | undefined {
     const configs = project?.componentConfigs ?? {};
     const explicit = lookupComponentConfigValue(configs, ADMIN_PANEL_URL);
     if (explicit) return explicit;
-    return deriveAccsAdminUrl(lookupComponentConfigValue(configs, ACCS_GRAPHQL_ENDPOINT));
+    const endpoint = lookupComponentConfigValue(configs, ACCS_GRAPHQL_ENDPOINT);
+    const unified = unifiedShellOrg ? deriveAccsUnifiedAdminUrl(endpoint, unifiedShellOrg) : undefined;
+    return unified ?? deriveAccsAdminUrl(endpoint);
+}
+
+/** Whether a project can choose its Admin interface: a Cloud Service store, with no URL of its own. */
+export function hasAdminExperienceChoice(project: Project | undefined | null): boolean {
+    const configs = project?.componentConfigs ?? {};
+    if (lookupComponentConfigValue(configs, ADMIN_PANEL_URL)) return false;
+    return deriveAccsAdminUrl(lookupComponentConfigValue(configs, ACCS_GRAPHQL_ENDPOINT)) !== undefined;
 }
 
 /**

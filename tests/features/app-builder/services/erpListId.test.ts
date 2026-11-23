@@ -39,7 +39,7 @@ describe('erpListIdFor', () => {
     it.each([
         ['Northwind ERP', 'northwind'],
         ['Contoso ERP', 'contoso'],
-        ['Justrite ERP', 'justrite'],
+        ['Tailspin ERP', 'tailspin'],
         ['AccuformNMC', 'accuformnmc'],
         ['Brand B (EMEA) ERP', 'brand-b-emea'],
         ['  ERP  ', 'erp'],
@@ -116,7 +116,7 @@ describe('ensureListId', () => {
         expect(ensureListId(project, SYSTEM)).toBe(true);
         expect(project.appBuilderComponents?.['demo-erp']?.listId).toBe('northwind');
 
-        project.appBuilderComponents!['demo-erp']!.name = 'Justrite ERP';
+        project.appBuilderComponents!['demo-erp']!.name = 'Tailspin ERP';
         expect(ensureListId(project, SYSTEM)).toBe(false);
         expect(project.appBuilderComponents?.['demo-erp']?.listId).toBe('northwind');
     });

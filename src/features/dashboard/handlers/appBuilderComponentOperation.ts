@@ -124,7 +124,7 @@ export type GuardableResult = {
  *
  * The SC reads them where the run was narrating. A run in the screen's modal already
  * ended on them (`withComponentProgress` hands them to the modal's success view), so
- * no notification opens for it: a removal's "Justrite ERP owns every product again"
+ * no notification opens for it: a removal's "Tailspin ERP owns every product again"
  * arrived as a pop-up after its modal had closed (owner, 2026-10-09). Anywhere else
  * they are a warning notification, as before.
  */

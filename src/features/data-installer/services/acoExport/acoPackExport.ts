@@ -73,7 +73,7 @@ function kindsAsked(dataTypes: readonly string[] | undefined): AcoExportKind[] {
     );
     if (unknown.length > 0) {
         throw new AcoExportError(
-            `An ACO pack is made of ${ACO_EXPORT_KINDS.join(', ')}; ${unknown.join(', ')} cannot be made from a Commerce store here (the Data Installer's own export makes no product layers either).`,
+            `An ACO datapack is made of ${ACO_EXPORT_KINDS.join(', ')}; ${unknown.join(', ')} cannot be made from a Commerce store here (the Data Installer's own export makes no product layers either).`,
         );
     }
     return ACO_EXPORT_KINDS.filter((kind) => dataTypes.includes(kind));
@@ -94,7 +94,7 @@ async function storeViewsAsked(
     const missing = asked.filter((code) => !known.includes(code));
     if (missing.length > 0)
         throw new AcoExportError(
-            `The store has no store view ${missing.join(', ')}. It has ${known.join(', ')}.`,
+            `Commerce has no store view ${missing.join(', ')}. It has ${known.join(', ')}.`,
         );
     return { codes: [...new Set(asked)].sort(), chosen: true, locales };
 }
@@ -157,7 +157,7 @@ async function save(
     } catch (error) {
         if (!(error instanceof DatapackTransferError)) throw error;
         throw new AcoExportError(
-            `${request.id.name}@${request.id.version} is already in your datapack library. Choose another version, or delete that one first.`,
+            `${request.id.name}@${request.id.version} is already in My Datapacks. Choose another version, or delete that one first.`,
         );
     }
     for (const failed of written.failed) {
@@ -166,18 +166,18 @@ async function save(
             entry.outcome = {
                 ...entry.outcome,
                 success: false,
-                reason: `The library did not take it: ${failed.reason}`,
+                reason: `My Datapacks did not take it: ${failed.reason}`,
             };
     }
     return request.id;
 }
 
 function sentenceFor(outcome: Omit<AcoExportOutcome, 'sentence'>, id: DatapackId): string {
-    if (!outcome.saved) return 'The store had nothing to put in an ACO pack, so nothing was saved.';
+    if (!outcome.saved) return 'Commerce had nothing to put in an ACO datapack, so nothing was saved.';
     const made = outcome.perType.filter((t) => t.success && t.exported > 0).length;
     const failed = outcome.perType.filter((t) => !t.success).length;
     const tail = failed > 0 ? ` ${failed} of the kinds could not be made; each says why.` : '';
-    return `Saved the ACO pack ${id.name}@${id.version} to your datapack library: ${made} ${made === 1 ? 'kind' : 'kinds'} for ${outcome.storeViews.join(', ')}, in ${outcome.locales.join(', ')}.${tail}`;
+    return `Saved the ACO datapack ${id.name}@${id.version} to My Datapacks: ${made} ${made === 1 ? 'kind' : 'kinds'} for ${outcome.storeViews.join(', ')}, in ${outcome.locales.join(', ')}.${tail}`;
 }
 
 /**

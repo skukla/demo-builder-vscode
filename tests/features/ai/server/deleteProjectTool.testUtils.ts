@@ -2,14 +2,15 @@
  * Shared harness for the `delete_project` suite family: the module wall, the fake server
  * that keeps the tool's schema, and the context the tool is built with.
  *
- * Extracted when the second suite arrived (`deleteProjectTool-pack.test.ts`, step 07's
- * `deletePack`). This file owns the SUBJECT import, so the `jest.mock` calls above it hoist
+ * Extracted when the second suite arrived (`deleteProjectTool-data.test.ts`, walk F96's
+ * `removeData`, which replaced step 07's `deletePack`). This file owns the SUBJECT import, so the `jest.mock` calls above it hoist
  * above it (webview-test-authoring §3): a spec that imported `registerDeleteProjectTool`
  * itself could bind the real collaborators.
  *
- * The three walls: the local deletion core, the cloud step (the real resolver decides; only
- * the step that would touch the cloud is held back, so what it is HANDED can be read), and the
- * library delete of the project's own pack.
+ * The walls: the local deletion core and the removal of the project's datapack data from
+ * Commerce. The button's delete (`runProjectDelete`, PL-104 fix 6) is the REAL one unless a
+ * suite says otherwise: `mockRunProjectDelete` passes through to it, so a suite reads what it
+ * was HANDED, and can stand in for it where the online steps would touch the cloud.
  */
 
 import * as vscode from 'vscode';
@@ -22,13 +23,29 @@ import { createMockStateManager } from '../../../helpers/stateManagerFake';
 jest.mock('@/features/projects-dashboard/services/projectFilesDeletion', () => ({
     deleteProjectFiles: jest.fn(),
 }));
-jest.mock('@/features/projects-dashboard/services/demoPackDeletion', () => ({
-    deleteProjectDemoPack: jest.fn(),
+jest.mock('@/features/projects-dashboard/services/datapackDataRemoval', () => ({
+    // Whether the project has datapack data to remove: none unless a suite says so.
+    hasRemovableData: jest.fn().mockResolvedValue(false),
+    removeDataBeforeDelete: jest.fn(),
 }));
-jest.mock('@/features/ai/server/agentProjectCleanup', () => ({
-    ...jest.requireActual('@/features/ai/server/agentProjectCleanup'),
-    cleanUpProjectCloud: jest.fn(),
+/** The button's delete, as the tool calls it; pass-through by default (`useRealDelete`). */
+export const mockRunProjectDelete = jest.fn();
+jest.mock('@/features/projects-dashboard/services/projectDeletionService', () => ({
+    runProjectDelete: (...a: unknown[]) => mockRunProjectDelete(...a),
 }));
+
+type RunProjectDelete = typeof import('@/features/projects-dashboard/services/projectDeletionService').runProjectDelete;
+
+/**
+ * Point the delete at the real `runProjectDelete`. Call from each spec's `beforeEach`: the
+ * config's `resetMocks` empties the pass-through before every test.
+ */
+export function useRealDelete(): void {
+    const real = jest.requireActual<{ runProjectDelete: RunProjectDelete }>(
+        '@/features/projects-dashboard/services/projectDeletionService',
+    ).runProjectDelete;
+    mockRunProjectDelete.mockImplementation(real);
+}
 
 // Below the mocks on purpose — see the note above about hoisting.
 import { registerDeleteProjectTool } from '@/features/ai/server/deleteProjectTool';

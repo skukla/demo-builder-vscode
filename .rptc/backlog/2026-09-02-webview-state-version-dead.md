@@ -3,7 +3,7 @@ id: PL-37
 kind: chore
 area: platform
 value: low
-status: built
+status: shipped
 needs: []
 ---
 
@@ -52,3 +52,4 @@ and deleting a protocol field is not a de-duplication.
 - 2026-10-03  Deleted 2026-10-03: no webview sends update-state or reads its version, and WebviewClient ignores the handshake payload, so the field, increment, getter, handshake payload, response field and their tests are gone; the update-state and get-state handlers themselves have no webview sender either and were left for a separate decision.
 - 2026-10-03  chore(platform): five small clean-ups (PL-36, PL-37, PL-40, PL-44, PL-56b) (`6817f5486`)
 - 2026-10-03  2026-10-03 (staged): the update-state and get-state handlers left for a separate decision are now deleted — no webview, MCP tool or command sent either.
+- 2026-11-20  Released in v1.0.0-beta.153

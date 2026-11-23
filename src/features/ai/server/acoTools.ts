@@ -214,7 +214,7 @@ function registerQuery(server: McpToolServer, ctxFactory: () => HandlerContext, 
                 'Mutations are refused. Answers past 30,000 characters are cut.',
             inputSchema: {
                 query: z.string().describe('The GraphQL query, e.g. { products(skus:["A"]) { sku } }'),
-                variables: z.record(z.unknown()).optional().describe('GraphQL variables, if the query takes any'),
+                variables: z.record(z.string(), z.unknown()).optional().describe('GraphQL variables, if the query takes any'),
                 viewId: z.string().optional().describe("A catalog view id; defaults to the project's"),
                 locale: z.string().optional().describe("The catalog source locale; defaults to the project's"),
                 priceBookId: z.string().optional().describe('The price book to ask as (sent as AC-Price-Book-ID); leave out to send none'),
@@ -267,7 +267,7 @@ function registerAdminRead(server: McpToolServer, ctxFactory: () => HandlerConte
                 'answers an error that names the type: read it and adjust. Mutations are refused: use write_aco_admin.',
             inputSchema: {
                 query: z.string().describe('The GraphQL query'),
-                variables: z.record(z.unknown()).optional().describe('GraphQL variables, if the query takes any'),
+                variables: z.record(z.string(), z.unknown()).optional().describe('GraphQL variables, if the query takes any'),
             },
         },
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -297,7 +297,7 @@ function registerAdminWrite(server: McpToolServer, ctxFactory: () => HandlerCont
                 'Changes the live instance. Requires confirm:true and raises a dialog for the user.',
             inputSchema: {
                 mutation: z.string().describe('The GraphQL mutation'),
-                variables: z.record(z.unknown()).optional().describe('GraphQL variables, if it takes any'),
+                variables: z.record(z.string(), z.unknown()).optional().describe('GraphQL variables, if it takes any'),
                 confirm: z.boolean().optional().describe('Must be true to proceed'),
             },
         },
@@ -339,7 +339,7 @@ function registerRows(server: McpToolServer, ctxFactory: () => HandlerContext, f
                 'them a little later, about two minutes on a sandbox. Changes the live instance. Requires confirm:true and raises a dialog for the user.',
             inputSchema: {
                 kind: z.enum(KIND_NAMES).describe('Which rows these are'),
-                rows: z.array(z.record(z.unknown())).min(1).describe('The rows, in the shape the ingestion API takes; to remove, each row needs only its key'),
+                rows: z.array(z.record(z.string(), z.unknown())).min(1).describe('The rows, in the shape the ingestion API takes; to remove, each row needs only its key'),
                 remove: z.boolean().optional().describe('Delete these rows instead of writing them'),
                 confirm: z.boolean().optional().describe('Must be true to proceed'),
             },

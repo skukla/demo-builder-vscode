@@ -15,6 +15,12 @@ if (!process.execArgv.includes('--no-sparkplug')) {
   process.execArgv.push('--no-sparkplug');
 }
 
+// ESM-only packages jest must compile (see the node project's transform). They sit nested
+// under sanitize-html, so the ignore pattern below allows one `.../node_modules/` level.
+const ESM_ONLY_PARSER_PACKAGES = [
+  'htmlparser2', 'domhandler', 'domutils', 'dom-serializer', 'entities', 'domelementtype',
+];
+
 module.exports = {
   roots: ['<rootDir>/tests'],
 
@@ -99,6 +105,12 @@ module.exports = {
           sourceMaps: true,
         }],
         '^.+\\.md(\\.template)?$': '<rootDir>/tests/transformers/mdTransformer.js',
+        // sanitize-html 2.18.1+ (the security fix) parses through htmlparser2 12, which ships
+        // ESM only, as do its five helpers. Compile just those to CommonJS for jest; esbuild
+        // bundles them for the extension as they are.
+        [`node_modules/(${ESM_ONLY_PARSER_PACKAGES.join('|')})/.+\\.js$`]: ['@swc/jest', {
+          module: { type: 'commonjs' },
+        }],
       },
       moduleFileExtensions: ['ts', 'js', 'json', 'md'],
       moduleNameMapper: {
@@ -111,13 +123,12 @@ module.exports = {
         '^@/types/(.*)$': '<rootDir>/src/types/$1',
         '^@/providers/(.*)$': '<rootDir>/src/providers/$1',
         '^vscode$': '<rootDir>/tests/__mocks__/vscode.ts',
-        '^uuid$': '<rootDir>/tests/__mocks__/uuid.ts',
         '^@octokit/core$': '<rootDir>/tests/__mocks__/@octokit/core.ts',
         '^@octokit/plugin-retry$': '<rootDir>/tests/__mocks__/@octokit/plugin-retry.ts',
       },
       // Transform ESM-only packages (Octokit, etc.)
       transformIgnorePatterns: [
-        'node_modules/(?!(@octokit|universal-user-agent|before-after-hook)/)',
+        `node_modules/(?!(?:.+/node_modules/)?(@octokit|universal-user-agent|before-after-hook|${ESM_ONLY_PARSER_PACKAGES.join('|')})/)`,
       ],
       setupFilesAfterEnv: ['<rootDir>/tests/setup/node.ts'],
     },
@@ -185,7 +196,6 @@ module.exports = {
         '^@spectrum-icons/(.*)$': '<rootDir>/tests/__mocks__/@spectrum-icons/workflow.tsx',
         // Other mocks
         '^vscode$': '<rootDir>/tests/__mocks__/vscode.ts',
-        '^uuid$': '<rootDir>/tests/__mocks__/uuid.ts',
         '^@octokit/core$': '<rootDir>/tests/__mocks__/@octokit/core.ts',
         '^@octokit/plugin-retry$': '<rootDir>/tests/__mocks__/@octokit/plugin-retry.ts',
       },

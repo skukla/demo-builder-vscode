@@ -21,13 +21,14 @@
  */
 
 import type { DatapackSummary } from '../types';
-import type { DatapackStoreName } from '@/types/datapack';
+import type { DatapackStoreName, ProjectDatapack } from '@/types/datapack';
 
 /** Every version of one datapack, ready to render as a single card. */
 export interface DatapackGroup {
     /**
-     * Unique across the grid: the store and the name. Two stores may hold a pack of
-     * the same name, and they are different packs — one card each, never merged.
+     * Unique across the grid: the store and the name. The one list already shows a pack
+     * held in both as the datapack store's (`mergedCatalog`), so this keeps apart only what
+     * a caller asked of both on its own.
      */
     key: string;
     name: string;
@@ -38,11 +39,77 @@ export interface DatapackGroup {
     shared: boolean;
     /** True when the signed-in SC owns ANY version. Only library packs can be. */
     mine: boolean;
+    /** True when ANY version is an official team pack. Only library packs can be. */
+    team: boolean;
     /** Ordered by {@link orderVersions}: live first, archived last. */
     versions: DatapackSummary[];
 }
 
+/**
+ * Whether a card is the demo's own pack: the same name, in the store the project records.
+ *
+ * @param group - the card's pack
+ * @param held - the pack the open project records
+ * @returns whether it is that pack
+ */
+export function isHeld(group: DatapackGroup, held?: ProjectDatapack): boolean {
+    return held !== undefined && group.name === held.name && group.store === (held.store ?? 'installer');
+}
+
 const MAIN = 'main';
+
+/** The data kind of one store configuration setting per row (datapack-engine step 09). */
+export const STORE_CONFIG_KIND = 'store_config';
+
+const LAYER_SUFFIX = '-settings';
+
+/** The library pack that holds a pack's settings layer (step 09, decision 1). */
+export function settingsLayerName(packName: string): string {
+    return `${packName}${LAYER_SUFFIX}`;
+}
+
+/** The name and description a settings layer carries for the datapack the SC knows by this name. */
+export function layerWords(displayName: string): { displayName: string; description: string } {
+    return {
+        displayName: `${displayName} settings`,
+        description: `Store configuration for ${displayName}, applied after its data when Demo Builder installs it.`,
+    };
+}
+
+/**
+ * Whether a row is a settings layer: named as one, AND holding nothing but store configuration. A demo
+ * whose name happens to end in `-settings` holds data, and stays a demo.
+ */
+export function isSettingsLayer(row: Pick<DatapackSummary, 'id' | 'dataTypes'>): boolean {
+    const named = row.id.name.endsWith(LAYER_SUFFIX) && row.id.name.length > LAYER_SUFFIX.length;
+    return named && row.dataTypes.length > 0 && row.dataTypes.every((kind) => kind === STORE_CONFIG_KIND);
+}
+
+/**
+ * The rows a catalog offers as cards: all but the settings layers whose pack is listed too, which
+ * are reached from that pack's flyout (its Store Configuration row; deleting a version of the SC's own
+ * takes its layer with it). A layer keeps its card when hiding it would strand it: no pack of its name is
+ * listed, so no flyout reaches it, or it was installed on its own, and a card is where a pack is
+ * removed from the store.
+ *
+ * @param installed - the names of the packs on this store
+ */
+export function withoutLayerCards<T extends Pick<DatapackSummary, 'id' | 'dataTypes'>>(rows: T[], installed: ReadonlySet<string> = new Set()): T[] {
+    const names = new Set(rows.map((row) => row.id.name));
+    return rows.filter((row) => {
+        if (!isSettingsLayer(row) || installed.has(row.id.name)) return true;
+        return !names.has(row.id.name.slice(0, -LAYER_SUFFIX.length));
+    });
+}
+
+/**
+ * The newest version by its date, which `main` does not outrank here (the default a card opens on
+ * is `pickDefaultVersion`'s question, not this one). Archived versions only when nothing else is left.
+ */
+export function newestVersion<T extends Pick<DatapackSummary, 'id' | 'updatedAt'>>(versions: readonly T[]): T | undefined {
+    const live = versions.filter((version) => !ARCHIVED.test(version.id.version));
+    return [...(live.length > 0 ? live : versions)].sort(byRecency)[0];
+}
 
 /** Matches both archived spellings seen live: `main-archived-…` and `archive_…`. */
 const ARCHIVED = /archiv/i;
@@ -64,6 +131,7 @@ export function groupDatapacks(items: DatapackSummary[]): DatapackGroup[] {
             existing.versions.push(item);
             existing.shared = existing.shared || item.shared;
             existing.mine = existing.mine || item.mine === true;
+            existing.team = existing.team || item.team === true;
             continue;
         }
         byName.set(key, {
@@ -73,6 +141,7 @@ export function groupDatapacks(items: DatapackSummary[]): DatapackGroup[] {
             store,
             shared: item.shared,
             mine: item.mine === true,
+            team: item.team === true,
             versions: [item],
         });
     }
@@ -112,7 +181,7 @@ function rank(version: DatapackSummary): number {
 }
 
 /** Newest first, treating a missing timestamp as equal so the sort stays stable. */
-function byRecency(a: DatapackSummary, b: DatapackSummary): number {
+function byRecency(a: Pick<DatapackSummary, 'updatedAt'>, b: Pick<DatapackSummary, 'updatedAt'>): number {
     if (!a.updatedAt || !b.updatedAt) {
         return 0;
     }

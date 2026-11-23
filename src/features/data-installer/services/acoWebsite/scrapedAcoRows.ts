@@ -81,7 +81,7 @@ const isFetchable = (url: string): boolean => {
 
 /** Refuse what cannot be made into a pack honestly, naming every product it is about. */
 function refuseUnusable(products: readonly ScrapedProduct[], currency: string): void {
-    if (products.length === 0) throw new ScrapedPackError('There are no products to put in an ACO pack.');
+    if (products.length === 0) throw new ScrapedPackError('There are no products to put in an ACO datapack.');
     const noImage = products.filter((p) => !isFetchable(p.data.image)).map((p) => p.data.name);
     if (noImage.length > 0)
         throw new ScrapedPackError(
@@ -92,7 +92,7 @@ function refuseUnusable(products: readonly ScrapedProduct[], currency: string): 
     );
     if (otherCurrency.length > 0)
         throw new ScrapedPackError(
-            `One pack has one price book, in one currency: ${otherCurrency.map((p) => `${p.data.name} is priced in ${String(p.data.currency).toUpperCase()}`).join(', ')}, not ${currency}.`,
+            `One datapack has one price book, in one currency: ${otherCurrency.map((p) => `${p.data.name} is priced in ${String(p.data.currency).toUpperCase()}`).join(', ')}, not ${currency}.`,
         );
     const bySku = new Map<string, string[]>();
     for (const p of products) {

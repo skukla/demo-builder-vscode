@@ -29,12 +29,17 @@ const PACK_ITEMS = {
     b2b_shared_catalogs: [{ sharedCatalog: { name: 'Platinum Buyer', customer_group_id: 'Platinum Buyer', type: 0, store_id: 0, tax_class_id: 3 } }],
     b2b_companies: [BODEA_COMPANY_ROW],
     b2b_shared_catalog_company_assignments: [{ assignment: { shared_catalog_name: 'Platinum Buyer', companies: [{ company_name: 'Altura' }] } }],
+    // A category by its url key and a product by its SKU, both the store's own (the pack assigns, never makes).
+    b2b_shared_catalog_categories: { catalogs: [{ name: 'Platinum Buyer', categories: [{ id: 'racks' }] }] },
+    b2b_shared_catalog_products: { catalogs: [{ name: 'Platinum Buyer', products: [{ sku: 'VR-RACK' }] }] },
 };
+/** The store's own category the pack assigns, as `GET categories/{id}` answers. */
+const RACKS = { id: 60, name: 'Racks', path: '1/2/60', custom_attributes: [{ attribute_code: 'url_key', value: 'racks' }] };
 const ADMIN = 'admin.altura@example.com';
 
 /** A store that holds what was written to it. */
 function liveStore() {
-    const state = { groups: [] as Array<{ id: number; code: string }>, customers: [] as CommerceCustomer[], companies: [] as CommerceCompany[], catalogs: [{ id: 1, name: 'Default (General)', customer_group_id: 1, type: 1 }] as Array<Record<string, unknown>>, assigned: new Map<number, string[]>(), members: [] as number[] };
+    const state = { groups: [] as Array<{ id: number; code: string }>, customers: [] as CommerceCustomer[], companies: [] as CommerceCompany[], catalogs: [{ id: 1, name: 'Default (General)', customer_group_id: 1, type: 1 }] as Array<Record<string, unknown>>, assigned: new Map<number, string[]>(), members: [] as number[], categories: [] as number[], products: [] as string[] };
     const groupSearch = (field: string, code: string) => page('customerGroups/search', field === 'eq' ? filterBy('customer_group_code', code) : `&searchCriteria[filterGroups][0][filters][0][field]=customer_group_code&searchCriteria[filterGroups][0][filters][0][value]=${encodeURIComponent(code)}`);
     const reads: Record<string, unknown> = {
         [groupSearch('eq', 'Platinum Buyer')]: () => ({ items: state.groups }),
@@ -50,8 +55,11 @@ function liveStore() {
         [page('sharedCatalog')]: () => ({ items: state.catalogs }),
         'sharedCatalog/41': () => state.catalogs.find((c) => c.id === 41) ?? null,
         'sharedCatalog/41/companies': () => JSON.stringify(state.assigned.get(41) ?? []),
-        'sharedCatalog/41/categories': [],
-        'sharedCatalog/41/products': [],
+        // Captured shapes (`CATALOG_19_*_DB08`): category ids as numbers, products as SKUs.
+        'sharedCatalog/41/categories': () => state.categories,
+        'sharedCatalog/41/products': () => state.products,
+        [page('categories/list', '&searchCriteria[filterGroups][0][filters][0][field]=url_key&searchCriteria[filterGroups][0][filters][0][value]=racks')]: { items: [RACKS], total_count: 1 },
+        'categories/60': RACKS,
         // Flat, the SC's members under the admin, as `GET hierarchy/28` answered live (`HIERARCHY_28_DB08`).
         'hierarchy/30': () => [...state.members.map((id) => ({ entity_id: id, entity_type: 'customer', structure_parent_id: 1 })), { entity_id: 52, entity_type: 'customer', structure_id: 1 }],
         [page('customers/search', filterBy('group_id', 31))]: () => ({ items: state.customers.filter((c) => c.group_id === 31) }),
@@ -71,8 +79,14 @@ function liveStore() {
         }
         if (call.path === 'sharedCatalog/41/assignCompanies') state.assigned.set(41, ['30']);
         if (call.path === 'sharedCatalog/41/unassignCompanies') state.assigned.set(41, []);
+        if (call.path === 'sharedCatalog/41/assignCategories') state.categories.push(...(body.categories as unknown as Array<{ id: number }>).map((c) => c.id));
+        if (call.path === 'sharedCatalog/41/assignProducts') state.products.push(...(body.products as unknown as Array<{ sku: string }>).map((p) => p.sku));
         if (call.method === 'DELETE' && call.path === 'company/30') state.companies = [];
-        if (call.method === 'DELETE' && call.path === 'sharedCatalog/41') state.catalogs = state.catalogs.filter((c) => c.id !== 41);
+        if (call.method === 'DELETE' && call.path === 'sharedCatalog/41') {
+            state.catalogs = state.catalogs.filter((c) => c.id !== 41);
+            state.categories = [];
+            state.products = [];
+        }
         if (call.method === 'PUT' && call.path === 'customers/77/companies/30') {
             state.members.push(77);
             return PUT_CUSTOMER_COMPANY_ANSWER_DB08;
@@ -92,25 +106,37 @@ async function installed() {
     const store = liveStore();
     const ctx = await fakeContext(store.reads, store.answer);
     const recorder = await openInstallRecord(files, PROJECT, PACK, NOW);
-    Object.assign(ctx, { recorder });
+    const seen: string[] = [];
+    // Each progress line under the kind it came from (walk F125).
+    const said: Record<string, string[]> = {};
+    Object.assign(ctx, { recorder, progress: (line: string) => void (said[seen.at(-1) ?? ''] ??= []).push(line) });
     ctx.session.websiteId = 3;
     ctx.session.storeId = 4;
-    const seen: string[] = [];
-    await installPack(ctx, PACK_ITEMS, (kind) => seen.push(kind));
-    return { ctx, files, store, seen };
+    await installPack(ctx, PACK_ITEMS, (kind) => kind && seen.push(kind));
+    return { ctx, files, store, seen, said };
 }
 
 describe('a customer and B2B pack', () => {
     it('installs its kinds in the store\'s order and records each object by its key, hashed', async () => {
         const { ctx, files, seen } = await installed();
 
-        expect(seen).toEqual(['customer_groups', 'customers', 'b2b_shared_catalogs', 'b2b_companies', 'b2b_shared_catalog_company_assignments']);
+        expect(seen).toEqual([
+            'customer_groups',
+            'customers',
+            'b2b_shared_catalogs',
+            'b2b_companies',
+            'b2b_shared_catalog_company_assignments',
+            'b2b_shared_catalog_categories',
+            'b2b_shared_catalog_products',
+        ]);
         expect(ctx.sent.map((c) => `${c.method} ${c.path}`)).toEqual([
             'POST customerGroups',
             'POST customers',
             'POST sharedCatalog',
             'POST company',
             'POST sharedCatalog/41/assignCompanies',
+            'POST sharedCatalog/41/assignCategories',
+            'POST sharedCatalog/41/assignProducts',
         ]);
         const record = await readInstallRecord(files, PROJECT, PACK);
         expect(record?.created.map((o) => [o.kind, o.id, o.key])).toEqual([
@@ -119,6 +145,8 @@ describe('a customer and B2B pack', () => {
             ['b2b_shared_catalogs', '41', 'Platinum Buyer'],
             ['b2b_companies', '30', 'Altura'],
             ['b2b_shared_catalog_company_assignments', '41/30', 'Platinum Buyer/Altura'],
+            ['b2b_shared_catalog_categories', '41/60', 'Platinum Buyer/racks'],
+            ['b2b_shared_catalog_products', '41/VR-RACK', 'Platinum Buyer/VR-RACK'],
         ]);
         expect(record?.created.every((o) => o.fingerprint !== undefined && o.wrote !== undefined)).toBe(true);
     });
@@ -136,16 +164,17 @@ describe('a customer and B2B pack', () => {
 
         const result = await removePack(ctx, files, { projectPath: PROJECT, pack: PACK });
 
+        // No unassign first: deleting a shared catalog returns its companies to the public catalog
+        // (Adobe, "Delete a shared catalog"; `impliedRemovals.ts`).
         expect(ctx.sent.map((c) => `${c.method} ${c.path}`)).toEqual([
-            'POST sharedCatalog/41/unassignCompanies',
             'DELETE company/30',
             'DELETE sharedCatalog/41',
             'DELETE customers/52',
             'DELETE customerGroups/31',
         ]);
-        expect(result).toEqual({ removed: 5, noRecord: false, kept: [] });
+        expect(result).toEqual({ removed: 7, noRecord: false, kept: [], refused: [] });
         expect(files.data.has(installRecordPath(PROJECT, PACK))).toBe(false);
-        expect(store.state).toMatchObject({ groups: [], customers: [], companies: [], catalogs: [{ id: 1 }] });
+        expect(store.state).toMatchObject({ groups: [], customers: [], companies: [], catalogs: [{ id: 1 }], categories: [], products: [] });
     });
 
     // Live, 2026-10-30: the removal unassigned the company first (moving it and the SC's customer to
@@ -159,13 +188,14 @@ describe('a customer and B2B pack', () => {
 
         expect(ctx.sent).toStrictEqual([]);
         expect(kept.removed).toBe(0);
-        expect((await readInstallRecord(files, PROJECT, PACK))?.created).toHaveLength(5);
+        expect((await readInstallRecord(files, PROJECT, PACK))?.created).toHaveLength(7);
 
         store.state.members = [];
         const emptied = await removePack(ctx, files, { projectPath: PROJECT, pack: PACK });
 
+        // No unassign first: deleting a shared catalog returns its companies to the public catalog
+        // (Adobe, "Delete a shared catalog"; `impliedRemovals.ts`).
         expect(ctx.sent.map((c) => `${c.method} ${c.path}`)).toEqual([
-            'POST sharedCatalog/41/unassignCompanies',
             'DELETE company/30',
             'DELETE sharedCatalog/41',
             'DELETE customers/52',
@@ -182,7 +212,7 @@ describe('a customer and B2B pack', () => {
         const outcome = await installPack(ctx, PACK_ITEMS);
 
         expect(ctx.sent).toStrictEqual([]);
-        expect(outcome).toEqual({ kept: [], containers: [], skipped: [] });
+        expect(outcome).toEqual({ kept: [], containers: [], skipped: [], tookOut: [], notTakenOut: [], productsWritten: false });
     });
 
     it("keeps a company the SC changed in the Admin, and brings in the pack's change to one left as it was", async () => {
@@ -195,5 +225,24 @@ describe('a customer and B2B pack', () => {
 
         expect(outcome.kept).toEqual([{ kind: 'b2b_companies', key: 'Altura' }]);
         expect(ctx.sent).toEqual([{ method: 'PUT', path: 'customerGroups/31', body: { group: { id: 31, code: 'Platinum Buyer', tax_class_id: 5 } } }]);
+    });
+
+    it('counts each kind\'s rows from "0 of 1" to "1 of 1" as it installs (walk F125)', async () => {
+        const { said } = await installed();
+
+        const oneOfOne = ['0 of 1', '1 of 1'];
+        expect(said).toEqual(Object.fromEntries(Object.keys(PACK_ITEMS).map((kind) => [kind, oneOfOne])));
+    });
+
+    it('counts nothing on a second install that writes nothing, and only the row it brings up to a changed pack', async () => {
+        const { ctx } = await installed();
+        const lines: string[] = [];
+        ctx.progress = (line) => void lines.push(line);
+
+        await installPack(ctx, PACK_ITEMS);
+        expect(lines).toStrictEqual([]);
+
+        await installPack(ctx, { ...PACK_ITEMS, customer_groups: [{ customer_group: { code: 'Platinum Buyer', tax_class_id: 5 } }] });
+        expect(lines).toEqual(['0 of 1', '1 of 1']);
     });
 });

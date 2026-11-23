@@ -9,11 +9,11 @@ import { getAppBuilderComponentCatalog } from '@/features/components/services/ap
 
 describe('pairNames — the SC names the system; the integration keeps its own name', () => {
     it.each([
-        ['JustRite ERP Integration', 'JustRite'],
-        ['JustRite Integration ERP', 'JustRite'],
-        ['JustRite', 'JustRite'],
-        ['  JustRite   erp  ', 'JustRite'],
-        ['JustRite integration', 'JustRite'],
+        ['Tailspin ERP Integration', 'Tailspin'],
+        ['Tailspin Integration ERP', 'Tailspin'],
+        ['Tailspin', 'Tailspin'],
+        ['  Tailspin   erp  ', 'Tailspin'],
+        ['Tailspin integration', 'Tailspin'],
         ['Multi-ERP Integration', 'Multi-ERP'],
     ])('%p → "%s ERP", beside the integration\'s own name', (typed, base) => {
         expect(pairNames(typed, 'ERP', 'ERP Integration')).toEqual({
@@ -61,9 +61,9 @@ describe('pairNameInputs — against the real catalog', () => {
     });
 
     it('records both names under the inputs each side deploys from', () => {
-        expect(pairNameInputs(integration!, catalog, 'JustRite ERP Integration')).toEqual({
+        expect(pairNameInputs(integration!, catalog, 'Tailspin ERP Integration')).toEqual({
             INTEGRATION_DISPLAY_NAME: integration!.name,
-            ERP_DISPLAY_NAME: 'JustRite ERP',
+            ERP_DISPLAY_NAME: 'Tailspin ERP',
         });
     });
 

@@ -11,9 +11,12 @@
  */
 
 import type { z } from 'zod';
+import type { SkipCause } from '../../types';
 import type { CreatedObject, InstallRecorder } from './installRecord';
 import type { StoreRoot } from './packRoot';
 import type { RootStepAsker } from './packRootStep';
+import type { RowCount } from './rowCount';
+import { runInBatches } from '@/core/utils/promiseUtils';
 import { CommerceReadError } from '@/features/app-builder/services/erpFillReaders';
 import type { CommerceGet, CommerceSend } from '@/types/commerceWire';
 
@@ -21,7 +24,23 @@ import type { CommerceGet, CommerceSend } from '@/types/commerceWire';
  * Ids one kind finds or makes that a later kind needs: products and assignments name their
  * attribute set, and the group an attribute goes in, by the set's NAME.
  */
+/** A url key a pack's links named that matched more than one category (DI-9). */
+export interface AmbiguousCategoryKey {
+    /** The category everything linking the key went into: the first match. */
+    chosen: string;
+    /** Every category the key matched, by name, the chosen one first. */
+    names: string[];
+}
+
 export interface CatalogSession {
+    /**
+     * Url keys a pack's links named that matched more than one category where the install looked
+     * (DI-9). A pack names a product's categories by url key alone, and Commerce lets a child reuse
+     * its parent's key (Bodea's "Servers and Racks" and its "Racks" are both `racks`), so
+     * everything linking such a key went into the first match. The install says so on its result
+     * rather than choosing in silence.
+     */
+    ambiguousCategoryKeys?: Map<string, AmbiguousCategoryKey>;
     /** Attribute set name → its id in this store. */
     setIds: Map<string, number>;
     /** Attribute set name → the group the pack's attributes go in. */
@@ -47,6 +66,8 @@ export interface CatalogSession {
      * stocks cannot be installed.
      */
     websiteCode?: string;
+    /** The target store view's code, for a pack's rows written per store view (`product_export`). */
+    storeCode?: string;
     /** The same website, by id: a pack's products are put on it, whatever website they named. */
     websiteId?: number;
     /**
@@ -63,7 +84,7 @@ export interface CatalogSession {
      */
     productsBefore?: ReadonlySet<string>;
     /**
-     * What the store settings kind did (step 09), for the install's one line: each change in the
+     * What the store configuration kind did (step 09), for the install's one line: each change in the
      * settings fix's words, its lines for settings kept, and the keys of the ones kept.
      */
     settings?: SettingsDone;
@@ -78,6 +99,11 @@ export interface CatalogSession {
      * item 3, `refusedRows.ts`): the install carries on, and its note names each.
      */
     skipped?: SkippedRow[];
+    /**
+     * Product ids this install already knows, by lowercased SKU (`bulkProducts.ts`): the ones it
+     * found or made in bulk. A parent's links read them here rather than one product at a time.
+     */
+    productIds?: Map<string, number>;
 }
 
 /** A pack row the install skipped, by kind and the pack's name for it, and why. */
@@ -87,6 +113,8 @@ export interface SkippedRow {
     reason: string;
     /** Other names later rows know it by (a category's url key), so a row needing it is told why. */
     names?: string[];
+    /** Why, as data, for the window's plain words (walk F221); `reason` keeps Commerce's text. */
+    cause?: SkipCause;
 }
 
 /**
@@ -105,7 +133,7 @@ export class MissingNameError extends Error {
     }
 }
 
-/** What the store settings kind did (step 09, `storeConfigKind.ts`), for an install's or removal's one line. */
+/** What the store configuration kind did (step 09, `storeConfigKind.ts`), for an install's or removal's one line. */
 export interface SettingsDone {
     /** Each change in the settings fix's words: "catalog/frontend/grid_per_page: 12 → 24". */
     changes: string[];
@@ -124,7 +152,11 @@ export function ownedKey(kind: string, key: string): string {
  * What this engine made for a pack row, from a repeat install's plan: its id, `null` when the
  * SC has deleted it since (leave it deleted), or `undefined` when nothing is recorded.
  */
-export function ownedId(session: CatalogSession, kind: string, key: string): string | null | undefined {
+export function ownedId(
+    session: CatalogSession,
+    kind: string,
+    key: string,
+): string | null | undefined {
     return session.owned?.get(ownedKey(kind, key));
 }
 
@@ -136,6 +168,10 @@ export interface KindContext {
     session: CatalogSession;
     /** One line per object, for Debug Logs. */
     log: (line: string) => void;
+    /** How far a long kind has got, in one line for the progress window ("450 of 2,046 products"); absent, unsaid. */
+    progress?: (line: string) => void;
+    /** The kind in progress's count of its rows, said through `progress` (`rowCount.ts`); absent, uncounted. */
+    count?: RowCount;
     /** How an install asks the SC for the one Admin step a pack can leave (step 12); absent, it is left open. */
     asker?: RootStepAsker;
 }
@@ -145,7 +181,12 @@ const DEFAULT_ROOT_CATEGORY = { id: 2, name: 'Default Category' };
 
 /** A fresh session for one install, before any kind has run. */
 export function newCatalogSession(storeId = 1): CatalogSession {
-    return { setIds: new Map(), groupIds: new Map(), storeId, rootCategory: { ...DEFAULT_ROOT_CATEGORY } };
+    return {
+        setIds: new Map(),
+        groupIds: new Map(),
+        storeId,
+        rootCategory: { ...DEFAULT_ROOT_CATEGORY },
+    };
 }
 
 /**
@@ -203,13 +244,13 @@ export async function deleteIfPresent(send: CommerceSend, path: string): Promise
  * The store's copy of each recorded object, read one at a time, by recorded id; an object the
  * store no longer has (the read answers undefined) is left out. Every kind's store copies use it.
  */
-export async function eachCopy(objects: readonly CreatedObject[], read: (o: CreatedObject) => Promise<unknown>): Promise<Map<string, unknown>> {
-    const copies = new Map<string, unknown>();
-    for (const object of objects) {
-        const copy = await read(object);
-        if (copy !== undefined) copies.set(object.id, copy);
-    }
-    return copies;
+export async function eachCopy(
+    objects: readonly CreatedObject[],
+    read: (o: CreatedObject) => Promise<unknown>,
+): Promise<Map<string, unknown>> {
+    // A few at once: one after another, each read waited on the last for no reason.
+    const copies = await runInBatches([...objects], REQUESTS_AT_ONCE, async (object) => [object.id, await read(object)] as const);
+    return new Map(copies.filter(([, copy]) => copy !== undefined));
 }
 
 /**
@@ -220,6 +261,38 @@ export async function eachCopy(objects: readonly CreatedObject[], read: (o: Crea
  */
 export function parseRows<T>(schema: z.ZodType<T>, records: unknown, what: string): T {
     const parsed = schema.safeParse(records);
-    if (!parsed.success) throw new Error(`The pack's ${what} are not in the shape Commerce takes: ${parsed.error.issues[0]?.message}`);
+    if (!parsed.success)
+        throw new Error(
+            `The datapack's ${what} are not in the shape Commerce takes: ${parsed.error.issues[0]?.message}`,
+        );
     return parsed.data;
+}
+
+/**
+ * Requests sent at once where each stands alone: a create (an attribute, an assignment, a category
+ * beside its siblings) or a read of one object back. One at a time, Luma's 600-odd creates took about
+ * two minutes of an eleven-minute install (2026-11-06); five is the number removal already sends at once.
+ */
+export const REQUESTS_AT_ONCE = 5;
+
+/** The items with the first of each key kept: sent at once, two rows for one object would both create it. */
+export function firstOfEach<T>(items: readonly T[], keyOf: (item: T) => string): T[] {
+    const seen = new Set<string>();
+    return items.filter((item) => !seen.has(keyOf(item)) && Boolean(seen.add(keyOf(item))));
+}
+
+/**
+ * Do `work` for each item, `atOnce` at a time ({@link REQUESTS_AT_ONCE} unless said). A group is let
+ * finish before a failure stops the rest, so no create is still on its way when the caller reports
+ * the install stopped.
+ *
+ * @throws the first failure, once its group has finished
+ */
+export async function eachFewAtOnce<T>(items: readonly T[], work: (item: T) => Promise<unknown>, atOnce = REQUESTS_AT_ONCE): Promise<void> {
+    for (let start = 0; start < items.length; start += atOnce) {
+        const group = items.slice(start, start + atOnce);
+        const results = await Promise.allSettled(group.map((item) => work(item)));
+        const failed = results.find((r): r is PromiseRejectedResult => r.status === 'rejected');
+        if (failed) throw failed.reason;
+    }
 }

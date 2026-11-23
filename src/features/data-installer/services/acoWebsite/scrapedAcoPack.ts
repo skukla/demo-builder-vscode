@@ -143,6 +143,6 @@ export async function saveScrapedAcoPack(
         failed: written.failed,
         proposed: made.proposed,
         unpriced: made.unpriced,
-        sentence: `Saved the ACO pack ${id.name}@${id.version} to your datapack library: ${count(made.rows.aco_products.length, 'product')}, ${count(made.rows.aco_categories.length, 'category', 'categories')}. ${review}${failedLine}`,
+        sentence: `Saved the ACO datapack ${id.name}@${id.version} to My Datapacks: ${count(made.rows.aco_products.length, 'product')}, ${count(made.rows.aco_categories.length, 'category', 'categories')}. ${review}${failedLine}`,
     };
 }

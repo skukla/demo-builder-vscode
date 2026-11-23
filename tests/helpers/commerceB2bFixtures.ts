@@ -11,7 +11,7 @@
  *   details already replaced there. Copied field for field. Every other store answer a suite
  *   builds (searches, hierarchy, addresses) is NOT captured and says so where it is made.
  * - **Store answers, 2026-10-30.** Read on scratch-1028's store (ACCS sandbox, website
- *   `justrite_test_website`) during step 08's live test, with a test pack of group "ZZ Test Buyers
+ *   `tailspin_test_website`) during step 08's live test, with a test pack of group "ZZ Test Buyers
  *   DB08", catalog "ZZ Test Catalog DB08" on it, and company "ZZ Test Company DB08": the
  *   `…_DB08` fixtures below, values as read.
  * - **Pack rows.** Bodea `main`'s own rows of the seven kinds, read from the Data Installer on
@@ -241,7 +241,7 @@ export const POST_CUSTOMER_COMPANY_ANSWER_DB08: CompanyAttributes = { company_id
 export const GROUP_SEARCH_ON_CODE_REFUSED = { status: 400, message: "Field code can't be used in filter" } as const;
 
 /*
- * The second live removal, 2026-10-30 (scratch-1028, website `justrite_test_website`). The pack
+ * The second live removal, 2026-10-30 (scratch-1028, website `tailspin_test_website`). The pack
  * installed group 25 (renamed by Commerce to its catalog's name), customers 63 (a buyer) and 64
  * (the company's admin), shared catalog 20 on group 25, company 28 (`super_user_id` 64,
  * `customer_group_id` 25) and the catalog's company, category and product assignments. The SC then

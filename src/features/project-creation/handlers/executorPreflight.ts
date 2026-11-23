@@ -111,7 +111,7 @@ export async function cleanupOrphanedDirectory(
             context.logger.debug(
                 `[Project Creation] Found ${existingFiles.length} files, cleaning up`,
             );
-            progressTracker(OPERATION_STAGES.preparingProject.label, 5, 'Removing existing project data');
+            progressTracker(OPERATION_STAGES.preparingProject.label, 5, 'Removing previous files');
             await fs.rm(projectPath, { recursive: true, force: true });
         } else {
             await fs.rmdir(projectPath);

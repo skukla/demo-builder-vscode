@@ -7,8 +7,8 @@
  * thing a reader of the screen can tell apart.
  */
 
+import { getProgressValue } from '@/core/ui/components/feedback/StepProgressBar';
 import {
-    getProgressValue,
     renderPluginStatusIcon,
     shouldShowPluginDetails,
 } from '@/features/prerequisites/ui/steps/hooks/prerequisiteRenderers';
@@ -30,23 +30,23 @@ describe('renderPluginStatusIcon', () => {
     });
 
     it('shows the green tick once a running check reports the plugin installed', () => {
-        expect(markup(renderPluginStatusIcon('checking', true))).toContain('class="text-green-600"');
+        expect(markup(renderPluginStatusIcon('checking', true))).toContain('class="text-positive"');
     });
 
     it('shows the red cross once a running check reports the plugin missing', () => {
-        expect(markup(renderPluginStatusIcon('checking', false))).toContain('class="text-red-600"');
+        expect(markup(renderPluginStatusIcon('checking', false))).toContain('class="text-negative"');
     });
 
     it('shows the red cross for an unknown verdict once the check is no longer running', () => {
-        expect(markup(renderPluginStatusIcon('success', undefined))).toContain('class="text-red-600"');
+        expect(markup(renderPluginStatusIcon('success', undefined))).toContain('class="text-negative"');
     });
 
     it('shows the green tick for an installed plugin on a finished check', () => {
-        expect(markup(renderPluginStatusIcon('success', true))).toContain('class="text-green-600"');
+        expect(markup(renderPluginStatusIcon('success', true))).toContain('class="text-positive"');
     });
 
     it('shows the red cross for a missing plugin on a failed check', () => {
-        expect(markup(renderPluginStatusIcon('error', false))).toContain('class="text-red-600"');
+        expect(markup(renderPluginStatusIcon('error', false))).toContain('class="text-negative"');
     });
 });
 

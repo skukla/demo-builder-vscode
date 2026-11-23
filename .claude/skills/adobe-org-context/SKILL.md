@@ -15,7 +15,7 @@ Running `aio` CLI commands against a specific org/project/workspace in a termina
 Consequences:
 - **There is no in-app org picker.** Sign-in owns org selection. The picker was removed deliberately — do not bring it back.
 - **The token is the truth**, never the stale CLI console selection (`aio config get console.org` can disagree with the token; the token wins).
-- **A token can also reach ZERO orgs** (account has no Developer Console access in the landed org). `getOrganizationsSdkOnly()` returns `[]` for that — a REAL answer, treated as unreachable → the forced "Switch IMS Org" recovery — vs `undefined` when the SDK could not answer at all → "sign in to check". Never collapse the two: mapping `[]` to "couldn't check" offers a non-forced sign-in that reuses the browser SSO session and loops forever (2026-08-13, Leah's gray badge).
+- **A token can also reach ZERO orgs** (account has no Developer Console access in the landed org). `getOrganizationsSdkOnly()` returns `[]` for that — a REAL answer, treated as unreachable → the forced "Switch IMS Org" recovery — vs `undefined` when the SDK could not answer at all → "sign in to check". Never collapse the two: mapping `[]` to "couldn't check" offers a non-forced sign-in that reuses the browser SSO session and loops forever (2026-08-13, Avery's gray badge).
 
 ## Canonical pieces (single implementations — never hand-roll)
 
@@ -24,15 +24,15 @@ Consequences:
 | "Is this org reachable with the current token?" | `ensureOrgContext(orgId, {listSelectableOrgs, probe?})` → typed status `ok \| needs_relogin \| access_revoked \| org_mismatch` | `src/features/authentication/services/ensureOrgContext.ts` |
 | "Is the project's org reachable?" (proactive guard) | `detectProjectOrgMismatch(authManager, project, logger)` → `OrgMismatchInfo` or undefined | `src/features/authentication/services/detectProjectOrgMismatch.ts` |
 | Target an org for ONE `aio` invocation | `withOrgContext` / `orgContextEnv` / `applyAdobeCLIDefaults` (env per invocation) | `src/core/shell/orgContextEnv.ts`, `commandExecutor.ts` |
-| Sign in / recover | `AuthenticationService.login(force)` and `loginAndRestoreProjectContext(adobeContext, force)` | `src/features/authentication/services/authenticationService.ts` |
+| Sign in / recover | A door calls one of three: `ensureAdobeIOAuth` (a flow that needs a sign-in partway), `signInToAdobe` (a Sign In button, the command, the agent), `signInThroughOrgChooser` / `handleForcedOrgSwitch` (the org switch, forced). Only those call the service's `login` / `loginAndRestoreProjectContext` | `src/core/auth/adobeAuthGuard.ts`, `src/features/authentication/handlers/signInToAdobe.ts`, `src/features/authentication/handlers/orgSwitchHandler.ts` |
 | Reactive 403 handling | `ErrorCode.ORG_MISMATCH` (thrown by `adobeCliFallback`); MCP treats org-mismatch as non-retryable | `src/types/errorCodes.ts`, `adobeCliFallback.ts` |
 
 ## Rules
 
 1. Any flow needing an org guard (dashboard status, mesh deploy, new features) calls `detectProjectOrgMismatch` — do NOT write `currentOrg.id !== project.adobe.organization` comparisons.
 2. `ensureOrgContext` NEVER runs `aio console * select`; per-op targeting uses env vars, never mutates the global CLI selection.
-3. Org-switch recovery = **forced** login (`force=true`, user-facing label "Switch IMS Org") → re-run the check to VERIFY the landed org → if still wrong, surface the no-loop hint (another browser tab holds a different org's SSO session). Session-expiry re-auth stays **non-forced** (`handleReAuthenticate`, `ensureAdobeIOAuth`).
-4. Projects store an org **id** only (`project.adobe.organization`) — no org name; don't add one.
+3. Org-switch recovery = **forced** login (`force=true`, user-facing label "Switch IMS Org") → re-run the check to VERIFY the landed org → if still wrong, surface the no-loop hint (another browser tab holds a different org's SSO session). Session-expiry re-auth stays **non-forced**: the one Sign In (`signInToAdobe`, a screen's button, the command, the agent) and the in-flow guard (`ensureAdobeIOAuth`). The forced sign-in outside the auth services lives only in `orgSwitchHandler.ts` (`signInThroughOrgChooser`); `spine-chokepoints.test.ts` pins all three doors.
+4. A project's org is its **id** (`project.adobe.organization`); `organizationName` beside it is display only, written by the wizard and kept current by the on-open check's self-heal (`orgContextCheck.ts` `selfHealOrgData`). Match orgs by id, never by name. Every ACCS project records its org, the wizard's and an agent's (`create_project`, 2026-11-04).
 5. New Console-API calls that can 403 map the failure to `ErrorCode.ORG_MISMATCH`, not a generic error.
 
 ## Verify

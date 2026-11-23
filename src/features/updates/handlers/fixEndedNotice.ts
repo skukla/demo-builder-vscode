@@ -22,6 +22,7 @@
 
 import * as vscode from 'vscode';
 import { openPrivateBrowser } from '@/core/utils/browserUtils';
+import { plain } from '@/core/utils/plainText';
 import { getProjectDisplayName } from '@/core/utils/projectDisplayName';
 import { validateURL } from '@/core/validation/URLValidator';
 import { storefrontUpdateName } from '@/features/updates/services/pendingUpdateRows';
@@ -42,18 +43,18 @@ export interface KeptRow {
     localCopyId: string;
 }
 
-const OPEN_STOREFRONT = 'Open storefront';
+const OPEN_STOREFRONT = 'Open Storefront';
 
 /** What the row says once the fix has ended. */
 const ROW_STATUS: Record<FixEnding, Omit<UpdateRowStatus, 'id'>> = {
-    finished: { state: 'done', message: 'Updated by your AI.' },
+    finished: { state: 'done', message: plain('Updated by your AI.') },
     left: {
         state: 'skipped',
-        message: 'Not updated. Your AI dropped the fix, so nothing changed. It is still offered in Check for Updates.',
+        message: plain('Not updated. Your AI dropped the fix, so nothing changed. It is still offered in Check for Updates.'),
     },
     'moved-on': {
         state: 'skipped',
-        message: 'Not updated. A newer version came out, so the fix was dropped and nothing changed. Check for updates again.',
+        message: plain('Not updated. A newer version came out, so the fix was dropped and nothing changed. Check for updates again.'),
     },
 };
 

@@ -59,35 +59,102 @@ describe('checkRecordedPack', () => {
         expect(r.detail).toHaveBeenCalledWith({ name: 'acme-demo-1a2b3c', version: '20261029-183000' }, 'library');
     });
 
-    it('reads a pack recorded with no store from the Data Installer', async () => {
+    it('reads a pack recorded with no store from the Data Installer when the datapack store has none', async () => {
         const r = reads([{ id: { name: 'bodea', version: 'main' }, store: 'installer' }]);
 
         await expect(checkRecordedPack(r, { name: 'bodea', version: 'main' })).resolves.toMatchObject({ verdict: 'readable' });
-        expect(r.detail).toHaveBeenCalledWith({ name: 'bodea', version: 'main' }, 'installer');
+        expect(r.detail.mock.calls.map((call) => call[1])).toEqual(['library', 'installer']);
     });
 
     // Rule 3: a project saved before the store was recorded may name a library version (the old
-    // "-saved-" ones). The Data Installer first, as every such reader asked; then the library.
-    it('finds a pack recorded with no store in the library when the Data Installer has none, and names that store', async () => {
+    // "-saved-" ones), found by asking the datapack store first as every pack now is.
+    it('finds a pack recorded with no store in the datapack store, and names that store', async () => {
         const saved = { name: 'bodea', version: 'main-saved-20261029-1830' };
         const r = reads([{ id: saved, store: 'library', over: { mine: true } }]);
 
         await expect(checkRecordedPack(r, saved)).resolves.toMatchObject({ verdict: 'readable', pack: { ...saved, store: 'library' }, mine: true });
-        expect(r.detail.mock.calls.map((call) => call[1])).toEqual(['installer', 'library']);
+        expect(r.detail.mock.calls.map((call) => call[1])).toEqual(['library']);
     });
 
-    it('falls back to the pack it was made from, saying the changes are not included', async () => {
+    describe("the datapack store's copy of a pack recorded in the Data Installer", () => {
+        const RECORDED: ProjectDatapack = { name: 'frescopa', version: 'main', store: 'installer' };
+
+        it('wins when both hold it, and the Data Installer is not asked', async () => {
+            const r = reads([
+                { id: RECORDED, store: 'library' },
+                { id: RECORDED, store: 'installer' },
+            ]);
+
+            await expect(checkRecordedPack(r, RECORDED)).resolves.toMatchObject({
+                verdict: 'readable',
+                pack: { name: 'frescopa', version: 'main', store: 'library' },
+            });
+            expect(r.detail.mock.calls.map((call) => call[1])).toEqual(['library']);
+        });
+
+        it('survives a Data Installer that refuses', async () => {
+            const r = reads([{ id: RECORDED, store: 'library' }]);
+            const held = r.detail.getMockImplementation();
+            r.detail.mockImplementation(async (id, store) => {
+                if (store === 'installer') throw new DataInstallerApiError('refused', 403, 'get-datapack-metadata');
+                return held!(id, store);
+            });
+
+            await expect(checkRecordedPack(r, RECORDED)).resolves.toMatchObject({ verdict: 'readable', pack: { store: 'library' } });
+        });
+
+        it('counts a refused datapack store read as none there, and asks the Data Installer', async () => {
+            const r = reads([{ id: RECORDED, store: 'installer' }]);
+            const held = r.detail.getMockImplementation();
+            r.detail.mockImplementation(async (id, store) => {
+                if (store === 'library') throw new DataInstallerApiError('refused', 403, 'get-datapack-metadata');
+                return held!(id, store);
+            });
+
+            await expect(checkRecordedPack(r, RECORDED)).resolves.toMatchObject({ verdict: 'readable', pack: RECORDED });
+        });
+
+        it('CONTROL: a pack recorded in the datapack store never asks the Data Installer', async () => {
+            const r = reads([{ id: { name: 'acme', version: '1' }, store: 'installer' }]);
+
+            await checkRecordedPack(r, { name: 'acme', version: '1', store: 'library' });
+
+            expect(r.detail.mock.calls.map((call) => call[1])).not.toContain('installer');
+        });
+    });
+
+    // Phase 2, step-02 slice 2: a datapack is always its latest save (D3), and only two saves are
+    // kept, so a project naming a save that has gone uses the same datapack's newest save: the
+    // changes are in it, and nothing needs saying.
+    it("uses the same datapack's newest save when the save it names has gone", async () => {
+        const r = reads([
+            { id: { name: ACME.name, version: '20261110-091500' }, store: 'library', over: { updatedAt: '2026-11-10T09:15:00Z', mine: true, shared: true } },
+            { id: { name: ACME.name, version: '20261105-103000' }, store: 'library', over: { updatedAt: '2026-11-05T10:30:00Z', mine: true, shared: true } },
+            { id: { name: 'bodea', version: '1.0.0' }, store: 'installer' },
+        ]);
+
+        await expect(checkRecordedPack(r, ACME)).resolves.toEqual({
+            verdict: 'readable',
+            pack: { name: ACME.name, version: '20261110-091500', store: 'library' },
+            displayName: 'Acme Demo',
+            mine: true,
+            shared: true,
+        });
+    });
+
+    it('falls back to the datapack it was made from, saying the changes are not included', async () => {
         const r = reads([{ id: { name: 'bodea', version: '1.0.0' }, store: 'installer' }]);
 
         await expect(checkRecordedPack(r, ACME)).resolves.toEqual({
             verdict: 'fallback',
             pack: { name: 'bodea', version: '1.0.0', store: 'installer' },
             displayName: 'Bodea',
-            note: "The acme-demo-1a2b3c pack this project uses can't be read: its owner has deleted it or not shared it. You can continue with Bodea, the pack it was made from; their changes won't be included.",
+            // Walk F237 (owner): simple and readable, the pack never by its code, no version.
+            note: "This project's datapack isn't available to you. You can use Bodea, the datapack it was made from, without the changes made to it.",
         });
     });
 
-    it("uses the newest version of the pack it was made from when that version has gone too, and says so", async () => {
+    it("uses the newest version of the datapack it was made from when that version has gone too, and says so", async () => {
         const r = reads([
             { id: { name: 'bodea', version: '2.0.0' }, store: 'installer', over: { updatedAt: '2026-10-20T00:00:00Z' } },
             { id: { name: 'bodea', version: '1.5.0' }, store: 'installer', over: { updatedAt: '2026-09-01T00:00:00Z' } },
@@ -96,22 +163,22 @@ describe('checkRecordedPack', () => {
         const check = await checkRecordedPack(r, ACME);
 
         expect(check).toMatchObject({ verdict: 'fallback', pack: { name: 'bodea', version: '2.0.0', store: 'installer' } });
-        expect(check.verdict === 'fallback' && check.note).toContain("Bodea version 1.0.0 has gone too, so its newest version, 2.0.0, is used");
+        expect(check.verdict === 'fallback' && check.note).toBe("This project's datapack isn't available to you. You can use the newest Bodea, the datapack it was made from, without the changes made to it.");
     });
 
-    it('continues without sample data when the pack it was made from has gone entirely, and says why', async () => {
+    it('continues without a datapack when the datapack it was made from has gone entirely, and says why', async () => {
         await expect(checkRecordedPack(reads([]), ACME)).resolves.toEqual({
             verdict: 'none',
-            note: "The acme-demo-1a2b3c pack this project uses can't be read: its owner has deleted it or not shared it. The pack it was made from, bodea, has gone too, so this project will be created without sample data.",
+            note: "This project's datapack isn't available to you, and neither is the one it was made from. The project will be created without sample data.",
         });
     });
 
-    it('continues without sample data when there is no pack it was made from', async () => {
+    it('continues without a datapack when there is no pack it was made from', async () => {
         const check = await checkRecordedPack(reads([]), { name: 'gone', version: '1', store: 'library' });
 
         expect(check).toEqual({
             verdict: 'none',
-            note: "The gone pack this project uses can't be read: its owner has deleted it or not shared it. This project will be created without sample data.",
+            note: "This project's datapack isn't available to you. The project will be created without sample data.",
         });
     });
 
@@ -124,26 +191,27 @@ describe('checkRecordedPack', () => {
     });
 });
 
-// The demo package check (research item 3): asked of both stores, by name AND version.
+// The demo package check (research item 3): asked of both stores, by name AND version. A pack
+// that is found answers its display name too, so the check names it rather than its code (F227).
 describe('availabilityOf', () => {
     it('finds a Data Installer pack by its version, not its name alone', async () => {
         const r = reads([{ id: { name: 'bodea', version: 'main' }, store: 'installer' }]);
 
-        await expect(availabilityOf(r, { name: 'bodea', version: 'main' })).resolves.toBe('installer');
-        await expect(availabilityOf(r, { name: 'bodea', version: 'main-saved-20261029-1830' })).resolves.toBe('missing');
+        await expect(availabilityOf(r, { name: 'bodea', version: 'main' })).resolves.toEqual({ where: 'installer', displayName: 'Bodea' });
+        await expect(availabilityOf(r, { name: 'bodea', version: 'main-saved-20261029-1830' })).resolves.toEqual({ where: 'missing' });
     });
 
     it('asks the store recorded first, then the other', async () => {
         const r = reads([{ id: ACME, store: 'library', over: { shared: true } }]);
 
-        await expect(availabilityOf(r, ACME)).resolves.toBe('library-shared');
+        await expect(availabilityOf(r, ACME)).resolves.toEqual({ where: 'library-shared', displayName: 'Acme Demo' });
         expect(r.detail.mock.calls[0][1]).toBe('library');
     });
 
     it('finds a library version recorded with no store, as packs saved before the store was recorded are', async () => {
         const r = reads([{ id: { name: 'bodea', version: 'main-saved-20261029-1830' }, store: 'library', over: { mine: true } }]);
 
-        await expect(availabilityOf(r, { name: 'bodea', version: 'main-saved-20261029-1830' })).resolves.toBe('library-yours-only');
+        await expect(availabilityOf(r, { name: 'bodea', version: 'main-saved-20261029-1830' })).resolves.toEqual({ where: 'library-yours-only', displayName: 'Bodea' });
         expect(r.detail.mock.calls.map((call) => call[1])).toEqual(['installer', 'library']);
     });
 

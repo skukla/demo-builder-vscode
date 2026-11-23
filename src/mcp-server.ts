@@ -127,7 +127,8 @@ export function registerProjectTools(
             annotations: { readOnlyHint: true, destructiveHint: false },
             title: 'List Projects',
             description:
-                'List all Demo Builder projects. The active one is marked current:true — no follow-up call needed to learn which it is.',
+                'List all Demo Builder projects: name, path, and pinned when set. To learn which project ' +
+                'your tools act on, use get_current_project.',
             inputSchema: { offset: offsetSchema, limit: limitSchema },
         },
         async (args: any) =>

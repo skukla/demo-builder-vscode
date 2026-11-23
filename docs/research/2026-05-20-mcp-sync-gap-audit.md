@@ -8,7 +8,7 @@
 
 ## Context
 
-The AI Layer Pivot plan promises a "30-minute storefront" experience matching the user's `te-eds-mock` example: open Claude Code in a generated project, AI edits a block, user sees the result. This audit asked two questions:
+The AI Layer Pivot plan promises a "30-minute storefront" experience matching the user's `org-l` example: open Claude Code in a generated project, AI edits a block, user sees the result. This audit asked two questions:
 
 1. Does the Demo Builder MCP give Claude correct local-project context?
 2. Where are the sync gaps between local storefront, custom block libraries, and their GitHub remotes?
@@ -50,7 +50,7 @@ Three places the same block code can live and drift independently:
 Key code paths:
 - `src/features/eds/services/blockCollectionHelpers.ts:62-264` — atomic-tree-commit install (no local clone)
 - `src/features/eds/services/storefrontSetupPhase2.ts` — unified built-in / custom processing (file no longer exists; this document is a dated snapshot of 2026-05-20 and is not being rewritten)
-- `src/features/updates/commands/updateExecutor.ts:287-330` — broken update apply (advances `commitSha` without re-copying files)
+- `src/features/updates/commands/updateExecutor.ts` (lines 287-330; file removed in 339e1021a) — broken update apply (advances `commitSha` without re-copying files)
 - `src/types/blockLibraries.ts:31-46` — `InstalledBlockLibrary` data model
 
 The AI agent's view of "the block" is always the divorced storefront copy. `list_blocks` and `get_block_source` query the storefront's local clone exclusively — no library-source awareness.
@@ -204,7 +204,7 @@ After Steps 6e–6h land, the AI Layer Pivot's promised experience actually work
 5. **User sees the change on the `.aem.page` preview URL** → seconds later, not minutes (manual Republish no longer required)
 6. **User asks Claude to install a block library update** → files actually update in the storefront (no state lie)
 
-The `te-eds-mock` 30-minute experience the user keeps citing becomes reproducible in Demo Builder projects.
+The `org-l` 30-minute experience the user keeps citing becomes reproducible in Demo Builder projects.
 
 ---
 

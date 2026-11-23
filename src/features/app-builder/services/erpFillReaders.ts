@@ -45,7 +45,7 @@ interface SearchPage {
 
 /**
  * How many pages are read at once after the first. Commerce takes about as long for one page
- * as for four at once, measured on Justrite's 321 products (2026-10-18): four pages of 100 in
+ * as for four at once, measured on Tailspin's 321 products (2026-10-18): four pages of 100 in
  * turn took 7.7 s, at once 2.6 s. One page of 400 took 6.2 s, so bigger pages are no answer.
  */
 const PAGES_AT_ONCE = 4;

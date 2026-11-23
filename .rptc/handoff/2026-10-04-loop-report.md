@@ -55,7 +55,7 @@ quality gate (31,226 tests); the ERP passes all 621 of its tests.
 - **Category pages and a menu built from the Commerce category tree.** The block, the page writer
   and its undo are built and tested; a new local block library holds the block. Creating its GitHub
   repository, adding it to the catalog and the first live run are the steps in
-  `.rptc/plans/category-pages/overview.md`.
+  `.rptc/complete/category-pages/overview.md`.
 
 ### Answered
 
@@ -108,11 +108,11 @@ already-published branch. The hook was not bypassed.
    (`loadBearingPatches.ts`, `storefrontReport.ts`, and the report command's offer dialog).
 7. **ERP number-series columns** stay fixed width; making them resizable needs a shorter heading.
 
-## Live checks waiting for a set-up Justrite
+## Live checks waiting for a set-up Tailspin
 
 - ERP grids: drag a few columns on the deployed ERP.
 - Setup with a repository the Code Sync App does not cover: the pause, then "verified, resuming".
 - Export a real project, import it, compare.
-- Add a storefront by link (`sayurihanki/aistore`): the "Built on" row, the fixes offered after.
+- Add a storefront by link (`org-j/aistore`): the "Built on" row, the fixes offered after.
 - "Open in Claude Code" on a machine without Claude Code.
 - Plus everything still listed from the first loop's report.

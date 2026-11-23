@@ -1,6 +1,6 @@
 Land the attribution change UF-04 designed — ONLY IF UF-04 said it is safe to land.
 
-FIRST, read `.rptc/plans/unmeasured-fifth/attribution-design.md` and find the line reading
+FIRST, read `.rptc/complete/unmeasured-fifth/attribution-design.md` and find the line reading
 `RECOMMENDATION-VERDICT:`.
 
 IF IT SAYS `NEEDS-THE-OWNER`, or the file does not exist, or the line is missing or says

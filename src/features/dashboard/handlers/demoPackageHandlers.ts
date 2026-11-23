@@ -20,6 +20,8 @@ import { packReadsFor } from '@/features/data-installer/handlers/recordedPackHan
 import { availabilityOf } from '@/features/data-installer/services/recordedPack';
 import { getGitHubServices } from '@/features/eds/handlers/edsHelpers';
 import {
+    customIntegrationChecks,
+    datapackChecks,
     describeProject,
     ownStorefrontOf,
     packageChecks,
@@ -46,6 +48,7 @@ import type {
     RemoveDemoPackageResult,
     SaveDemoPackageRequest,
     SaveDemoPackageResult,
+    ShareDatapackChecks,
 } from '@/types/webviewRequests';
 
 export const EDS_ONLY =
@@ -132,6 +135,21 @@ function checkDeps(context: HandlerContext): PackageCheckDeps {
     };
 }
 
+/**
+ * Share Demo's file step on a project with no storefront to preview (walk F230): the datapack
+ * check alone, by the preview's rule and lookup, so the file step's notice says what the link
+ * step's does. Any project, Edge Delivery or not. A read: no panel, no prompt.
+ */
+export const handleGetShareDatapackCheck: MessageHandler = async (context) => {
+    const project = await context.stateManager.getCurrentProject();
+    if (!project) return { success: false, error: 'No project found', code: ErrorCode.PROJECT_NOT_FOUND };
+    // With each custom integration's: a file names its repository, not its code (walk F240).
+    const deps = checkDeps(context);
+    const checks = [...(await datapackChecks(project, deps.datapackAvailability)), ...(await customIntegrationChecks(project, deps))];
+    const answer: ShareDatapackChecks = { checks };
+    return { success: true, data: answer };
+};
+
 export const handleGetDemoPackagePreview: MessageHandler = async (context) => {
     const ready = await candidate(context);
     if ('response' in ready) return ready.response;
@@ -162,13 +180,18 @@ function cardFor(
     };
 }
 
-/** Put the card on the SC's list, or keep it off; answers whether it is on. */
+/**
+ * Put the card on the SC's list (true), take it off (false), or leave the list exactly as it is
+ * (undefined: Share Demo's Send a Link, which has no say over the Welcome step since EDS-72).
+ * Answers whether the card is on.
+ */
 async function placeCard(
-    wanted: boolean,
+    wanted: boolean | undefined,
     description: SharedDemoDescription,
     storefront: OwnStorefront,
     repoOperations: Pick<GitHubRepoOperations, 'getRepository'>,
 ): Promise<boolean> {
+    if (wanted === undefined) return isOnList(storefront);
     if (!wanted) {
         if (isOnList(storefront)) await forgetAddedDemo(storefront);
         return false;
@@ -201,9 +224,9 @@ export const handleSaveDemoPackage: MessageHandler<SaveDemoPackageRequest> = asy
     }
 
     // The card on the SC's own Welcome step: the same row a colleague's add builds,
-    // from the description just written (or meant to be), never re-read. Unticked
-    // in the Share dialog, the card stays off, or comes off if it was there.
-    const onList = await placeCard(data?.addToWelcome !== false, description, storefront, repoOperations);
+    // from the description just written (or meant to be), never re-read. Save as Package
+    // asks for it; false takes it off; Send a Link says nothing and the list stays as it is.
+    const onList = await placeCard(data?.addToWelcome, description, storefront, repoOperations);
 
     // Record what is ours to undo: the file's sha when we wrote it (empty when the
     // file was not ours to write).

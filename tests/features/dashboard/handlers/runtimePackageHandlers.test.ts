@@ -87,9 +87,7 @@ describe('handleListRuntimePackages', () => {
 
         expect(result).toEqual({
             success: false,
-            error:
-                "Could not list what is deployed in this project's Adobe Runtime namespace. " +
-                'See Debug Logs for the reason.',
+            error: "Could not list what is deployed in this project's Adobe Runtime namespace.",
         });
     });
 

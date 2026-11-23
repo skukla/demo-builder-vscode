@@ -5,16 +5,26 @@
  * - `preview-datapack-changes`: what installing the pack again would bring up to the pack, add,
  *   take out, and keep because the SC changed it. Counts and a few names by kind, never rows.
  *   Writes nothing.
- * - `save-store-changes-to-pack`: "Save store changes to this pack". The store's copy of the
- *   pack is written into the datapack LIBRARY as a new version of the demo's OWN pack (step 07,
- *   `demoPack.ts`, made at the first save), the pack installed is left as it is, and the project
- *   records the new version. Things the SC made by hand go in too when picked (`selections`,
- *   step 14). With no pack named, the pack is the project's own when Demo Builder installed it,
- *   else there is none and the version holds only the picks (a store Demo Builder did not fill).
+ * - `save-store-changes-to-pack`: Save and Save As (`demoPack.ts`, owner 2026-11-03). The
+ *   store's copy of the pack it holds, and anything picked (`selections`, step 14), is written
+ *   into the datapack LIBRARY:
+ *   - **Save** (no `saveAs`): a new version of the demo's pack (`project.datapack`), when that
+ *     pack is the SC's own. When it is not, nothing is written and the answer says a name is
+ *     needed (`data.needsName`, with the name Save As would start with).
+ *   - **Save As** (`saveAs.displayName`): a new pack of the SC's under that name.
+ *   Either way the pack installed is left as it is, and the project then uses the new version.
+ *   With no pack named, the pack read is the project's when Demo Builder installed it, else
+ *   none, and the version holds only the picks (a store Demo Builder did not fill).
  *   Confirm-gated; its progress goes to the screen's progress window when started from one.
  *   Undone by deleting the new version from the library (`delete-library-datapack`).
+ * - `verify-datapack-install`: whether the store holds what the pack says, for the products the pack
+ *   made: each is there, a configurable has its options and children, select values are the options
+ *   the pack names, and prices match. Counts and up to 20 examples per finding. Writes nothing.
  * - `listPickable` (for `list-datapack-export-items` with Demo Builder's engine): one kind of the
  *   store's items to pick from, less what the pack being saved holds already.
+ *
+ * - `countPickable` (for `count-datapack-export-items`): how many of each kind that list would read
+ *   from, for greying out a kind with none before it is clicked.
  *
  * - `get-datapack-setup-step` / `check-datapack-setup-step` (step 12): the one Admin step a pack
  *   can leave (its root category is a root of its own, and only the SC can point the store at
@@ -29,37 +39,44 @@
  * @module features/data-installer/handlers/storeChangesHandlers
  */
 
-import { PICKABLE_KINDS, type Selections, type StorePicks, isPickableKind, picksOf } from '../pickableKinds';
-import { projectCommerce, readPackItems } from '../services/buildDatapackEngine';
-import { DatapackStoreWriter } from '../services/datapackStoreWriter';
-import { writePackToStore } from '../services/datapackTransfer';
+import { KIND_NOUNS, PICKABLE_KINDS, type PickableKind, type Selections, type StorePicks, isPickableKind, pickCount, picksOf, wholeKindsOf } from '../pickableKinds';
+import { layerFinder, projectCommerce, readPackItems } from '../services/buildDatapackEngine';
+import type { ReadWindowUse } from '../services/commerceReadWindow';
+import { addedSinceInstall } from '../services/demoBuilderEngine/demoAdditions';
 import { nodeRecordFiles, readInstallRecord } from '../services/demoBuilderEngine/installRecord';
 import { checkRecordedRootStep, recordedRootStep, rootStepItem } from '../services/demoBuilderEngine/packRootCheck';
 import type { PackRootStep } from '../services/demoBuilderEngine/packRootStep';
-import { listPickable, saveStoreChanges } from '../services/demoBuilderEngine/saveStore';
-import { type StoreChangesDeps, StoreChangesError } from '../services/demoBuilderEngine/storeAccess';
+import { countPickable, listPickable } from '../services/demoBuilderEngine/saveStore';
+import type { StoreChangesDeps } from '../services/demoBuilderEngine/storeAccess';
 import { previewChanges } from '../services/demoBuilderEngine/storeChanges';
-import { type DemoPackSave, demoPackSaveFor, recordDemoPackSave, recordOwnPackName } from '../services/demoPack';
-import { resolveInstallTarget } from '../services/sampleDataInstall';
+import { verifyPackInstall } from '../services/demoBuilderEngine/verifyInstall';
 import type { DatapackSetupStep } from '../types';
 import { resolveDataInstallerAccess } from './dataInstallerHandlers';
 import { resolveDatapackWriteAccess } from './datapackWriteGate';
+import { installedElsewhere } from './installedElsewhere';
 import { libraryReads } from './libraryReads';
+import { failure, saveInWindow, saveIntoFor, saveToPack } from './packSave';
 import { DATAPACK_SAVE_OPERATION_ID } from '@/core/utils/operationIds';
 import { narrateOutcomeToModal } from '@/core/vscode/operationProgress';
-import { type OperationOutcome, withOperationProgress } from '@/core/vscode/withOperationProgress';
+import { withOperationProgress } from '@/core/vscode/withOperationProgress';
 import { orgGuard } from '@/features/authentication/services/projectOrgGuard';
 import { handleOpenAdminPanel } from '@/features/dashboard/handlers/openUrlHandlers';
+import { resolveInstallTarget } from '@/features/data-installer/installTarget';
+import { deriveImportInstance } from '@/features/data-installer/services/importInstance';
 import type { Project } from '@/types/base';
 import type { DatapackId, DatapackStoreName } from '@/types/datapack';
 import { ErrorCode } from '@/types/errorCodes';
 import { defineHandlers, type HandlerContext, type HandlerResponse } from '@/types/handlers';
-import type { SaveStoreChangesRequest, SaveStoreChangesResult } from '@/types/webviewRequests';
+import type { SaveStoreChangesRequest } from '@/types/webviewRequests';
 
 const LOG_PREFIX = '[Data Installer]';
 
 /** What either action may be sent. Every field is checked here: an agent sends these too. */
-export interface StoreChangesPayload extends Partial<Omit<SaveStoreChangesRequest, 'confirm' | 'source'>> {
+export interface StoreChangesPayload extends Partial<Omit<SaveStoreChangesRequest, 'confirm' | 'source' | 'saveAs' | 'wholeKinds'>> {
+    /** Kinds ticked whole, checked here (`wholeKindsOf`): an agent may send anything. */
+    wholeKinds?: unknown;
+    /** Save As's name, checked here: an agent may send anything. */
+    saveAs?: { displayName?: unknown };
     /**
      * Which store holds the pack: `installer` or `library`. The preview reads it from there
      * (the Data Installer when absent); a save reads the installed version's own rows from there
@@ -68,6 +85,13 @@ export interface StoreChangesPayload extends Partial<Omit<SaveStoreChangesReques
     source?: string;
     /** The kinds to look at; all the pack holds when absent. Preview only. */
     dataTypes?: string[];
+    /** For an uninstall: Review Records (what it would take and keep, `removalRecords.ts`, walk F151), and the scope without what the store had before (F187). */
+    removal?: boolean;
+    /**
+     * Also count what was added by hand since the install (`addedSinceInstall`): what a save would
+     * take that the pack does not hold, by type (step-07 E1). The preview's and the changes read's.
+     */
+    added?: boolean;
     /** Save only: must be true. */
     confirm?: boolean;
 }
@@ -84,7 +108,7 @@ interface OpenedStore extends ProjectStore {
     source?: DatapackStoreName;
 }
 
-function readPayload(payload: StoreChangesPayload | undefined): { pack: DatapackId; source?: DatapackStoreName } | { error: string } {
+export function readPayload(payload: StoreChangesPayload | undefined): { pack: DatapackId; source?: DatapackStoreName } | { error: string } {
     if (!payload?.datapackName || !payload.version) return { error: 'A datapack name and version are required.' };
     const { source } = payload;
     if (source !== undefined && source !== 'installer' && source !== 'library') {
@@ -116,30 +140,50 @@ function describer(context: HandlerContext, fromInstaller: (id: DatapackId) => P
  * The project's store, opened as every datapack write opens it, with the sign-in checked against
  * the org that owns it; or the response to answer instead.
  */
-export async function openProjectStore(context: HandlerContext): Promise<ProjectStore | { response: HandlerResponse }> {
+export async function openProjectStore(context: HandlerContext, use?: ReadWindowUse): Promise<ProjectStore | { response: HandlerResponse }> {
     const gate = await resolveDatapackWriteAccess(context, 'import');
     if ('response' in gate) return gate;
     if (context.authManager) {
         const mismatch = await orgGuard(context, gate.project, context.authManager);
         if (mismatch) return { response: { success: false, error: mismatch.error, code: ErrorCode.ORG_MISMATCH } };
     }
+    // The project's pack went into another Commerce instance: its record says nothing of this one (step-07 D6).
+    const held = gate.project.datapack;
+    const elsewhere = held ? await installedElsewhere(context, gate.project, { name: held.name, version: held.version }) : undefined;
+    if (elsewhere) return { response: elsewhere };
     const libraryCatalog = libraryReads(context);
+    const log = (line: string): void => context.debugLogger.debug(`${LOG_PREFIX} ${line}`);
     const deps: StoreChangesDeps = {
-        commerce: projectCommerce({ project: gate.project, authManager: context.authManager, secrets: context.context?.secrets }),
+        // A changes check keeps what it reads; a save reuses it (`commerceReadWindow`, walk F128).
+        commerce: projectCommerce({ project: gate.project, authManager: context.authManager, secrets: context.context?.secrets }, use ? { use, log } : undefined),
         readPack: (id, source) => readPackItems({ catalog: gate.catalog, libraryCatalog }, id, source),
         describe: describer(context, (id) => gate.catalog.getDatapackDetail(id)),
         projectPath: gate.project.path,
         target: resolveInstallTarget(gate.project) ?? undefined,
-        log: (line) => context.debugLogger.debug(`${LOG_PREFIX} ${line}`),
+        instance: deriveImportInstance(gate.project.componentConfigs),
+        log,
+        // The settings layer (step 09) is previewed and saved as the engine applies it.
+        ...layerFinder({ libraryCatalog }),
     };
     return { project: gate.project, deps };
 }
 
+/**
+ * Where a save reads the installed version of this pack from: the store named, else the one the
+ * project records for it, else none, and the save's own rule reads the library first
+ * (`readInstalled`). "N added" reads it from the same place, so it counts what the save takes.
+ */
+export function savedFrom(project: Project, pack: DatapackId, named: DatapackStoreName | undefined): DatapackStoreName | undefined {
+    if (named) return named;
+    const held = project.datapack;
+    return held && held.name === pack.name && held.version === pack.version ? held.store : undefined;
+}
+
 /** The access the pack's actions share, or the response to answer instead. */
-async function openStoreChanges(context: HandlerContext, payload: StoreChangesPayload | undefined): Promise<OpenedStore | { response: HandlerResponse }> {
+async function openStoreChanges(context: HandlerContext, payload: StoreChangesPayload | undefined, use?: ReadWindowUse): Promise<OpenedStore | { response: HandlerResponse }> {
     const input = readPayload(payload);
     if ('error' in input) return { response: { success: false, error: input.error } };
-    const store = await openProjectStore(context);
+    const store = await openProjectStore(context, use);
     return 'response' in store ? store : { ...store, ...input };
 }
 
@@ -155,78 +199,43 @@ export async function packToSave(project: Project, payload: StoreChangesPayload 
     return (await readInstallRecord(nodeRecordFiles, project.path, pack)) ? { pack, ...(held.store ? { source: held.store } : {}) } : {};
 }
 
-/** A save's store, its pack if it has one, and its picks; or the response to answer instead. */
-async function openSave(context: HandlerContext, payload: StoreChangesPayload): Promise<SaveOpened | { response: HandlerResponse }> {
+/**
+ * A save's store, its pack if it has one, and its picks; or the response to answer instead.
+ *
+ * @param use - `reuse` only for a save inside a job whose changes check the SC just answered (a
+ *   removal's, walk F128). Omitted, the save reads Commerce itself: the plain Save reused any check
+ *   from the last five minutes, so an edit made in the Admin since was not saved and the window said
+ *   "No Changes to Save" (live run 2, 2026-11-15).
+ */
+export async function openSave(context: HandlerContext, payload: StoreChangesPayload, use?: ReadWindowUse): Promise<SaveOpened | { response: HandlerResponse }> {
     const read = picksOf(payload.selections);
     if ('error' in read) return { response: { success: false, error: read.error } };
-    const store = await openProjectStore(context);
+    const whole = wholeKindsOf(payload.wholeKinds);
+    if ('error' in whole) return { response: { success: false, error: whole.error } };
+    const store = await openProjectStore(context, use);
     if ('response' in store) return store;
     const target = await packToSave(store.project, payload);
     if ('error' in target) return { response: { success: false, error: target.error } };
-    return { ...store, ...target, picks: read.picks };
-}
-
-interface SaveOpened extends ProjectStore {
-    pack?: DatapackId;
-    source?: DatapackStoreName;
-    picks: StorePicks;
-}
-
-function failure(context: HandlerContext, error: unknown, fallback: string): HandlerResponse {
-    if (error instanceof StoreChangesError) return { success: false, error: error.message };
-    context.logger.warn(`${LOG_PREFIX} ${fallback} ${error instanceof Error ? error.message : String(error)}`);
-    return { success: false, error: `${fallback} Details are in Debug Logs.`, code: ErrorCode.UNKNOWN };
+    if (target.pack && (pickCount(read.picks) > 0 || whole.kinds.length > 0)) return { response: PICKS_WITH_PACK };
+    return { ...store, ...target, picks: read.picks, wholeKinds: whole.kinds };
 }
 
 /**
- * Record on the project that its store now matches the new version of its own pack; for a save
- * of picks alone, only the own pack's name, so the next save is a version of the same pack and
- * the pack the project installs from is left as it was.
+ * A save from a datapack takes everything the demo uses, so there is nothing left to pick: Add
+ * Unused Items was removed (overview 7b, 2026-11-10). Picks are a save from nothing's alone.
  */
-async function recordOnProject(context: HandlerContext, save: DemoPackSave, holdsPack: boolean): Promise<void> {
-    const project = await context.stateManager.getCurrentProject();
-    if (!project) return;
-    if (holdsPack) recordDemoPackSave(project, save);
-    else recordOwnPackName(project, save);
-    await context.stateManager.saveProject(project);
-}
+const PICKS_WITH_PACK: HandlerResponse = {
+    success: false,
+    error: "A save from a datapack takes everything this demo uses, so selections cannot be sent with one, nor wholeKinds. Send them only for a save with no datapack, with saveAs.",
+    code: ErrorCode.INVALID_OPERATION,
+};
 
-/** Capture, write the new version into the library, and record it on the project. */
-async function save(context: HandlerContext, opened: SaveOpened, report: (stage: string) => void): Promise<HandlerResponse & OperationOutcome> {
-    const library = await resolveDataInstallerAccess(context, 'library');
-    if (!library.ok) return library.response;
-    const writer = new DatapackStoreWriter({
-        baseUrl: library.baseUrl,
-        getToken: library.getToken,
-        ...(library.orgCode ? { orgCode: library.orgCode } : {}),
-        log: (line) => context.debugLogger.debug(`${LOG_PREFIX} ${line}`),
-    });
-    try {
-        // No `update`: the version saved is always new, so nothing in the library is written over.
-        const at = new Date();
-        const { pack, source, picks } = opened;
-        const plan = demoPackSaveFor(opened.project, pack, at);
-        const saveAs = { id: plan.id, displayName: plan.displayName };
-        const target = { saveAs, picks, ...(pack ? { pack } : {}), ...(source ? { source } : {}) };
-        const result = await saveStoreChanges(opened.deps, target, (file) => writePackToStore(writer, file), report);
-        // The pack it was made from names the store its rows were actually read from.
-        await recordOnProject(context, demoPackSaveFor(opened.project, pack ? { ...pack, store: result.readFrom } : undefined, at), pack !== undefined);
-        const from = pack ? `the store's copy of ${pack.name}@${pack.version}` : 'what was picked from the store';
-        context.logger.info(`${LOG_PREFIX} Saved ${from} as ${result.saved.name}@${result.saved.version} in the datapack library`);
-        const data: SaveStoreChangesResult = {
-            datapackName: result.saved.name,
-            version: result.saved.version,
-            displayName: plan.displayName,
-            ...(pack ? { previous: pack } : {}),
-            counts: result.counts,
-            message: result.sentence,
-            unnamed: result.unnamed,
-            leftOut: result.leftOut,
-        };
-        return { success: true, note: result.sentence, data };
-    } catch (error) {
-        return failure(context, error, 'The store changes could not be saved.');
-    }
+export interface SaveOpened extends ProjectStore {
+    pack?: DatapackId;
+    source?: DatapackStoreName;
+    picks: StorePicks;
+    /** Kinds ticked whole, listed inside the save (step-07 E2). */
+    wholeKinds: PickableKind[];
 }
 
 /** The step's answer: the pack, and its step as the setup guide lists one, or null. */
@@ -250,13 +259,32 @@ export async function listPickableItems(context: HandlerContext, payload: (Store
     try {
         return { success: true, data: await listPickable(store.deps, kind, target.pack, target.source) };
     } catch (error) {
-        return failure(context, error, `The store's ${kind} could not be listed.`);
+        return failure(context, error, `Commerce's ${KIND_NOUNS[kind][1]} could not be listed.`);
     }
 }
 
-/** What the export door is sent: the picks, and the service's own fields, which are refused here. */
+/**
+ * How many of each kind the project's store has, so a screen can grey out a kind with none before
+ * it is clicked (the export door's `count-datapack-export-items`). Opened as `listPickableItems`
+ * opens, so it counts the website and root that list reads. Reads only.
+ */
+export async function countPickableItems(context: HandlerContext, payload: StoreChangesPayload | undefined): Promise<HandlerResponse> {
+    const store = await openProjectStore(context);
+    if ('response' in store) return store.response;
+    const target = await packToSave(store.project, payload);
+    if ('error' in target) return { success: false, error: target.error };
+    try {
+        return { success: true, data: await countPickable(store.deps, target.pack, target.source) };
+    } catch (error) {
+        return failure(context, error, "Commerce's items could not be counted.");
+    }
+}
+
+/** What the export door is sent: the picks, the name, and the service's own fields, which are refused here. */
 interface StoreSavePayload {
     selections?: Selections;
+    wholeKinds?: unknown;
+    saveAs?: { displayName?: string };
     confirm?: boolean;
     progress?: 'modal';
     datapackName?: string;
@@ -265,24 +293,29 @@ interface StoreSavePayload {
     dataTypes?: string[];
 }
 
-/** The service's export fields, which name a pack in the shared catalog that this save never writes. */
-const SERVICE_EXPORT_FIELDS = ['datapackName', 'version', 'commerceInstance', 'dataTypes'] as const;
+/**
+ * The export fields that name the pack written, which only an ACO pack takes, and the service's
+ * export did before it was deleted (DI-12): a save names its pack by the project's, or by `saveAs`.
+ */
+const NAMING_FIELDS = ['datapackName', 'version', 'commerceInstance', 'dataTypes'] as const;
 
 /**
- * The export door with Demo Builder's engine (step 14, item 10): what is picked from the project's
- * store, with the project's own pack when Demo Builder installed it, saved as a new version of
- * the demo's own pack. The same save as "Save store changes"; never a pack in the shared catalog.
+ * The export door (step 14, item 10): what is picked from the project's store, with the project's
+ * pack when Demo Builder installed it, saved as Save or Save As (`saveAs`). The same save as
+ * `save-store-changes-to-pack`; never a pack in the shared catalog.
  */
 export async function saveFromStore(context: HandlerContext, payload: StoreSavePayload | undefined): Promise<HandlerResponse> {
-    const named = SERVICE_EXPORT_FIELDS.filter((field) => payload?.[field] !== undefined);
+    const named = NAMING_FIELDS.filter((field) => payload?.[field] !== undefined);
     if (named.length > 0) {
         return {
             success: false,
-            error: `With Demo Builder's engine a save goes into this demo's own pack, never a named one, so ${named.join(', ')} cannot be sent. Send only selections.`,
+            error: `A save goes into My Datapacks under the project's datapack or saveAs, so ${named.join(', ')} cannot be sent. Send selections and/or wholeKinds, and saveAs with a name for a new datapack.`,
             code: ErrorCode.INVALID_OPERATION,
         };
     }
     const save: StoreChangesPayload = { selections: payload?.selections, confirm: payload?.confirm };
+    if (payload?.wholeKinds !== undefined) save.wholeKinds = payload.wholeKinds;
+    if (payload?.saveAs) save.saveAs = payload.saveAs;
     if (payload?.progress) save.progress = payload.progress;
     return storeChangesHandlers['save-store-changes-to-pack'](context, save);
 }
@@ -308,17 +341,32 @@ export const storeChangesHandlers = defineHandlers({
         }
     },
 
-    // The step's "Open the Admin", as the dashboard's Admin button opens it.
+    // The step's "Open Admin", as the dashboard's Admin button opens it.
     openAdminPanel: handleOpenAdminPanel,
 
     'preview-datapack-changes': async (context: HandlerContext, payload?: StoreChangesPayload): Promise<HandlerResponse> => {
+        // The re-import's comparison is a changes check: it reads Commerce itself, and keeps it (F128).
+        const opened = await openStoreChanges(context, payload, 'remember');
+        if ('response' in opened) return opened.response;
+        try {
+            const source = opened.source ?? 'installer';
+            const preview = await previewChanges(opened.deps, opened.pack, source, payload?.dataTypes);
+            const added = payload?.added === true ? { added: await addedSinceInstall(opened.deps, opened.pack, savedFrom(opened.project, opened.pack, opened.source)) } : {};
+            return { success: true, data: { datapackName: opened.pack.name, version: opened.pack.version, ...preview, ...added } };
+        } catch (error) {
+            return failure(context, error, 'What installing again would change could not be read.');
+        }
+    },
+
+    // Whether the store holds what the pack says (owner, 2026-11-06). Reads only.
+    'verify-datapack-install': async (context: HandlerContext, payload?: StoreChangesPayload): Promise<HandlerResponse> => {
         const opened = await openStoreChanges(context, payload);
         if ('response' in opened) return opened.response;
         try {
-            const preview = await previewChanges(opened.deps, opened.pack, opened.source ?? 'installer', payload?.dataTypes);
-            return { success: true, data: { datapackName: opened.pack.name, version: opened.pack.version, ...preview } };
+            const check = await verifyPackInstall(opened.deps, opened.pack, opened.source ?? 'installer');
+            return { success: true, data: { datapackName: opened.pack.name, version: opened.pack.version, ...check } };
         } catch (error) {
-            return failure(context, error, 'What installing again would change could not be read.');
+            return failure(context, error, 'Commerce could not be checked against the datapack.');
         }
     },
 
@@ -327,14 +375,20 @@ export const storeChangesHandlers = defineHandlers({
             if (payload?.confirm !== true) {
                 return {
                     success: false,
-                    error: "This saves the store's copy of the pack, and anything picked, as a new version of this demo's own pack in the datapack library. Confirm to proceed.",
+                    error: "This saves Commerce's copy of the datapack, and anything picked, into My Datapacks: a new version of this demo's datapack when it is yours, else a new datapack named by saveAs. Confirm to proceed.",
                     code: ErrorCode.INVALID_OPERATION,
                 };
             }
             const opened = await openSave(context, payload);
             if ('response' in opened) return opened.response;
-            const options = { id: DATAPACK_SAVE_OPERATION_ID, title: 'Saving store changes', inModal: payload.progress === 'modal' };
-            return withOperationProgress(options, (report) => save(context, opened, (stage) => report(stage)));
+            const into = await saveIntoFor(context, opened, payload.saveAs);
+            if ('response' in into) return into.response;
+            const title = into.name ? `Saving ${into.displayName}` : `Creating ${into.displayName}`;
+            const options = { id: DATAPACK_SAVE_OPERATION_ID, title, inModal: payload.progress === 'modal' };
+            // The reporter itself, so the save's rows reach its window (walk F91: a wrapper passing on
+            // only the stage and step dropped them, and the window kept its one spinner).
+            const save = options.inModal ? saveInWindow : saveToPack;
+            return withOperationProgress(options, (report) => save(context, opened, into, report));
         },
         () => DATAPACK_SAVE_OPERATION_ID,
     ),

@@ -101,13 +101,13 @@ describe('cleanup_dalive_site — what the teardown is handed', () => {
         });
     });
 
-    it('hands on the token provider the DA.live operations were built on, and its own logger', async () => {
+    it('hands on the DA.live session the DA.live operations were built on, and its own logger', async () => {
         const { ctx, server } = registered();
 
         await server.call('cleanup_dalive_site', CONFIRMED);
 
         const [, deps] = handedToTeardown();
-        expect(deps.tokenProvider).toBe((DaLiveOrgOperations as jest.Mock).mock.calls[0][0]);
+        expect(deps.daLiveSession).toBe((DaLiveOrgOperations as jest.Mock).mock.calls[0][0]);
         expect(deps.logger).toBe(ctx.logger);
     });
 
@@ -128,7 +128,7 @@ describe('cleanup_dalive_site — what the teardown is handed', () => {
         await server.call('cleanup_dalive_site', CONFIRMED);
         const [, deps] = handedToTeardown();
 
-        const contentOps = deps.makeContentOps!(deps.tokenProvider, ctx.logger);
+        const contentOps = deps.makeContentOps!(deps.daLiveSession, ctx.logger);
 
         expect(contentOps.deleteAllSiteContent).toBe(mockDeleteAllSiteContent);
     });

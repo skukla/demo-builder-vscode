@@ -9,7 +9,7 @@
  *   - `projectsListBrowse`    — list, select, create, help, settings
  *   - `projectsListTransfer`  — import from file, copy from existing, export
  *   - `projectsListOpen`      — start/stop the demo, open browser/AI/live site/DA.live/Admin
- *   - `projectsListLifecycle` — delete, edit, rename, reset, pin
+ *   - `projectsListLifecycle` — edit, rename, pin (reset and delete: `projectsBatchHandlers`)
  *
  * @module features/projects-dashboard/handlers/dashboardHandlers
  */
@@ -21,15 +21,7 @@ export {
     handleOpenSettings,
     handleSelectProject,
 } from './projectsListBrowse';
-export {
-    handleDeleteProject,
-    handleEditProject,
-    handleRenameProject,
-    handleResetProject,
-    handleSetProjectPinned,
-    type DeleteProjectPayload,
-    type ResetProjectPayload,
-} from './projectsListLifecycle';
+export { handleEditProject, handleRenameProject, handleSetProjectPinned } from './projectsListLifecycle';
 export {
     handleOpenAdminPanel,
     handleOpenAiForProject,

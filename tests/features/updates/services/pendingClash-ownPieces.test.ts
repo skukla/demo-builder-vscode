@@ -7,8 +7,8 @@
  * clashes cannot go back while git's markers are there, so it is recorded on the clash and goes
  * back when the fix is finished.
  *
- * JustRite's header in miniature (`keptClash.testUtils.ts`), with one of our fixes on the line
- * above Khalil's. "GitHub" is local bare repositories.
+ * Tailspin's header in miniature (`keptClash.testUtils.ts`), with one of our fixes on the line
+ * above PersonB's. "GitHub" is local bare repositories.
  */
 
 // FIRST: this module owns the jest.mock calls the imports below must see.
@@ -34,7 +34,7 @@ import type { FinishDeps } from '@/features/updates/services/pendingClashFinish'
 const HEADER_FIX: CodePatch = {
     id: 'header-nav-start-fix',
     target: 'blocks/header/header.js',
-    description: 'A fix on the line above the one Adobe and Khalil both changed.',
+    description: 'A fix on the line above the one Adobe and PersonB both changed.',
     precondition: '// nav start',
     replacement: '// nav start (Demo Builder fix)',
 };

@@ -44,7 +44,7 @@ describe('resolveIntegrationRows — AI-built instances (shell-source discrimina
                 id: 'firefly-image-gen',
                 kind: 'blank',
                 name: 'Firefly Image Gen',
-                sourceLine: 'Custom integration · built with AI',
+                sourceLine: 'Custom integration, built with AI',
                 needsSetup: true,
                 apis: [BASELINE_CODE],
                 renamable: true,
@@ -116,9 +116,9 @@ describe('resolveIntegrationRows — AI-built instances (shell-source discrimina
                 'firefly-image-gen',
                 'blank',
                 'Firefly Image Gen',
-                'Custom integration · built with AI',
+                'Custom integration, built with AI',
             ],
-            ['acme-widget', 'custom', 'widget', 'Custom integration · acme/widget'],
+            ['acme-widget', 'custom', 'widget', 'Custom integration, acme/widget'],
         ]);
     });
 
@@ -142,7 +142,7 @@ describe('resolveIntegrationRows — AI-built instances (shell-source discrimina
                 id: 'acme-widget',
                 kind: 'custom',
                 name: 'widget',
-                sourceLine: 'Custom integration · acme/widget',
+                sourceLine: 'Custom integration, acme/widget',
                 needsSetup: true,
                 apis: [BASELINE_CODE],
             } satisfies IntegrationRow,
@@ -165,7 +165,7 @@ describe('resolveIntegrationRows — AI-built instances (shell-source discrimina
             expect.objectContaining({
                 kind: 'custom',
                 name: 'My Widget',
-                sourceLine: 'Custom integration · acme/widget',
+                sourceLine: 'Custom integration, acme/widget',
             }),
         ]);
     });
@@ -189,7 +189,7 @@ describe('resolveIntegrationRows — AI-built instances (shell-source discrimina
         expect(rows).toEqual([
             expect.objectContaining({
                 kind: 'blank',
-                sourceLine: 'Custom integration · built with AI',
+                sourceLine: 'Custom integration, built with AI',
             }),
         ]);
     });
@@ -212,7 +212,7 @@ describe('resolveIntegrationRows — AI-built instances (shell-source discrimina
             expect.objectContaining({
                 kind: 'blank',
                 name: 'app-builder-shell',
-                sourceLine: 'Custom integration · built with AI',
+                sourceLine: 'Custom integration, built with AI',
             }),
         ]);
     });
@@ -232,7 +232,7 @@ describe('resolveIntegrationRows — AI-built instances (shell-source discrimina
         expect(rows).toEqual([
             expect.objectContaining({
                 kind: 'custom',
-                sourceLine: 'Custom integration · someone-else/app-builder-shell',
+                sourceLine: 'Custom integration, someone-else/app-builder-shell',
             }),
         ]);
     });
@@ -255,7 +255,7 @@ describe('resolveIntegrationRows — AI-built instances (shell-source discrimina
         expect(rows).toEqual([
             expect.objectContaining({
                 kind: 'custom',
-                sourceLine: 'Custom integration · skukla/some-other-app',
+                sourceLine: 'Custom integration, skukla/some-other-app',
             }),
         ]);
         expect(rows[0].renamable).toBeUndefined();

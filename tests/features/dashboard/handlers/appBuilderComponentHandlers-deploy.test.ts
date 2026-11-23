@@ -45,7 +45,7 @@ describe('handleDeployAppBuilderComponent — the answer', () => {
                 'demo-erp': {
                     kind: 'system',
                     status: 'deployed',
-                    name: 'Justrite ERP',
+                    name: 'Tailspin ERP',
                     source: { owner: 'skukla', repo: 'demo-erp' },
                 },
             },
@@ -59,7 +59,7 @@ describe('handleDeployAppBuilderComponent — the answer', () => {
 
         expect(result).toStrictEqual({
             success: false,
-            error: 'Justrite ERP came with erp-integration, which is not in this project. Add erp-integration to finish — it reuses Justrite ERP.',
+            error: 'Tailspin ERP came with erp-integration, which is not in this project. Add erp-integration to finish — it reuses Tailspin ERP.',
         });
         expect(mockDeployAppBuilderComponent).not.toHaveBeenCalled();
     });

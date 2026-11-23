@@ -69,13 +69,13 @@ const findingOf = (item: SetupChecklistItem): string | undefined => item.note?.r
 
 /** How a done step got done: Demo Builder applied it, its check found it, or the SC said so. */
 function doneLine(item: SetupChecklistItem): string {
-    if (item.fixApplied) return DONE_COPY.applied;
+    if (item.setupApplied) return DONE_COPY.applied;
     return item.lastCheck === 'passed' ? DONE_COPY.found : DONE_COPY.marked;
 }
 
 /** A step not set up: what Apply will do when Demo Builder can apply it, else what the check found missing. */
 export function notSetUpStatus(item: SetupChecklistItem): StepStatusView {
-    if (item.fix && item.applicable) return { label: STATUS_COPY.notSetUp, tone: 'warning', plan: true };
+    if (item.setup && item.applicable) return { label: STATUS_COPY.notSetUp, tone: 'warning', plan: true };
     return { label: STATUS_COPY.notSetUp, tone: 'warning', ...(item.lastCheck === 'failed' ? { line: findingOf(item) } : {}) };
 }
 

@@ -7,18 +7,19 @@
  * webview). Settings another app provides are read-only lines. "Save and
  * redeploy" posts only what changed; the extension stores it and redeploys what
  * uses it, because a setting reaches an app only through its deploy. Pressing it
- * IS the confirmation, so the button says both verbs.
- *
- * Hosting mirrors {@link ManageApisModal}: an always-mounted DialogContainer with
- * the Modal rendered only while open; the grid owns one instance.
+ * IS the confirmation, so the button says both verbs, and nothing above the fields
+ * says it again. A save that did not go through is the title's outcome, in red,
+ * with its reason above the fields and what was typed still in them: the Form
+ * layout's failure mode ({@link FormDialog}), held at one height throughout.
+ * The grid owns one instance.
  *
  * @module features/dashboard/ui/components/IntegrationSettingsModal
  */
 
-import { DialogContainer, Text, TextField, View } from '@adobe/react-spectrum';
+import { Text, TextField } from '@adobe/react-spectrum';
 import React, { useEffect, useState } from 'react';
 import { SecretFieldRow } from './integrations/SecretFieldRow';
-import { Modal } from '@/core/ui/components/ui/Modal';
+import { FormDialog } from '@/core/ui/components/ui/FormDialog';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import type { ComponentSettings, ComponentSettingField } from '@/types/appBuilderComponents';
 import type { SaveIntegrationSettingsResult } from '@/types/webviewRequests';
@@ -29,6 +30,18 @@ export interface IntegrationSettingsModalProps {
     onClose: () => void;
     /** The settings as the extension holds them after a save. */
     onSaved: (id: string, settings: ComponentSettings) => void;
+}
+
+/** Why the last save did not finish, and whether the values were stored before it stopped. */
+interface SaveFailure {
+    saved: boolean;
+    reason: string;
+}
+
+/** The title: the settings, or what did not go through. */
+function titleOf(name: string, failure: SaveFailure | null): string {
+    if (!failure) return `${name} Settings`;
+    return failure.saved ? `Couldn't Redeploy ${name}` : `Couldn't Save ${name} Settings`;
 }
 
 function initialValues(settings: ComponentSettings): Record<string, string> {
@@ -85,7 +98,7 @@ function SettingsFields({ id, settings, values, onText, onSecret }: {
                 }
                 const blank = blankRequired(field, values);
                 return (
-                    <View key={field.name} marginBottom="size-200">
+                    <div key={field.name}>
                         <TextField
                             label={field.label}
                             value={values[field.name] ?? ''}
@@ -95,15 +108,15 @@ function SettingsFields({ id, settings, values, onText, onSecret }: {
                             errorMessage={blank ? `${field.label} cannot be empty.` : undefined}
                             onChange={(next) => onText(field.name, next)}
                         />
-                    </View>
+                    </div>
                 );
             })}
             {settings.connected.map((row) => (
-                <View key={row.name} marginBottom="size-200">
+                <div key={row.name}>
                     <Text>
                         {row.label}: {row.value ?? `set when ${row.from} is deployed`} (from {row.from})
                     </Text>
-                </View>
+                </div>
             ))}
         </>
     );
@@ -117,14 +130,14 @@ export function IntegrationSettingsModal({
     const [values, setValues] = useState<Record<string, string>>({});
     const [secrets, setSecrets] = useState<Record<string, string>>({});
     const [isSaving, setIsSaving] = useState(false);
-    const [saveError, setSaveError] = useState<string | null>(null);
+    const [failure, setFailure] = useState<SaveFailure | null>(null);
 
     // Each open starts from the settings as they are: nothing typed carries over.
     useEffect(() => {
         if (!target) return;
         setValues(initialValues(target.settings));
         setSecrets({});
-        setSaveError(null);
+        setFailure(null);
         setIsSaving(false);
     }, [target]);
 
@@ -135,7 +148,7 @@ export function IntegrationSettingsModal({
     const handleSave = async (): Promise<void> => {
         if (!target) return;
         setIsSaving(true);
-        setSaveError(null);
+        setFailure(null);
         try {
             const result = await webviewClient.request<SaveIntegrationSettingsResult>(
                 'saveIntegrationSettings',
@@ -146,53 +159,38 @@ export function IntegrationSettingsModal({
                 onClose();
                 return;
             }
-            setSaveError(result?.error ?? 'Could not save the settings.');
+            setFailure({ saved: result?.saved === true, reason: result?.error ?? 'Could not save the settings.' });
         } catch (err) {
-            setSaveError(toMessage(err));
+            setFailure({ saved: false, reason: toMessage(err) });
         } finally {
             setIsSaving(false);
         }
     };
 
     return (
-        <DialogContainer onDismiss={onClose}>
+        <FormDialog
+            isOpen={!!target}
+            title={target ? titleOf(target.name, failure) : ''}
+            submitLabel="Save and Redeploy"
+            onSubmit={() => {
+                void handleSave();
+            }}
+            submitDisabled={!isDirty || hasBlank}
+            submitPending={isSaving}
+            // The redeploy carries on after the window closes, with its progress on the card.
+            background
+            failure={failure ? failure.reason : null}
+            onClose={onClose}
+        >
             {target && (
-                <Modal
-                    title={`${target.name} settings`}
-                    size="M"
-                    onClose={onClose}
-                    closeLabel={isSaving ? 'Close' : 'Cancel'}
-                    actionButtons={[{
-                        label: 'Save and redeploy',
-                        variant: 'accent',
-                        onPress: () => {
-                            void handleSave();
-                        },
-                        isDisabled: !isDirty || hasBlank,
-                        isPending: isSaving,
-                    }]}
-                >
-                    <View marginBottom="size-200">
-                        <Text>
-                            A change takes effect when the app is redeployed, so saving redeploys it.
-                        </Text>
-                    </View>
-                    <SettingsFields
-                        id={target.id}
-                        settings={target.settings}
-                        values={values}
-                        onText={(name, value) => setValues((prev) => ({ ...prev, [name]: value }))}
-                        onSecret={(name, value) => setSecrets((prev) => ({ ...prev, [name]: value }))}
-                    />
-                    {isSaving && (
-                        <Text UNSAFE_className="text-sm text-gray-600">
-                            Redeploying can take a few minutes. Progress shows on the card, and you
-                            can close this window.
-                        </Text>
-                    )}
-                    {saveError && <Text UNSAFE_className="text-sm text-red-600">{saveError}</Text>}
-                </Modal>
+                <SettingsFields
+                    id={target.id}
+                    settings={target.settings}
+                    values={values}
+                    onText={(name, value) => setValues((prev) => ({ ...prev, [name]: value }))}
+                    onSecret={(name, value) => setSecrets((prev) => ({ ...prev, [name]: value }))}
+                />
             )}
-        </DialogContainer>
+        </FormDialog>
     );
 }

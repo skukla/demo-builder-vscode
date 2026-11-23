@@ -78,11 +78,11 @@ describe('parseStorefrontLink', () => {
             owner: 'vinodsivagnanam-pm',
             repo: 'booth3-summit',
         });
-        expect(parseStorefrontLink('https://main--isle5-demo--jen.aem.page/products/default')).toEqual({
-            owner: 'jen',
+        expect(parseStorefrontLink('https://main--isle5-demo--robin.aem.page/products/default')).toEqual({
+            owner: 'robin',
             repo: 'isle5-demo',
         });
-        expect(parseStorefrontLink('main--isle5-demo--jen.hlx.live')).toEqual({ owner: 'jen', repo: 'isle5-demo' });
+        expect(parseStorefrontLink('main--isle5-demo--robin.hlx.live')).toEqual({ owner: 'robin', repo: 'isle5-demo' });
     });
 
     it('reads a chat client\'s long dashes as the two hyphens they were', () => {
@@ -93,8 +93,8 @@ describe('parseStorefrontLink', () => {
     });
 
     it('still reads a GitHub link, and refuses everything else', () => {
-        expect(parseStorefrontLink('https://github.com/jen/isle5-demo')).toEqual({ owner: 'jen', repo: 'isle5-demo' });
-        expect(parseStorefrontLink('https://da.live/#/jen/isle5-demo')).toBeNull();
+        expect(parseStorefrontLink('https://github.com/robin/isle5-demo')).toEqual({ owner: 'robin', repo: 'isle5-demo' });
+        expect(parseStorefrontLink('https://da.live/#/robin/isle5-demo')).toBeNull();
         expect(parseStorefrontLink('https://example.aem.live')).toBeNull();
         expect(parseStorefrontLink('https://--repo--owner.aem.live')).toBeNull();
         expect(parseStorefrontLink('not a link')).toBeNull();
@@ -104,36 +104,36 @@ describe('parseStorefrontLink', () => {
 
 describe('gitHubSourceProblem', () => {
     it('answers nothing for a usable owner and repo', () => {
-        expect(gitHubSourceProblem('jen', 'isle5-demo.v2')).toBeUndefined();
+        expect(gitHubSourceProblem('robin', 'isle5-demo.v2')).toBeUndefined();
     });
 
     it('names the owner when the owner is unusable, before looking at the repo', () => {
-        expect(gitHubSourceProblem('jen smith', '..')).toBe('Invalid GitHub owner: "jen smith"');
+        expect(gitHubSourceProblem('robin smith', '..')).toBe('Invalid GitHub owner: "robin smith"');
     });
 
     it('names the repo when only the repo is unusable', () => {
-        expect(gitHubSourceProblem('jen', '..')).toBe('Invalid GitHub repo: ".."');
+        expect(gitHubSourceProblem('robin', '..')).toBe('Invalid GitHub repo: ".."');
     });
 });
 
 describe('parseStorefrontLink — what counts as a site address', () => {
     it('reads an address pasted with spaces around it', () => {
-        expect(parseStorefrontLink('  main--isle5-demo--jen.aem.live  ')).toEqual({
-            owner: 'jen',
+        expect(parseStorefrontLink('  main--isle5-demo--robin.aem.live  ')).toEqual({
+            owner: 'robin',
             repo: 'isle5-demo',
         });
     });
 
     it('reads the shorter long dash the same way as the longer one', () => {
-        expect(parseStorefrontLink('https://main\u2013isle5-demo\u2013jen.aem.page')).toEqual({
-            owner: 'jen',
+        expect(parseStorefrontLink('https://main\u2013isle5-demo\u2013robin.aem.page')).toEqual({
+            owner: 'robin',
             repo: 'isle5-demo',
         });
     });
 
     it('reads the older hlx.page host', () => {
-        expect(parseStorefrontLink('https://main--isle5-demo--jen.hlx.page')).toEqual({
-            owner: 'jen',
+        expect(parseStorefrontLink('https://main--isle5-demo--robin.hlx.page')).toEqual({
+            owner: 'robin',
             repo: 'isle5-demo',
         });
     });
@@ -141,17 +141,17 @@ describe('parseStorefrontLink — what counts as a site address', () => {
     // The whole host has to be the site address: a look-alike that merely
     // CONTAINS one is somebody else's domain.
     it('refuses a host that only contains a site address', () => {
-        expect(parseStorefrontLink('https://sub.main--isle5-demo--jen.aem.live')).toBeNull();
-        expect(parseStorefrontLink('https://main--isle5-demo--jen.aem.live.example.com')).toBeNull();
+        expect(parseStorefrontLink('https://sub.main--isle5-demo--robin.aem.live')).toBeNull();
+        expect(parseStorefrontLink('https://main--isle5-demo--robin.aem.live.example.com')).toBeNull();
     });
 
     it('refuses a host with too few or too many parts', () => {
-        expect(parseStorefrontLink('https://isle5-demo--jen.aem.live')).toBeNull();
-        expect(parseStorefrontLink('https://main--isle5-demo--jen--extra.aem.live')).toBeNull();
+        expect(parseStorefrontLink('https://isle5-demo--robin.aem.live')).toBeNull();
+        expect(parseStorefrontLink('https://main--isle5-demo--robin--extra.aem.live')).toBeNull();
     });
 
     it('refuses a host with any part left empty, whichever one', () => {
-        expect(parseStorefrontLink('https://main----jen.aem.live')).toBeNull();
+        expect(parseStorefrontLink('https://main----robin.aem.live')).toBeNull();
         expect(parseStorefrontLink('main--isle5-demo--.aem.live')).toBeNull();
     });
 
@@ -163,7 +163,7 @@ describe('parseStorefrontLink — what counts as a site address', () => {
 
 describe('assertGitHubName', () => {
     it('accepts letters, digits, dots, underscores and hyphens', () => {
-        expect(() => assertGitHubName('Jen-smith_2.demo', 'owner')).not.toThrow();
+        expect(() => assertGitHubName('Robin-smith_2.demo', 'owner')).not.toThrow();
     });
 
     it('refuses a name with a shell character at the start, the middle or the end', () => {

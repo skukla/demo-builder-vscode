@@ -54,7 +54,6 @@ jest.mock('@/features/eds/handlers/storefrontSetup/storefrontSetupPhases', () =>
 
 
 // Mock remaining imports
-jest.mock('@/features/eds/services/cleanupService');
 jest.mock('@/features/eds/services/configService/configurationService');
 jest.mock('@/features/eds/services/daLive/daLiveAuthService');
 jest.mock('@/features/eds/services/daLive/daLiveTokenProviders', () => ({

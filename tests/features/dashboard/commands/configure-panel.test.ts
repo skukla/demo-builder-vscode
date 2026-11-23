@@ -14,7 +14,7 @@ import * as vscode from 'vscode';
 import { BaseWebviewCommand } from '@/core/base/baseWebviewCommand';
 import { getRegisteredTypes } from '@/core/handlers/dispatchHandler';
 import { ComponentRegistryManager } from '@/features/components/services/ComponentRegistryManager';
-import { loadDeclaredSecretFlags } from '@/features/components/services/commerceSecretMigration';
+import { loadDeclaredSecretFlags } from '@/features/components/services/declaredSecretStore';
 import { parseCustomBlockLibrarySettings } from '@/features/project-creation/services/customBlockLibraryUtils';
 import type { Logger } from '@/types/logger';
 import { internals } from '../../../helpers/commandInternals';
@@ -24,7 +24,7 @@ import { createMockProject } from '../../../helpers/projectFake';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
 import { createMockWebviewPanel } from '../../../helpers/webviewPanelFake';
 
-jest.mock('@/features/components/services/commerceSecretMigration', () => ({
+jest.mock('@/features/components/services/declaredSecretStore', () => ({
     loadDeclaredSecretFlags: jest.fn(async () => ({ COMMERCE_PASSWORD: true })),
     migrateDeclaredSecrets: jest.fn(),
     reKeyProjectSecrets: jest.fn(),
@@ -290,19 +290,6 @@ describe('ConfigureProjectWebviewCommand - panel lifecycle and initial data', ()
                 expect.anything(),
                 expect.anything()
             );
-        });
-
-        it('sends the existing project names so the rename field can reject duplicates', async () => {
-            stateManager.getAllProjects.mockResolvedValue([
-                createMockProject({ name: 'alpha' }),
-                createMockProject({ name: 'beta' }),
-            ]);
-
-            const data = await internals(command).getInitialData<{
-                existingProjectNames: string[];
-            }>();
-
-            expect(data.existingProjectNames).toEqual(['alpha', 'beta']);
         });
 
         it('forwards the secret FLAGS (never the values) the webview needs', async () => {

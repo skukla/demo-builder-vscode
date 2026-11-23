@@ -27,11 +27,7 @@
         },
         "authenticate": {
             "tool": "sign_in",
-            "reason": "Adobe browser sign-in through the same authManager.login(); the tool does not pass force."
-        },
-        "reAuthenticate": {
-            "tool": "sign_in",
-            "reason": "Adobe browser sign-in. The handler also restores the project's org context afterwards; agent tools carry that per call (runWithAdobeTarget)."
+            "reason": "Both run the one Sign In (signInToAdobe): the screen in person mode, the tool in agent mode. The screen's force is the org switch's sign-in, which an agent does through select_org."
         },
         "check-auth": {
             "tool": "get_auth_status",
@@ -148,6 +144,12 @@
         },
         "check-erp-integration-holder": {
             "reason": "Greys the ERP integration out in the Add Integration modal when another project already runs one on this Commerce instance (AB-78). An agent gets the same answer as a refusal from add_integration, add_erp or create_project, before anything is made."
+        },
+        "copyAiPrompt": {
+            "reason": "Puts a saved prompt the SC pressed Copy on into the clipboard, with a status-bar line. The clipboard is the person's; an agent already holds the prompt text (visible since 2026-11-14, when `copy` left the UI-verb list)."
+        },
+        "copy-library-datapack-to-installer": {
+            "reason": "Copies a library pack into the Data Installer's shared catalog. Agents cannot write into the Data Installer: the tool was removed on purpose (D7, datapack simplification Phase 8) and the screen hides the button (`INSTALLER_WRITES_SHOWN`)."
         }
     },
     "gaps": {

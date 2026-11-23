@@ -2,7 +2,7 @@
 
 Read-only, on the Data Installer service's Stage deployment. Owner's choices recorded with the
 findings. The plan's decisions on where packs live are in
-`.rptc/plans/datapack-engine/overview.md`.
+`.rptc/complete/datapack-engine/overview.md`.
 
 ## What a pack holds (measured 2026-10-27, read-only, Stage)
 

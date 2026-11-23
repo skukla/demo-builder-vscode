@@ -7,7 +7,7 @@
  * halves import.
  */
 
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 
 import { press, settle } from '../../../../helpers/reactSettle';
 import '@testing-library/jest-dom';
@@ -16,7 +16,12 @@ import {
     DatapackCatalogView,
     mockRequest,
     CATALOG,
+    makeSummary,
+    showSelect,
 } from './DatapackCatalogView.testUtils';
+
+/** The Data Installer's own packs: the service's installed list speaks only for these. */
+const INSTALLER_ROWS = [makeSummary('bodea', 'main'), makeSummary('wknd', 'main')];
 
 describe('the project’s recorded sample data', () => {
     function withRecordedChoice(datapack: unknown) {
@@ -55,7 +60,7 @@ describe('the project’s recorded sample data', () => {
             if (type === 'find-datapacks') {
                 return Promise.resolve({
                     success: true,
-                    data: { items: CATALOG, count: CATALOG.length, total: CATALOG.length },
+                    data: { items: INSTALLER_ROWS, count: INSTALLER_ROWS.length, total: INSTALLER_ROWS.length },
                 });
             }
             if (type === 'get-datapack-import-target') {
@@ -88,6 +93,8 @@ describe('the project’s recorded sample data', () => {
         // Mount effects fire requests; settle so their responses commit inside
         // act() rather than in the next query's wait loop.
         await settle();
+        // Recommended leaves the Data Installer's packs out (step-07 P1).
+        fireEvent.change(showSelect(), { target: { value: 'installer' } });
 
         const check = await screen.findByTestId('datapack-card-project-check');
 
@@ -102,7 +109,7 @@ describe('the project’s recorded sample data', () => {
      * boxes the user was not looking at.
      */
     it('CONTROL — asks only about this project’s instance', async () => {
-        withRecordedChoice({ name: 'bodea', version: 'main' });
+        withRecordedChoice({ name: 'bodea', version: 'main', store: 'library' });
         render(<DatapackCatalogView />);
         // Mount effects fire requests; settle so their responses commit inside
         // act() rather than in the next query's wait loop.
@@ -119,7 +126,7 @@ describe('the project’s recorded sample data', () => {
 
     /** The check lands on the project's pack, and on no other card. */
     it('marks the pack this project was created for', async () => {
-        withRecordedChoice({ name: 'bodea', version: 'main' });
+        withRecordedChoice({ name: 'bodea', version: 'main', store: 'library' });
         render(<DatapackCatalogView />);
         // Mount effects fire requests; settle so their responses commit inside
         // act() rather than in the next query's wait loop.
@@ -135,7 +142,7 @@ describe('the project’s recorded sample data', () => {
      * as well if every card wore a check, which is the mistake a grid invites.
      */
     it('CONTROL — marks only that one card', async () => {
-        withRecordedChoice({ name: 'bodea', version: 'main' });
+        withRecordedChoice({ name: 'bodea', version: 'main', store: 'library' });
         render(<DatapackCatalogView />);
         // Mount effects fire requests; settle so their responses commit inside
         // act() rather than in the next query's wait loop.
@@ -200,13 +207,14 @@ describe('the project’s recorded sample data', () => {
 
         const cards = await screen.findAllByTestId('datapack-card');
         await press(cards[0]);
-        await press(await screen.findByRole('button', { name: /^import/i }));
-        await screen.findByRole('button', { name: /start import/i });
+        await press(await screen.findByRole('button', { name: /^install$/i }));
+        await screen.findByText('Install', { selector: '.modal-button' });
 
         const before = mockRequest.mock.calls.filter(
             (c) => c[0] === 'get-datapack-import-target'
         ).length;
-        await press(screen.getByRole('button', { name: /^close$/i }));
+        // A first install's summary commits, so its way out is Cancel (step 03, S4).
+        await press(screen.getByRole('button', { name: /^cancel$/i }));
 
         await waitFor(() =>
             expect(
@@ -228,7 +236,7 @@ describe('the project’s recorded sample data', () => {
 
     /** The banner is gone, not merely unrendered in this state. */
     it('no longer shows a "set up for" banner', async () => {
-        withRecordedChoice({ name: 'bodea', version: 'main' });
+        withRecordedChoice({ name: 'bodea', version: 'main', store: 'library' });
         render(<DatapackCatalogView />);
         // Mount effects fire requests; settle so their responses commit inside
         // act() rather than in the next query's wait loop.

@@ -22,6 +22,7 @@
 import { ADOBE_PROJECT_STAGES } from './adobeProjectStages';
 import { CREATION_STAGES } from './creationStages';
 import { DATAPACK_STAGES } from './datapackStages';
+import { namedStageBase } from './packStage';
 import { RESET_STAGES } from './resetStages';
 import { STOREFRONT_STAGES } from './storefrontStages';
 import { UPDATE_STAGES } from './updateStages';
@@ -33,27 +34,29 @@ export interface OperationStage {
     readonly expectation: string;
     /**
      * Row 2 when a report names no step of its own: what the stage is working on.
-     * Without it the row sat blank and the modal read as two lines with a gap.
+     * Without it the row sat blank and the modal read as two lines with a gap; a stage whose
+     * label says it all leaves it out, and the row is dropped (`noBlankRows`), not left blank
+     * (Phase 1, owner 2026-11-10: Clear Demo Data's labels stand alone).
      */
-    readonly detail: string;
+    readonly detail?: string;
 }
 
 export const OPERATION_STAGES = {
     checkingRequirements: {
         label: 'Checking requirements',
         expectation: 'Usually a few seconds',
-        detail: 'Adobe sign-in and developer access',
+        detail: 'Checking sign-in and developer access',
     },
     preparingNode: {
         label: 'Preparing Node',
         // Kept off line 3, which stays short (owner, 2026-10-16): the first time only.
         expectation: 'Up to 30 seconds',
-        detail: 'The Node version this app runs on',
+        detail: 'Installing required Node version',
     },
     reinstallingPackages: {
         label: 'Reinstalling packages',
         expectation: 'A minute per component',
-        detail: 'Moving a component onto the new Node',
+        detail: 'Rebuilding for the new Node version',
     },
     subscribingApis: {
         label: 'Adding Adobe services',
@@ -72,12 +75,12 @@ export const OPERATION_STAGES = {
     makingWorkspace: {
         label: 'Setting up the workspace',
         expectation: 'Usually a few seconds',
-        detail: 'A workspace of its own, for this app',
+        detail: 'Creating app workspace',
     },
     gettingCode: {
         label: 'Getting the code',
         expectation: 'Usually under a minute',
-        detail: 'Downloading it, installing its packages',
+        detail: 'Downloading and installing',
     },
     // `buildComponent` reported a literal "Building..." until 2026-09-19 — an
     // off-table stage, so the modal showed an ellipsis title and no expectation
@@ -86,52 +89,52 @@ export const OPERATION_STAGES = {
     buildingMesh: {
         label: 'Building the mesh',
         expectation: 'Usually a few seconds',
-        detail: 'Compiling it before the deploy',
+        detail: 'Compiling mesh',
     },
     buildingApp: {
         label: 'Building the app',
         expectation: 'Usually under a minute',
-        detail: 'Installing what it needs to run',
+        detail: 'Installing dependencies',
     },
     adding: {
         label: 'Preparing the app',
         expectation: 'Usually a few seconds',
-        detail: 'Checking what it needs before it deploys',
+        detail: 'Checking prerequisites',
     },
     deploying: {
         label: 'Preparing the deploy',
         expectation: 'Usually a few seconds',
-        detail: 'Checking what it needs before it deploys',
+        detail: 'Checking prerequisites',
     },
     removing: {
-        label: 'Taking the app down',
+        label: 'Undeploying the app',
         expectation: 'Usually under a minute',
-        detail: 'Removing it from Adobe I/O Runtime',
+        detail: 'Removing from Adobe I/O Runtime',
     },
     generatingMeshConfig: {
-        label: 'Building the mesh config',
+        label: 'Building the mesh configuration',
         expectation: 'Usually a few seconds',
-        detail: "From the project's Commerce settings",
+        detail: 'Reading Commerce settings',
     },
     resolvingCommerceCredentials: {
         label: 'Getting Commerce access',
         expectation: 'Usually a few seconds',
-        detail: "For the mesh's Commerce connection",
+        detail: 'Creating Commerce credentials',
     },
     loadingErpDemoData: {
         label: 'Loading demo data',
         expectation: 'Usually a minute',
-        detail: 'Products and companies, into the ERP',
+        detail: 'Loading products and companies',
     },
     assigningErpProducts: {
         label: 'Tagging the products',
         expectation: 'Usually under a minute',
-        detail: 'erp_owner on every product, in one call',
+        detail: 'Setting erp_owner on products',
     },
     updatingErps: {
         label: 'Updating the ERPs',
         expectation: 'Usually a minute',
-        detail: 'Only the ERPs whose products moved',
+        detail: 'Updating changed ERPs',
     },
     // The demo setup's words, one name for it everywhere (AB-82, 2026-10-26).
     preparingStore: { label: 'Applying the demo setup', expectation: 'Usually under a minute', detail: 'Each step checked first' },
@@ -139,28 +142,28 @@ export const OPERATION_STAGES = {
     undoingStorePreparation: {
         label: 'Undoing the demo setup',
         expectation: 'Usually under a minute',
-        detail: 'Each step put back, newest first',
+        detail: 'Reverting setup steps',
     },
     changingAttributeSets: {
         label: 'Changing attribute sets',
         expectation: 'A few seconds per set',
-        detail: 'erp_owner in the sets your products use',
+        detail: 'Adding erp_owner to attribute sets',
     },
     undoingStoreSetup: {
         label: 'Undoing the store setup',
         expectation: 'Usually a minute',
-        detail: 'Tags, attribute sets, demo setup',
+        detail: 'Reverting tags and attribute sets',
     },
     resettingErpRecords: {
         label: 'Resetting the records',
         expectation: 'Usually a minute or two',
-        detail: "Undoing the ERP's writes in Commerce",
+        detail: 'Reverting ERP changes in Commerce',
     },
     updatingCli: {
         label: 'Updating Adobe CLI',
         // Kept off line 3, which stays short (owner, 2026-10-16): only when the CLI is out of date.
         expectation: 'A minute or two',
-        detail: 'npm install -g @adobe/aio-cli',
+        detail: 'Installing latest Adobe CLI',
     },
     deployingApp: {
         label: 'Deploying the app',
@@ -177,12 +180,12 @@ export const OPERATION_STAGES = {
         // Kept off line 3, which stays short (owner, 2026-10-16): longer if Commerce asks for a
         // retry.
         expectation: 'Usually under a minute',
-        detail: "Through Commerce's App Management",
+        detail: 'Using Commerce App Management',
     },
     readingMeshConfig: {
-        label: 'Reading the mesh config',
+        label: 'Reading the mesh configuration',
         expectation: 'Usually a few seconds',
-        detail: "The mesh's mesh.json",
+        detail: 'Reading mesh.json',
     },
     deployingMesh: {
         label: 'Deploying the mesh',
@@ -193,57 +196,56 @@ export const OPERATION_STAGES = {
         label: 'Checking the mesh is live',
         // Kept off line 3, which stays short (owner, 2026-10-16): while Adobe finishes.
         expectation: 'Up to a couple of minutes',
-        detail: 'Waiting for Adobe to report it deployed',
+        detail: 'Waiting for deployment status',
     },
-    // A removal ran as ONE line, "Taking the app down", for 3m 39s on 2026-09-21
+    // A removal ran as ONE line for 3m 39s on 2026-09-21
     // while it undid Commerce writes, uninstalled, undeployed two apps, deleted
     // eight leftovers and waited on Adobe for the workspace. Each phase now says so.
     undoingCommerceChanges: {
         label: 'Undoing Commerce changes',
         expectation: 'Usually under a minute',
-        detail: 'What the integration wrote into Commerce',
+        detail: 'Reverting integration changes',
     },
     clearingRecords: {
-        label: 'Clearing the records',
+        label: 'Deleting the records',
         expectation: 'Usually under a minute',
-        detail: 'Its own data, before its code goes',
+        detail: 'Deleting integration data',
     },
     // "Checking nothing is left" covered three jobs with one line and said which
     // in none of them (owner, 2026-10-09). Every reporter now names its job.
     checkingLeftovers: {
         label: 'Checking for leftovers',
         expectation: 'Usually under a minute',
-        detail: 'Runtime namespace, Admin registration',
+        detail: 'Checking Runtime and Admin registration',
     },
     // The storefront's stages (republish, and the pages after a store change).
     ...STOREFRONT_STAGES,
     ...RESET_STAGES,
     ...ADOBE_PROJECT_STAGES,
     removingWorkspace: {
-        label: 'Removing the workspace',
+        label: 'Deleting the workspace',
         expectation: 'Up to a couple of minutes',
-        detail: 'Adobe can take a while to confirm it',
+        detail: 'Waiting for Adobe to confirm',
     },
     removingFromCommerce: {
-        label: 'Removing from Commerce',
+        label: 'Uninstalling from Commerce',
         // Kept off line 3, which stays short (owner, 2026-10-16): longer if Commerce asks for a
         // retry.
         expectation: 'Usually under a minute',
-        detail: "Through Commerce's App Management",
+        detail: 'Using Commerce App Management',
     },
     // Changing a project's Adobe destination (AB-23). Both were literals until the
-    // progress vocabulary's enforcer found them (slice 8, 2026-10-16), and the first
-    // read "Saving the new destination", one character over the 25.
+    // progress vocabulary's enforcer found them (slice 8, 2026-10-16).
     // FIRST ESTIMATES, NOT MEASURED.
     savingDestination: {
         label: 'Saving the destination',
         expectation: 'Usually a few seconds',
-        detail: 'Its new Adobe project and workspace',
+        detail: 'Saving project and workspace',
     },
     movingIntegrations: {
         label: 'Moving the integrations',
         expectation: 'Usually 1–2 minutes each',
-        detail: 'Deploying each to the new destination',
+        detail: 'Deploying to new workspace',
     },
     // A bound pair (the ERP integration and the ERP it uses): the system goes first.
     addingSystem: {
@@ -251,14 +253,14 @@ export const OPERATION_STAGES = {
         // Kept off line 3, which stays short (owner, 2026-10-16): the system is deployed before
         // the integration.
         expectation: 'Usually 2–3 minutes',
-        detail: 'First, so the integration can reach it',
+        detail: 'Deploying required system',
     },
     // The wizard's creation screen and an Edit (`creationStages.ts`).
     ...CREATION_STAGES,
     fetchingUpdate: {
         label: 'Fetching the update',
         expectation: 'Usually a few seconds',
-        detail: 'From GitHub',
+        detail: 'Downloading from GitHub',
     },
     installingUpdateDependencies: {
         label: 'Installing dependencies',
@@ -275,12 +277,17 @@ const BY_LABEL: ReadonlyMap<string, OperationStage> = new Map(
     Object.values(OPERATION_STAGES).map((stage) => [stage.label, stage]),
 );
 
+/** A reported stage's table label: itself, or the step a named one stands for (`packStage`). */
+export function baseStage(stage: string): string {
+    return BY_LABEL.has(stage) ? stage : (namedStageBase(stage) ?? stage);
+}
+
 /**
  * The expectation line for a reported stage, or `undefined` for a stage this table
  * does not name — which then shows no line rather than a guessed one.
  */
 export function expectationFor(stage: string): string | undefined {
-    return BY_LABEL.get(stage)?.expectation;
+    return BY_LABEL.get(baseStage(stage))?.expectation;
 }
 
 /**
@@ -288,5 +295,5 @@ export function expectationFor(stage: string): string | undefined {
  * stage this table does not name.
  */
 export function detailFor(stage: string): string | undefined {
-    return BY_LABEL.get(stage)?.detail;
+    return BY_LABEL.get(baseStage(stage))?.detail;
 }

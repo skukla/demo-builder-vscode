@@ -11,7 +11,7 @@ status: dropped
 # Refuse an ERP integration that would collide with another project's
 
 Filed 2026-09-17, from a code-only spike (owner asked whether several ERP integrations can
-be added without conflicting; findings in `.rptc/plans/erp-linked-tiles/overview.md`).
+be added without conflicting; findings in `.rptc/complete/erp-linked-tiles/overview.md`).
 Nothing was run live.
 
 ## What collides

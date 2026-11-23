@@ -4,16 +4,16 @@ kind: fix
 area: app-builder
 needs: []
 value: med
-status: built
+status: shipped
 ---
 
 # An update whose deploy failed then says "already up to date"
 
-Filed 2026-10-09, measured live on the Justrite project.
+Filed 2026-10-09, measured live on the Tailspin project.
 
 ## What happened
 
-`update_integration` on the Justrite ERP (`demo-erp`) fast-forwarded the
+`update_integration` on the Tailspin ERP (`demo-erp`) fast-forwarded the
 component's clone from `2e50537` to `89a3ad0`, then ran `aio app deploy`, which
 failed: Adobe's database status check answered 504, so the deploy tried to
 provision a database that already exists and got 409 "Provision request already
@@ -51,3 +51,4 @@ Run Redeploy (button or `redeploy_integration`) after an update whose deploy fai
 
 - 2026-10-09  fix(integrations): an update whose deploy failed is finished by the next update (`35fcc97f7`)
 - 2026-10-09  docs(backlog): file AB-71, an update whose deploy failed then says up to date (`ec32d2197`)
+- 2026-11-20  Released in v1.0.0-beta.153

@@ -1,9 +1,9 @@
 /**
- * Store settings in a pack (datapack-engine step 09): the `store_config` kind, one row per
+ * Store configuration in a pack (datapack-engine step 09): the `store_config` kind, one row per
  * setting, `{ path, value, scope, scope_code }`, stored and moved like every other kind.
  *
  * Nothing here writes a setting itself. Every read and write goes through the setup guide's
- * settings fix (`configFix`, AB-77): `GET /V1/system/config` at the row's scope (`scope=default`,
+ * settings fix (`configSetup`, AB-77): `GET /V1/system/config` at the row's scope (`scope=default`,
  * or `scope=website&scopeCode=<code>`), field `items[].value`, and one `PUT /V1/system/config`
  * whose body names each row's own `scope` and `scope_code`, so the store code in the address
  * decides nothing. Commerce answers 200 with refused rows in `errors`, which that fix reads. "Is it
@@ -14,7 +14,7 @@
  * | `scope` `default` | written store-wide |
  * | `scope` `website`/`websites` | written for the install target's website, whatever code the row names (as the service maps website codes for its own kinds) |
  * | `scope` `store`/`stores` | refused before anything is written: the settings fix reads and writes the default and website scopes only |
- * | a path a pack may not change (base URLs, cookies, the Admin, a credential) | refused before anything is written |
+ * | a path outside the allowed sections, under `web/` or `admin/`, or ending in a credential's name | refused before anything is written |
  * | a path with no value anywhere now | refused before anything is written: the fix would put back Commerce's "0" for it, not what it held |
  *
  * Each setting written is recorded with what its scope held before (`previous`, the fix's own
@@ -22,7 +22,7 @@
  * the value written, and keeps it, saying so, when the SC has changed it since; either way it
  * leaves the record (a kept setting is the SC's now, as in the setup guide).
  *
- * Read live: the `GET`/`PUT` round trip ran against Justrite on 2026-10-10 (memory
+ * Read live: the `GET`/`PUT` round trip ran against Tailspin on 2026-10-10 (memory
  * `reference_accs_system_config_api`), but no response is recorded in this repo; the shapes are
  * Adobe's "System configuration API" page (`CommerceSystemConfigList`, `CommerceSystemConfigPutAnswer`).
  *
@@ -30,20 +30,22 @@
  */
 
 import { z } from 'zod';
+import { STORE_CONFIG_KIND } from '../datapackCatalog';
 import type { CreatedObject } from './installRecord';
 import { type KindContext, type SettingsDone, parseRows } from './kindContext';
 import { certainlyNotMade } from './pendingCreates';
 import type { PendingObject } from './pendingRecord';
-import { skipRow } from './refusedRows';
+import { commerceSaid, skipRow } from './refusedRows';
+import { counted, startRowCount } from './rowCount';
 import { andList } from '@/core/utils/andList';
 import { decideOwnedChange } from '@/core/utils/ownedChange';
-import { SETTING_PATH, configFix, readPrevious } from '@/features/app-builder/services/storePreparation/configFix';
-import type { FixDeps } from '@/features/app-builder/services/storePreparation/fixContract';
-import type { SetupConfigFixItem } from '@/types/appBuilderComponents';
+import { SETTING_PATH, configSetup, readPrevious } from '@/features/app-builder/services/storePreparation/configSetup';
+import type { SetupDeps } from '@/features/app-builder/services/storePreparation/setupContract';
+import type { ConfigSetupItem } from '@/types/appBuilderComponents';
 import type { CommerceGet, CommerceSend } from '@/types/commerceWire';
 import type { CommerceConfigPrevious } from '@/types/storePreparation';
 
-export const STORE_CONFIG_KIND = 'store_config';
+export { STORE_CONFIG_KIND };
 
 const rowsSchema = z.array(
     z.object({
@@ -55,26 +57,37 @@ const rowsSchema = z.array(
 );
 
 /**
- * Paths a pack may not set, whoever made it: Adobe's "System configuration API" page warns that
- * copying base URLs or credentials between environments "can break the production store", and the
- * Admin's own settings decide who can sign in to fix it.
+ * The sections a pack may set (step 09, decision 3, owner 2026-11-02): a pack is untrusted input,
+ * since any path the Admin role can reach is writable through this API, so a section is refused
+ * until someone chooses to allow it.
  */
-const REFUSED_PREFIXES = ['web/unsecure/', 'web/secure/', 'web/cookie/', 'admin/'];
-const CREDENTIAL = /(password|secret|token|(^|_)key)$/u;
+const ALLOWED_SECTIONS = ['catalog', 'sales', 'checkout', 'customer', 'btob', 'cataloginventory'];
+
+/**
+ * Refused whatever the allowed list says, were it ever to grow: Adobe's "System configuration API"
+ * page warns that copying base URLs or credentials between environments "can break the production
+ * store", and the Admin's own settings decide who can sign in to fix it.
+ */
+const NEVER_SECTIONS = ['web', 'admin'];
+const CREDENTIAL = /(password|secret|token|key)$/u;
 
 /** One pack setting, as the settings fix takes it, and the record's name for it. */
 interface PackSetting {
     key: string;
-    item: SetupConfigFixItem;
+    item: ConfigSetupItem;
 }
 
-const keyOf = (item: Pick<SetupConfigFixItem, 'path' | 'scope'>): string => `${item.path}@${item.scope}`;
+const keyOf = (item: Pick<ConfigSetupItem, 'path' | 'scope'>): string => `${item.path}@${item.scope}`;
+
+/** A setting nothing here writes, whoever asks: anything under `web/` or `admin/`, or a credential. */
+export function isOffLimitsSetting(path: string): boolean {
+    return NEVER_SECTIONS.includes(path.split('/')[0]) || CREDENTIAL.test(path);
+}
 
 function refusal(path: string, scope: string): string | undefined {
-    if (scope === 'store' || scope === 'stores') return `${path} is set for one store view, and Demo Builder sets store settings store-wide or for the install's website only`;
-    if (REFUSED_PREFIXES.some((prefix) => path.startsWith(prefix)) || CREDENTIAL.test(path.split('/').pop() ?? '')) {
-        return `${path} is a setting a pack may not change`;
-    }
+    if (scope === 'store' || scope === 'stores') return `${path} is set for one store view, and Demo Builder sets store configuration store-wide or for the install's website only`;
+    if (isOffLimitsSetting(path)) return `${path} is a setting a datapack may not change`;
+    if (!ALLOWED_SECTIONS.includes(path.split('/')[0])) return `${path} is outside what a datapack may set (${andList(ALLOWED_SECTIONS)})`;
     return undefined;
 }
 
@@ -85,14 +98,19 @@ function refusal(path: string, scope: string): string | undefined {
  * @throws Error naming each row refused, so nothing of this kind is written
  */
 export function packSettings(records: unknown, websiteCode: string | undefined): PackSetting[] {
-    const rows = parseRows(rowsSchema, records, 'store settings');
+    const rows = parseRows(rowsSchema, records, 'store configuration');
     const refused = rows.flatMap((row) => refusal(row.path, row.scope) ?? []);
-    if (refused.length > 0) throw new Error(`The pack's store settings cannot be installed: ${andList(refused)}. Nothing of this kind was written.`);
+    if (refused.length > 0) throw new Error(`The datapack's store configuration cannot be installed: ${andList(refused)}. Nothing of this kind was written.`);
+    return settingsOf(rows, websiteCode);
+}
+
+/** The rows as the settings fix takes them, the last row for a path and scope winning. */
+function settingsOf(rows: ReadonlyArray<z.infer<typeof rowsSchema>[number]>, websiteCode: string | undefined): PackSetting[] {
     const settings = new Map<string, PackSetting>();
     for (const row of rows) {
         const scope = row.scope === 'default' ? 'default' : 'website';
-        if (scope === 'website' && !websiteCode) throw new Error('The install target names no website, and the pack sets a website setting.');
-        const item: SetupConfigFixItem = { path: row.path, value: row.value, scope };
+        if (scope === 'website' && !websiteCode) throw new Error('The install target names no website, and the datapack sets a website setting.');
+        const item: ConfigSetupItem = { path: row.path, value: row.value, scope };
         settings.set(keyOf(item), { key: keyOf(item), item });
     }
     return [...settings.values()];
@@ -104,7 +122,7 @@ export type SettingOutcome = 'set' | 'update' | 'already' | 'unchanged' | 'kept'
 interface PlannedSetting {
     key: string;
     outcome: SettingOutcome;
-    item?: SetupConfigFixItem;
+    item?: ConfigSetupItem;
     object?: CreatedObject;
 }
 
@@ -137,7 +155,7 @@ function againstRecord(object: CreatedObject, current: string, wanted: string): 
  */
 async function readWhereRecorded(
     get: CommerceGet,
-    items: ReadonlyArray<Pick<SetupConfigFixItem, 'path' | 'scope'> & { scopeCode?: string }>,
+    items: ReadonlyArray<Pick<ConfigSetupItem, 'path' | 'scope'> & { scopeCode?: string }>,
     websiteCode: string | undefined,
 ): Promise<CommerceConfigPrevious[]> {
     const codeOf = (item: (typeof items)[number]) => (item.scope === 'website' ? (item.scopeCode ?? websiteCode) : undefined);
@@ -185,7 +203,7 @@ export function settingsWebsite(created: readonly CreatedObject[]): string | und
 
 const NONE = (): SettingsDone => ({ changes: [], notes: [], kept: [] });
 
-const fixDeps = (commerce: { get: CommerceGet; send: CommerceSend }, websiteCode: string | undefined): FixDeps => ({ commerce, websiteCode, erpNames: [] });
+const fixDeps = (commerce: { get: CommerceGet; send: CommerceSend }, websiteCode: string | undefined): SetupDeps => ({ commerce, websiteCode, erpNames: [] });
 
 /**
  * Each new setting as pending (step 14 item 1), with what its scope holds now and the value about to
@@ -215,7 +233,7 @@ async function writeSettings(ctx: KindContext, writing: readonly PlannedSetting[
             throw error;
         }
     };
-    const applied = await configFix({ kind: 'config', items }).apply(fixDeps({ get: ctx.get, send }, ctx.session.websiteCode));
+    const applied = await configSetup({ kind: 'config', items }).apply(fixDeps({ get: ctx.get, send }, ctx.session.websiteCode));
     if (lost !== undefined) throw lost;
     const saved = applied.record?.kind === 'config' ? applied.record.previous : [];
     done.changes.push(...applied.changes);
@@ -245,7 +263,8 @@ function skipRefused(ctx: KindContext, writing: readonly PlannedSetting[], rejec
     for (const text of rejected) {
         const planned = writing.find((p) => p.item && text.startsWith(`${p.item.path}: `));
         const path = planned?.item?.path ?? text.split(': ')[0];
-        skipRow(ctx, { kind: STORE_CONFIG_KIND, key: planned?.key ?? path, reason: text.slice(path.length + 2) });
+        const reason = text.slice(path.length + 2);
+        skipRow(ctx, { kind: STORE_CONFIG_KIND, key: planned?.key ?? path, reason, cause: commerceSaid(reason) });
     }
 }
 
@@ -263,12 +282,16 @@ export async function installStoreConfig(ctx: KindContext, records: unknown): Pr
     if (unknown.length > 0) throw new Error(`Demo Builder cannot read what ${andList(unknown)} holds now, so it could not put it back. Nothing of this kind was written.`);
     const done = (ctx.session.settings ??= NONE());
     done.kept.push(...plan.filter((p) => p.outcome === 'kept').map((p) => p.key));
-    const rejected = await writeSettings(ctx, plan.filter((p) => p.outcome === 'set' || p.outcome === 'update'), done);
+    const writing = plan.filter((p) => p.outcome === 'set' || p.outcome === 'update');
     const dropped = plan.flatMap((p) => (p.outcome === 'remove' && p.object ? [p.object] : []));
-    const back = await putBackSettings(ctx, dropped, (o) => ctx.recorder.drop(o));
+    // Settings keep no record by the pack's key, so this kind counts its own: each written or put back.
+    const droppedKeys = dropped.map((o) => o.key ?? o.id);
+    const counting = { count: startRowCount(ctx.progress, STORE_CONFIG_KIND, [...writing.map((p) => p.key), ...droppedKeys]) };
+    const rejected = await counted(counting, STORE_CONFIG_KIND, writing.map((p) => p.key), () => writeSettings(ctx, writing, done));
+    const back = await counted(counting, STORE_CONFIG_KIND, droppedKeys, () => putBackSettings(ctx, dropped, (o) => ctx.recorder.drop(o)));
     const putBack = settingsLine(back, 'Put back');
     if (putBack) done.notes.push(putBack);
-    skipRefused(ctx, plan.filter((p) => p.outcome === 'set' || p.outcome === 'update'), rejected);
+    skipRefused(ctx, writing, rejected);
 }
 
 /**
@@ -285,7 +308,7 @@ export async function putBackSettings(
 ): Promise<SettingsDone> {
     const done = NONE();
     const refused: string[] = [];
-    const fix = configFix({ kind: 'config', items: [] });
+    const fix = configSetup({ kind: 'config', items: [] });
     for (const object of objects.filter((o) => o.kind === STORE_CONFIG_KIND)) {
         const previous = recordedPrevious(object);
         if (!previous) {
@@ -323,13 +346,15 @@ export async function captureSettings(
     installed: Record<string, unknown>,
     websiteCode: string | undefined,
 ): Promise<Record<string, unknown>> {
-    const named = new Map<string, Pick<SetupConfigFixItem, 'path' | 'scope'> & { scopeCode?: string }>();
+    const named = new Map<string, Pick<ConfigSetupItem, 'path' | 'scope'> & { scopeCode?: string }>();
     for (const object of created) {
         const previous = object.kind === STORE_CONFIG_KIND ? recordedPrevious(object) : undefined;
         if (previous) named.set(keyOf(previous), { path: previous.path, scope: previous.scope, ...(previous.scopeCode ? { scopeCode: previous.scopeCode } : {}) });
     }
     if (installed[STORE_CONFIG_KIND] !== undefined) {
-        for (const { key, item } of packSettings(installed[STORE_CONFIG_KIND], websiteCode)) if (!named.has(key)) named.set(key, { path: item.path, scope: item.scope });
+        // The rows' shape only: a path the install would refuse is the save's to refuse, by name (`saveStore.ts`).
+        const rows = parseRows(rowsSchema, installed[STORE_CONFIG_KIND], 'store configuration').filter((row) => row.scope !== 'store' && row.scope !== 'stores');
+        for (const { key, item } of settingsOf(rows, websiteCode)) if (!named.has(key)) named.set(key, { path: item.path, scope: item.scope });
     }
     const wanted = [...named.values()];
     if (wanted.length === 0) return {};
@@ -341,4 +366,20 @@ export async function captureSettings(
         ...(item.scope === 'website' ? { scope_code: now[i].scopeCode } : {}),
     }));
     return { [STORE_CONFIG_KIND]: rows };
+}
+
+/**
+ * A recorded setting moved onto a version just saved (`rebaseRecord`): still what it held before
+ * the first install, now against the value that version carries, so a removal puts it back while
+ * it still holds that. One the version does not carry, or whose record does not say what it held,
+ * is left as it is.
+ *
+ * @param saved - the saved version's rows of this kind
+ */
+export function rebasedSetting(object: CreatedObject, saved: unknown): CreatedObject {
+    const previous = recordedPrevious(object);
+    const rows = rowsSchema.safeParse(saved);
+    if (!previous || !rows.success) return object;
+    const row = rows.data.find((each) => each.path === previous.path && (each.scope === 'default' ? 'default' : 'website') === previous.scope);
+    return row ? { ...object, previous: { ...previous, wrote: row.value } } : object;
 }

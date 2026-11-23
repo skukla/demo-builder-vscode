@@ -37,5 +37,5 @@ Applying the Finish row (step 03), from the modal or `apply_updates`:
 ## Done when
 
 On a throwaway storefront with a planted clash, Fix with AI then Finish pushes one commit
-and the next check is clean. JustRite is the first real run (needs the owner present: it
+and the next check is clean. Tailspin is the first real run (needs the owner present: it
 pushes).

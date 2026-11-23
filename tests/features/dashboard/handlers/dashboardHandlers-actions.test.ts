@@ -3,7 +3,6 @@
  *
  * Tests for action handlers that delegate to commands or open external resources:
  * - handleConfigure: opens project configuration UI
- * - handleDeleteProject: triggers project deletion
  * - handleOpenBrowser: opens demo in browser
  */
 
@@ -18,7 +17,6 @@ jest.mock('@/core/utils/browserUtils', () => ({
 import * as vscode from 'vscode';
 import {
     handleConfigure,
-    handleDeleteProject,
     handleEditProject,
     handleOpenAdminPanel,
     handleOpenBrowser,
@@ -41,6 +39,9 @@ jest.mock(
             showInformationMessage: jest.fn().mockResolvedValue(undefined),
         },
         ColorThemeKind: { Dark: 2, Light: 1 },
+        workspace: {
+            getConfiguration: jest.fn(() => ({ get: jest.fn() })),
+        },
         env: {
             openExternal: jest.fn().mockResolvedValue(true),
         },
@@ -51,8 +52,8 @@ jest.mock(
     { virtual: true }
 );
 
-// Mock projectStateSync (detectFrontendChanges)
-jest.mock('@/core/state/projectStateSync');
+// Mock frontendEnvDrift (detectFrontendChanges)
+jest.mock('@/core/state/frontendEnvDrift');
 
 // Mock authentication
 
@@ -61,11 +62,6 @@ jest.mock('@/core/di/serviceLocator', () => ({
     ServiceLocator: {
         getAuthenticationService: jest.fn(),
     },
-}));
-
-// Mock projectDeletionService to avoid deep dependency chain
-jest.mock('@/features/projects-dashboard/services/projectDeletionService', () => ({
-    deleteProject: jest.fn().mockResolvedValue({ success: true }),
 }));
 
 // Mock the projects-dashboard services barrel (dynamic-imported by the edit/
@@ -99,36 +95,6 @@ describe('Dashboard Action Handlers', () => {
 
             expect(result).toEqual({ success: true });
             expect(mockExecuteCommand).toHaveBeenCalledWith('demoBuilder.configureProject', '/path/to/project');
-        });
-    });
-
-    describe('handleDeleteProject', () => {
-        it('should delegate to deleteProject service with current project', async () => {
-            const { mockContext, mockProject } = setupMocks();
-            const {
-                deleteProject,
-            } = require('@/features/projects-dashboard/services/projectDeletionService');
-
-            const result = await handleDeleteProject(mockContext);
-
-            expect(result).toEqual({ success: true });
-            // Plus where it reports and the id its modal follows (PL-59).
-            expect(deleteProject).toHaveBeenCalledWith(mockContext, mockProject, undefined, {
-                progress: undefined,
-                operationId: expect.stringContaining('delete:'),
-            });
-        });
-
-        it('should return error when no project available', async () => {
-            const { mockContext } = setupMocks();
-            mockContext.stateManager.getCurrentProject = jest.fn().mockResolvedValue(null);
-
-            const result = await handleDeleteProject(mockContext);
-
-            expect(result).toEqual({
-                success: false,
-                error: 'No project found to delete',
-            });
         });
     });
 

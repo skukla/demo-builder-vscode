@@ -308,9 +308,9 @@ describe('an Edit that changed nothing, or only integrations, skips the storefro
         { id: 'create-project', name: 'Create', enabled: true },
     ] as unknown as WizardStepDefinition[];
     const EDITING = {
-        projectName: 'justrite',
-        projectPath: '/p/justrite',
-        settings: { selectedStack: 'eds-accs', selectedPackage: 'justrite' },
+        projectName: 'tailspin',
+        projectPath: '/p/tailspin',
+        settings: { selectedStack: 'eds-accs', selectedPackage: 'tailspin' },
     };
 
     it('records what the SC chose when the Edit opened', () => {
@@ -344,7 +344,7 @@ describe('an Edit that changed nothing, or only integrations, skips the storefro
             useWizardState({ wizardSteps: STEPS, stacks: STACKS, editProject: EDITING })
         );
 
-        act(() => result.current.updateState({ datapack: { name: 'justrite', version: '2.0.0' } }));
+        act(() => result.current.updateState({ datapack: { name: 'tailspin', version: '2.0.0' } }));
 
         expect(stepIds(result.current.WIZARD_STEPS)).not.toContain('storefront-setup');
     });

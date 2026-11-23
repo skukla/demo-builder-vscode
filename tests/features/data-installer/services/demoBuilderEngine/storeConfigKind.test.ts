@@ -1,6 +1,6 @@
 /**
  * The `store_config` kind (datapack-engine step 09): a pack's settings are written through the
- * setup guide's settings fix (`configFix`), store-wide or for the install target's website, each
+ * setup guide's settings fix (`configSetup`), store-wide or for the install target's website, each
  * recorded with what it held before, and put back on removal unless the SC changed it since.
  *
  * The store is a fake of `GET`/`PUT /V1/system/config` in the shapes Adobe's "System configuration
@@ -19,7 +19,7 @@ import {
     settingsLine,
     settingsWebsite,
 } from '@/features/data-installer/services/demoBuilderEngine/storeConfigKind';
-import { configListPath } from '@/features/app-builder/services/storePreparation/configFix';
+import { configListPath } from '@/features/app-builder/services/storePreparation/configSetup';
 import { GRID, LIST, PROJECT_WEBSITE, WEBSITE, configStore, row, storeContext } from './storeConfig.testUtils';
 
 describe('installing a pack’s store settings', () => {
@@ -55,14 +55,42 @@ describe('installing a pack’s store settings', () => {
 
     it.each([
         ['a store-view row', row(GRID, '24', 'stores', 'default'), 'is set for one store view'],
-        ['a base URL', row('web/secure/base_url', 'https://example.com/'), 'a setting a pack may not change'],
-        ['a credential', row('payment/some_gateway/api_key', 'x'), 'a setting a pack may not change'],
+        ['a base URL', row('web/secure/base_url', 'https://example.com/'), 'a setting a datapack may not change'],
+        ['a credential', row('payment/some_gateway/api_key', 'x'), 'a setting a datapack may not change'],
     ])('refuses %s before writing anything', async (_what, refused, words) => {
         const ctx = await storeContext(configStore({ default: { [GRID]: '12', [LIST]: '10' } }));
 
         await expect(installStoreConfig(ctx, [row(LIST, '20'), refused])).rejects.toThrow(words);
 
         expect(ctx.sent).toStrictEqual([]);
+    });
+
+    // Decision 3: an allowed list of sections, and what stays refused whatever the list says.
+    it.each(['catalog/frontend/grid_per_page', 'sales/totals_sort/tax', 'checkout/options/guest_checkout', 'customer/create_account/confirm', 'btob/website_configuration/company_active', 'cataloginventory/options/show_out_of_stock'])(
+        'takes %s: its section is on the allowed list',
+        (path) => {
+            expect(packSettings([row(path, '1')], WEBSITE).map((s) => s.item.path)).toEqual([path]);
+        },
+    );
+
+    it.each(['design/head/default_title', 'payment/checkmo/active', 'carriers/flatrate/active', 'general/locale/code', 'sales_email/order/enabled', 'catalogue/frontend/x'])(
+        'refuses %s by path: its section is not on the allowed list',
+        (path) => {
+            expect(() => packSettings([row(path, '1')], WEBSITE)).toThrow(`${path} is outside what a datapack may set`);
+        },
+    );
+
+    it.each(['web/unsecure/base_url', 'web/seo/use_rewrites', 'admin/security/session_lifetime', 'catalog/search/api_key', 'sales/gateway/apikey', 'customer/captcha/secret', 'checkout/hook/token', 'btob/service/password', 'catalog/search/API_KEY'.toLowerCase()])(
+        'refuses %s whatever the list says',
+        (path) => {
+            expect(() => packSettings([row(path, '1')], WEBSITE)).toThrow(`${path} is a setting a datapack may not change`);
+        },
+    );
+
+    it('names every path it refuses in one sentence, and refuses a malformed path before that', () => {
+        expect(() => packSettings([row('design/a/b', '1'), row('web/a/b', '1')], WEBSITE)).toThrow(/design\/a\/b.*web\/a\/b/u);
+        expect(() => packSettings([row('catalog', '1')], WEBSITE)).toThrow('a setting path is section/group/field');
+        expect(() => packSettings([row('../admin/x', '1')], WEBSITE)).toThrow('a setting path is section/group/field');
     });
 
     it('refuses, writing nothing, a setting that holds no value anywhere: it could not be put back', async () => {
@@ -80,7 +108,7 @@ describe('installing a pack’s store settings', () => {
         await installStoreConfig(ctx, [row(GRID, '24'), row(LIST, '20')]);
 
         expect(ctx.recorder.created.map((o) => o.key)).toEqual([`${GRID}@default`]);
-        expect(ctx.session.skipped).toEqual([{ kind: 'store_config', key: `${LIST}@default`, reason: '10 → 20: not allowed' }]);
+        expect(ctx.session.skipped).toEqual([{ kind: 'store_config', key: `${LIST}@default`, reason: '10 → 20: not allowed', cause: { by: 'commerce', message: '10 → 20: not allowed' } }]);
         expect(ctx.recorder.pending).toStrictEqual([]);
     });
 });
@@ -169,8 +197,8 @@ describe('putting settings back', () => {
 });
 
 /**
- * Live, scratch-1028, 2026-10-30: the pack went to `justrite_test_website`, the project's own
- * website is JustRite's, and the preview read the setting at JustRite's (10, not the 15 written)
+ * Live, scratch-1028, 2026-10-30: the pack went to `tailspin_test_website`, the project's own
+ * website is Tailspin's, and the preview read the setting at Tailspin's (10, not the 15 written)
  * and called it "changed in the Admin". A recorded setting is read where the record says it was
  * written, whatever website the caller is pointed at.
  */
@@ -219,6 +247,14 @@ describe('a recorded website setting is read at the website the record names', (
 });
 
 describe('saving the store’s settings into a new version', () => {
+    it('reads a row the allowed list now refuses, rather than failing the read: the save refuses it in plain words', async () => {
+        const store = configStore({ default: { 'design/head/title': 'Hi' } });
+
+        const rows = await captureSettings(store.get, [], { store_config: [row('design/head/title', 'Hello')] }, WEBSITE);
+
+        expect(rows).toEqual({ store_config: [{ path: 'design/head/title', value: 'Hi', scope: 'default' }] });
+    });
+
     it('reads each recorded setting at its own scope, as it is in the store now', async () => {
         const ctx = await storeContext(configStore({ default: { [GRID]: '30' }, website: { [LIST]: '15' } }));
         const created: CreatedObject[] = [

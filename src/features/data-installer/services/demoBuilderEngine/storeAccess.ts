@@ -10,6 +10,7 @@
 import { type InstallRecord, type InstallRecorder, type RecordFiles, nodeRecordFiles, openInstallRecord } from './installRecord';
 import { type TargetCodes, resolveEngineTarget, sessionFor } from './installTarget';
 import type { KindContext } from './kindContext';
+import type { FindLayer } from './layerStep';
 import { packRootOf, readStoreRoot } from './packRoot';
 import type { CommerceGet, CommerceSend } from '@/types/commerceWire';
 import type { DatapackId, DatapackStoreName } from '@/types/datapack';
@@ -25,9 +26,13 @@ export interface StoreChangesDeps {
     projectPath: string;
     /** The website and store view the project installs into. */
     target: TargetCodes | undefined;
+    /** The Commerce instance, for a record Create writes (`deriveImportInstance`). */
+    instance?: string;
     log: (line: string) => void;
     files?: RecordFiles;
     now?: () => Date;
+    /** The pack's settings layer from the library, with Demo Builder's engine (step 09). */
+    findLayer?: FindLayer;
 }
 
 /** A save or preview that cannot go ahead, in words an SC can act on. */
@@ -58,6 +63,7 @@ const NOTHING_RECORDED: InstallRecorder = {
     markPending: readsOnly,
     confirm: readsOnly,
     forgetPending: readsOnly,
+    keep: readsOnly,
 };
 
 /**
@@ -78,4 +84,26 @@ export async function openStore(deps: StoreChangesDeps, pack: DatapackId | undef
     // Step 12: where a pack's own root goes is decided as the install decides it.
     if (packRootOf(categories)) session.storeRoot = await readStoreRoot(commerce.get, codes);
     return { ...commerce, recorder, session, log: deps.log };
+}
+
+/**
+ * The installed version's own rows: from the store named, else the library, else the Data
+ * Installer. A save that cannot read them stops, rather than save a version missing the pack's
+ * products the store already had.
+ */
+export async function readInstalled(
+    deps: StoreChangesDeps,
+    target: { pack: DatapackId; source?: DatapackStoreName },
+): Promise<{ rows: Record<string, unknown>; source: DatapackStoreName }> {
+    const stores: DatapackStoreName[] = target.source ? [target.source] : ['library', 'installer'];
+    for (const source of stores) {
+        try {
+            return { rows: await deps.readPack(target.pack, source), source };
+        } catch (error) {
+            deps.log(`could not read ${labelPack(target.pack)} from the ${source}: ${error instanceof Error ? error.message : String(error)}`);
+        }
+    }
+    throw new StoreChangesError(
+        `${labelPack(target.pack)} cannot be read from the library or the Data Installer, so the products it holds that Commerce already had cannot be saved with it. Nothing was saved.`,
+    );
 }

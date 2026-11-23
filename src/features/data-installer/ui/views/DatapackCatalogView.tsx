@@ -24,10 +24,10 @@
  * cannot be assumed to exist, so three of the eleven curated brands open on
  * `eds-compatible` instead.
  *
- * **The community toggle re-asks the service.** Curation is a server-side filter
- * the handler owns (`shared: true` unless `includeCommunity`), so this asks again
- * rather than fetching everything and hiding half — 17 of the 40 live rows are
- * developer scratch nobody wants shipped down the wire to be discarded.
+ * **It loads everything once and filters what it holds** (`catalogShow.ts`, owner, 2026-11-05).
+ * It used to ask again for Community only when switched on, to save fetching 17 developer rows of
+ * 40, and every switch then showed its wait on the Refresh button. The Show list has nothing to
+ * wait for.
  *
  * The filter is `matchesSearchFields`, not the `useSearchFilter` hook that wraps
  * it: the hook has zero consumers, its `Record<string, unknown>` constraint does
@@ -38,35 +38,29 @@
  * @module features/data-installer/ui/views/DatapackCatalogView
  */
 
-import { Flex, Switch } from '@adobe/react-spectrum';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { groupDatapacks, type DatapackGroup } from '../../services/datapackCatalog';
-import type { CatalogPage, DataItemInventory, DatapackDetail, InstalledDatapack, Page } from '../../types';
-import { CatalogHeaderActions } from '../components/CatalogHeaderActions';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
+import { updateWaiting } from '../../packVersions';
+import type { CatalogPage, DataItemInventory, DatapackDetail, PackDetailLayer } from '../../types';
+import { CatalogCountRow } from '../components/CatalogCountRow';
+import type { HeaderSaveActions } from '../components/CatalogHeaderActions';
 import { DatapackCatalogGrid } from '../components/DatapackCatalogGrid';
 import { DatapackDetailPanel } from '../components/DatapackDetailPanel';
-import { ImportDatapackModal } from '../components/ImportDatapackModal';
+import { DatapackSourceNotice } from '../components/DatapackSourceNotice';
 import { renderDataInstallerFailure } from '../dataInstallerFailure';
+import { headerSave, heldInCatalogOf, heldSavesOf } from '../headerSave';
+import { useCatalogShow } from '../hooks/useCatalogShow';
+import type { ClearArrival } from '../hooks/useClearArrival';
 import { useDataInstallerRequest } from '../hooks/useDataInstallerRequest';
+import { CATALOG_LOADING, useDatapackCatalog } from '../hooks/useDatapackCatalog';
+import { requestDatapackRename, useDetailFlyout } from '../hooks/useDetailFlyout';
 import { useHeldPack } from '../hooks/useHeldPack';
+import { ImportWindowModal, ownedOf, useImportWindow } from '../hooks/useImportWindow';
+import { useProjectHolding } from '../hooks/useProjectHolding';
+import { installedPackProps } from '../installedPackProps';
 import { FullScreenLoading } from '@/core/ui/components/feedback/FullScreenLoading';
 import { FullScreenSurface } from '@/core/ui/components/layout/FullScreenSurface';
 import { SearchHeader } from '@/core/ui/components/navigation/SearchHeader';
-import { matchesSearchFields } from '@/core/ui/hooks/useSearchFilter';
-import { webviewClient } from '@/core/ui/utils/WebviewClient';
-import type { DatapackId, DatapackStoreName, ProjectDatapack } from '@/types/datapack';
-
-/** Fields a query is matched against — the id and the label, nothing else. */
-const SEARCH_FIELDS: ReadonlyArray<keyof DatapackGroup> = ['name', 'displayName'];
-
-/**
- * Show the search field from the first item, as both page-level peers do.
- *
- * NOT a tuning knob. `SearchHeader` puts the count BESIDE the refresh button when
- * there is no field and BENEATH the field when there is, so a non-zero threshold
- * makes the band change shape as the catalog crosses it.
- */
-const SEARCH_THRESHOLD = 0;
+import type { DatapackId } from '@/types/datapack';
 
 /** What `get-datapack-detail` hands back — metadata plus what is actually stored. */
 interface DatapackDetailResponse {
@@ -74,116 +68,55 @@ interface DatapackDetailResponse {
     inventory: DataItemInventory;
     /** The warning a delete carries when this SC shared the pack in a project file (step 07). */
     sharedInFile?: string;
+    /** The settings layer Import will apply after the pack's data (step 09). */
+    settingsLayer?: PackDetailLayer;
+}
+
+const DATAPACKS_UNAVAILABLE = "Datapacks Aren't Available";
+
+/**
+ * The name the open pack's card shows, for the flyout's title while its detail loads. By version:
+ * a pack's versions can carry different names, and the first one's was shown (2026-11-05).
+ */
+function nameOnCard(page: CatalogPage | null, id: DatapackId | undefined): string | undefined {
+    if (!id) return undefined;
+    const rows = page?.items ?? [];
+    const same = (row: (typeof rows)[number]): boolean => row.id.name === id.name;
+    return (rows.find((row) => same(row) && row.id.version === id.version) ?? rows.find(same))?.displayName;
+}
+
+/** The SC's own datapacks in My Datapacks, by id. */
+function mySavesIn(page: CatalogPage | null): DatapackId[] {
+    return (page?.items ?? []).filter((row) => row.store === 'library' && row.mine === true).map((row) => row.id);
 }
 
 /**
- * Rename the SC's own library pack (step 07), the inline field's contract: null on success,
- * the reason otherwise. The field is the confirmation, so it is sent confirmed.
+ * @param library - the Datapack Library (owner, 2026-11-07): no project is read, no card wears the
+ *   project's check, and nothing that acts on a store is offered (Import, the header's save button,
+ *   Install from File, the Clear menu).
+ * @param clearArrival - a Clear window the Command Palette asked for, which the header opens (P6-Q5)
  */
-async function requestDatapackRename(id: DatapackId, displayName: string): Promise<string | null> {
-    try {
-        const response = await webviewClient.request<{ success: boolean; error?: string }>('rename-library-datapack', {
-            datapackName: id.name,
-            displayName,
-            confirm: true,
-        });
-        return response?.success ? null : (response?.error ?? 'Rename failed');
-    } catch (error) {
-        return error instanceof Error ? error.message : 'Rename failed';
-    }
-}
-
-export function DatapackCatalogView(): React.JSX.Element {
-    const [includeCommunity, setIncludeCommunity] = useState(false);
+export function DatapackCatalogView({ library = false, clearArrival }: { library?: boolean; clearArrival?: ClearArrival } = {}): React.JSX.Element {
     const [query, setQuery] = useState('');
     const [versions, setVersions] = useState<Record<string, string>>({});
-    const [selected, setSelected] = useState<DatapackId | undefined>(undefined);
-    /** Which store the open flyout's pack lives in. */
-    const [selectedStore, setSelectedStore] = useState<DatapackStoreName>('installer');
-    const [importing, setImporting] = useState<DatapackId | undefined>(undefined);
 
-    // Both catalogs in one answer: the Data Installer's packs plus the library's,
-    // each tagged. A library outage still shows the Data Installer's, with a reason.
-    const { load, loading, value, failure, settled } =
-        useDataInstallerRequest<CatalogPage>('find-datapacks');
+    // The one list: Demo Builder's datapack store, then the Data Installer's if it answers.
+    // Set below, once the callbacks it needs exist: what a pack change also reads again (F66).
+    const onPacksChanged = useRef<(() => void) | undefined>(undefined);
+    const { refresh, value, failure, settled, notice, refreshControl } = useDatapackCatalog(onPacksChanged);
     const detail = useDataInstallerRequest<DatapackDetailResponse>('get-datapack-detail');
-    // What the open project was CREATED to hold, recorded by the wizard's Sample
-    // Data area. Optional in every direction: no project, or a project that
-    // chose nothing, simply shows no banner.
-    const projectContext = useDataInstallerRequest<ProjectSampleData>('get-datapack-import-target');
+    const { held, installedAt, failed, updateBehind, installedPacks, projectAnswered, reloadProject, reloadHolding } = useProjectHolding(library);
+    const { show, setShow, installerAnswered, showInstaller, groups, shown, filtered, elsewhere, hideRemoved } = useCatalogShow({
+        page: value,
+        installedPacks,
+        held,
+        query,
+        heldFirst: true,
+    });
 
-    useEffect(() => {
-        load({ includeCommunity, includeLibrary: true });
-    }, [load, includeCommunity]);
+    // The file load asks about replacing only a version the SC's own datapacks hold (Clarity 1.15).
+    const mySaves = useMemo(() => mySavesIn(value), [value]);
 
-    const loadProjectContext = projectContext.load;
-    useEffect(() => {
-        loadProjectContext({});
-    }, [loadProjectContext]);
-
-    /**
-     * What is recorded as installed on this project's instance: Demo Builder's
-     * engine's install records, then the service's tracking (step 14,
-     * `engineHistoryReads`). Before step 14 this was the service's alone, so a
-     * pack our engine installed wore no check.
-     *
-     * Scoped to the instance, so it answers "what is on the box this project
-     * writes to" rather than the global cross-instance list an earlier Installed
-     * view showed (removed for exactly that reason — see `DataInstallerScreen`).
-     *
-     * Self-reported, like every source available here: a `DELETE
-     * get-installed-datapacks` clears the record without uninstalling anything,
-     * so it can say ABSENT while data sits on the instance. That is the safe
-     * direction for a checkmark, and it is why this is unioned with the
-     * project's own record rather than replacing it.
-     */
-    const installed = useDataInstallerRequest<Page<InstalledDatapack>>('list-installed-datapacks');
-    const commerceInstance = projectContext.value?.instance;
-    const loadInstalled = installed.load;
-    useEffect(() => {
-        if (!commerceInstance) {
-            return;
-        }
-        loadInstalled({ commerceInstance });
-    }, [loadInstalled, commerceInstance]);
-
-    /**
-     * Every pack believed to be on this instance, from both self-reports.
-     *
-     * UNION, not either alone. The service's list can be wrong in the absent
-     * direction; the project's record covers only one pack and can outlive a
-     * failed import. Neither is ground truth — nothing here has that, since only
-     * Commerce itself knows what it holds — so the check means "believed
-     * installed", and both sources clear when a removal runs through the
-     * extension, which is the case that matters.
-     */
-    const installedPacks = useMemo(() => {
-        const names = new Set<string>();
-        for (const row of installed.value?.items ?? []) {
-            names.add(row.id.name);
-        }
-        const recorded = projectContext.value?.datapack?.name;
-        if (recorded) {
-            names.add(recorded);
-        }
-        return names;
-    }, [installed.value, projectContext.value]);
-
-    const groups = useMemo(() => groupDatapacks(value?.items ?? []), [value]);
-    const filtered = useMemo(
-        () => groups.filter((group) => matchesSearchFields(group, SEARCH_FIELDS, query)),
-        [groups, query],
-    );
-
-    const refresh = useCallback(
-        (): void => load({ includeCommunity, includeLibrary: true }),
-        [load, includeCommunity],
-    );
-
-    /** Opens VS Code settings at the section a configuration refusal names. */
-    const openDataInstallerSettings = useCallback((): void => {
-        webviewClient.postMessage('open-data-installer-settings');
-    }, []);
     const pickVersion = useCallback(
         (name: string, version: string): void =>
             setVersions((current) => ({ ...current, [name]: version })),
@@ -191,26 +124,24 @@ export function DatapackCatalogView(): React.JSX.Element {
     );
 
     const loadDetail = detail.load;
-    const openDetail = useCallback(
-        (id: DatapackId, store: DatapackStoreName): void => {
-            setSelected(id);
-            setSelectedStore(store);
-            loadDetail({ datapackName: id.name, version: id.version, store });
-        },
-        [loadDetail],
-    );
-    const closeDetail = useCallback((): void => setSelected(undefined), []);
-    // Removing your own library pack closes its flyout and re-reads the catalog.
+    // The flyout's pack: the version its card showed, or the demo's own once known (F77).
+    const flyout = useDetailFlyout({ load: loadDetail, held, versions, groups: shown });
+    const { selected, selectedStore, open: openDetail, close: closeDetail } = flyout;
+    // Removing your own library pack closes its flyout, takes its card off at once, and re-reads the
+    // catalog, which confirms it.
     const removedFromLibrary = useCallback((): void => {
-        setSelected(undefined);
+        if (selected) hideRemoved(selected);
+        closeDetail();
         refresh();
-    }, [refresh]);
+    }, [selected, hideRemoved, closeDetail, refresh]);
 
     // The import modal is mounted HERE, not inside the flyout. As a child of the
     // Drawer it was a dialog nested in a drawer; `IntegrationsScreen` mounts its
     // flow modal beside the list and keeps its flyout view-only, and this follows
     // that. Closing the modal therefore leaves the flyout open behind it.
-    const openImport = useCallback((id: DatapackId): void => setImporting(id), []);
+    // Fixed when it opens: nothing the flyout does afterwards closes it (walk F113).
+    const owned = useMemo(() => ownedOf(value, held, installedAt), [value, held, installedAt]);
+    const importWindow = useImportWindow(detail.value, selectedStore, owned);
     /**
      * Closing the import modal RE-READS which pack this project holds.
      *
@@ -224,38 +155,59 @@ export function DatapackCatalogView(): React.JSX.Element {
      * knowledge and the read is a cheap local lookup, so asking it to report back
      * would be a second thing to keep in step for no gain.
      */
+    const closeWindow = importWindow.close;
     const closeImport = useCallback((): void => {
-        setImporting(undefined);
-        loadProjectContext({});
-        if (commerceInstance) {
-            loadInstalled({ commerceInstance });
-        }
-    }, [loadProjectContext, loadInstalled, commerceInstance]);
+        closeWindow();
+        reloadHolding();
+    }, [closeWindow, reloadHolding]);
 
     /**
-     * The held pack's actions (`useHeldPack`): "Save store changes to this pack" and "Save from
-     * this store" (steps 05 and 14), and its one Admin step (step 12). Closing a save's progress
-     * window reads the catalog and the project again, since the library now holds a new version.
+     * The held pack's actions (`useHeldPack`): the header's save button and its one Admin step
+     * (step 12). A finished save reads the catalog and the project
+     * again, since the library now holds a new version and the demo uses it.
      */
     const afterSave = useCallback((): void => {
-        loadProjectContext({});
+        reloadProject();
         refresh();
-    }, [loadProjectContext, refresh]);
+    }, [reloadProject, refresh]);
+    // The flyout waits for the project's first answer too: its main button and Uninstall hang on it,
+    // and the flyout's save appeared on its own a moment after the other buttons (owner, 2026-11-09,
+    // walk F92). The detail is held
+    // back too: the panel shows a detail already on show whatever `loading` says.
+    const flyoutLoading = detail.loading || !projectAnswered;
+    const flyoutDetail = projectAnswered ? (detail.value?.detail ?? null) : null;
+    const heldInCatalog = useMemo(() => heldInCatalogOf(value, held), [value, held]);
+    // Update waits on the demo's datapack (J9-1): the flyout's main button is Update, not Restore.
+    const heldUpdatable = useMemo(() => held !== undefined && updateWaiting(held, value?.items ?? [], updateBehind), [held, value, updateBehind]);
     const heldPack = useHeldPack({
         selected,
-        selectedStore,
-        held: projectContext.value?.datapack,
-        engine: value?.engine,
+        held,
         detail: detail.value?.detail,
-        detailLoading: detail.loading,
+        heldInCatalog,
+        detailLoading: flyoutLoading,
+        ownNames: owned.ownNames,
         onSaved: afterSave,
     });
+
+    // The header reads Create once known; the demo's datapack's saves are in its flyout (walk F219).
+    const { create: createDatapack, saveDemo, saveDemoAsNew } = heldPack;
+    const saveState = headerSave({ projectAnswered, catalogAnswered: settled, held, installedAt, heldInCatalog });
+    const save = useMemo((): HeaderSaveActions | undefined => (library ? undefined : { pending: saveState === 'pending', onCreate: createDatapack }), [library, saveState, createDatapack]);
+    const heldSaves = useMemo(() => heldSavesOf(saveState, { onUpdate: saveDemo, onSaveAsNew: saveDemoAsNew, into: heldInCatalog?.displayName }), [saveState, saveDemo, saveDemoAsNew, heldInCatalog]);
 
     const retryDetail = useCallback((): void => {
         if (selected) {
             loadDetail({ datapackName: selected.name, version: selected.version, store: selectedStore });
         }
     }, [loadDetail, selected, selectedStore]);
+
+    // Another Datapacks screen, or an agent, changed the packs (F66): the list reads itself again
+    // (`useDatapackCatalog`), then this reads which pack the project holds, and the open pack's details.
+    const packsChanged = useCallback((): void => {
+        if (!library) reloadHolding();
+        retryDetail();
+    }, [library, reloadHolding, retryDetail]);
+    onPacksChanged.current = packsChanged;
 
     // A rename shows on the card and in the flyout: both are read again once it lands.
     const renamePack = useCallback(
@@ -270,7 +222,7 @@ export function DatapackCatalogView(): React.JSX.Element {
         [refresh, retryDetail],
     );
 
-    // Sharing shows on the card (its Shared label) and in the flyout: both are read again.
+    // Sharing shows on the card (its Community tag) and in the flyout: both are read again.
     const sharingChanged = useCallback((): void => {
         refresh();
         retryDetail();
@@ -292,13 +244,13 @@ export function DatapackCatalogView(): React.JSX.Element {
         // there; centred across the whole window it sat far to their right
         // (2026-10-29).
         return (
-            <FullScreenLoading message="Loading datapacks" withinContentColumn />
+            <FullScreenLoading message={CATALOG_LOADING} withinContentColumn />
         );
     }
 
     if (failure) {
         return renderDataInstallerFailure(failure, refresh, {
-            onOpenSettings: openDataInstallerSettings,
+            unreachableTitle: DATAPACKS_UNAVAILABLE,
         });
     }
 
@@ -307,114 +259,85 @@ export function DatapackCatalogView(): React.JSX.Element {
             {/* No `Flex` wrapper around the header: the two surfaces that have
                 one need it for trailing buttons, and this one has none to place. */}
             <FullScreenSurface
+                waiting={refreshControl.refreshWaitBelow ? CATALOG_LOADING : undefined}
                 header={
                     <SearchHeader
                         searchQuery={query}
                         onSearchQueryChange={setQuery}
                         searchPlaceholder="Filter datapacks"
-                        searchThreshold={SEARCH_THRESHOLD}
-                        totalCount={groups.length}
+                        totalCount={shown.length}
                         filteredCount={filtered.length}
                         itemNoun="datapack"
-                        onRefresh={refresh}
-                        isRefreshing={loading}
+                        {...refreshControl}
                         refreshAriaLabel="Refresh datapacks"
                         hasLoadedOnce={value !== null}
-                        // Always: the toggle lives on this row, and an empty
-                        // curated catalog is exactly when it must be reachable.
+                        // Always: the Show list lives on this row, and an empty view is
+                        // exactly when it must be reachable. Choosing one must not move the row.
                         alwaysShowCount
+                        alwaysShowSearch
                         countTrailing={
-                            <Flex gap="size-200" alignItems="center">
-                                <Switch
-                                    isSelected={includeCommunity}
-                                    onChange={setIncludeCommunity}
-                                >
-                                    Include community datapacks
-                                </Switch>
-                                {/* Create datapack, Load from file, then Clear demo data set apart. */}
-                                <CatalogHeaderActions
-                                    onCatalogChanged={refresh}
-                                    engine={value?.engine}
-                                    onSaveFromStore={heldPack.saveFromStore}
-                                />
-                            </Flex>
+                            <CatalogCountRow
+                                show={show}
+                                onShow={setShow}
+                                installerAnswered={installerAnswered}
+                                onCatalogChanged={refresh}
+                                save={save}
+                                mySaves={mySaves}
+                                ownNames={owned.ownNames}
+                                clearRequest={clearArrival?.request}
+                                onClearRequestTaken={clearArrival?.taken}
+                                onInstall={library ? undefined : importWindow.openLoaded}
+                            />
                         }
                     />
                 }
             >
-                {value?.libraryError ? (
-                    <p className="datapack-export-note">
-                        The datapack library could not be listed: {value.libraryError}
-                    </p>
-                ) : null}
+                <DatapackSourceNotice {...notice} onShowInstaller={showInstaller} />
                 <DatapackCatalogGrid
-                    groups={groups}
+                    groups={shown}
                     filtered={filtered}
+                    show={show}
+                    elsewhere={elsewhere}
+                    onShow={setShow}
                     query={query}
                     versions={versions}
                     pickVersion={pickVersion}
                     openDetail={openDetail}
                     installedPacks={installedPacks}
+                    held={held}
+                    installedAt={installedAt}
+                    heldFailed={failed !== undefined}
+                    updateBehind={updateBehind}
+                    othersListed={groups.length > shown.length}
+                    library={library}
                 />
             </FullScreenSurface>
-
             <DatapackDetailPanel
                 selected={selected}
-                detail={detail.value?.detail ?? null}
+                selectedName={nameOnCard(value, selected)}
+                detail={flyoutDetail}
                 inventory={detail.value?.inventory ?? null}
-                loading={detail.loading}
+                loading={flyoutLoading}
                 failure={detail.failure}
                 onClose={closeDetail}
                 onRetry={retryDetail}
-                onImport={openImport}
+                onImport={library ? undefined : importWindow.open}
                 onRemoved={removedFromLibrary}
-                installsFromLibrary={value?.engine === 'demo-builder'}
-                onSaveStoreChanges={heldPack.offerSave}
+                installerOn={value?.installerOn === true}
                 setupStep={heldPack.setupStepLine}
                 onRename={renamePack}
                 sharedInFile={detail.value?.sharedInFile}
                 onSharingChanged={sharingChanged}
+                settingsLayer={detail.value?.settingsLayer}
+                {...(flyout.undoTo ? { undoTo: flyout.undoTo } : {})}
+                {...installedPackProps({ library, held, installedAt, selected, failed, updatable: heldUpdatable, saves: heldSaves }, importWindow.openRemoval)}
             />
             {heldPack.windows}
 
             {/* Only what the service HOLDS is importable — the inventory, never
                 the pack's declared types. Mounted while `importing` is set, so
                 closing it leaves the flyout behind it open. */}
-            {importing && detail.value ? (
-                <ImportDatapackModal
-                    id={importing}
-                    displayName={detail.value.detail.displayName}
-                    availableTypes={detail.value.inventory.present}
-                    source={selectedStore}
-                    onClose={closeImport}
-                />
-            ) : null}
+            {importWindow.window ? <ImportWindowModal opened={importWindow.window} onClose={closeImport} /> : null}
         </>
     );
 }
-
-/** What `get-datapack-import-target` reports about the open project. */
-interface ProjectSampleData {
-    projectName?: string;
-    /** The Commerce instance this project writes to — scopes the installed list. */
-    instance?: string;
-    datapack?: ProjectDatapack;
-}
-
-/*
- * A `RecordedChoiceNotice` banner was previously rendered here and has been
- * replaced by the card's own check: a full-width bar reading "<project> is set up
- * for <pack> (main)" with a "Review and install" link.
- *
- * It existed to close the wizard's loop — the Sample Data step records a pack and
- * deliberately does not import it, so the user needed the name carried forward
- * rather than re-found among 25 cards. That need is real and has not gone away;
- * it is now met by the card itself, which wears the shared `SelectionCheck` and
- * the accent border. The banner announced a card's state somewhere the card was
- * not, and then needed a link to point back at it.
- *
- * The wording had also stopped being true. `project.datapack` was written only by
- * the wizard, so "is set up for" meant "chosen, not yet installed" — until an
- * import from the modal began writing the same field, at which point the bar
- * invited the user to install what they had just installed.
- */

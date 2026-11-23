@@ -27,6 +27,8 @@ export function checkEndpoint(options: {
     url: string;
     fixture: unknown;
     token: string;
+    /** The org's code (`…@AdobeOrg`), sent as `x-gw-ims-org-id` when given. */
+    orgCode?: string;
     fetchImpl: (url: string, init?: unknown) => Promise<{
         status: number;
         ok: boolean;

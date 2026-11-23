@@ -4,12 +4,12 @@ kind: fix
 area: app-builder
 needs: []
 value: med
-status: built
+status: shipped
 ---
 
 # An agent cannot name the first ERP when it adds the ERP integration
 
-Filed 2026-10-04, found re-adding the Justrite pair through the agent surface.
+Filed 2026-10-04, found re-adding the Tailspin pair through the agent surface.
 
 `add_integration` takes `id`, `source`, `name`, `instanceId`, `apis` and
 `refreshCli` — nothing for the integration's text settings. The ERP integration's
@@ -32,7 +32,7 @@ which arrives with the integration, has no way in.
 ## The fix
 
 Let `add_integration` take the entry's text settings at add time (e.g. `settings:
-{ ERP_DISPLAY_NAME: "Justrite ERP" }`), validated against the catalog entry's
+{ ERP_DISPLAY_NAME: "Tailspin ERP" }`), validated against the catalog entry's
 `envSchema` the same way the add dialog validates them, and say in its description
 that the ERP's name is fixed once added. Human and agent surface then agree.
 
@@ -43,3 +43,4 @@ Undo: unchanged — `remove_integration` already removes the pair.
 - 2026-10-05  Built. The handler already named the first ERP from add_integration's name (the same field the add dialog fills); the tool just never said so. Fixed the tool and name-field descriptions (name names the first ERP; cannot change after add), removed a stale comment claiming an add_integration preflight, pinned the deploy argument with the real resolver and catalog. No settings field added: it would be a second door to the same value. Gate green.
 - 2026-10-04  fix(ai): add_integration says its name names the ERP integration's first ERP (`a9616582a`)
 - 2026-10-04  docs(backlog): AB-67 — an agent cannot name the first ERP when it adds the ERP integration (`e06700b37`)
+- 2026-11-20  Released in v1.0.0-beta.153

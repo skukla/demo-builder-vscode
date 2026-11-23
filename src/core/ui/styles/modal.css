@@ -3,9 +3,9 @@
  *
  * FEATURE-SCOPED DESPITE LIVING IN core/ui (ADR-017 §6, and §3 as amended
  * 2026-09-09: reach, not global). `Modal` is in core/ui/components/ui, but only
- * SIX entries render it — wizard, dashboard, integrations, aiOverview,
- * dataInstaller and projectsList (the Updates modal, PL-80). `configure` and
- * `sidebar` do not, and do not import this sheet.
+ * EIGHT entries import it — wizard, dashboard, configure, integrations,
+ * aiOverview, dataInstaller, siteAccess and projectsList (the Updates modal,
+ * PL-80). `sidebar` does not.
  *
  * `.modal-body:has(.manage-apis-body)` travels with this family, not with
  * `.manage-*`: its first class decides ownership, and it styles the modal body.
@@ -21,6 +21,13 @@
    scrolling content bleed through that strip, so zero it — the footer owns the bottom gap. */
 .modal-content {
     padding-bottom: 0;
+    /* Room for a focus ring (2px outline, 2px offset) at the dialog's edges. Spectrum's content
+       box clips what it holds, and the buttons and the body's fields sit flush with its sides
+       and bottom, so a ring there was cut off. The box reaches 4px further out on those three
+       sides, and the body and the buttons take the 4px back as padding, so nothing moves.
+       It also stops a field's own ring room (`.search-header`) poking past the body's edge,
+       which made the body scroll sideways by 4px (owner, 2026-11-04). */
+    margin: 0 -4px -4px;
     /* Column flex so .modal-body can grow and push the footer to the true bottom on a
        SHORT modal (sticky only pins against an overflowing container — see below). */
     display: flex;
@@ -33,6 +40,8 @@
 .modal-body {
     flex: 1 1 auto;
     min-height: 0;
+    /* The ring room `.modal-content` reaches out for, given back. */
+    padding: 0 4px;
     /* THE scroll container. Without this the body just grows: a long list (the
        ~90-row Adobe API picker) overflows the dialog, and the sticky footer pins
        against a container that no longer scrolls — so the buttons land in the
@@ -105,6 +114,17 @@
     flex: 0 1 auto;
 }
 
+/* A wait, centred both ways between the title's rule and the buttons (dialog design rules).
+   The padding matches the 24 the footer keeps above the buttons, less the 16 the dialog's content
+   already sits under the rule, so the space above and below comes out equal. */
+.modal-wait {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 72px;
+    padding-top: 8px;
+}
+
 .modal-footer-actions {
     /* Pin to the bottom of the dialog's scroll area so the primary action stays visible while
        a tall body (e.g. the integration catalog grid) scrolls. With .modal-content's bottom
@@ -113,14 +133,312 @@
     position: sticky;
     bottom: 0;
     z-index: 1;
+    /* 24 between the body and the buttons (dialog design rules). The 16px of padding that
+       sat over the rule line went with the line. */
     margin-top: 24px;
-    padding-top: 16px;
-    padding-bottom: 16px;
+    /* No space of its own above or below: the dialog's own padding below matches the 40 above
+       its title. The 4px on the sides and bottom is the ring room `.modal-content` reaches out
+       for, given back. */
+    padding: 0 4px 4px;
     display: flex;
     justify-content: flex-end;
+    /* Wraps the row, never a label, when the dialog is too narrow for its buttons. */
+    flex-wrap: wrap;
     gap: 8px;
-    border-top: 1px solid var(--spectrum-global-color-gray-200);
+    /* No rule over the buttons: one rule per dialog, under the title (dialog design rules,
+       docs/development/sop/dialog-design.md). The background still hides content scrolling
+       under the pinned footer. */
     background: var(--spectrum-global-color-gray-100);
+}
+
+/* Modal `startButtons`: held to the footer's start, the dialog's own answers staying at its end. */
+.modal-footer-start {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-right: auto;
+}
+
+/* The title, with how things stand as an icon before it (Modal `status`). The icon sits on the
+   title's first line when a long title wraps. Top-aligned in its line, so the icon arriving as a
+   run ends does not grow the title row (it added 3px, measured; decisions Phase 1b, J1-3d). */
+.modal-title {
+    display: inline-flex;
+    vertical-align: top;
+    align-items: flex-start;
+    gap: 10px;
+    overflow-wrap: anywhere;
+}
+
+.modal-status-icon {
+    display: inline-flex;
+    flex-shrink: 0;
+    margin-top: 3px;
+}
+
+/* Pinned near the top, not centred: content that grows pushes only the bottom edge down, so
+   nothing above it moves under the pointer. Spectrum's wrapper centres its panel, and the panel
+   is the element whose direct child is our dialog. Every Spectrum class arrives with a build
+   prefix (`PDo2aW_react-spectrum-Modal`, measured in the built bundle 2026-10-31: a selector
+   on the bare name matched nothing), so the panel is found by its child, and a fullscreen
+   dialog keeps Spectrum's placement. */
+[class*="spectrum-Modal"]:has(> .modal-dialog):not([class*="fullscreen"]) {
+    align-self: flex-start;
+    margin-top: calc(var(--spectrum-visual-viewport-height) * 0.08);
+    max-height: calc(var(--spectrum-visual-viewport-height) * 0.84);
+}
+
+/* A wait in the box it found, which is taller than it needs: level between the rule and the
+   buttons. */
+.modal-dialog.is-holding .modal-content,
+.modal-dialog.is-holding .modal-body {
+    flex: 1 1 auto;
+}
+
+.modal-dialog.is-holding .modal-body {
+    display: flex;
+    align-items: center;
+}
+
+/* A window never changes height once on screen (owner, 2026-11-11; `StepsDialog`, `useFixedHeight`).
+   The box keeps the height it opened at; the body fills it and scrolls, so the buttons stay at the
+   bottom. Beats `.modal-fit-content`'s `flex: 0 1 auto` on specificity. The two wrappers Modal puts
+   round its children (SteadyHeight's column and its inner div) grow with it, so a wait can sit
+   level in the middle of the space. */
+.modal-dialog.is-locked .modal-content,
+.modal-dialog.is-locked .modal-body {
+    flex: 1 1 auto;
+    min-height: 0;
+}
+
+.modal-dialog.is-locked .modal-body,
+.modal-dialog.is-locked .modal-body > *,
+.modal-dialog.is-locked .modal-body > * > * {
+    display: flex;
+    flex-direction: column;
+}
+
+.modal-dialog.is-locked .modal-body > *,
+.modal-dialog.is-locked .modal-body > * > * {
+    flex: 1 0 auto;
+}
+
+/* Every step in one grid cell: the one shown, and until the height is held, the others hidden
+   beside it, so the tallest sets the box from the first frame. */
+.modal-steps {
+    display: grid;
+    flex: 1 0 auto;
+    grid-template-columns: minmax(0, 1fr);
+}
+
+/* Mounted but not shown while the small wait window stands in for it (`StepsWindow`): the grid
+   above would otherwise beat the attribute's own display. */
+.modal-steps[hidden] {
+    display: none;
+}
+
+.modal-steps > * {
+    grid-area: 1 / 1;
+    min-width: 0;
+}
+
+.modal-steps-ghost {
+    visibility: hidden;
+    pointer-events: none;
+}
+
+.modal-steps > .modal-wait {
+    align-self: center;
+}
+
+/* Measured before it is seen, so the first height the SC sees is the one it keeps. The box is
+   Spectrum's panel round the dialog, which paints the background, so it is hidden too: hiding the
+   dialog alone left an empty box on screen that grew when the content arrived (owner, 2026-11-11). */
+.modal-dialog.is-measuring,
+[class*="spectrum-Modal"]:has(> .modal-dialog.is-measuring) {
+    visibility: hidden;
+}
+
+/* The progress window's wait: room for its large spinner and all three lines, measured in Chromium
+   (2026-11-02), so a line arriving does not move the box. The spinner and its words sit in the
+   middle row, level between the rule and the buttons whatever else is there. */
+.modal-wait-progress {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: 1fr auto 1fr;
+    min-height: 176px;
+}
+
+.modal-wait-progress > [role="status"] {
+    grid-row: 2;
+}
+
+/* With what the run acts on as a line under the title, in the room above the spinner and matched
+   by the same below: room for all three lines and it. The margin brings the line back to the 16
+   under the title that `.modal-wait`'s padding takes it past. */
+.modal-wait-progress-subject {
+    min-height: 200px;
+}
+
+.modal-wait-progress > .modal-progress-subject {
+    grid-row: 1;
+    margin-top: -8px;
+    margin-bottom: 4px;
+    text-align: left;
+}
+
+/* A dialog body's rows, 8px apart (dialog design rules): a confirm's consequences, a line each. */
+.dialog-rows {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+/* A result's line with its own action (`ResultDialog rows`): the row, then its button under the name,
+   in line with the text rather than the icon. */
+.dialog-row-action {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+}
+
+.dialog-row-action > :not(.work-row) {
+    margin: 0 0 0 28px;
+}
+
+/* A dialog body's parts, 16px apart, each without margins of its own. */
+.dialog-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.dialog-stack > * {
+    margin: 0;
+}
+
+/* The Guide layout in two columns (`GuideDialog` columns="two", step-07 Win4; moved from the setup
+   guide's own sheet, declarations unchanged): the step list wide enough to read its labels whole,
+   with the rule beside it, and the chosen step taking the rest. */
+.guide-columns {
+    display: grid;
+    grid-template-columns: 232px minmax(0, 1fr);
+    gap: 40px;
+    align-items: start;
+}
+
+.guide-columns-list {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+    padding-right: 24px;
+    border-right: 1px solid var(--spectrum-global-color-gray-300);
+}
+
+/* A guide step: its row (or the step drawn whole), then its own buttons beside it, small and in
+   the footer's order (`GuideDialog`). The rows keep the rule between them that a bare
+   `work-row-list` draws. */
+.guide-step {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.work-row-list > .guide-step + .guide-step {
+    border-top: 1px solid var(--spectrum-global-color-gray-200);
+}
+
+/* A step drawn whole is a block, not a row: its buttons sit under it, where its facts end. */
+.guide-step--drawn {
+    flex-direction: column;
+    align-items: flex-start;
+}
+
+.guide-step--drawn > .guide-step-body {
+    width: 100%;
+}
+
+.guide-step-body {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.guide-step-actions {
+    display: flex;
+    flex: 0 0 auto;
+    gap: 8px;
+}
+
+/* A line of body text that is not the lead (a result's troubled types). */
+.dialog-line {
+    margin: 0;
+    font-size: 14px;
+    line-height: 1.5;
+    color: var(--spectrum-global-color-gray-800);
+    overflow-wrap: anywhere;
+}
+
+/* A line of reading stops at about 60 characters, in every window: a sentence across a whole
+   large box is one thin line in an empty one (owner, 2026-11-10). Here and not in
+   modal-text.css, because this file reaches every bundle that draws a window and that one does
+   not; unlayered, so it wins over the layered `.lead-text` there. A feature stylesheet never
+   sets max-width, font-size or font-weight on these classes (`tests/sop/modal-layouts.test.ts`). */
+.lead-text,
+.dialog-line {
+    max-width: 60ch;
+}
+
+/* A window whose body is only sentences leads at 16px, so the sentence reads ahead of the
+   buttons; lists, forms and rows stay at 14px. Drawn by `LeadText sentences`, which a layout
+   component sets from what it holds, never the caller. */
+.lead-text-sentences {
+    font-size: 16px;
+}
+
+/* A run's question (`feedback/OperationQuestion`): two groups 24 apart, the text then the fields
+   (the dialog rules' gap between groups). Flat 16px gaps between every line read as noise (owner,
+   2026-11-04). */
+.operation-question {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+/* The sentence and its steps: one group, 8 apart, the steps under the sentence they finish. */
+.operation-question-text {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+/* The steps numbered (the reset strips a list's markers), a shade quieter than the sentence. */
+.dialog-steps {
+    margin: 0;
+    padding-left: 22px;
+    list-style: decimal;
+    font-size: 14px;
+    line-height: 1.5;
+    color: var(--spectrum-global-color-gray-700);
+}
+
+/* A note: small and muted, for what the SC need only know. */
+.dialog-note {
+    margin: 0;
+    font-size: 12px;
+    line-height: 1.5;
+    /* The labels' grey: gray-700 read nearly as bright as body text in the dark theme. */
+    color: var(--spectrum-global-color-gray-600);
+}
+
+/* A note about a problem: small, but it keeps its colour. No colour of its own, so `.text-notice`
+   (a warning) or `.text-negative` (a failure) sets it. */
+.dialog-problem {
+    margin: 0;
+    font-size: 12px;
+    line-height: 1.5;
+    overflow-wrap: anywhere;
 }
 
 /* Modal step crossfade transition (architecture ↔ block libraries) */
@@ -151,7 +469,9 @@
     padding: 0 14px;
     border-radius: 16px;
     font-size: 14px;
-    font-weight: 600;
+    /* Spectrum's own button weight, read from its token rather than chosen here (owner,
+       2026-11-10): the larger lead, not a lighter button, puts the sentence ahead. */
+    font-weight: var(--spectrum-global-font-weight-bold);
     cursor: pointer;
     transition: background-color var(--spectrum-global-animation-duration-100) ease, border-color var(--spectrum-global-animation-duration-100) ease;
     border: 2px solid transparent;
@@ -165,12 +485,15 @@
 }
 
 .modal-button-secondary:hover {
-    background: rgba(255, 255, 255, 0.07);
-    border-color: var(--spectrum-global-color-gray-200);
+    background: var(--spectrum-global-color-gray-300);
+    border-color: var(--spectrum-global-color-gray-400);
+    color: var(--spectrum-global-color-gray-900);
 }
 
 .modal-button-secondary:active {
-    background: rgba(255, 255, 255, 0.1);
+    background: var(--spectrum-global-color-gray-400);
+    border-color: var(--spectrum-global-color-gray-400);
+    color: var(--spectrum-global-color-gray-900);
 }
 
 .modal-button-primary {
@@ -187,6 +510,31 @@
 .modal-button-primary:active {
     background: var(--spectrum-accent-background-color-down, var(--spectrum-global-color-blue-600));
     border-color: var(--spectrum-accent-background-color-down, var(--spectrum-global-color-blue-600));
+}
+
+/* A dangerous main action: solid red. It was mapped to the outline style, so no removal in any
+   house dialog showed red. Spectrum's own token for a negative button, not the colour scale:
+   the dark theme inverts the scale, so red-600 drew pale pink (measured 2026-10-31). */
+.modal-button-negative {
+    background: var(--spectrum-negative-background-color-default);
+    color: white;
+    border-color: var(--spectrum-negative-background-color-default);
+}
+
+.modal-button-negative:hover {
+    background: var(--spectrum-negative-background-color-hover);
+    border-color: var(--spectrum-negative-background-color-hover);
+}
+
+/* An action beside the main one: no border until hovered. */
+.modal-button-quiet {
+    background: transparent;
+    color: var(--spectrum-global-color-gray-800);
+}
+
+.modal-button-quiet:hover {
+    background: var(--spectrum-global-color-gray-300);
+    color: var(--spectrum-global-color-gray-900);
 }
 
 .modal-button:focus-visible {
@@ -224,22 +572,20 @@
     display: inline-flex;
 }
 
-/* The progress modal's body (PL-59, OperationProgressModal): ONE height for every
- * state, with the content centred in it, so the modal never resizes as stages come and
- * go, a step wraps, or it turns into a failure (owner, 2026-09-19). Sized for the
- * tallest state — a failure whose reason runs to three lines; a longer one scrolls
- * inside. Here rather than in a feature sheet because every screen that hosts a Modal
- * hosts this one, and this sheet is what reaches them. */
-.modal-progress-body {
-    display: flex;
-    flex-direction: column;
-    /* `safe`: content taller than the body (a result's rows) starts at the top and
-       scrolls, rather than overflowing above it where nothing can scroll to. */
-    justify-content: safe center;
-    /* 240px until 2026-10-28, when the delete question (two boxes, each naming what it
-       deletes) overflowed it; 280 leaves a margin for a question one box longer. */
-    height: 280px;
-    overflow-y: auto;
+/* A button whose label changes while open (`sizeLabels`): every label it may show sits hidden in
+   the same cell, so the widest sets its width and its neighbours never move (owner, 2026-11-04). */
+.modal-button-sized {
+    display: inline-grid;
+    justify-items: center;
+}
+
+.modal-button-sized > * {
+    grid-area: 1 / 1;
+    white-space: nowrap;
+}
+
+.modal-button-sizer {
+    visibility: hidden;
 }
 
 /* A question's checkbox detail (what the box deletes), on its own smaller line inside the
@@ -252,13 +598,75 @@
 }
 
 /* What the operation acts on, under a short title instead of inside a long one that
- * wrapped ("Changing destination to Kukla Test App 2 · Production", 2026-10-28). One
- * line in every state, so the body below keeps its one height. */
+ * wrapped ("Changing destination to Kukla Test App 2 · Production", 2026-10-28). Wraps
+ * rather than cutting off: nothing in a dialog ends in an ellipsis (dialog design rules). */
 .modal-progress-subject {
     font-size: 14px;
     color: var(--spectrum-global-color-gray-700);
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    overflow-wrap: anywhere;
 }
+
+/* How a run or an action ended (`ResultBody`; owner, 2026-11-17, walk F222): the wizard's success
+   look in a dialog. The large mark centred where the run's spinner was, the outcome in bold under
+   it, one reason centred and muted under that. At least the room the run's three centred lines
+   held (`.modal-wait-progress`), so a window never shrinks from its run to its result. */
+.result-body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 176px;
+    padding-top: 8px;
+    text-align: center;
+}
+
+.result-body > * {
+    margin: 0;
+}
+
+.result-mark {
+    display: flex;
+    margin-bottom: 8px;
+}
+
+.result-outcome {
+    font-size: 18px;
+    font-weight: 700;
+    line-height: 1.3;
+    color: var(--spectrum-global-color-gray-900);
+    overflow-wrap: anywhere;
+}
+
+.result-reason {
+    max-width: 60ch;
+    font-size: 14px;
+    line-height: 1.5;
+    color: var(--spectrum-global-color-gray-700);
+    overflow-wrap: anywhere;
+}
+
+/* Several lines, or the rows a run keeps, read left-aligned under the outcome, 16 below it. The
+   capped scroll (`scroll-fade--capped`) keeps the mark, the outcome and the buttons in view. */
+.result-detail {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    align-self: stretch;
+    margin-top: 8px;
+    text-align: left;
+}
+
+.result-detail > * {
+    margin: 0;
+}
+}
+
+@layer overrides {
+    @media (prefers-reduced-motion: reduce) {
+        .modal-dialog,
+        .modal-dialog .modal-content {
+            transition: none;
+        }
+    }
 }

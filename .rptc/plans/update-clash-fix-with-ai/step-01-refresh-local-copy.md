@@ -31,4 +31,4 @@ clash is kept there (step 02).
 
 ## Done when
 
-JustRite's copy, after the next update, matches its GitHub main.
+Tailspin's copy, after the next update, matches its GitHub main.

@@ -169,15 +169,15 @@ export function IntegrationsScreen({
             >
                 {/* The empty state renders INSIDE the page chrome, not instead of
                     it. As a full-screen takeover it dropped the title, the
-                    project · destination subtitle, and the Project Dashboard
+                    project and destination subtitle, and the Project Dashboard
                     button — so removing your last integration stranded you on a
                     screen with no project context and no way back. */}
                 {cards.length === 0 ? (
                     <CtaEmptyState
-                        title="No integrations yet"
+                        title="No Integrations Yet"
                         description="Add an API Mesh, a pre-built integration, or your own."
                         actions={[
-                            { label: 'Add integration', variant: 'accent', onPress: openAdd },
+                            { label: 'Add Integration', variant: 'accent', onPress: openAdd },
                         ]}
                     />
                 ) : (

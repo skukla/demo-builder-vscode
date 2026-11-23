@@ -5,7 +5,7 @@ area: platform
 parent: PL-56
 needs: [PL-56c, PL-56d]
 value: med
-status: built
+status: shipped
 ---
 
 # Copy and Edit read the same complete file, so neither can drop what the other keeps
@@ -23,4 +23,5 @@ identical in every travelling field. Copy vs Import: same file, same wire.
 
 ## Shipped so far
 
-- 2026-10-04  2026-10-04 night3-a (staged, not committed): staleness - Copy and Edit already used the export's writer but never the reader, so Copy carried the source's credentials and storefront and Edit opened with no datapack or store structure; now Copy opens the wizard with copySeedFromProject (the export read back by readProjectFile, same file and same creation wire as Import, no credential, own repository) and Edit with that file plus its own values and storefront (sign-ins re-checked), seeding datapack and store structure as Import does; pinned by projectCopyEditRoundTrip.test.tsx and copySettingsFromProject.test.ts; the one real project on this machine (justrite) reads through.
+- 2026-10-04  2026-10-04 night3-a (staged, not committed): staleness - Copy and Edit already used the export's writer but never the reader, so Copy carried the source's credentials and storefront and Edit opened with no datapack or store structure; now Copy opens the wizard with copySeedFromProject (the export read back by readProjectFile, same file and same creation wire as Import, no credential, own repository) and Edit with that file plus its own values and storefront (sign-ins re-checked), seeding datapack and store structure as Import does; pinned by projectCopyEditRoundTrip.test.tsx and copySettingsFromProject.test.ts; the one real project on this machine (tailspin) reads through.
+- 2026-11-20  Released in v1.0.0-beta.152 (361bbe56f); found at the beta.153 reconcile

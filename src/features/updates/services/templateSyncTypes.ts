@@ -37,7 +37,7 @@ export interface TemplateClash {
 /**
  * Whose edit a clashing file holds. Demo Builder's own pieces are set aside before Adobe's
  * change, so what still clashes is somebody's: made in this storefront, or brought along by
- * the colleague's demo it was copied from (JustRite's header.js, 2026-10-30).
+ * the colleague's demo it was copied from (Tailspin's header.js, 2026-10-30).
  */
 export interface ClashEdit {
     file: string;
@@ -106,7 +106,7 @@ export interface TemplateSyncTarget {
 export interface Checkout {
     tempDir: string;
     repoDir: string;
-    backups: Map<string, string>;
+    backups: Map<string, Buffer>;
     /** The SC's branch the result is pushed to. */
     branch: string;
 }

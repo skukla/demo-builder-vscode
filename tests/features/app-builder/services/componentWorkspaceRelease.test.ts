@@ -63,7 +63,7 @@ describe('releaseWorkspaces', () => {
                 return KEY;
             }),
             watchNamespaceRemoval: jest.fn(),
-            progressLabel: 'Removing the workspace',
+            progressLabel: 'Deleting the workspace',
             logger: createMockLogger(),
         };
     }

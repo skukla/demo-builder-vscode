@@ -237,57 +237,29 @@ describe('toolHandlers.listProjects — pinned', () => {
     });
 });
 
-// ─── toolHandlers.listProjects — the current marker ─────────────────────────
+// ─── toolHandlers.listProjects — no current marker ──────────────────────────
 //
-// `agent-gap-scan` measured half of list_projects' chained follow-ups as
-// get_current_project — the agent listing projects and then asking which one
-// is active, a question the listing could have answered. The pointer lives in
-// `state.json` beside the projects dir, atomically written for exactly this
-// kind of file-based reader.
-describe('toolHandlers.listProjects — current marker', () => {
+// list_projects marked the window's project `current` while get_current_project reports the
+// project the agent's tools act on, so after set_current_project the two named different
+// projects (2026-11-16). The owner chose one tool for the one question: the listing carries no
+// marker, and get_current_project says which project and why.
+describe('toolHandlers.listProjects — no current marker', () => {
     beforeEach(() => {
         jest.clearAllMocks();
     });
 
-    it('marks the project state.json points at, and only that one', async () => {
+    it('marks no project current, even the one the window has open', async () => {
         withManifests([{ name: 'alpha' }, { name: 'beta' }], {
             currentProjectPath: path.join(PROJECTS_DIR, 'beta'),
         });
 
         const parsed = JSON.parse(await toolHandlers.listProjects(PROJECTS_DIR));
 
-        expect(parsed[1]).toMatchObject({ name: 'beta', current: true });
-        expect(parsed[0]).not.toHaveProperty('current');
-    });
-
-    it('lists with no marker when state.json does not exist', async () => {
-        withManifests([{ name: 'alpha' }]);
-
-        const parsed = JSON.parse(await toolHandlers.listProjects(PROJECTS_DIR));
-
-        // Absence degrades to "no marker", never to a failed listing.
-        expect(parsed).toHaveLength(1);
-        expect(parsed[0]).not.toHaveProperty('current');
-    });
-
-    it('lists with no marker when state.json is torn or invalid', async () => {
-        withManifests([{ name: 'alpha' }], 'unreadable');
-
-        const parsed = JSON.parse(await toolHandlers.listProjects(PROJECTS_DIR));
-
-        expect(parsed).toHaveLength(1);
-        expect(parsed[0]).not.toHaveProperty('current');
-    });
-
-    it('ignores a pointer at a project that is not in the listing', async () => {
-        // A stale pointer (deleted project) must not invent a marker.
-        withManifests([{ name: 'alpha' }], {
-            currentProjectPath: path.join(PROJECTS_DIR, 'deleted-long-ago'),
-        });
-
-        const parsed = JSON.parse(await toolHandlers.listProjects(PROJECTS_DIR));
-
-        expect(parsed[0]).not.toHaveProperty('current');
+        // Control: both rows built, so the absence is about the field.
+        expect(parsed).toStrictEqual([
+            { name: 'alpha', path: path.join(PROJECTS_DIR, 'alpha') },
+            { name: 'beta', path: path.join(PROJECTS_DIR, 'beta') },
+        ]);
     });
 });
 
@@ -313,7 +285,7 @@ describe('toolHandlers.getProject', () => {
 
     /**
      * Found by probing the LIVE server (2026-08-17): a real project's response
-     * carried its `ACCS_OAUTH_CLIENT_SECRET` in plaintext, so every agent that
+     * carried its `ADOBE_COMMERCE_ADMIN_PASSWORD` in plaintext, so every agent that
      * read the project put a working Commerce credential into its transcript.
      *
      * The convention it breaks was already written down and already enforced one
@@ -330,8 +302,8 @@ describe('toolHandlers.getProject', () => {
             componentConfigs: {
                 'adobe-commerce-accs': {
                     ACCS_GRAPHQL_ENDPOINT: 'https://example.test/graphql',
-                    ACCS_OAUTH_CLIENT_ID: 'client-id-is-not-a-secret',
-                    ACCS_OAUTH_CLIENT_SECRET: 'fake-test-pw-not-a-secret',
+                    ADOBE_COMMERCE_ADMIN_USERNAME: 'client-id-is-not-a-secret',
+                    ADOBE_COMMERCE_ADMIN_PASSWORD: 'fake-test-pw-not-a-secret',
                 },
             },
         };
@@ -342,7 +314,7 @@ describe('toolHandlers.getProject', () => {
             const result = await toolHandlers.getProject(PROJECTS_DIR, PROJECT_NAME);
 
             expect(result).not.toContain('fake-test-pw-not-a-secret');
-            expect(result).not.toContain('ACCS_OAUTH_CLIENT_SECRET');
+            expect(result).not.toContain('ADOBE_COMMERCE_ADMIN_PASSWORD');
         });
 
         // full:true is the MORE dangerous path, not an exemption from the rule —
@@ -353,7 +325,7 @@ describe('toolHandlers.getProject', () => {
             const result = await toolHandlers.getProject(PROJECTS_DIR, PROJECT_NAME, true);
 
             expect(result).not.toContain('fake-test-pw-not-a-secret');
-            expect(result).not.toContain('ACCS_OAUTH_CLIENT_SECRET');
+            expect(result).not.toContain('ADOBE_COMMERCE_ADMIN_PASSWORD');
         });
 
         // The control. Stripping the whole config map would also pass the two
@@ -366,7 +338,7 @@ describe('toolHandlers.getProject', () => {
 
             expect(parsed.componentConfigs['adobe-commerce-accs']).toEqual({
                 ACCS_GRAPHQL_ENDPOINT: 'https://example.test/graphql',
-                ACCS_OAUTH_CLIENT_ID: 'client-id-is-not-a-secret',
+                ADOBE_COMMERCE_ADMIN_USERNAME: 'client-id-is-not-a-secret',
             });
         });
 
@@ -470,13 +442,13 @@ describe('toolHandlers.getComponentConfig', () => {
 
     it('reads .demo-builder.json and returns content — with manifest secrets STRIPPED', async () => {
         // The tool's whole edge over native Read (see the handler comment): a
-        // verbatim manifest is the ACCS_OAUTH_CLIENT_SECRET leak, one tool over.
+        // verbatim manifest is the ADOBE_COMMERCE_ADMIN_PASSWORD leak, one tool over.
         (fsProm.readFile as jest.Mock).mockResolvedValue(
             JSON.stringify({
                 name: 'test',
                 componentConfigs: {
                     'adobe-commerce-accs': {
-                        ACCS_OAUTH_CLIENT_SECRET: 'live-credential',
+                        ADOBE_COMMERCE_ADMIN_PASSWORD: 'live-credential',
                         ACCS_BASE_URL: 'https://na1.example',
                     },
                 },
@@ -497,20 +469,20 @@ describe('toolHandlers.getComponentConfig', () => {
         // Keys stay: an agent needs to know a credential IS configured. Values
         // go: the transcript must never carry them.
         (fsProm.readFile as jest.Mock).mockResolvedValue(
-            '# Commerce\nACCS_OAUTH_CLIENT_SECRET=shh-real-secret\nMESH_ENDPOINT=https://mesh/graphql\n'
+            '# Commerce\nADOBE_COMMERCE_ADMIN_PASSWORD=shh-real-secret\nMESH_ENDPOINT=https://mesh/graphql\n'
         );
 
         const result = await toolHandlers.getComponentConfig(
             PROJECTS_DIR, PROJECT_NAME, 'components/backend/.env'
         );
 
-        expect(result).toContain('ACCS_OAUTH_CLIENT_SECRET=[secret hidden]');
+        expect(result).toContain('ADOBE_COMMERCE_ADMIN_PASSWORD=[secret hidden]');
         expect(result).toContain('MESH_ENDPOINT=https://mesh/graphql');
         expect(result).not.toContain('shh-real-secret');
     });
 
     it('refuses to return a manifest that does not parse, rather than leak raw content', async () => {
-        (fsProm.readFile as jest.Mock).mockResolvedValue('{broken json ACCS_OAUTH_CLIENT_SECRET=x');
+        (fsProm.readFile as jest.Mock).mockResolvedValue('{broken json ADOBE_COMMERCE_ADMIN_PASSWORD=x');
 
         await expect(
             toolHandlers.getComponentConfig(PROJECTS_DIR, PROJECT_NAME, '.demo-builder.json')

@@ -1,7 +1,7 @@
 /**
  * "Shared in a file" (datapack-engine step 07): exporting a project whose pack is in the
  * datapack library records when, so deleting that pack later warns that anyone who has not
- * created the project yet will get the pack it was made from instead.
+ * created the project yet will get the datapack it was made from instead.
  */
 
 import type { PackReads } from '@/features/data-installer/services/recordedPack';
@@ -30,7 +30,7 @@ const AT = new Date('2026-10-27T15:00:00Z');
 const LIBRARY_PACK = { name: 'acme-demo-1a2b3c', version: '20261029-183005', store: 'library' as const, origin: { name: 'bodea', version: 'main' } };
 
 describe('recordSharedInFile', () => {
-    it('records a library pack by name and version, with when and the pack it was made from', async () => {
+    it('records a library pack by name and version, with when and the datapack it was made from', async () => {
         const m = memento();
 
         await recordSharedInFile(m, { datapack: LIBRARY_PACK }, AT);
@@ -87,19 +87,19 @@ describe('sharedInFileWarning', () => {
 
     it('names the day and the pack a colleague gets instead, by the name the SC sees', () => {
         expect(sharedInFileWarning(ENTRY, 'Frescopa')).toBe(
-            "You shared this pack in a project file on 27 October. Anyone who hasn't created that project yet will get Frescopa instead.",
+            "You shared this datapack in a project file on 27 October. Anyone who hasn't created that project yet will get Frescopa instead.",
         );
     });
 
     it('never names the pack by its id: with no name to show, it says what the pack is', () => {
         expect(sharedInFileWarning(ENTRY)).toBe(
-            "You shared this pack in a project file on 27 October. Anyone who hasn't created that project yet will get the pack it was made from instead.",
+            "You shared this datapack in a project file on 27 October. Anyone who hasn't created that project yet will get the datapack it was made from instead.",
         );
     });
 
     it('says no sample data when the pack was made from nothing', () => {
         expect(sharedInFileWarning({ at: '2026-10-27T15:00:00.000Z' })).toBe(
-            "You shared this pack in a project file on 27 October. Anyone who hasn't created that project yet will get no sample data instead.",
+            "You shared this datapack in a project file on 27 October. Anyone who hasn't created that project yet will get no datapack instead.",
         );
     });
 });

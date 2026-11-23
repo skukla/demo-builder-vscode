@@ -94,6 +94,9 @@ import {
     row,
 } from './IntegrationsStep.testUtils';
 
+/** The window on screen now: a taller stage opens a new one (step-07 Win3); never hold an old one. */
+const currentDialog = (): HTMLElement => screen.getByRole('dialog');
+
 async function renderStep(state: WizardState, updateState = jest.fn()) {
     render(
         <Provider theme={defaultTheme}>
@@ -111,10 +114,6 @@ async function renderStep(state: WizardState, updateState = jest.fn()) {
     await settle();
     return { updateState };
 }
-
-
-
-
 
 beforeEach(() => {
     jest.clearAllMocks();
@@ -149,8 +148,8 @@ describe('IntegrationsStep — results-only layout', () => {
 
     it('does not render the old deployable type-rows', async () => {
         await renderStep(baseState());
-        expect(screen.queryByText('Pre-built integration')).not.toBeInTheDocument();
-        expect(screen.queryByText('Import a repo')).not.toBeInTheDocument();
+        expect(screen.queryByText('Pre-Built Integration')).not.toBeInTheDocument();
+        expect(screen.queryByText('Import Repository')).not.toBeInTheDocument();
         expect(screen.queryByText('API Mesh')).not.toBeInTheDocument();
     });
 
@@ -165,9 +164,10 @@ describe('IntegrationsStep — result cards from state', () => {
     it('renders a selected mesh as a card, with the destination unset', async () => {
         await renderStep(baseState({ selectedAppBuilderComponents: [MESH_ID] }));
         expect(row(MESH_NAME)).not.toBeNull();
-        expect(within(destinationLine()).getByText('Not set')).toBeInTheDocument();
         expect(
-            within(destinationLine()).getByRole('button', { name: 'Set up' })
+            within(screen.getByTestId('adobe-project-notice')).getByRole('button', {
+                name: 'Choose Adobe Project',
+            })
         ).toBeInTheDocument();
     });
 
@@ -175,15 +175,22 @@ describe('IntegrationsStep — result cards from state', () => {
         // onStackSelect seeds a required mesh into selectedAppBuilderComponents (D3).
         await renderStep(baseState({ selectedAppBuilderComponents: [MESH_ID] }));
         expect(row(MESH_NAME)).not.toBeNull();
-        expect(within(destinationLine()).getByText('Not set')).toBeInTheDocument();
+        expect(screen.getByTestId('adobe-project-notice')).toBeInTheDocument();
     });
 
     // The destination is ONE project and ONE workspace for the whole build. It
     // used to print on every card, identically. `getByText` throws on a second
     // match, so these two assertions fail if the repetition returns.
+    it('labels the Adobe project, and names no workspace', async () => {
+        await renderStep(baseState({ ...CUSTOM_ADDED, ...COMMITTED_DEST }));
+        const line = within(destinationLine());
+        expect(line.getByText('Adobe Project')).toBeInTheDocument();
+        expect(line.queryByText('Stage')).not.toBeInTheDocument();
+    });
+
     it('shows the committed destination ONCE, above the cards, with Change', async () => {
         await renderStep(baseState({ ...CUSTOM_ADDED, ...COMMITTED_DEST }));
-        expect(screen.getByText('Demo Project · Stage')).toBeInTheDocument();
+        expect(screen.getByText('Demo Project')).toBeInTheDocument();
         expect(
             within(destinationLine()).getByRole('button', { name: 'Change' })
         ).toBeInTheDocument();
@@ -197,14 +204,14 @@ describe('IntegrationsStep — result cards from state', () => {
                 appBuilderComponentSources: { 'acme-widget': { owner: 'acme', repo: 'widget' } },
             })
         );
-        expect(screen.getAllByText('Demo Project · Stage')).toHaveLength(1);
+        expect(screen.getAllByText('Demo Project')).toHaveLength(1);
         expect(document.querySelectorAll('.integration-card').length).toBeGreaterThan(1);
     });
 
     it('puts the source line, and no API count, in the card subline', async () => {
         await renderStep(baseState({ ...CUSTOM_ADDED, ...COMMITTED_DEST }));
         const custom = row('widget');
-        expect(within(custom).getByText(/Custom integration · acme\/widget$/)).toBeInTheDocument();
+        expect(within(custom).getByText(/Custom integration, acme\/widget$/)).toBeInTheDocument();
         expect(within(custom).queryByText(/\d APIs?$/)).not.toBeInTheDocument();
         expect(screen.queryByText('API access enabled')).not.toBeInTheDocument();
     });
@@ -217,7 +224,7 @@ describe('IntegrationsStep — result cards from state', () => {
         ).toBeInTheDocument();
     });
 
-    it('renders a card for a committed blank "Build custom" app', async () => {
+    it('renders a card for a committed blank "Build Custom" app', async () => {
         // Regression: the blank shell was resolved against the blank-FILTERED catalog,
         // so a committed "Build custom" app produced no row.
         await renderStep(baseState({ selectedAppBuilderComponents: ['app-builder-shell'] }));
@@ -279,52 +286,49 @@ describe('IntegrationsStep — modal wiring', () => {
     it('the Add Integration button opens the flow modal in add mode', async () => {
         await renderStep(baseState());
         await press(screen.getByRole('button', { name: 'Add Integration' }));
-        const dialog = screen.getByRole('dialog');
         expect(
-            within(dialog).getByRole('heading', { name: 'Add Integration' })
+            within(currentDialog()).getByRole('heading', { name: 'Add Integration' })
         ).toBeInTheDocument();
         // The kind picker renders inside the journey.
         expect(
-            within(dialog).getByRole('button', { name: /Pre-built integration/ })
+            within(currentDialog()).getByRole('button', { name: /Pre-Built Integration/ })
         ).toBeInTheDocument();
     });
 
-    it("the destination line's Set up opens the modal in destination mode", async () => {
+    it("the project notice's Choose Adobe Project opens the modal in destination mode", async () => {
         await renderStep(baseState({ selectedAppBuilderComponents: [MESH_ID], ...SIGNED_IN }));
-        await press(within(destinationLine()).getByRole('button', { name: 'Set up' }));
-        const dialog = screen.getByRole('dialog');
+        await press(screen.getByRole('button', { name: 'Choose Adobe Project' }));
         expect(
-            within(dialog).getByRole('heading', { name: 'Deployment Destination' })
+            within(currentDialog()).getByRole('heading', { name: 'Deployment Destination' })
         ).toBeInTheDocument();
-        expect(within(dialog).getByTestId('project-field')).toBeInTheDocument();
+        expect(within(currentDialog()).getByTestId('project-field')).toBeInTheDocument();
     });
 
     it("the destination line's Change opens the modal in destination mode", async () => {
         await renderStep(baseState({ ...CUSTOM_ADDED, ...COMMITTED_DEST, ...SIGNED_IN }));
         await press(within(destinationLine()).getByRole('button', { name: 'Change' }));
-        const dialog = screen.getByRole('dialog');
         expect(
-            within(dialog).getByRole('heading', { name: 'Deployment Destination' })
+            within(currentDialog()).getByRole('heading', { name: 'Deployment Destination' })
         ).toBeInTheDocument();
-        expect(within(dialog).getByTestId('project-field')).toBeInTheDocument();
+        expect(within(currentDialog()).getByTestId('project-field')).toBeInTheDocument();
     });
 
     it("a custom card's Manage APIs opens the modal in api-edit mode (the picker)", async () => {
         await renderStep(baseState({ ...CUSTOM_ADDED, ...COMMITTED_DEST, ...SIGNED_IN }));
         await pickMenuItem(row('widget'), /Manage APIs/i);
-        const dialog = await screen.findByRole('dialog');
+        await screen.findByRole('dialog');
         expect(
-            within(dialog).getByRole('heading', { name: 'Edit API Access' })
+            within(currentDialog()).getByRole('heading', { name: 'Edit API Access' })
         ).toBeInTheDocument();
-        expect(within(dialog).getByTestId('api-picker-stage')).toBeInTheDocument();
+        expect(await within(currentDialog()).findByTestId('api-picker-stage')).toBeInTheDocument();
     });
 
     it('pressing a custom card opens the same picker (its only detail)', async () => {
         await renderStep(baseState({ ...CUSTOM_ADDED, ...COMMITTED_DEST, ...SIGNED_IN }));
         await press(row('widget'));
-        const dialog = await screen.findByRole('dialog');
+        await screen.findByRole('dialog');
         expect(
-            within(dialog).getByRole('heading', { name: 'Edit API Access' })
+            within(currentDialog()).getByRole('heading', { name: 'Edit API Access' })
         ).toBeInTheDocument();
     });
 
@@ -334,14 +338,13 @@ describe('IntegrationsStep — modal wiring', () => {
         // no error affordance at all.
         await renderStep(baseState());
         await press(screen.getByRole('button', { name: 'Add Integration' }));
-        const dialog = screen.getByRole('dialog');
-        await press(within(dialog).getByRole('button', { name: /Build custom/ }));
-        await press(within(dialog).getByRole('button', { name: 'Continue' }));
-        const input = within(dialog).getByLabelText(/Name \(optional\)/);
+        await press(within(currentDialog()).getByRole('button', { name: /Build Custom/ }));
+        await press(within(currentDialog()).getByRole('button', { name: 'Continue' }));
+        const input = within(currentDialog()).getByLabelText(/Name \(Optional\)/);
         const DUPLICATE = 'That name is already used by another part of this project.';
         await change(input, 'App Builder Shell');
-        expect(within(dialog).queryByText(DUPLICATE)).not.toBeInTheDocument();
-        expect(within(dialog).getByRole('button', { name: 'Continue' })).toBeEnabled();
+        expect(within(currentDialog()).queryByText(DUPLICATE)).not.toBeInTheDocument();
+        expect(within(currentDialog()).getByRole('button', { name: 'Continue' })).toBeEnabled();
     });
 });
 
@@ -497,7 +500,10 @@ describe('IntegrationsStep — the ERP pair before creation', () => {
     const ERP_NAMED = baseState({
         selectedAppBuilderComponents: ['erp-integration'],
         componentConfigs: {
-            'erp-integration': { INTEGRATION_DISPLAY_NAME: 'ERP Integration', ERP_DISPLAY_NAME: 'Acme ERP' },
+            'erp-integration': {
+                INTEGRATION_DISPLAY_NAME: 'ERP Integration',
+                ERP_DISPLAY_NAME: 'Acme ERP',
+            },
         },
     });
 
@@ -506,13 +512,16 @@ describe('IntegrationsStep — the ERP pair before creation', () => {
         expect(within(row('ERP Integration')).getByText('Comes with Acme ERP')).toBeInTheDocument();
 
         await pickMenuItem(row('ERP Integration'), /Settings/i);
-        const dialog = await screen.findByRole('dialog');
-        await change(within(dialog).getByLabelText(/^ERP name/), 'Justrite');
-        await press(within(dialog).getByRole('button', { name: /^Save$/ }));
+        await screen.findByRole('dialog');
+        await change(within(currentDialog()).getByLabelText(/^ERP Name/), 'Tailspin');
+        await press(within(currentDialog()).getByRole('button', { name: /^Save$/ }));
 
         expect(updateState).toHaveBeenCalledWith({
             componentConfigs: {
-                'erp-integration': { INTEGRATION_DISPLAY_NAME: 'ERP Integration', ERP_DISPLAY_NAME: 'Justrite ERP' },
+                'erp-integration': {
+                    INTEGRATION_DISPLAY_NAME: 'ERP Integration',
+                    ERP_DISPLAY_NAME: 'Tailspin ERP',
+                },
             },
         });
         // Saving closes the Settings dialog; it does not wait for a second press.
@@ -525,18 +534,17 @@ describe('IntegrationsStep — the ERP pair before creation', () => {
     it('adds the pair under its OWN id when the ERP is named in the Add journey', async () => {
         const { updateState } = await renderStep(baseState({ ...SIGNED_IN, ...COMMITTED_DEST }));
         await press(screen.getByRole('button', { name: 'Add Integration' }));
-        const dialog = screen.getByRole('dialog');
-        await press(within(dialog).getByRole('button', { name: /Pre-built integration/ }));
-        await press(within(dialog).getByRole('button', { name: 'Continue' }));
-        await press(within(dialog).getByRole('button', { name: /ERP Integration/ }));
-        await change(within(dialog).getByLabelText(/^ERP name/), 'Northwind');
+        await press(within(currentDialog()).getByRole('button', { name: /Pre-Built Integration/ }));
+        await press(within(currentDialog()).getByRole('button', { name: 'Continue' }));
+        await press(within(currentDialog()).getByRole('button', { name: /ERP Integration/ }));
+        await change(within(currentDialog()).getByLabelText(/^ERP Name/), 'Northwind');
         // Walk the rest of the journey to its terminal stage, whatever length it is.
         for (let step = 0; step < 4; step += 1) {
-            const next = within(dialog).queryByRole('button', { name: 'Continue' });
+            const next = within(currentDialog()).queryByRole('button', { name: 'Continue' });
             if (!next) break;
             await press(next);
         }
-        await press(within(dialog).getByRole('button', { name: 'Add Integration' }));
+        await press(within(currentDialog()).getByRole('button', { name: 'Add Integration' }));
 
         expect(updateState.mock.calls.map((c) => c[0])).toStrictEqual([
             {
@@ -586,21 +594,20 @@ describe('IntegrationsStep — mesh add commits without subscribing', () => {
         await settle();
 
         await press(screen.getByRole('button', { name: 'Add Integration' }));
-        const dialog = screen.getByRole('dialog');
-        await press(within(dialog).getByRole('button', { name: /API Mesh/ }));
+        await press(within(currentDialog()).getByRole('button', { name: /API Mesh/ }));
         // A committed destination is a context LINE, not a step, and the deterministic
         // mesh has no api-access — so the KIND stage is terminal. Selection NEVER
         // provisions.
         await waitFor(() => {
             // The terminal stage just commits the integration — plain "Add Integration".
-            expect(within(dialog).getByRole('button', { name: 'Add Integration' })).toHaveAttribute(
+            expect(within(currentDialog()).getByRole('button', { name: 'Add Integration' })).toHaveAttribute(
                 'aria-disabled',
                 'false'
             );
         });
 
         // A single Add press commits + closes; the card appears.
-        await press(within(dialog).getByRole('button', { name: 'Add Integration' }));
+        await press(within(currentDialog()).getByRole('button', { name: 'Add Integration' }));
         await waitFor(() => {
             expect(row(MESH_NAME)).not.toBeNull();
         });

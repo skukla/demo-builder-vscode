@@ -20,7 +20,7 @@ const SECRET = 'fake-test-pw-not-a-secret';
 
 const SETTINGS: ComponentSettings = {
     fields: [
-        { name: 'ERP_DISPLAY_NAME', label: 'ERP name', type: 'text', required: false, value: 'Acme ERP' },
+        { name: 'ERP_DISPLAY_NAME', label: 'ERP Name', type: 'text', required: false, value: 'Acme ERP' },
         { name: 'ERP_REGION', label: 'Region', type: 'text', required: true, value: 'eu' },
         { name: 'ERP_API_KEY', label: 'API key', type: 'secret', required: true, isSet: true },
     ],
@@ -65,14 +65,14 @@ describe('IntegrationSettingsModal', () => {
     it('renders nothing while closed', () => {
         renderModal(null);
 
-        expect(screen.queryByText('ERP integration settings')).not.toBeInTheDocument();
+        expect(screen.queryByText('ERP integration Settings')).not.toBeInTheDocument();
     });
 
     it('shows each setting with its value, a secret only as set, and the provided address read-only', () => {
         renderModal();
 
-        expect(screen.getByText('ERP integration settings')).toBeInTheDocument();
-        expect(field('ERP name').value).toBe('Acme ERP');
+        expect(screen.getByText('ERP integration Settings')).toBeInTheDocument();
+        expect(field('ERP Name').value).toBe('Acme ERP');
         expect(field('Region').value).toBe('eu');
         expect((screen.getByLabelText('API key') as HTMLInputElement).value).toBe('');
         expect(screen.getByText('Secret is set')).toBeInTheDocument();
@@ -84,7 +84,7 @@ describe('IntegrationSettingsModal', () => {
         renderModal();
         expect(saveButton()).toHaveAttribute('aria-disabled', 'true');
 
-        fireEvent.change(field('ERP name'), { target: { value: 'Nordwind' } });
+        fireEvent.change(field('ERP Name'), { target: { value: 'Nordwind' } });
         expect(saveButton()).toHaveAttribute('aria-disabled', 'false');
 
         fireEvent.change(field('Region'), { target: { value: ' ' } });
@@ -98,7 +98,7 @@ describe('IntegrationSettingsModal', () => {
         getClient().request.mockResolvedValue({ success: true, saved: true, settings: next });
         const { onClose, onSaved } = renderModal();
 
-        fireEvent.change(field('ERP name'), { target: { value: 'Nordwind' } });
+        fireEvent.change(field('ERP Name'), { target: { value: 'Nordwind' } });
         fireEvent.change(screen.getByLabelText('API key'), { target: { value: SECRET } });
         fireEvent.click(saveButton());
         await flush();
@@ -121,28 +121,51 @@ describe('IntegrationSettingsModal', () => {
         });
         const { onClose, onSaved } = renderModal();
 
-        fireEvent.change(field('ERP name'), { target: { value: 'Nordwind' } });
+        fireEvent.change(field('ERP Name'), { target: { value: 'Nordwind' } });
         fireEvent.click(saveButton());
         await flush();
 
-        expect(screen.getByText('Settings saved, but redeploying ERP failed: aio said no')).toBeInTheDocument();
+        // The values went in; it is the redeploy that did not go through, and the title says so.
+        expect(screen.getByText("Couldn't Redeploy ERP integration")).toBeInTheDocument();
+        expect(document.querySelector('.modal-status-icon')).not.toBeNull();
+        expect(screen.getByText('Settings saved, but redeploying ERP failed: aio said no')).not.toHaveClass('text-negative');
         expect(onSaved).toHaveBeenCalledWith('erp-integration', SETTINGS);
         expect(onClose).not.toHaveBeenCalled();
     });
 
-    it('while saving, says the redeploy can take a while and that the window can be closed', async () => {
+    it('a save refused before anything was stored says the save failed, and keeps the form', async () => {
+        getClient().request.mockResolvedValue({ success: false, error: 'Region is not one of the choices.' });
+        renderModal();
+
+        fireEvent.change(field('ERP Name'), { target: { value: 'Nordwind' } });
+        fireEvent.click(saveButton());
+        await flush();
+
+        expect(screen.getByText("Couldn't Save ERP integration Settings")).toBeInTheDocument();
+        expect(screen.getByText('Region is not one of the choices.')).toBeInTheDocument();
+        expect(field('ERP Name').value).toBe('Nordwind');
+    });
+
+    it('says nothing above the fields: the button already says saving redeploys', () => {
+        renderModal();
+
+        expect(screen.queryByText(/takes effect when the app is redeployed/)).not.toBeInTheDocument();
+        expect(document.querySelector('.modal-status-icon')).toBeNull();
+    });
+
+    it('while saving, the button is its own spinner and the way out says the work carries on', async () => {
         getClient().request.mockReturnValue(new Promise(() => undefined));
         renderModal();
 
-        fireEvent.change(field('ERP name'), { target: { value: 'Nordwind' } });
+        fireEvent.change(field('ERP Name'), { target: { value: 'Nordwind' } });
         fireEvent.click(saveButton());
         await flush();
 
         // A spinner in the button's place, not a "-ing" label (owner, 2026-10-31).
-        const busy = screen.getByRole('button', { name: 'Save and redeploy' });
+        const busy = screen.getByRole('button', { name: 'Save and Redeploy' });
         expect(busy).toHaveAttribute('aria-disabled', 'true');
         expect(busy).toHaveAttribute('aria-busy', 'true');
-        expect(screen.getByText(/you\s+can close this window/)).toBeInTheDocument();
-        expect(screen.getByRole('button', { name: 'Close' })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Run in Background' })).toBeInTheDocument();
+        expect(screen.queryByText(/close this window/)).not.toBeInTheDocument();
     });
 });

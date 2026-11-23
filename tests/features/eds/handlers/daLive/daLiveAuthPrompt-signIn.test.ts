@@ -191,21 +191,21 @@ describe('showDaLiveAuthQuickPick', () => {
         it('should not ask for an org when a namespace is already pinned', async () => {
             // The expiry path: the token went stale, the pinned org did not.
             mockGetOrgName.mockReturnValue('demo-system-stores');
-            showInfoMessageResponses = ['I have my token'];
+            showInfoMessageResponses = ['I Have My Token'];
             showInputBoxResponses = [validToken];
 
             await showDaLiveAuthQuickPick(mockContext);
 
             expect(showInputBoxCalls).toHaveLength(1);
             expect(showInputBoxCalls[0]).toMatchObject({
-                title: 'Sign in to DA.live — token',
+                title: 'Sign In to DA.live: Token',
                 password: true,
             });
         });
 
         it('should store the pinned org rather than a re-typed one', async () => {
             mockGetOrgName.mockReturnValue('demo-system-stores');
-            showInfoMessageResponses = ['I have my token'];
+            showInfoMessageResponses = ['I Have My Token'];
             showInputBoxResponses = [validToken];
 
             await showDaLiveAuthQuickPick(mockContext);
@@ -228,7 +228,7 @@ describe('showDaLiveAuthQuickPick', () => {
             // supply the token, and a promised step 2 that never arrives is a
             // lie the flow cannot predict at this point.
             expect(showInputBoxCalls[0]).toMatchObject({
-                title: 'Sign in to DA.live — namespace',
+                title: 'Sign In to DA.live: Namespace',
                 prompt: expect.stringContaining('organization'),
             });
             expect(showInputBoxCalls[0].password).toBeFalsy();
@@ -244,22 +244,22 @@ describe('showDaLiveAuthQuickPick', () => {
             await showDaLiveAuthQuickPick(mockContext);
 
             expect(vscode.window.showInformationMessage).toHaveBeenCalledWith(
-                'Sign in to DA.live',
+                'Sign In to DA.live',
                 expect.objectContaining({ modal: true, detail: expect.stringContaining('token from DA.live') }),
                 'Open DA.live',
-                'I have my token'
+                'I Have My Token'
             );
         });
 
         it('should show token input password-masked as step 2', async () => {
-            showInfoMessageResponses = ['I have my token'];
+            showInfoMessageResponses = ['I Have My Token'];
             showInputBoxResponses = ['my-org', undefined]; // org, then cancel at token
 
             await showDaLiveAuthQuickPick(mockContext);
 
             expect(showInputBoxCalls).toHaveLength(2);
             expect(showInputBoxCalls[1]).toMatchObject({
-                title: 'Sign in to DA.live — token',
+                title: 'Sign In to DA.live: Token',
                 password: true,
             });
         });
@@ -318,7 +318,7 @@ describe('showDaLiveAuthQuickPick', () => {
         it('should skip the Continue gate when the user already has a token', async () => {
             // User picked "I have my token" — no browser opens, no gate shown.
             mockGetOrgName.mockReturnValue('my-org');
-            showInfoMessageResponses = ['I have my token'];
+            showInfoMessageResponses = ['I Have My Token'];
             showInputBoxResponses = [undefined];
 
             await showDaLiveAuthQuickPick(mockContext);
@@ -340,7 +340,7 @@ describe('showDaLiveAuthQuickPick', () => {
 
         it('should take the token from the clipboard without opening an input box', async () => {
             clipboardText = validToken;
-            showInfoMessageResponses = ['I have my token'];
+            showInfoMessageResponses = ['I Have My Token'];
 
             const result = await showDaLiveAuthQuickPick(mockContext);
 
@@ -351,7 +351,7 @@ describe('showDaLiveAuthQuickPick', () => {
 
         it('should tolerate surrounding whitespace on the copied token', async () => {
             clipboardText = `\n  ${validToken}  \n`;
-            showInfoMessageResponses = ['I have my token'];
+            showInfoMessageResponses = ['I Have My Token'];
 
             await showDaLiveAuthQuickPick(mockContext);
 
@@ -361,7 +361,7 @@ describe('showDaLiveAuthQuickPick', () => {
 
         it('should fall back to the input box when the clipboard holds something else', async () => {
             clipboardText = 'a git branch name I copied earlier';
-            showInfoMessageResponses = ['I have my token'];
+            showInfoMessageResponses = ['I Have My Token'];
             showInputBoxResponses = [validToken];
 
             await showDaLiveAuthQuickPick(mockContext);
@@ -375,7 +375,7 @@ describe('showDaLiveAuthQuickPick', () => {
             // Re-copying the token that just expired must not be accepted
             // silently — the clipboard is validated, not trusted.
             clipboardText = expiredToken;
-            showInfoMessageResponses = ['I have my token'];
+            showInfoMessageResponses = ['I Have My Token'];
             showInputBoxResponses = [validToken];
 
             await showDaLiveAuthQuickPick(mockContext);
@@ -386,7 +386,7 @@ describe('showDaLiveAuthQuickPick', () => {
 
         it('should fall back to the input box when the clipboard is empty', async () => {
             clipboardText = '';
-            showInfoMessageResponses = ['I have my token'];
+            showInfoMessageResponses = ['I Have My Token'];
             showInputBoxResponses = [validToken];
 
             await showDaLiveAuthQuickPick(mockContext);
@@ -399,7 +399,7 @@ describe('showDaLiveAuthQuickPick', () => {
             (vscode.env.clipboard.readText as jest.Mock).mockRejectedValueOnce(
                 new Error('clipboard unavailable')
             );
-            showInfoMessageResponses = ['I have my token'];
+            showInfoMessageResponses = ['I Have My Token'];
             showInputBoxResponses = [validToken];
 
             await showDaLiveAuthQuickPick(mockContext);
@@ -425,7 +425,7 @@ describe('showDaLiveAuthQuickPick', () => {
             // .env, a k8s secret, a config payload. The format check alone
             // cannot tell this from a token.
             clipboardText = Buffer.from('{"aws_secret_access_key":"AKIA…"}').toString('base64');
-            showInfoMessageResponses = ['I have my token'];
+            showInfoMessageResponses = ['I Have My Token'];
             showInputBoxResponses = [validToken];
 
             await showDaLiveAuthQuickPick(mockContext);
@@ -442,7 +442,7 @@ describe('showDaLiveAuthQuickPick', () => {
                 expires_in: '3600000',
                 email: 'someone@example.com',
             });
-            showInfoMessageResponses = ['I have my token'];
+            showInfoMessageResponses = ['I Have My Token'];
             showInputBoxResponses = [validToken];
 
             await showDaLiveAuthQuickPick(mockContext);
@@ -456,7 +456,7 @@ describe('showDaLiveAuthQuickPick', () => {
             // and that fabricated expiry outranks a real one in the
             // da-auth-helper cache — it would evict a working credential.
             clipboardText = makeToken({ client_id: 'darkalley', email: 'user@example.com' });
-            showInfoMessageResponses = ['I have my token'];
+            showInfoMessageResponses = ['I Have My Token'];
             showInputBoxResponses = [validToken];
 
             await showDaLiveAuthQuickPick(mockContext);
@@ -468,7 +468,7 @@ describe('showDaLiveAuthQuickPick', () => {
         it('should never store a token the clipboard check rejected', async () => {
             const blob = Buffer.from('{"not":"a token"}').toString('base64');
             clipboardText = blob;
-            showInfoMessageResponses = ['I have my token'];
+            showInfoMessageResponses = ['I Have My Token'];
             showInputBoxResponses = [validToken];
 
             await showDaLiveAuthQuickPick(mockContext);
@@ -491,7 +491,7 @@ describe('showDaLiveAuthQuickPick', () => {
     // =========================================================================
     describe('successful authentication', () => {
         it('should store token via auth service on success', async () => {
-            showInfoMessageResponses = ['I have my token'];
+            showInfoMessageResponses = ['I Have My Token'];
             showInputBoxResponses = ['my-org', validToken];
 
             await showDaLiveAuthQuickPick(mockContext);
@@ -506,7 +506,7 @@ describe('showDaLiveAuthQuickPick', () => {
         });
 
         it('should return success with email on valid auth', async () => {
-            showInfoMessageResponses = ['I have my token'];
+            showInfoMessageResponses = ['I Have My Token'];
             showInputBoxResponses = ['my-org', validToken];
 
             const result = await showDaLiveAuthQuickPick(mockContext);
@@ -522,7 +522,7 @@ describe('showDaLiveAuthQuickPick', () => {
             // the confirmation is the only place a wrong identity can show
             // itself. A colleague's still-valid token would otherwise bind
             // silently and 403 on every later write.
-            showInfoMessageResponses = ['I have my token'];
+            showInfoMessageResponses = ['I Have My Token'];
             showInputBoxResponses = ['my-org', validToken];
 
             await showDaLiveAuthQuickPick(mockContext);
@@ -539,7 +539,7 @@ describe('showDaLiveAuthQuickPick', () => {
                 created_at: '9999999999999',
                 expires_in: '3600000',
             });
-            showInfoMessageResponses = ['I have my token'];
+            showInfoMessageResponses = ['I Have My Token'];
             showInputBoxResponses = ['my-org', noEmail];
 
             await showDaLiveAuthQuickPick(mockContext);
@@ -556,7 +556,7 @@ describe('showDaLiveAuthQuickPick', () => {
     // =========================================================================
     describe('error handling', () => {
         it('should show error on invalid token format', async () => {
-            showInfoMessageResponses = ['I have my token'];
+            showInfoMessageResponses = ['I Have My Token'];
             showInputBoxResponses = ['my-org', 'not-a-jwt-token'];
 
             const result = await showDaLiveAuthQuickPick(mockContext);
@@ -568,7 +568,7 @@ describe('showDaLiveAuthQuickPick', () => {
         });
 
         it('should show error on expired token', async () => {
-            showInfoMessageResponses = ['I have my token'];
+            showInfoMessageResponses = ['I Have My Token'];
             showInputBoxResponses = ['my-org', expiredToken];
 
             const result = await showDaLiveAuthQuickPick(mockContext);
@@ -598,7 +598,7 @@ describe('showDaLiveAuthQuickPick', () => {
         });
 
         it('should return cancelled when user cancels at token step', async () => {
-            showInfoMessageResponses = ['I have my token'];
+            showInfoMessageResponses = ['I Have My Token'];
             showInputBoxResponses = ['my-org', undefined];
 
             const result = await showDaLiveAuthQuickPick(mockContext);
@@ -626,7 +626,7 @@ describe('showDaLiveAuthQuickPick', () => {
         });
 
         it('should log cancellation at token step', async () => {
-            showInfoMessageResponses = ['I have my token'];
+            showInfoMessageResponses = ['I Have My Token'];
             showInputBoxResponses = ['my-org', undefined];
 
             await showDaLiveAuthQuickPick(mockContext);

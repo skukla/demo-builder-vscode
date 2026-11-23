@@ -263,7 +263,7 @@ export class SyncStorefrontCommand extends BaseCommand {
         // Conflict path — open Source Control, poll until clear, decide based on user action.
         const action = await askDuringOperation(
             {
-                title: 'Resolve the conflicts',
+                title: 'Resolve the Conflicts',
                 message:
                     'Demo Builder pulled the latest changes and found conflicts that need your input. ' +
                     'Resolve each conflict in the Source Control panel (Accept Current / Incoming / Both buttons), ' +

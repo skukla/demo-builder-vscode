@@ -282,8 +282,8 @@ describe('cloud-resource tools (DA.live)', () => {
             });
         });
 
-        it('hands off to Adobe auth when the IMS token is invalid', async () => {
-            mockInspectToken.mockResolvedValueOnce({ valid: false, expiresIn: 0 });
+        it('hands off to the DA.live sign-in when the DA.live session holds no token', async () => {
+            mockDaLiveAuth.getAccessToken.mockResolvedValue(null);
             const s = fakeServer();
             registerCloudResourceTools(s, ctxFactory);
             expect(await s.call('list_dalive_sites', { org: 'acme' })).toMatchObject({
@@ -363,8 +363,8 @@ describe('cloud-resource tools (DA.live)', () => {
             expect(mockDeleteAllSiteContent).not.toHaveBeenCalled();
         });
 
-        it('hands off to Adobe auth when the strict gate passes but token invalid', async () => {
-            mockInspectToken.mockResolvedValueOnce({ valid: false, expiresIn: 0 });
+        it('hands off to the DA.live sign-in when the strict gate passes but there is no DA.live token', async () => {
+            mockDaLiveAuth.getAccessToken.mockResolvedValue(null);
             const s = fakeServer();
             registerCloudResourceTools(s, ctxFactory);
             const res = await s.call('cleanup_dalive_site', {
@@ -471,7 +471,7 @@ describe('response-size ceilings', () => {
 });
 
 describe('DA.live operations — which sign-in they are built on', () => {
-    it('builds on the DA.live session when there is one, without consulting the IMS token', async () => {
+    it('builds on the DA.live session, without consulting the IMS token', async () => {
         mockDaLiveAuth.getAccessToken.mockResolvedValue('fake-dalive-token-not-a-secret');
         mockListOrgSites.mockResolvedValue([]);
         const s = fakeServer();
@@ -482,18 +482,23 @@ describe('DA.live operations — which sign-in they are built on', () => {
         const provider = (DaLiveOrgOperations as jest.Mock).mock.calls.at(-1)?.[0] as { getAccessToken(): Promise<string | null> };
         await expect(provider.getAccessToken()).resolves.toBe('fake-dalive-token-not-a-secret');
         expect(mockInspectToken).not.toHaveBeenCalled();
-        mockDaLiveAuth.getAccessToken.mockResolvedValue(null);
     });
 
-    it('falls back to the IMS token when there is no DA.live session', async () => {
-        mockInspectToken.mockResolvedValue({ valid: true, token: 'fake-ims-token-not-a-secret' });
-        mockListOrgSites.mockResolvedValue([]);
-        const s = fakeServer();
-        registerCloudResourceTools(s, ctxFactory);
+    // PL-104 fix 7: the IMS token listed zero sites and was refused (measured 2026-09-12),
+    // and Helix refused it on a delete that DA.live then went through with (2026-10-25).
+    it.each(['list_dalive_sites', 'cleanup_dalive_site'])(
+        '%s never falls back to a valid Adobe IMS token when there is no DA.live session',
+        async (tool) => {
+            mockDaLiveAuth.getAccessToken.mockResolvedValue(null);
+            mockInspectToken.mockResolvedValue({ valid: true, expiresIn: 60, token: 'fake-ims-token-not-a-secret' });
+            const s = fakeServer();
+            registerCloudResourceTools(s, ctxFactory);
 
-        await s.call('list_dalive_sites', { org: 'acme' });
+            const res = await s.call(tool, { org: 'acme', site: 'shop', confirm: true, confirmName: 'acme/shop' });
 
-        const provider = (DaLiveOrgOperations as jest.Mock).mock.calls.at(-1)?.[0] as { getAccessToken(): Promise<string | null> };
-        await expect(provider.getAccessToken()).resolves.toBe('fake-ims-token-not-a-secret');
-    });
+            expect(res).toMatchObject({ needsAuth: 'dalive' });
+            expect(DaLiveOrgOperations).not.toHaveBeenCalled();
+            expect(mockDeleteAllSiteContent).not.toHaveBeenCalled();
+        },
+    );
 });

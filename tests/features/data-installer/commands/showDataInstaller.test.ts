@@ -28,31 +28,19 @@ import { createPanelHandlerContext } from '@/commands/handlerContextFactory';
 import { dispatchHandler } from '@/core/handlers/dispatchHandler';
 import { getBundleUri } from '@/core/utils/bundleUri';
 import { getWebviewHTML } from '@/core/utils/getWebviewHTMLWithBundles';
-import { handleOpenDataInstallerSettings } from '@/features/data-installer/handlers/settingsHandlers';
+import { handleOpenSetting } from '@/features/data-installer/handlers/settingsHandlers';
 import { createMockWebviewPanel } from '../../../helpers/webviewPanelFake';
 import { WebviewCommunicationManager } from '@/core/communication/webviewCommunicationManager';
 import { dataInstallerHandlers } from '@/features/data-installer/handlers/dataInstallerHandlers';
 import { getRegisteredTypes } from '@/core/handlers/dispatchHandler';
 import { importHandlers } from '@/features/data-installer/handlers/importHandlers';
+import { announceDatapacksChanged } from '@/features/data-installer/services/datapackChanges';
 import type { DataInstallerInitialData } from '@/types/webviewPayloads';
 import * as vscode from 'vscode';
-import { createMockLogger } from '../../../helpers/loggerFake';
-import { createMockStateManager } from '../../../helpers/stateManagerFake';
-import type { StateManager } from '@/core/state/stateManager';
-import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
+import { makeDataInstallerCommand } from './showDataInstaller.testUtils';
 
 jest.mock('@/core/communication/webviewCommunicationManager');
 
-/** Minimal ExtensionContext — only what BaseWebviewCommand reaches for. */
-function makeExtensionContext(): vscode.ExtensionContext {
-    return createMockExtensionContext();
-}
-
-function makeStateManager(): ReturnType<typeof createMockStateManager> {
-    return createMockStateManager({ getCurrentProject: jest.fn().mockResolvedValue(null) });
-}
-
-const logger = createMockLogger();
 
 /** `activeColorTheme` is readonly on the real API, so replace the whole object. */
 function themeIs(kind: vscode.ColorThemeKind): void {
@@ -77,12 +65,8 @@ type Internals = {
     communicationManager: WebviewCommunicationManager | undefined;
 };
 
-function makeCommand(): ShowDataInstallerCommand & Internals {
-    return new ShowDataInstallerCommand(
-        makeExtensionContext(),
-        makeStateManager() as unknown as StateManager,
-        logger
-    ) as ShowDataInstallerCommand & Internals;
+function makeCommand(mode?: 'library' | 'project'): ShowDataInstallerCommand & Internals {
+    return makeDataInstallerCommand(mode).command as ShowDataInstallerCommand & Internals;
 }
 
 describe('ShowDataInstallerCommand', () => {
@@ -94,11 +78,42 @@ describe('ShowDataInstallerCommand', () => {
         });
 
         it('titles the panel for humans', () => {
-            expect(makeCommand().getWebviewTitle()).toBe('Data Installer');
+            expect(makeCommand().getWebviewTitle()).toBe('Datapacks');
         });
 
-        it('has a loading message', () => {
-            expect(makeCommand().getLoadingMessage()).toMatch(/data installer/i);
+        // The screen's own name: the list is not only the Data Installer's (2026-11-04).
+        it('has a loading message naming the screen', () => {
+            expect(makeCommand().getLoadingMessage()).toBe('Loading Datapacks');
+        });
+    });
+
+    describe('the settings the list depends on', () => {
+        const changeOf = (setting: string): vscode.ConfigurationChangeEvent => ({
+            affectsConfiguration: (section: string) => section === setting,
+        });
+
+        function watch(): { command: ReturnType<typeof makeCommand>; fire: (setting: string) => void } {
+            const command = makeCommand();
+            command.sendMessage = jest.fn().mockResolvedValue(undefined);
+            command.initializeMessageHandlers({ onStreaming: jest.fn() });
+            const listener = (vscode.workspace.onDidChangeConfiguration as jest.Mock).mock.calls.at(-1)?.[0];
+            return { command, fire: (setting) => listener(changeOf(setting)) };
+        }
+
+        it('tells the screen when the Data Installer address changes', () => {
+            const { command, fire } = watch();
+
+            fire('demoBuilder.dataInstaller.apiBaseUrl');
+
+            expect(command.sendMessage).toHaveBeenCalledWith('datapack-list-changed');
+        });
+
+        it('says nothing about a setting the list does not read', () => {
+            const { command, fire } = watch();
+
+            fire('demoBuilder.blockLibraries.custom');
+
+            expect(command.sendMessage).not.toHaveBeenCalled();
         });
     });
 
@@ -114,19 +129,21 @@ describe('ShowDataInstallerCommand', () => {
             // descriptors mirror — writes are deliberately not agent-exposed — but
             // the panel needs every type, so the command registers the union.
             //
-            // Plus `open-data-installer-settings`, which is in NEITHER map on
+            // Plus `open-setting`, which is in NEITHER map on
             // purpose: it opens a VS Code pane, so it has no business in the read
             // map the MCP descriptors mirror. Named here rather than derived,
             // because being outside both maps is the whole point of it. The same goes
             // for the house progress window's two messages, which "Save store changes to
-            // this pack" opens (datapack-engine step 05).
+            // this pack" opens (datapack-engine step 05), and `takeClearRequest`, where the
+            // screen takes a Clear window the Command Palette held for it (step 06 C5).
             expect(registered).toEqual(
                 [
                     ...getRegisteredTypes(dataInstallerHandlers),
                     ...getRegisteredTypes(importHandlers),
-                    'open-data-installer-settings',
+                    'open-setting',
                     'getOperationProgress',
                     'openDebugLogs',
+                    'takeClearRequest',
                 ].sort()
             );
         });
@@ -142,7 +159,7 @@ describe('ShowDataInstallerCommand', () => {
             makeCommand().initializeMessageHandlers(comm);
 
             const registered = comm.onStreaming.mock.calls.map((call) => call[0]);
-            expect(registered).toContain('open-data-installer-settings');
+            expect(registered).toContain('open-setting');
         });
 
         it('registers at least the six Stage 1 types', () => {
@@ -187,14 +204,14 @@ describe('ShowDataInstallerCommand', () => {
             makeCommand().initializeMessageHandlers(comm);
 
             const [, handler] = comm.onStreaming.mock.calls.find(
-                (c) => c[0] === 'open-data-installer-settings'
+                (c) => c[0] === 'open-setting'
             )!;
             await handler(undefined);
 
             expect(dispatchHandler).toHaveBeenCalledWith(
-                { 'open-data-installer-settings': handleOpenDataInstallerSettings },
+                { 'open-setting': handleOpenSetting },
                 { marker: 'panel-context' },
-                'open-data-installer-settings',
+                'open-setting',
                 undefined
             );
         });
@@ -260,7 +277,7 @@ describe('ShowDataInstallerCommand', () => {
                 scriptUri: 'vscode-webview://bundle.js',
                 nonce: expect.any(String),
                 cspSource: 'vscode-webview:',
-                title: 'Data Installer',
+                title: 'Datapacks',
             });
         });
     });
@@ -299,6 +316,48 @@ describe('ShowDataInstallerCommand', () => {
 
             expect(initComm).not.toHaveBeenCalled();
         });
+    });
+
+    // Owner, 2026-11-07 (F65): the same screen, opened as the Datapack Library from the sidebar and palette.
+    describe('as the Datapack Library', () => {
+        it('has a panel of its own, titled the library, so a project\'s Datapacks can stay open beside it', () => {
+            const library = makeCommand('library');
+
+            expect(library.getWebviewId()).toBe('demoBuilder.datapackLibrary');
+            expect(library.getWebviewTitle()).toBe('Datapack Library');
+            expect(library.getLoadingMessage()).toBe('Loading Datapack Library');
+        });
+
+        it('says it is the library, and names no project even while one is open', async () => {
+            const built = makeDataInstallerCommand('library');
+            const { stateManager } = built;
+            (stateManager.getCurrentProject as jest.Mock).mockResolvedValue({ name: 'scratch-1028', path: '/p' });
+            const library = built.command as ShowDataInstallerCommand & Internals;
+
+            const data = await library.getInitialData();
+
+            expect(data).toMatchObject({ mode: 'library', projectName: '' });
+            expect(stateManager.getCurrentProject).not.toHaveBeenCalled();
+        });
+
+        it('CONTROL: a project\'s Datapacks says so', async () => {
+            expect((await makeCommand().getInitialData()).mode).toBe('project');
+        });
+    });
+
+    // F66: a change in the other Datapacks screen, or by an agent.
+    it('tells the screen when the packs change, until the panel closes', () => {
+        const command = makeCommand();
+        command.sendMessage = jest.fn().mockResolvedValue(undefined);
+        command.initializeMessageHandlers({ onStreaming: jest.fn() });
+
+        announceDatapacksChanged();
+        expect(command.sendMessage).toHaveBeenCalledWith('datapack-list-changed');
+
+        (command as unknown as { disposables: { dispose(): void } }).disposables.dispose();
+        (command.sendMessage as jest.Mock).mockClear();
+        announceDatapacksChanged();
+        expect(command.sendMessage).not.toHaveBeenCalled();
     });
 
     describe('initial data', () => {

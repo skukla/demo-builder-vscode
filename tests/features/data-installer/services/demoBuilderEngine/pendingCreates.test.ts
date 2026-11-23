@@ -71,7 +71,7 @@ const CASES: Record<string, Case> = {
             ctx.session.groupIds.set('Racks', 80);
             return installAssignments(ctx, parseAssignmentRows([{ attributeSetId: 'Racks', attributeCode: 'fabric' }]));
         },
-        pending: { kind: 'attribute_assign_to_set', key: '12/fabric', id: '12/fabric' },
+        pending: { kind: 'attribute_assign_to_set', key: 'Racks/fabric', id: '12/fabric' },
     },
     'a category': {
         reads: { [childSearch(2, 'Sale')]: { items: [] } },
@@ -106,7 +106,7 @@ const CASES: Record<string, Case> = {
     'a stock source link': {
         reads: INVENTORY,
         run: (ctx) => installStockSourceLinks(ctx, parseStockSourceLinks({ stockSourceLinks: [{ stockSourceLink: { stock_id: 'Racks Stock', source_code: 'default' } }] })),
-        pending: { kind: 'stock_source_links', key: '3/default', id: '3/default' },
+        pending: { kind: 'stock_source_links', key: 'Racks Stock/default', id: '3/default' },
     },
     'a product': {
         reads: {},
@@ -202,7 +202,8 @@ describe('createOne', () => {
         await createOne(ctx, { kind: 'products', key: 'vrrack', id: 'vrrack' }, async () => ({ kind: 'products', id: 'vrrack' }));
 
         expect(ctx.recorder.pending).toStrictEqual([]);
-        expect(ctx.recorder.created).toEqual([{ kind: 'products', id: 'vrrack' }]);
+        // The pending entry's key goes on the record at creation, so an interrupted install still says what each row is.
+        expect(ctx.recorder.created).toEqual([{ kind: 'products', id: 'vrrack', key: 'vrrack' }]);
     });
 
     it('forgets the pending entry when Commerce refused the create: it made nothing', async () => {
@@ -218,7 +219,7 @@ describe('createOne', () => {
 
     it.each([
         ['a 5xx, which may have landed', new CommerceReadError('Commerce answered 503 for products', 503)],
-        ["an answer missing the new id, which did land", new Error('Commerce did not answer the new cart rule Spring\'s id.')],
+        ["an answer missing the new id, which did land", new Error('Commerce did not return the new cart rule Spring\'s id.')],
     ])('keeps the pending entry after %s', async (_label, error) => {
         const ctx = await fakeContext();
 

@@ -137,7 +137,7 @@ same as never executing the file.** A module with few mutants produces zeros tri
 further tests were excluded on exactly that ground. The 284 above are only counted where the
 module has 30 or more mutants to cover.
 
-Source: [[PL-49]] Phase 2, `.rptc/plans/test-suite-consolidation/overview.md`.
+Source: [[PL-49]] Phase 2, `.rptc/complete/test-suite-consolidation/overview.md`.
 
 ## MEASURED FOUR TIMES THE SAME DAY — raised to high on this evidence
 

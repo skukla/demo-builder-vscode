@@ -10,13 +10,16 @@ import { AGENT_PREFIX, agentNotice } from '@/features/ai/server/agentNotice';
 const SERVER_DIR = join(__dirname, '..', '..', '..', '..', 'src', 'features', 'ai', 'server');
 // "Demo Builder: <Command>" is how VS Code names this extension's commands and
 // output channels, so a bare "Demo Builder: " is not scanned; the notification
-// spellings were the interpolated title, the dash, and "Agent:".
+// spellings were the interpolated title, the dash, and a hand-written "Agent: ",
+// which is now the prefix's own words but must still come through agentNotice.
 const OLD_SPELLINGS = [/['"`]Agent: /, /Demo Builder — /, /Demo Builder: \$\{/];
 
 describe('agentNotice', () => {
-    it('opens with the word and the separator VS Code does not also use', () => {
-        expect(agentNotice('Resetting the storefront')).toBe('Agent · Resetting the storefront');
-        expect(AGENT_PREFIX).toBe('Agent ·');
+    // Step-07 A2 (owner, 2026-11-13): "Agent: ", never a middle dot, which reads as AI-written.
+    it('opens with the word and a colon', () => {
+        expect(agentNotice('Resetting the storefront')).toBe('Agent: Resetting the storefront');
+        expect(AGENT_PREFIX).toBe('Agent:');
+        expect(AGENT_PREFIX).not.toContain('\u00b7');
     });
 
     it('is the only spelling the agent server code uses for its notifications', () => {

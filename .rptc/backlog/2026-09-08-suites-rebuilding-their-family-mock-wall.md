@@ -4,7 +4,7 @@ kind: fix
 area: platform
 needs: []
 value: med
-status: built
+status: shipped
 ---
 
 # Test suites that rebuild a mock wall their family helper already owns
@@ -88,3 +88,4 @@ the byte-identical check above belongs there as an enforcer once the 17 are clea
 - 2026-10-04  night4-b (staged, uncommitted): re-measured with a byte-identical mock-factory scan (top-level jest.mock blocks, suite vs its family .testUtils): 22 suites share at least one identical factory; 2 have the helper's whole wall. (1) importHandlers-scopes, declined on 2026-10-03 for one unwanted mock: that mock (adobeAuthGuard) has since been deleted from the helper as dead, so the helper's wall is now a strict subset — converted (two jest.mock blocks deleted, the handlers taken from the helper); 205 tests in the family pass unchanged. (2) meshDeployment-createFallback: a VARIANT — the helper's verifier mock lives inside setupMeshDeploymentVerifierMock(), a function its siblings call in beforeEach, not at top level, so the suite's own top-level mock is needed. Still declined, re-checked: checkUpdates + checkUpdates-graduation (helper 9 mocks, 3 shared), stalenessDetector-hashCalculation (4, 2 shared), daLiveContentCopy-retry (3, 2 shared). Variants unchanged from the 2026-10-03 list. Every suite the item named is now converted, declined with its reason, or recorded as a variant. Not done (optional, per the item): turning the byte-identical check into an enforcer. Lead, not acted on: the siblings call setupMeshDeploymentVerifierMock() in beforeEach — a jest.mock registered after the subject loaded; worth a dead-mock-scan probe.
 - 2026-10-04  Correction, same night: the setupMeshDeploymentVerifierMock() lead is NOT dead — probed by commenting out every call: 5+ tests in meshDeployment-errors and -operations fail (the subject reaches the verifier lazily, so a mock registered in beforeEach still applies). Files restored unchanged. Lead closed.
 - 2026-10-04  feat: save a blank-starter app to GitHub; adding is a card on every grid (`79f8ed297`)
+- 2026-11-20  Released in v1.0.0-beta.153

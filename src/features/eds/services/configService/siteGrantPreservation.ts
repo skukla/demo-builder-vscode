@@ -66,7 +66,7 @@ export async function captureSiteGrants(
         statusCode: captured.status === 'not_authorized' ? (captured.httpStatus ?? 403) : undefined,
         error:
             'Could not read the current site administrators, so the update was ' +
-            'refused — continuing would have erased them. Check the Debug Logs and retry.',
+            'refused — continuing would have erased them. Try again.',
     };
 }
 

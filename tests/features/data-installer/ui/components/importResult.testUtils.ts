@@ -11,6 +11,7 @@
 import type { DataTypeStatus, ImportJobRecord } from '@/features/data-installer/types';
 import type { resolveResult } from '@/features/data-installer/ui/components/importResult';
 import type { DataInstallerRequest } from '@/features/data-installer/ui/hooks/useDataInstallerRequest';
+import { plainFailure } from '@/features/data-installer/plainFailure';
 
 /** The activation the session started, so a record can match it or not. */
 export const ACTIVATION = 'act-123';
@@ -30,9 +31,12 @@ export function failed<T>(message: string): DataInstallerRequest<T> {
         load: jest.fn(),
         loading: false,
         value: null,
-        failure: { message },
+        failure: { message: plainFailure(message) },
     };
 }
+
+/** The pack the results are about, as the dialog's titles name it. */
+export const PACK_NAME = 'Frescopa';
 
 /** A request that came back with data. */
 export function succeeded<T>(value: T): DataInstallerRequest<T> {
@@ -46,6 +50,7 @@ export function succeeded<T>(value: T): DataInstallerRequest<T> {
  */
 export function sources(overrides: Partial<ResultSources> = {}): ResultSources {
     return {
+        name: PACK_NAME,
         dryRun: succeeded({ valid: true }),
         start: succeeded({ activationId: 'stale-act' }),
         reset: succeeded({ activationId: 'stale-act' }),
@@ -58,6 +63,7 @@ export function sources(overrides: Partial<ResultSources> = {}): ResultSources {
 /** Sources whose requests have all never run — the record decides everything. */
 export function recordOnlySources(record: ImportJobRecord): ResultSources {
     return {
+        name: PACK_NAME,
         dryRun: idle<{ valid: boolean; reason?: string }>(),
         start: idle<{ activationId: string }>(),
         reset: idle<{ activationId: string }>(),

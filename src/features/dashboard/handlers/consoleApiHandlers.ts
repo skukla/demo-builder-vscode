@@ -41,6 +41,7 @@ import {
 } from '@/features/app-builder/services/apiSubscriber';
 import { createApiSubscriberClient } from '@/features/app-builder/services/apiSubscriberClientAdapter';
 import { subscriberTarget } from '@/features/app-builder/services/ensureMeshApiSubscribed';
+import { ACO_ADDON_ID } from '@/features/components/services/acoSettings';
 import {
     getAppBuilderComponentEntry,
     getAvailableAppBuilderComponents,
@@ -113,9 +114,9 @@ export const handleListConsoleApis: MessageHandler<{ componentId?: string; profi
         return { success: false, error: guardError.error, code: guardError.code };
     }
 
-    if (payload?.profilesOf) return answerProfilesOf(orgId, payload.profilesOf);
-
     try {
+        // One code's access rows and product profiles; a failure answers as the list's does.
+        if (payload?.profilesOf) return await answerProfilesOf(orgId, payload.profilesOf);
         // `managed` = ALWAYS-ON only (baseline + catalog required, NO extras) — these
         // are locked, non-removable. The optional extras are returned as `added`
         // (checked + removable in the modal). Both survive the noise filter.
@@ -191,20 +192,50 @@ function validateSdkCodes(
  * and any extra NOT in `desired` is dropped — so a shorter `desired` removes.
  * Persist happens only AFTER a successful subscribe (a failed reconcile must not
  * poison later ones).
- *
- * Also the ACO add-on's door (`acoCredentialHandlers.ts`, PL-60): its API is kept under its
- * own owner key, `adobe-commerce-aco`, so every later reconcile carries it.
  */
-export async function reconcileExtras(
+async function reconcileExtras(
     context: HandlerContext,
     project: Project,
     desiredExtras: string[],
     componentId?: string,
-): Promise<{
+): Promise<ReconcileResult> {
+    // The one guard every door shares (PL-104 fix 15): picks for an integration the
+    // project does not have would be saved and subscribed on the shared workspace.
+    // Only add checked this; Manage APIs and set_console_apis went straight here.
+    if (componentId && !project.appBuilderComponents?.[componentId]) {
+        return {
+            success: false,
+            error: `This project has no integration "${componentId}".`,
+            code: ErrorCode.CONFIG_INVALID,
+        };
+    }
+    return reconcileOwned(context, project, desiredExtras, componentId);
+}
+
+/**
+ * The ACO add-on's door (`acoCredentialHandlers.ts`, PL-60): its API is kept under its own owner
+ * key, `adobe-commerce-aco`, so every later reconcile carries it. That key is an add-on, never an
+ * integration, so the integration guard above does not apply. Only the ACO credential door calls it
+ * (`credentialDeps`), which set_up_aco_credential and Configure's ACO tab both reach.
+ */
+export function reconcileAcoApis(context: HandlerContext, project: Project, codes: string[]): Promise<ReconcileResult> {
+    return reconcileOwned(context, project, codes, ACO_ADDON_ID);
+}
+
+type ReconcileResult = {
     success: boolean;
     error?: string;
+    code?: ErrorCode;
     data?: { subscribed?: SubscribedApi[]; notSubscribed?: string[] };
-}> {
+};
+
+/** The reconcile itself, for an owner key a door has already checked. */
+async function reconcileOwned(
+    context: HandlerContext,
+    project: Project,
+    desiredExtras: string[],
+    componentId?: string,
+): Promise<ReconcileResult> {
     // Does this component hold a workspace of its own (AB-23)? It decides the whole
     // shape of the edit, because the danger the union protects against only exists
     // in a SHARED workspace.
@@ -387,13 +418,6 @@ export const handleAddConsoleApis: MessageHandler<{
     const { project } = loaded;
 
     const componentId = payload?.componentId;
-    if (componentId && !project.appBuilderComponents?.[componentId]) {
-        return {
-            success: false,
-            error: `This project has no integration "${componentId}".`,
-            code: ErrorCode.CONFIG_INVALID,
-        };
-    }
     const current = componentId
         ? (project.componentApiPicks?.[componentId] ?? [])
         : resolveDesiredApis(project);

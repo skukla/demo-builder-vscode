@@ -40,9 +40,11 @@ describe('dataInstallerHandlers', () => {
             'list-datapack-data-types',
             'list-installed-datapacks',
             'get-datapack-activity',
+            // The Datapacks screen's "no access" banner, closed and remembered (2026-11-03).
+            'dismiss-datapack-no-access',
         ];
 
-        it('registers exactly the six Stage 1 message types', () => {
+        it('registers exactly the six Stage 1 message types and the banner dismissal', () => {
             // Count pin. An unregistered type is SILENCE, not an error — the
             // webview request hangs to timeout — so the set is asserted exactly.
             expect(Object.keys(dataInstallerHandlers).sort()).toEqual([...EXPECTED].sort());
@@ -68,8 +70,8 @@ describe('dataInstallerHandlers', () => {
             expect(access.ok).toBe(true);
         });
 
-        it('refuses when the feature is disabled, without constructing a client', async () => {
-            setupSettings({ enabled: false });
+        it('refuses when no base URL is set, without constructing a client', async () => {
+            setupSettings({ apiBaseUrl: '' });
             const access = await resolveDataInstallerAccess(makeAccessContext());
             expect(access.ok).toBe(false);
             expect(access.ok === false && access.response.code).toBe(ErrorCode.INVALID_OPERATION);
@@ -102,14 +104,14 @@ describe('dataInstallerHandlers', () => {
                 expect(logged).toContain('apiBaseUrl');
             });
 
-            it('logs the disabled feature by name', async () => {
-                setupSettings({ enabled: false });
+            it('logs the unusable base URL by name', async () => {
+                setupSettings({ apiBaseUrl: 'not a url' });
                 const context = makeAccessContext();
 
                 await resolveDataInstallerAccess(context);
 
                 const logged = JSON.stringify((context.logger.warn as jest.Mock).mock.calls);
-                expect(logged).toContain('enabled');
+                expect(logged).toContain('apiBaseUrl');
             });
 
             /**
@@ -120,11 +122,11 @@ describe('dataInstallerHandlers', () => {
             it('codes both config refusals so the UI can offer the settings fix', async () => {
                 setupSettings({ apiBaseUrl: '' });
                 const unset = await resolveDataInstallerAccess(makeAccessContext());
-                setupSettings({ enabled: false });
-                const off = await resolveDataInstallerAccess(makeAccessContext());
+                setupSettings({ apiBaseUrl: 'not a url' });
+                const unusable = await resolveDataInstallerAccess(makeAccessContext());
 
                 expect(unset.ok === false && unset.response.code).toBe(ErrorCode.INVALID_OPERATION);
-                expect(off.ok === false && off.response.code).toBe(ErrorCode.INVALID_OPERATION);
+                expect(unusable.ok === false && unusable.response.code).toBe(ErrorCode.INVALID_OPERATION);
             });
         });
 
@@ -149,7 +151,7 @@ describe('dataInstallerHandlers', () => {
             setupSettings({ apiBaseUrl: 'not a url' });
             const unusable = await resolveDataInstallerAccess(makeAccessContext());
 
-            expect(unset.ok === false && unset.response.error).toContain('No Data Installer API URL');
+            expect(unset.ok === false && unset.response.error).toContain('No Data Installer address is set');
             expect(unusable.ok === false && unusable.response.error).toContain('not usable');
         });
 
@@ -197,7 +199,7 @@ describe('dataInstallerHandlers', () => {
             const DEMO_SYSTEM = { id: '285361', code: 'DEMO@AdobeOrg', name: 'Adobe Demo System' };
             const OTHER = { id: '999', code: 'OTHER@AdobeOrg', name: 'Somewhere Else' };
 
-            function signedInto(orgs: AdobeOrg[] | Error, cached?: AdobeOrg) {
+            function signedInto(orgs: AdobeOrg[] | Error | Array<AdobeOrg[] | undefined>, cached?: AdobeOrg) {
                 setupSettings({ apiBaseUrl: STAGE });
                 const context = makeAccessContext({
                     authManager: createMockAuthenticationService(
@@ -211,16 +213,23 @@ describe('dataInstallerHandlers', () => {
                             cache: { getCachedOrganization: jest.fn().mockReturnValue(cached) },
                             entities: {
                                 orgReads: {
-                                    getOrganizationsSdkOnly:
-                                        orgs instanceof Error
-                                            ? jest.fn().mockRejectedValue(orgs)
-                                            : jest.fn().mockResolvedValue(orgs),
+                                    getOrganizationsSdkOnly: listing(orgs),
                                 },
                             },
                         },
                     ),
                 });
                 return context;
+            }
+
+            /** One answer for every call, or (a list of answers) one per call, in order. */
+            function listing(orgs: AdobeOrg[] | Error | Array<AdobeOrg[] | undefined>): jest.Mock {
+                if (orgs instanceof Error) return jest.fn().mockRejectedValue(orgs);
+                const perCall = orgs.length > 0 && orgs.every((entry) => entry === undefined || Array.isArray(entry));
+                if (!perCall) return jest.fn().mockResolvedValue(orgs);
+                const mock = jest.fn();
+                for (const answer of orgs as Array<AdobeOrg[] | undefined>) mock.mockResolvedValueOnce(answer);
+                return mock;
             }
 
             it("names the org the service's address belongs to, found in the sign-in's orgs", async () => {
@@ -237,15 +246,36 @@ describe('dataInstallerHandlers', () => {
                 expect(!access.ok && access.response.code).toBe(ErrorCode.AUTH_FORBIDDEN);
                 expect(!access.ok && access.response.error).toBe(
                     "Your Adobe sign-in isn't in the Adobe org that runs the Data Installer (org 285361). " +
-                        'Sign in with an account in that org, or check the Data Installer address in settings.',
+                        'Sign in with an account in that org, or change its address in Settings.',
                 );
+                expect(!access.ok && access.response.setting).toBe('demoBuilder.dataInstaller.apiBaseUrl');
             });
 
-            it('still sends the request, naming no org, when Adobe cannot list the orgs', async () => {
+            /**
+             * Release test 1.4 (2026-11-16): after the Adobe CLI signed in again on its own, the
+             * Console client still held the old sign-in, Adobe refused the org list, and the request
+             * went without an org: the store answered "missing x-gw-ims-org-id header".
+             */
+            it('starts the Console client again and asks once more when Adobe does not list the orgs', async () => {
+                const context = signedInto([undefined, [DEMO_SYSTEM]]);
+
+                const access = await resolveDataInstallerAccess(context);
+
+                expect(context.authManager!.getSdkClient().clear).toHaveBeenCalledTimes(1);
+                expect(access.ok && access.orgCode).toBe('DEMO@AdobeOrg');
+            });
+
+            it('never sends a request without the org when Adobe still cannot list the orgs', async () => {
+                MockedClient.mockClear();
+
                 const access = await resolveDataInstallerAccess(signedInto(new Error('401')));
 
-                expect(access.ok).toBe(true);
-                expect(access.ok && access.orgCode).toBeUndefined();
+                expect(access.ok).toBe(false);
+                expect(!access.ok && access.response.code).toBe(ErrorCode.AUTH_FORBIDDEN);
+                expect(!access.ok && access.response.error).toBe(
+                    "Adobe didn't confirm your sign-in, so the request wasn't sent. Sign in to Adobe again, then retry.",
+                );
+                expect(MockedClient).not.toHaveBeenCalled();
             });
         });
 
@@ -409,10 +439,26 @@ describe('dataInstallerHandlers', () => {
             MockedClient.prototype.findDatapacks = jest
                 .fn()
                 .mockRejectedValue(new DataInstallerApiError('find-datapacks: cannot authorize request', status, 'find-datapacks'));
-            const res = await dataInstallerHandlers['find-datapacks'](makeAccessContext(), {});
-            expect(res).toEqual({
+            const res = await dataInstallerHandlers['find-datapacks'](makeAccessContext(), { store: 'installer' });
+            expect(res).toStrictEqual({
                 success: false,
-                error: "The Data Installer didn't accept your Adobe sign-in. find-datapacks: cannot authorize request",
+                error:
+                    "The Data Installer didn't accept your Adobe sign-in. Its address in Settings may point at a " +
+                    "deployment that doesn't take your sign-in.",
+                code: ErrorCode.AUTH_FORBIDDEN,
+                setting: 'demoBuilder.dataInstaller.apiBaseUrl',
+            });
+        });
+
+        // Release test 1.4: a library pack's refusal named the Data Installer and its address.
+        it('says the datapack library refused the sign-in in its own name, with no Data Installer advice', async () => {
+            MockedClient.prototype.findDatapacks = jest
+                .fn()
+                .mockRejectedValue(new DataInstallerApiError('find-datapacks: cannot authorize request', 401, 'find-datapacks'));
+            const res = await dataInstallerHandlers['find-datapacks'](makeAccessContext(), { store: 'library' });
+            expect(res).toStrictEqual({
+                success: false,
+                error: "The datapack library didn't accept your Adobe sign-in. Sign in to Adobe again, then retry.",
                 code: ErrorCode.AUTH_FORBIDDEN,
             });
         });
@@ -461,7 +507,9 @@ describe('dataInstallerHandlers', () => {
 
             await dataInstallerHandlers['find-datapacks'](makeAccessContext());
 
-            expect(findDatapacks.mock.calls[0][0]).toStrictEqual({ shared: true });
+            // The datapack store, then the Data Installer: one client mock answers for both here.
+            expect(findDatapacks.mock.calls[0][0]).toStrictEqual({});
+            expect(findDatapacks.mock.calls[1][0]).toStrictEqual({ shared: true });
         });
 
         it('forwards limit and skip, and omits the KEYS when they are absent', async () => {
@@ -478,12 +526,15 @@ describe('dataInstallerHandlers', () => {
                 includeCommunity: true,
             });
 
-            expect(findDatapacks.mock.calls[0][0]).toStrictEqual({
+            // Each call asks the datapack store, then the Data Installer.
+            expect(findDatapacks.mock.calls[0][0]).toStrictEqual({ limit: 5, skip: 10 });
+            expect(findDatapacks.mock.calls[1][0]).toStrictEqual({
                 shared: true,
                 limit: 5,
                 skip: 10,
             });
-            expect(findDatapacks.mock.calls[1][0]).toStrictEqual({});
+            expect(findDatapacks.mock.calls[2][0]).toStrictEqual({});
+            expect(findDatapacks.mock.calls[3][0]).toStrictEqual({});
         });
 
         it('get-datapack-detail refuses when EITHER half of the identity is missing', async () => {
@@ -590,14 +641,15 @@ describe('dataInstallerHandlers', () => {
             // UI `undefined` where the fallback sentence belongs.
             MockedClient.prototype.findDatapacks = jest.fn().mockRejectedValue('a bare string');
 
-            const res = await dataInstallerHandlers['find-datapacks'](makeAccessContext(), {});
+            const res = await dataInstallerHandlers['find-datapacks'](makeAccessContext(), { store: 'installer' });
 
             expect(res.error).toBe('Could not list datapacks.');
             expect(res.code).toBe(ErrorCode.UNKNOWN);
         });
 
         it('returns the guard failure unchanged rather than calling the client', async () => {
-            setupSettings({ enabled: false });
+            // Neither address is set: `setupSettings` answers for both sections.
+            setupSettings({ apiBaseUrl: '' });
             const findDatapacks = jest.fn();
             MockedClient.prototype.findDatapacks = findDatapacks;
             const res = await dataInstallerHandlers['find-datapacks'](makeAccessContext(), {});

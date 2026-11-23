@@ -2,7 +2,7 @@
  * A list in words: "A", "A and B", "A, B and C".
  *
  * One home for a sentence that was written by hand in ten files, and missing from the two that
- * joined every name with " and " (the Reset ERPs confirm read "Justrite ERP and Accuform ERP
+ * joined every name with " and " (the Reset ERPs confirm read "Tailspin ERP and Accuform ERP
  * and Test ERP", release walk 2026-10-28).
  *
  * @module core/utils/andList

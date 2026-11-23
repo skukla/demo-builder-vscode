@@ -8,9 +8,14 @@
  * @module features/data-installer/handlers/libraryWriter
  */
 
+import { versionChoices } from '../packVersions';
 import type { DataInstallerClient } from '../services/dataInstallerClient';
+import { resolveDataInstallerBaseUrl, resolveDatapackStoreBaseUrl } from '../services/dataInstallerConfig';
 import { DatapackStoreWriter } from '../services/datapackStoreWriter';
+import { rememberNewestSaves, rememberPackChoices, rememberPackName, rememberedPackName } from '../services/packNames';
 import { resolveDataInstallerAccess } from './dataInstallerHandlers';
+import type { Project } from '@/types/base';
+import { storeOf } from '@/types/datapack';
 import type { HandlerContext } from '@/types/handlers';
 
 /** The library's reads and writes, or why it cannot be opened. */
@@ -31,6 +36,82 @@ export async function openLibraryWriter(context: HandlerContext): Promise<Opened
         getToken: access.getToken,
         ...(access.orgCode ? { orgCode: access.orgCode } : {}),
         log: (line) => context.debugLogger.debug(`[Data Installer] ${line}`),
+        inParts: true,
     });
     return { ok: true, client: access.client, writer };
+}
+
+/**
+ * A library pack's display name, as the Datapacks screen shows it (F17: the reset confirm showed its
+ * id, "kukla-tailspin-a80dca"). Undefined for a pack outside the library, or a library that does not
+ * answer: the caller falls back. Read by the Reset Selected confirm and the dashboard's Datapacks
+ * card (owner, 2026-11-07). Every name read is remembered (`packNames`), so the card can show it at
+ * once next time, with how many versions the pack offers (step-07 P4).
+ *
+ * @param context - a context with no `panel` reads without asking the SC to sign in
+ */
+export async function libraryDisplayName(context: HandlerContext, held: NonNullable<Project['datapack']>): Promise<string | undefined> {
+    if (held.store !== 'library') return undefined;
+    try {
+        const library = await openLibraryWriter(context);
+        if (!library.ok) return undefined;
+        const page = await library.client.findDatapacks({ datapackName: held.name });
+        const versions = page.items.filter((item) => item.id.name === held.name);
+        const name = versions[0]?.displayName;
+        if (!name) return undefined;
+        await rememberPackName(context.context.globalState, held.name, name);
+        // The same read says how many versions the pack offers: the dashboard line names one only with two (step-07 P4).
+        await rememberPackChoices(context.context.globalState, held.name, versionChoices(versions.map((item) => item.id.version)).length);
+        await rememberNewestSaves(context.context.globalState, versions);
+        return name;
+    } catch (error) {
+        context.debugLogger.debug(`[Data Installer] Could not read ${held.name}'s display name: ${error instanceof Error ? error.message : String(error)}`);
+        return undefined;
+    }
+}
+
+/**
+ * The project's pack by the name the SC knows it by: remembered, else read from the library without
+ * a sign-in prompt, else its id.
+ */
+export async function heldDisplayName(
+    context: HandlerContext,
+    held: NonNullable<Project['datapack']>,
+): Promise<string> {
+    return (await knownPackName(context, held)) ?? held.name;
+}
+
+/**
+ * The pack's name as the SC knows it: remembered (every list keeps the names it shows), else read
+ * from the store that holds it without a sign-in prompt, else undefined, and a progress step keeps
+ * the table's "the datapack" rather than showing an id (owner, 2026-11-16). A store with no address
+ * set is not asked: a name lookup is not worth its configuration warning.
+ */
+export async function knownPackName(
+    context: HandlerContext,
+    held: NonNullable<Project['datapack']>,
+): Promise<string | undefined> {
+    try {
+        const memory = context.context?.globalState;
+        const known = memory ? rememberedPackName(memory, held.name) : undefined;
+        if (known) return known;
+        const quiet = { ...context, panel: undefined };
+        if (storeOf(held) === 'library') {
+            return resolveDatapackStoreBaseUrl().ok ? await libraryDisplayName(quiet, held) : undefined;
+        }
+        return resolveDataInstallerBaseUrl().ok ? await installerDisplayName(quiet, held) : undefined;
+    } catch {
+        // A name is not worth stopping for: the step still says what it does.
+        return undefined;
+    }
+}
+
+/** A Data Installer pack's name, read from its detail and remembered. Undefined when it does not answer. */
+async function installerDisplayName(context: HandlerContext, held: NonNullable<Project['datapack']>): Promise<string | undefined> {
+    const access = await resolveDataInstallerAccess(context);
+    if (!access.ok) return undefined;
+    const name = (await access.client.getDatapackDetail({ name: held.name, version: held.version })).displayName;
+    if (!name) return undefined;
+    await rememberPackName(context.context.globalState, held.name, name);
+    return name;
 }

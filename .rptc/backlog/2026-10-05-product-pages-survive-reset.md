@@ -4,7 +4,7 @@ kind: fix
 area: eds
 needs: []
 value: med
-status: built
+status: shipped
 ---
 
 # Reset and delete leave a storefront's product pages published
@@ -65,7 +65,7 @@ There was no listing API in the code or in the `eds-publish-and-config` skill. T
 status job is new to this codebase; its request and response shape are written from
 Adobe's Admin API reference, not from a captured response.
 
-### The live check (scratch storefront, or Justrite with the owner's say)
+### The live check (scratch storefront, or Tailspin with the owner's say)
 
 1. Before: `get_auth_status`, then confirm product pages exist, for example
    `read_published_page({ path: "/products/<urlKey>/<sku>" })` for one pre-warmed SKU
@@ -94,5 +94,6 @@ Found on the way and filed, not fixed: EDS-31 ("Manage DA.live Sites" unpublishe
 ## Shipped so far
 
 - 2026-10-05  fix(eds): reset and delete remove a storefront's product pages (EDS-26) (`696de0118`)
-- 2026-10-05  2026-10-05 Reset proven live on Justrite: the Helix bulk status listing was accepted and found 49 published product pages; the reset reported 'Removed 49 product pages, live and preview' (the preview removal was NOT refused), then pre-warm re-published the current catalog's 49 and the three sampled product URLs answer 200 again. Not proven: that a page for a SKU no longer in the catalog now 404s (none existed to test), that a shopper-visit page is in the listing, and the delete path (needs a scratch project).
-- 2026-10-05  docs(backlog): reset proven live on Justrite for EDS-26 and EDS-24; EDS-27 read checks (`1a3c43aa1`)
+- 2026-10-05  2026-10-05 Reset proven live on Tailspin: the Helix bulk status listing was accepted and found 49 published product pages; the reset reported 'Removed 49 product pages, live and preview' (the preview removal was NOT refused), then pre-warm re-published the current catalog's 49 and the three sampled product URLs answer 200 again. Not proven: that a page for a SKU no longer in the catalog now 404s (none existed to test), that a shopper-visit page is in the listing, and the delete path (needs a scratch project).
+- 2026-10-05  docs(backlog): reset proven live on Tailspin for EDS-26 and EDS-24; EDS-27 read checks (`1a3c43aa1`)
+- 2026-11-20  Released in v1.0.0-beta.153

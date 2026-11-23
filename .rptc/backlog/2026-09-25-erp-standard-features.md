@@ -5,7 +5,8 @@ area: app-builder
 parent: AB-26
 needs: []
 value: high
-status: built
+status: shipped
+plan: erp-demo-filling
 ---
 
 # The mock ERP knows nothing about Commerce: filling at reset, running as if the ERP were the source
@@ -100,7 +101,7 @@ events.
 
 - 2026-09-25  feat(integrations): an ERP pair's name is fixed when it is added (`b8219846e`)
 - 2026-09-25  Step 1, words (demo-erp be9879b): the ERP's screens stop naming Commerce; the monitor says Inbound/Outbound/Sent; Home's sync card gone. Fixed name (demo-erp 1554681, this repo b8219846e). Left in step 1: Sync records and Wipe move to Demo Builder with the demo copy.
-- 2026-09-25  Plan written for steps 1c to 5: .rptc/plans/erp-demo-filling/overview.md. Three owner questions: Wipe to Demo Builder; detach becomes Demo Builder's over the integration's write log; whether the Mapping tab can be pre-filled from outside the app.
+- 2026-09-25  Plan written for steps 1c to 5: .rptc/complete/erp-demo-filling/overview.md. Three owner questions: Wipe to Demo Builder; detach becomes Demo Builder's over the integration's write log; whether the Mapping tab can be pre-filled from outside the app.
 - 2026-09-27  fix(app-builder): the ERP's first sync after an add actually starts (`281f5275b`)
 - 2026-09-27  2026-09-27  Owner: during A3's live run, capture Commerce's own event payloads (shipment, invoice, order hold/cancel save, product delete) from the Developer Console's registration debug tracing, scrubbed, into commerce-erp-integration test/fixtures/commerce/events/, and point the handler tests at them (today they use hand-written payloads). Turn tracing on before the run's first order.
 - 2026-09-27  feat(erp): Demo Builder fills the ERP from Commerce (`706583816`)
@@ -110,7 +111,7 @@ events.
 - 2026-09-27  feat(erp): "Load demo data" on the ERP card (`6670494a9`)
 - 2026-09-27  Plan steps 2 and 3 built (loop branches, not deployed): the integration's copy removed (mirror, mirror-job, reset, refresh-job and its timer, refresh-partners, the Admin page's Sync/Refresh/Reset buttons; commerce-erp-integration 4eaf6ac, contract 4649ef0), and the ERP's Sync records button and sync record removed (demo-erp ef7727b). Demo Builder fills the ERP at add, at Reset records, and from Load demo data on the ERP card.
 - 2026-09-27  Correction to the 2026-09-27 live-run line: Commerce DOES raise a company event (observer.company_save_commit_after, in the Cloud Service's supported list); the integration subscribes to it since 30e37cb, not yet proven live. Stock moved by Commerce's own Transfer, Import or a REST write still raises nothing and no longer reaches the ERP; the Move stock action is the path.
-- 2026-09-27  Next: the key map (plan step 1's second half, prerequisite of step 5). Today the pairing is implicit: ERP customer C<companyId>, product by SKU. Design written in .rptc/plans/erp-demo-filling/overview.md.
+- 2026-09-27  Next: the key map (plan step 1's second half, prerequisite of step 5). Today the pairing is implicit: ERP customer C<companyId>, product by SKU. Design written in .rptc/complete/erp-demo-filling/overview.md.
 - 2026-09-27  feat(erp): the fill hands the integration its key map (`5cee05c3f`)
 - 2026-09-27  docs(handoff): ERP loop report, 2026-09-27 (`de8956524`)
 - 2026-09-27  docs(plan): ERP filling progress, and the key-map design (`37fe91fb3`)
@@ -127,8 +128,9 @@ events.
 - 2026-10-02  Owner 2026-10-02: (1) YES to step 6 — the ERP must not speak Commerce language (its own event names and payloads; the integration translates). (2) Question 3 decided: Demo Builder pre-fills the integration mapping settings (feasibility of writing App Management business config from outside the app still to verify). (3) Wipe: today Demo Builder wipes only inside Reset ERPs (detach, wipe, refill) and on removal; the ERP Settings screen still has its own Wipe all records card — to go with the Settings redesign (AB-59)
 - 2026-10-02  Owner 2026-10-02: step 6 includes the product event fix found under AB-60 — the ERP raises Product changed (not product.price / Price changed) with the full record, and the journal names the fields that changed
 - 2026-10-02  docs(plans): the ERP speaks its own language, design and event research (AB-26y) (`b6c04455f`)
-- 2026-10-03  Reconciled 2026-10-03: step 6 is DONE, not queued — demo-erp 32b8408 (contract v16, the ERP's own CloudEvents) and integration 81c69ce (one translation module), deployed and run live on Justrite 2026-10-02 (order 5000000011 end to end). Still open here: remove the ERP's DELETE products/:sku route (demo-erp actions/products/index.js:58), and Demo Builder pre-filling the mapping settings (designed in .rptc/plans/several-erps/erp-own-language-design.md, not built).
+- 2026-10-03  Reconciled 2026-10-03: step 6 is DONE, not queued — demo-erp 32b8408 (contract v16, the ERP's own CloudEvents) and integration 81c69ce (one translation module), deployed and run live on Tailspin 2026-10-02 (order 5000000011 end to end). Still open here: remove the ERP's DELETE products/:sku route (demo-erp actions/products/index.js:58), and Demo Builder pre-filling the mapping settings (designed in .rptc/plans/several-erps/erp-own-language-design.md, not built).
 - 2026-10-03  feat(erp): a fill writes each ERP's sales organizations into the integration's mapping, where unset (AB-26y) (`4cdd36d52`)
 - 2026-10-03  Step 5 built 2026-10-03: the ERP's DELETE products route is removed (demo-erp 4457097, contract v17); a Commerce product delete is recorded in the integration's Activity and no ERP is called (integration 030bc88). 'Unlink the SKU in the lookup' was nothing to do: the key map holds customers only and the Admin lookup reads live.
 - 2026-10-03  Last step built 2026-10-03: the ERP raises its event for every change, whoever made it; the integration drops the events that echo its own changes (own-writes.js, five kinds, 15-minute records); box journeys count exactly one shipment, invoice, hold, unhold and cancel (demo-erp c7c0837, integration 812cf10; contract v19; on main). All six steps are now built.
 - 2026-10-18  fix(erp): Fill from Commerce asks first, and Reset ERPs says it plainly (`afd69da7c`)
+- 2026-11-20  Released in v1.0.0-beta.153

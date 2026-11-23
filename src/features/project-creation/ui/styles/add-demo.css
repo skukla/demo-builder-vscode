@@ -22,14 +22,6 @@
         color: var(--spectrum-global-color-gray-700);
     }
 
-    .add-demo-warnings {
-        margin: 0;
-        padding-left: 18px;
-        font-size: 12px;
-        line-height: 1.5;
-        color: var(--spectrum-global-color-gray-700);
-    }
-
     .add-demo-b2b {
         display: flex;
         flex-direction: column;

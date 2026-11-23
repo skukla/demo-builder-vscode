@@ -48,12 +48,28 @@ export function useRunClock(startedAt: number | undefined): string | undefined {
 export const TOOK_WORTH_SAYING_MS = 60_000;
 
 /**
- * The line a run's last view carries: "Took 3 minutes, 12 seconds". Nothing for a run
- * under {@link TOOK_WORTH_SAYING_MS}.
+ * How long a run took, as the words after "Took" ("3 minutes, 12 seconds"), or undefined for a run
+ * under {@link TOOK_WORTH_SAYING_MS}. `RunFoot` makes the one call and shows it as the last line of
+ * the run's body, "Took 3 minutes, 12 seconds" in the quiet note (owner, 2026-11-10).
  *
  * @param tookMs - how long the run took, as the extension measured it
- * @returns the line, or undefined when the run was short
+ * @returns the value, or undefined when the run was short
  */
-export function tookLine(tookMs: number): string | undefined {
-    return tookMs < TOOK_WORTH_SAYING_MS ? undefined : `Took ${formatElapsed(tookMs)}`;
+export function tookValue(tookMs: number): string | undefined {
+    return tookMs < TOOK_WORTH_SAYING_MS ? undefined : formatElapsed(tookMs);
+}
+
+/**
+ * How long one item of a list of work took, as its row keeps it once it ends ("1 minute, 5
+ * seconds"), on the same scale its running clock counted: nothing under a second, as the clock
+ * shows nothing before its first tick (owner, 2026-11-04, the projects batch run).
+ *
+ * @param startedAt - when the item began, ms since the epoch
+ * @param endedAt - when it ended
+ * @returns the time, or undefined when either is unknown or it took under a second
+ */
+export function spanValue(startedAt: number | undefined, endedAt: number | undefined): string | undefined {
+    if (startedAt === undefined || endedAt === undefined) return undefined;
+    const ms = endedAt - startedAt;
+    return ms >= TICK_MS ? formatElapsed(ms) : undefined;
 }

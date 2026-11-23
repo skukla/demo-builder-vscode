@@ -19,14 +19,24 @@
  *
  * Tests the `ensureMeshPreflightAuth` helper extracted from executor.ts.
  *
- * Total tests: 5
+ * Since 2026-11-18 it signs in through the shared guard (`ensureAdobeIOAuth`): a
+ * flow that needs a sign-in partway asks first in a VS Code dialog, so the browser
+ * opens only on "Sign In". It used to start the browser sign-in unasked.
  */
+
+import * as vscode from 'vscode';
 
 import { ensureMeshPreflightAuth } from './executorMeshPhase.testUtils';
 import { createMockLogger } from './executorMeshPhase.testUtils';
 
 import { createMockAuthenticationService } from './executorMeshPhase.testUtils';
 describe('Executor - Mesh Pre-flight Authentication', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+        // The guard's dialog: the SC presses Sign In unless a test says otherwise.
+        (vscode.window.showWarningMessage as jest.Mock).mockResolvedValue('Sign In');
+    });
+
     // Minimal mock for authManager
     function createMockAuthManager(overrides: {
         isAuthenticated?: boolean;
@@ -86,6 +96,17 @@ describe('Executor - Mesh Pre-flight Authentication', () => {
                 projectId: 'proj-456',
                 workspace: 'ws-789',
             });
+        });
+
+        it('asks in the guard dialog first, and opens no sign-in on Cancel', async () => {
+            (vscode.window.showWarningMessage as jest.Mock).mockResolvedValue('Cancel');
+            const authManager = createMockAuthManager({ isAuthenticated: false });
+
+            const result = await ensureMeshPreflightAuth(authManager, createMockLogger(), {});
+
+            expect(result).toBe(false);
+            expect(vscode.window.showWarningMessage).toHaveBeenCalled();
+            expect(authManager.loginAndRestoreProjectContext).not.toHaveBeenCalled();
         });
 
         it('should return false when re-login fails', async () => {

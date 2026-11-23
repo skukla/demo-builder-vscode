@@ -89,7 +89,6 @@ const CHECK: FoundUpdates = {
         adobeMcp: [],
         blockLibrary: [],
         blockLibraryInstall: [],
-        inspector: [],
         integration: [],
     },
     count: 1,

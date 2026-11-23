@@ -4,7 +4,7 @@ kind: fix
 area: ai
 needs: []
 value: low
-status: built
+status: shipped
 ---
 
 # An agent's project delete ignores the "deleteAll" setting
@@ -51,3 +51,4 @@ behaviour in either direction.
 ## Shipped so far
 
 - 2026-10-19  fix(ai): an agent's project delete follows the cleanupBehavior setting (`83d5a41f1`)
+- 2026-11-20  Released in v1.0.0-beta.153

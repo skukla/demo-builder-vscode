@@ -509,6 +509,8 @@ describe('when the run does not finish', () => {
             repoUrl: 'https://github.com/test-owner/test-repo',
             // Phase 2 ran before the copy failed: what its build step left (storefrontChanges.ts).
             storefrontBuildComplete: true,
+            // Phase 3 wrote the new site, so a stop would remove it (F275).
+            siteWritten: true,
         });
     });
 
@@ -695,6 +697,7 @@ describe('when the run does finish', () => {
             repoName: 'test-repo',
             repoUrl: 'https://github.com/test-owner/test-repo',
             storefrontBuildComplete: true,
+            siteWritten: true,
         });
     });
 });

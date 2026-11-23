@@ -10,12 +10,12 @@ import { createNonSwitchingStateManager, createWorkingProjectStateManager } from
 import { createMockProject } from '../../helpers/projectFake';
 import { createMockStateManager } from '../../helpers/stateManagerFake';
 
-const WORKING = '/projects/justrite';
+const WORKING = '/projects/tailspin';
 const OTHER = '/projects/scratch';
 
 function makeReal(currentPath: string) {
     return createMockStateManager({
-        loadProjectFromPath: jest.fn().mockResolvedValue(createMockProject({ name: 'justrite', path: WORKING })),
+        loadProjectFromPath: jest.fn().mockResolvedValue(createMockProject({ name: 'tailspin', path: WORKING })),
         getCurrentProject: jest.fn().mockResolvedValue(createMockProject({ name: 'current', path: currentPath })),
         hasProject: jest.fn().mockReturnValue(true),
     });
@@ -31,7 +31,7 @@ describe('createWorkingProjectStateManager', () => {
 
         expect(project?.path).toBe(WORKING);
         expect(real.loadProjectFromPath).toHaveBeenCalledTimes(2);
-        expect(real.loadProjectFromPath).toHaveBeenCalledWith(WORKING, undefined, { persistAfterLoad: false });
+        expect(real.loadProjectFromPath).toHaveBeenCalledWith(WORKING);
     });
 
     it('follows the current project while it has no working project', async () => {
@@ -52,13 +52,13 @@ describe('createWorkingProjectStateManager', () => {
         await view.getCurrentProject();
 
         expect(real.getCurrentProject).toHaveBeenCalledTimes(1);
-        expect(real.loadProjectFromPath).toHaveBeenCalledWith(WORKING, undefined, { persistAfterLoad: false });
+        expect(real.loadProjectFromPath).toHaveBeenCalledWith(WORKING);
     });
 
     it('saves without moving the pointer while its project is not the current one', async () => {
         const real = makeReal(OTHER);
         const view = createWorkingProjectStateManager(real, () => WORKING);
-        const project = createMockProject({ name: 'justrite', path: WORKING });
+        const project = createMockProject({ name: 'tailspin', path: WORKING });
 
         await view.saveProject(project);
 
@@ -71,7 +71,7 @@ describe('createWorkingProjectStateManager', () => {
     it('saves exactly as before while its project is the current one, change event and all', async () => {
         const real = makeReal(WORKING);
         const view = createWorkingProjectStateManager(real, () => WORKING);
-        const project = createMockProject({ name: 'justrite', path: WORKING });
+        const project = createMockProject({ name: 'tailspin', path: WORKING });
 
         await view.saveProject(project);
 
@@ -85,7 +85,7 @@ describe('createWorkingProjectStateManager', () => {
     it('lets a rename of the current project move the pointer to the new folder', async () => {
         const real = makeReal(WORKING);
         const view = createWorkingProjectStateManager(real, () => WORKING);
-        const renamed = createMockProject({ name: 'justrite-2', path: '/projects/justrite-2' });
+        const renamed = createMockProject({ name: 'tailspin-2', path: '/projects/tailspin-2' });
 
         await view.saveProject(renamed);
 
@@ -96,7 +96,7 @@ describe('createWorkingProjectStateManager', () => {
     it('saves exactly as before when it has no working project', async () => {
         const real = makeReal(OTHER);
         const view = createWorkingProjectStateManager(real, () => undefined);
-        const project = createMockProject({ name: 'justrite', path: WORKING });
+        const project = createMockProject({ name: 'tailspin', path: WORKING });
 
         await view.saveProject(project);
 
@@ -123,7 +123,7 @@ describe('createNonSwitchingStateManager', () => {
     // Check for Updates and its apply walk every project; none may become the open one.
     it('writes a project that is not open to disk only, leaving the open one where it is', async () => {
         const real = makeReal(OTHER);
-        const project = createMockProject({ name: 'justrite', path: WORKING });
+        const project = createMockProject({ name: 'tailspin', path: WORKING });
 
         await createNonSwitchingStateManager(real).saveProject(project);
 
@@ -133,7 +133,7 @@ describe('createNonSwitchingStateManager', () => {
 
     it('gives the open project the ordinary save, so its screens see the change', async () => {
         const real = makeReal(WORKING);
-        const project = createMockProject({ name: 'justrite', path: WORKING });
+        const project = createMockProject({ name: 'tailspin', path: WORKING });
 
         await createNonSwitchingStateManager(real).saveProject(project);
 

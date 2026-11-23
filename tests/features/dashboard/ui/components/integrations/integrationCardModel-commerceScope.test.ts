@@ -54,14 +54,14 @@ function meshCardWith(
     return deriveMeshCard(display(), 'deployed', meshEntry({ envVars }), false, undefined, structure);
 }
 
-describe('deriveMeshCard — deployed Commerce scope', () => {
+describe('deriveMeshCard — deployed Commerce Scope', () => {
     it('reads the three scope codes off the deployed snapshot', () => {
         const model = meshCardWith(ACCS_SCOPE);
 
         expect(model.commerceScope).toEqual([
             { label: 'Website', code: 'citisignal' },
             { label: 'Store', code: 'citisignal_store' },
-            { label: 'Store view', code: 'citisignal_us' },
+            { label: 'Store View', code: 'citisignal_us' },
         ]);
     });
 
@@ -74,7 +74,7 @@ describe('deriveMeshCard — deployed Commerce scope', () => {
         expect(model.commerceScope).toEqual([
             { label: 'Website', code: 'base' },
             { label: 'Store', code: 'main_website_store' },
-            { label: 'Store view', code: 'default' },
+            { label: 'Store View', code: 'default' },
         ]);
     });
 
@@ -97,7 +97,7 @@ describe('deriveMeshCard — deployed Commerce scope', () => {
 
         expect(model.commerceScope).toEqual([
             { label: 'Website', code: 'citisignal' },
-            { label: 'Store view', code: 'citisignal_us' },
+            { label: 'Store View', code: 'citisignal_us' },
         ]);
     });
 
@@ -132,7 +132,7 @@ describe('deriveMeshCard — naming the codes from the store structure', () => {
         expect(model.commerceScope).toEqual([
             { label: 'Website', code: 'citisignal', name: 'CitiSignal' },
             { label: 'Store', code: 'citisignal_store', name: 'CitiSignal Store' },
-            { label: 'Store view', code: 'citisignal_us', name: 'CitiSignal US' },
+            { label: 'Store View', code: 'citisignal_us', name: 'CitiSignal US' },
         ]);
     });
 
@@ -162,7 +162,7 @@ describe('deriveMeshCard — naming the codes from the store structure', () => {
         const model = meshCardWith({ ADOBE_COMMERCE_STORE_VIEW_CODE: 'citisignal_us' }, STRUCTURE);
 
         expect(model.commerceScope).toEqual([
-            { label: 'Store view', code: 'citisignal_us', name: 'CitiSignal US' },
+            { label: 'Store View', code: 'citisignal_us', name: 'CitiSignal US' },
         ]);
     });
 });

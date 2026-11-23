@@ -70,7 +70,8 @@ describe("a pack's root, the store's root its own", () => {
         const ctx = await open();
         const removed = await removePack(ctx, files, { projectPath: PROJECT, pack: PACK });
         expect(removed).toMatchObject({ removed: 2, kept: [] });
-        expect(store.sent.map((c) => `${c.method} ${c.path}`)).toEqual(['DELETE categories/301', 'DELETE categories/300']);
+        // Espresso (301) goes with Coffee (300), as Commerce deletes a category's children with it.
+        expect(store.sent.map((c) => `${c.method} ${c.path}`)).toEqual(['DELETE categories/300']);
         expect(store.categories).toEqual(before);
         await expect(readInstallRecord(files, PROJECT, PACK)).resolves.toBeUndefined();
     });
@@ -101,7 +102,7 @@ describe("a pack's root, the store's root shared", () => {
 
         expect(posts(store.sent)).toEqual(['Frescopa under 1', 'Coffee under 300', 'Espresso under 301']);
         expect(asker.asked).toHaveLength(1);
-        expect(outcome).toMatchObject({ rootPlacement: 'own', rootStep: { state: 'open', rootId: 300, storeRootId: 119, storeCode: 'justrite_test_store' } });
+        expect(outcome).toMatchObject({ rootPlacement: 'own', rootStep: { state: 'open', rootId: 300, storeRootId: 119, storeCode: 'tailspin_test_store' } });
         expect((await readInstallRecord(files, PROJECT, PACK))?.rootStep?.state).toBe('open');
     });
 
@@ -113,16 +114,16 @@ describe("a pack's root, the store's root shared", () => {
         await installPack(await open(), ITEMS);
         expect(asker.asked).toHaveLength(2);
 
-        store.setRoot('justrite_test_store', 300);
+        store.setRoot('tailspin_test_store', 300);
         const outcome = await installPack(await open(), ITEMS);
         expect(asker.asked).toHaveLength(2);
         expect(outcome.rootStep?.state).toBe('done');
     });
 
-    it("I've done it, after the SC set the root, carries the install on with the step done", async () => {
+    it("I've Done It, after the SC set the root, carries the install on with the step done", async () => {
         const { store, files, open } = await opened(SHARED_TARGET);
         const ctx = await open();
-        ctx.asker = { ask: async () => (store.setRoot('justrite_test_store', 300), DONE_IT), openAdmin: async () => undefined };
+        ctx.asker = { ask: async () => (store.setRoot('tailspin_test_store', 300), DONE_IT), openAdmin: async () => undefined };
 
         const outcome = await installPack(ctx, ITEMS);
 
@@ -137,7 +138,7 @@ describe("a pack's root, the store's root shared", () => {
         const deps = { commerce: async () => ({ get: ctx.get }), projectPath: PROJECT, files };
 
         await expect(checkRecordedRootStep(deps, PACK)).resolves.toMatchObject({ state: 'open' });
-        store.setRoot('justrite_test_store', 300);
+        store.setRoot('tailspin_test_store', 300);
         store.sent.length = 0;
         await expect(checkRecordedRootStep(deps, PACK)).resolves.toMatchObject({ state: 'done' });
         expect(store.sent).toStrictEqual([]);
@@ -147,17 +148,20 @@ describe("a pack's root, the store's root shared", () => {
     it('removal keeps the root while the store shows it, then takes it once pointed back: back to zero', async () => {
         const { store, files, open, before } = await opened(SHARED_TARGET, answering(SKIP));
         await installPack(await open(), ITEMS);
-        store.setRoot('justrite_test_store', 300);
+        store.setRoot('tailspin_test_store', 300);
 
         const first = await removePack(await open(), files, { projectPath: PROJECT, pack: PACK });
-        expect(first.kept).toEqual([expect.objectContaining({ name: 'Frescopa', reason: expect.stringContaining('the store JustRite Test Store shows it as its root category') })]);
+        expect(first.kept).toEqual([expect.objectContaining({ name: 'Frescopa', reason: expect.stringContaining('the store Tailspin Test Store shows it as its root category') })]);
+        // The result screen's Admin step: which store, which category, and the root to set back.
+        expect(first.keptRoot).toEqual({ store: 'Tailspin Test Store', category: 'Frescopa', restore: 'Tailspin' });
         expect(idsByName(store)).toHaveProperty('Frescopa', 300);
         expect(idsByName(store)).not.toHaveProperty('Coffee');
         expect((await readInstallRecord(files, PROJECT, PACK))?.created.map((o) => o.key)).toEqual(['(root)']);
 
-        store.setRoot('justrite_test_store', 119);
+        store.setRoot('tailspin_test_store', 119);
         const second = await removePack(await open(), files, { projectPath: PROJECT, pack: PACK });
         expect(second).toMatchObject({ removed: 1, kept: [] });
+        expect(second.keptRoot).toBeUndefined();
         expect(store.categories).toEqual(before);
         await expect(readInstallRecord(files, PROJECT, PACK)).resolves.toBeUndefined();
     });
@@ -165,7 +169,7 @@ describe("a pack's root, the store's root shared", () => {
     it("capture keeps the pack's root, as the store has it now, when the SC made it the store's root", async () => {
         const { store, open } = await opened(SHARED_TARGET, answering(SKIP));
         await installPack(await open(), ITEMS);
-        store.setRoot('justrite_test_store', 300);
+        store.setRoot('tailspin_test_store', 300);
         // Renamed in the Admin too: the save keeps the root this engine made as it is now.
         store.categories.set(300, { ...store.categories.get(300)!, name: 'Frescopa Coffee' });
         // The store's root is now the pack's: a fresh session reads it so.

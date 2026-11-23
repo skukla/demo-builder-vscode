@@ -29,7 +29,7 @@ export interface AcoAddonChoiceProps {
     note?: string;
 }
 
-const LABEL = 'Read the catalog from Adobe Commerce Optimizer';
+const LABEL = 'Read the Catalog from Adobe Commerce Optimizer';
 const DETAIL = 'Carts and orders stay with Commerce';
 const REQUIRED = 'This demo package requires it';
 

@@ -14,6 +14,7 @@ import { createMockDebugLogger } from '../../../helpers/debugLoggerFake';
 import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockStepLogger } from './authenticationService.testUtils';
 import { cancelSignIn, signInLink } from '@/core/auth/signInSession';
+import { RejectedTokens } from '@/features/authentication/services/rejectedTokens';
 import type { ExecuteOptions } from '@/core/shell/types';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import {
@@ -141,6 +142,40 @@ describe('runAdobeLogin', () => {
         ]);
     });
 
+    // Walk F247: a plain sign-in reuses the stored sign-in while it has time left, so it handed
+    // back the very token Adobe had turned away, and Sign In changed nothing. Forced, it is new.
+    it('a plain sign-in that hands back a turned-away token retries once, forced', async () => {
+        const { deps, execute } = buildDeps();
+        const rejected = new RejectedTokens();
+        rejected.mark(VALID_TOKEN);
+        const NEW_TOKEN = 'eyJ'.padEnd(120, 'y');
+        execute.mockResolvedValueOnce(createSuccessResult(VALID_TOKEN)).mockResolvedValueOnce(createSuccessResult(NEW_TOKEN));
+
+        await expect(runAdobeLogin({ ...deps, rejected }, false)).resolves.toBe(true);
+
+        expect(execute.mock.calls.map((c) => c[0])).toStrictEqual(['aio auth login', 'aio auth login -f']);
+    });
+
+    // Walk F276: Adobe had already refused the stored token, yet Sign In ran a plain login first,
+    // which handed it straight back, and only then the forced one: two runs for one press.
+    it('goes straight to the forced sign-in, once, when Adobe already refused the stored token', async () => {
+        const { deps, execute } = buildDeps();
+        execute.mockResolvedValue(createSuccessResult(VALID_TOKEN));
+
+        await expect(runAdobeLogin({ ...deps, storedTokenRefused: () => true }, false)).resolves.toBe(true);
+
+        expect(execute.mock.calls.map((c) => c[0])).toStrictEqual(['aio auth login -f']);
+    });
+
+    it('keeps the plain sign-in first when the stored token was not refused', async () => {
+        const { deps, execute } = buildDeps();
+        execute.mockResolvedValue(createSuccessResult(VALID_TOKEN));
+
+        await expect(runAdobeLogin({ ...deps, storedTokenRefused: () => false }, false)).resolves.toBe(true);
+
+        expect(execute.mock.calls.map((c) => c[0])).toStrictEqual(['aio auth login']);
+    });
+
     it('a forced sign-in with no token does NOT retry, and answers false', async () => {
         const { deps, execute } = buildDeps();
         execute.mockResolvedValue(createSuccessResult('no token here'));
@@ -227,6 +262,21 @@ describe('runAdobeLogin — the forced sign-in watch', () => {
         await expect(runAdobeLogin(deps, false)).resolves.toBe(true);
 
         expect(order).toStrictEqual(['aio auth login', 'before', 'aio auth login -f', 'after']);
+    });
+
+    it('covers the forced sign-in a refused stored token goes straight to', async () => {
+        const { deps, execute } = buildDeps();
+        const { order, watch } = watched();
+        deps.watchForcedSignIn = watch;
+        deps.storedTokenRefused = () => true;
+        execute.mockImplementation(async (command: string) => {
+            order.push(command);
+            return createSuccessResult(VALID_TOKEN);
+        });
+
+        await expect(runAdobeLogin(deps, false)).resolves.toBe(true);
+
+        expect(order).toStrictEqual(['before', 'aio auth login -f', 'after']);
     });
 
     it('is not read for a normal sign-in', async () => {

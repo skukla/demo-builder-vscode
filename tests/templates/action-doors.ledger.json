@@ -1,0 +1,530 @@
+{
+    "_what": "One row per user action: the regex for a call into its spine (`entry`), the files that own the spine, and the DOORS - every file outside the spine allowed to call it, each with the audit's verdict. Enforced by tests/templates/action-doors.test.ts on every jest run. Which ENTRY POINTS (commands, message types, MCP tools) reach each row is in action-doors.entry-points.json, which assigns every one of them, so an action not listed here cannot grow a door unseen. Seeded 2026-11-18 from .rptc/research/entry-point-drift-audit/research.md (rows are its table's numbers).",
+    "_rules": [
+        "A file that calls an entry and is not listed is a NEW DOOR and fails. Call an existing door instead, or add a row here with a reason a reviewer can read.",
+        "A listed door that no longer calls the entry is STALE and fails. Delete the row in the change that moved the call.",
+        "verdict `drift` or `lead` is an exemption: known debt, and it must name its fix in `fix`. Fixing the drift deletes or re-labels the row.",
+        "`modeRule` lists arguments the spine decides. A door passing one fails unless it carries `decidesMode`. On a drift door, `decidesMode` is debt and goes stale when the door stops passing the mode; on any other door it is a standing permission (the one entry point whose job IS that mode).",
+        "`mustRead` names spine result fields that hand the door a job. A door that does not read one fails unless it carries `doesNotRead`.",
+        "`bypasses` are files that do the action's job WITHOUT calling the entry. When one starts calling it, the row fails: move it to `doors`.",
+        "`agentOnlyHandlers`: a descriptor handler type no webview sends is a door only an agent reaches. Each needs a reason and EITHER `fix` (debt, counted) OR `byDesign: true` (an agent-only capability on purpose; the reason says why, not counted); one a webview now sends is stale.",
+        "`exemptionCeiling` counts drift and lead doors, bypasses, agent-only handlers carrying a `fix`, and the entry-point `drift` rows in action-doors.entry-points.json. It only falls.",
+        "A spine that returns a `should*` field hands its doors a job: the field must be in the `mustRead` of a row whose spine holds that file."
+    ],
+    "_notCovered": "Rows 13 (start/stop demo: every caller runs the command), 18 and 19 (their doors are already pinned in spine-chokepoints.test.ts), and 24 to 30 (one handler type that the button and the agent descriptor both send). The audit's untraced list (edit project, export/import bundle, copy project, ERP actions, added demos) has no rows yet; their entry points sit in the `write` bucket of action-doors.entry-points.json until one is given. Block-library promote/remove was traced 2026-11-18: a sync-storefront door.",
+    "exemptionCeiling": 0,
+    "actions": {
+        "adobe-sign-in": {
+            "auditRow": 1,
+            "entry": "\\.(login|loginAndRestoreProjectContext)\\(",
+            "spine": ["features/authentication/services/"],
+            "modeRule": {
+                "patterns": ["\\btrue\\b", "\\bforce\\b"],
+                "why": "Forced or not is the shared sign-in's decision. A door passing `force` to the raw sign-in is how seven doors drifted (F248)."
+            },
+            "doors": {
+                "core/auth/adobeAuthGuard.ts": {
+                    "verdict": "one-door",
+                    "reason": "The guard `ensureAdobeIOAuth`: a flow that needs a sign-in partway asks first, then signs in."
+                },
+                "features/authentication/handlers/signInToAdobe.ts": {
+                    "verdict": "one-door",
+                    "reason": "The one Sign In `signInToAdobe`: every screen's Sign In, the command and the agent's `sign_in`.",
+                    "decidesMode": "Its caller may ask for a fresh sign-in of the same account (owner, 2026-11-18); this entry point is where that choice becomes a forced sign-in."
+                },
+                "features/authentication/handlers/orgSwitchHandler.ts": {
+                    "verdict": "one-door",
+                    "reason": "The organization switch.",
+                    "decidesMode": "The org switch is the only forced sign-in by design (F248)."
+                }
+            }
+        },
+        "github-sign-in": {
+            "auditRow": 2,
+            "entry": "getSession\\((?=\\s*['\"]github['\"])|\\bsignInToGitHub\\(",
+            "spine": ["features/eds/handlers/edsGitHubHandlers.ts"],
+            "modeRule": {
+                "patterns": ["\\bcreateIfNone\\s*:\\s*true\\b", "\\bforceNewSession\\b"],
+                "why": "Prompting for a GitHub session, and forcing a new one, is `acquireGitHubSession`'s decision (audit enforcement 4). A door that prompts on its own picks its own scopes and stores a narrower token (PL-104 fix 2)."
+            },
+            "doors": {
+                "features/ai/server/authTools.ts": {
+                    "verdict": "same-policy",
+                    "reason": "`get_auth_status` reads VS Code's session silently with GITHUB_SCOPES: never prompts, never stores."
+                },
+                "commands/commandManager.ts": {
+                    "verdict": "same-policy",
+                    "reason": "The palette's Sign In to GitHub, through `signInToGitHub`; `force` is its Sign In Again, a parameter of the one sign-in."
+                },
+                "features/eds/commands/manageGitHubRepos.ts": {
+                    "verdict": "same-policy",
+                    "reason": "Manage GitHub Repositories asks, then signs in through `signInToGitHub`: GITHUB_SCOPES and the stale-session recovery (PL-104 fix 2)."
+                },
+                "features/projects-dashboard/services/edsExternalCleanup.ts": {
+                    "verdict": "same-policy",
+                    "reason": "Delete Project's GitHub sign-in, through `signInToGitHub` (PL-104 fix 2)."
+                }
+            }
+        },
+        "dalive-sign-in": {
+            "auditRow": 3,
+            "entry": "\\bshowDaLiveAuthQuickPick\\(",
+            "spine": ["features/eds/handlers/daLive/daLiveAuthPrompt.ts"],
+            "doors": {
+                "commands/commandManager.ts": {
+                    "verdict": "same-policy",
+                    "reason": "The palette's DA.live sign-in; stores through the same strict validation."
+                },
+                "features/ai/server/authTools.ts": {
+                    "verdict": "same-policy",
+                    "reason": "The agent's sign-in; fire-and-forget is a surface adaptation."
+                },
+                "features/eds/handlers/daLive/daLiveAuthGuard.ts": {
+                    "verdict": "same-policy",
+                    "reason": "The in-flow guard: a flow that needs DA.live partway asks first."
+                }
+            }
+        },
+        "dalive-teardown-token": {
+            "auditRow": 4,
+            "entry": "\\btearDownStorefront\\(",
+            "spine": ["features/eds/services/storefront/storefrontTeardown.ts"],
+            "modeRule": {
+                "patterns": ["\\bauthManager\\b", "AuthenticationService", "\\b[iI]ms[A-Z]\\w*", "\\bfirstUsable"],
+                "why": "The teardown runs on the DA.live session only and stops without one (PL-104 fix 7). A door handing it an Adobe sign-in is how three doors fell back to the IMS token, which Helix refuses (2026-10-25)."
+            },
+            "doors": {
+                "features/projects-dashboard/services/edsExternalCleanup.ts": {
+                    "verdict": "same-policy",
+                    "reason": "The delete button and the agent's `delete_project` (through `runProjectDelete`): hands over the DaLiveAuthService session."
+                },
+                "features/ai/server/cloudResourceTools.ts": {
+                    "verdict": "same-policy",
+                    "reason": "`cleanup_dalive_site`: hands over a token provider built from the DaLiveAuthService session."
+                },
+                "features/eds/commands/cleanupDaLiveSites.ts": {
+                    "verdict": "same-policy",
+                    "reason": "Manage DA.live Sites: hands over a token provider built from the DaLiveAuthService session."
+                }
+            }
+        },
+        "storefront-reset": {
+            "auditRow": 5,
+            "entry": "\\b(executeEdsReset|resetEdsProject|resetEdsProjectWithUI|runEdsReset)\\(",
+            "spine": [
+                "features/eds/services/reset/edsResetService.ts",
+                "features/eds/services/reset/edsResetRun.ts"
+            ],
+            "modeRule": {
+                "patterns": ["\\bincludeBlockLibrary\\b", "\\bverifyCdn\\b"],
+                "why": "Whether a reset restores the block library and checks the CDN is the reset's decision, not each door's (audit fix 1). `resetEdsProject` sets both."
+            },
+            "doors": {
+                "features/eds/services/reset/edsResetUI.ts": {
+                    "verdict": "same-policy",
+                    "reason": "`resetEdsProjectWithUI`, the window's door into `resetEdsProject`: its asker puts the pre-flight's questions in dialogs."
+                },
+                "features/ai/server/edsResetTool.ts": {
+                    "verdict": "same-policy",
+                    "reason": "`runEdsReset`, the agent's door into `resetEdsProject`: the same org check, GitHub App check and `whileRunning('resetting')`; its asker refuses with the reason where the window asks (PL-104 fix 1)."
+                },
+                "features/projects-dashboard/handlers/projectsBatchHandlers.ts": {
+                    "verdict": "same-policy",
+                    "reason": "Reset button, single and batch, through `resetEdsProjectWithUI`."
+                },
+                "features/project-creation/handlers/executorEditPackage.ts": {
+                    "verdict": "same-policy",
+                    "reason": "An Edit that changes the demo package resets the storefront, through `resetEdsProjectWithUI`."
+                },
+                "features/ai/server/resetProjectTool.ts": {
+                    "verdict": "same-policy",
+                    "reason": "`reset_project` sends an Edge Delivery project to `runEdsReset`."
+                }
+            }
+        },
+        "headless-reset": {
+            "auditRow": 6,
+            "entry": "\\b(executeProjectReset|runProjectResetAnswered)\\(",
+            "spine": ["features/lifecycle/services/projectResetService.ts"],
+            "doors": {
+                "features/ai/server/resetProjectTool.ts": {
+                    "verdict": "same-policy",
+                    "reason": "The agent's reset; refuses while a demo runs, where the button stops it (deliberate and documented)."
+                },
+                "features/projects-dashboard/handlers/projectsBatchHandlers.ts": {
+                    "verdict": "same-policy",
+                    "reason": "Reset button, single and batch."
+                }
+            }
+        },
+        "delete-project": {
+            "auditRow": 7,
+            "entry": "\\brunProjectDelete\\(",
+            "spine": ["features/projects-dashboard/services/projectDeletionService.ts"],
+            "doors": {
+                "features/projects-dashboard/services/projectsBatch.ts": {
+                    "verdict": "one-door",
+                    "reason": "Delete button, single and batch, through `runProjectDelete`."
+                },
+                "features/ai/server/deleteProjectTool.ts": {
+                    "verdict": "same-policy",
+                    "reason": "The agent's `delete_project` runs `runProjectDelete` with `nobodyToAsk`: the button's order and stop rules, with each question it would ask answered as a refusal (PL-104 fix 6)."
+                }
+            }
+        },
+        "republish-storefront": {
+            "auditRow": 8,
+            "entry": "\\brepublishStorefrontContent\\(",
+            "spine": ["features/eds/services/storefront/storefrontContentRepublishService.ts"],
+            "doors": {
+                "features/dashboard/handlers/edsContentHandlers.ts": {
+                    "verdict": "same-policy",
+                    "reason": "Dashboard Republish. The spine rechecks Finish Setup's 'Republish the Code' step itself after a success (PL-104 fix 10)."
+                },
+                "features/ai/server/storefrontTools.ts": {
+                    "verdict": "same-policy",
+                    "reason": "The agent's `republish`; the Finish Setup recheck happens inside the spine, so it gets it too (PL-104 fix 10)."
+                }
+            }
+        },
+        "republish-storefront-settings": {
+            "auditRow": 9,
+            "entry": "\\brepublishStorefrontConfig\\(",
+            "spine": ["features/eds/services/storefront/storefrontRepublishService.ts"],
+            "doors": {
+                "features/mesh/commands/deployMesh.ts": {
+                    "verdict": "same-policy",
+                    "reason": "After a palette mesh deploy."
+                },
+                "features/mesh/handlers/deployHandler.ts": {
+                    "verdict": "same-policy",
+                    "reason": "After a screen or agent mesh deploy."
+                },
+                "features/dashboard/commands/configureStorefrontRepublish.ts": {
+                    "verdict": "same-policy",
+                    "reason": "Configure's Republish."
+                },
+                "features/eds/services/authoringExperienceFlip.ts": {
+                    "verdict": "same-policy",
+                    "reason": "The authoring-experience flip."
+                },
+                "features/eds/services/storefront/storefrontContentRepublishService.ts": {
+                    "verdict": "same-policy",
+                    "reason": "The full republish's settings step."
+                },
+                "features/project-creation/services/meshAddressRepublish.ts": {
+                    "verdict": "same-policy",
+                    "reason": "Creation, once the mesh address is known."
+                },
+                "commands/repairSiteConfiguration.ts": {
+                    "verdict": "same-policy",
+                    "reason": "The palette's Repair Site Configuration; passes `ensureDaLiveSession`, which the service now requires of every caller (PL-104 fix 11)."
+                }
+            }
+        },
+        "mesh-deploy": {
+            "auditRow": 10,
+            "entry": "\\b(deployMeshComponent|deployMeshCreateOrUpdate|deployMeshWithFeedback)\\(",
+            "spine": [
+                "features/mesh/services/meshDeployment.ts",
+                "features/mesh/services/meshRedeploy.ts",
+                "features/mesh/services/deployMeshHeadless.ts",
+                "features/mesh/services/deployMeshWithFeedback.ts"
+            ],
+            "doors": {
+                "features/mesh/commands/deployMesh.ts": {
+                    "verdict": "same-policy",
+                    "reason": "The palette's Deploy Mesh, through `deployMeshWithFeedback`."
+                },
+                "features/mesh/handlers/deployHandler.ts": {
+                    "verdict": "same-policy",
+                    "reason": "The screen button (`deployMeshFromScreen`) and the agent's `deploy_mesh` (`handleDeployApiMesh`), both through `deployMeshWithFeedback`, which takes `meshDeployLock` and fires `meshActionTaken` (PL-104 fix 4)."
+                },
+                "features/project-creation/services/meshSetupService.ts": {
+                    "verdict": "same-policy",
+                    "reason": "Project creation's mesh step; listed by the audit, not flagged."
+                },
+                "features/eds/services/reset/edsResetMeshHelper.ts": {
+                    "verdict": "same-policy",
+                    "reason": "The storefront reset's mesh redeploy; listed by the audit, not flagged."
+                },
+                "features/lifecycle/services/projectResetMesh.ts": {
+                    "verdict": "same-policy",
+                    "reason": "The headless reset's mesh redeploy; listed by the audit, not flagged."
+                }
+            }
+        },
+        "mesh-delete": {
+            "auditRow": 11,
+            "entry": "\\bMESH_DELETE_COMMAND\\b",
+            "spine": ["core/shell/meshDeleteCommand.ts"],
+            "doors": {
+                "features/app-builder/services/appBuilderComponentTeardown.ts": {
+                    "verdict": "same-policy",
+                    "reason": "Removing the mesh component; the delete is part of removing its record."
+                },
+                "features/project-creation/handlers/creationFailureCleanup.ts": {
+                    "verdict": "same-policy",
+                    "reason": "Cleanup after a failed creation."
+                },
+                "features/mesh/handlers/deleteHandler.ts": {
+                    "verdict": "same-policy",
+                    "reason": "The agent's `delete_mesh`: takes `meshDeployLock` and saves the mesh as gone on the project (`recordMeshGone`, PL-104 fix 5)."
+                }
+            }
+        },
+        "datapack-job": {
+            "auditRow": 12,
+            "entry": "\\.(startImport|startDelete)\\(",
+            "spine": [],
+            "doors": {
+                "features/data-installer/handlers/importStart.ts": {
+                    "verdict": "same-policy",
+                    "reason": "The Data Installer screen and the agent: validates the request with the synchronous twin before starting."
+                },
+                "features/data-installer/handlers/importHandlers.ts": {
+                    "verdict": "same-policy",
+                    "reason": "`reset-datapack`, the handler path's removal."
+                },
+                "features/data-installer/services/projectDatapackInstallDeps.ts": {
+                    "verdict": "same-policy",
+                    "reason": "Creation and reset (`runSampleDataJob`): checks the request with the engine's dry run before starting, as the handler path does (`startChecked`, PL-104 fix 3)."
+                }
+            }
+        },
+        "restart-demo": {
+            "auditRow": 14,
+            "entry": "demoBuilder\\.restartDemo['\"]|demoBuilder\\.stopDemo['\"][\\s\\S]{0,200}?demoBuilder\\.startDemo",
+            "spine": ["extension.ts"],
+            "doors": {
+                "core/vscode/envFileWatcherService.ts": {
+                    "verdict": "same-policy",
+                    "reason": "The restart after a .env change, through `demoBuilder.restartDemo` (PL-104 fix 12)."
+                },
+                "commands/configure.ts": {
+                    "verdict": "same-policy",
+                    "reason": "The restart after a port change, through `demoBuilder.restartDemo` (PL-104 fix 12)."
+                },
+                "features/dashboard/commands/configure.ts": {
+                    "verdict": "same-policy",
+                    "reason": "Configure's restart, through `demoBuilder.restartDemo` (PL-104 fix 12)."
+                },
+                "features/dashboard/handlers/dashboardHandlers.ts": {
+                    "verdict": "same-policy",
+                    "reason": "The dashboard's Restart, through `demoBuilder.restartDemo`."
+                }
+            }
+        },
+        "open-commerce-admin": {
+            "auditRow": 15,
+            "entry": "\\bopenCommerceAdmin\\(",
+            "spine": ["core/utils/commerceAdmin.ts"],
+            "doors": {
+                "features/dashboard/handlers/openUrlHandlers.ts": {
+                    "verdict": "same-policy",
+                    "reason": "The dashboard's Open Commerce Admin."
+                },
+                "features/data-installer/handlers/demoDataHandlers.ts": {
+                    "verdict": "same-policy",
+                    "reason": "The Data Installer's link."
+                },
+                "features/data-installer/services/buildDatapackEngine.ts": {
+                    "verdict": "same-policy",
+                    "reason": "The datapack engine's admin opener."
+                },
+                "features/projects-dashboard/handlers/projectsListOpen.ts": {
+                    "verdict": "same-policy",
+                    "reason": "The projects list's Open Commerce Admin (PL-104 fix 9). The agent's `open_url` commerceAdmin dispatches the dashboard's `openAdminPanel` handler, so it reaches the opener through openUrlHandlers.ts."
+                }
+            }
+        },
+        "create-project": {
+            "auditRow": 16,
+            "entry": "\\brunCreation\\(",
+            "spine": [
+                "features/project-creation/handlers/creationRun.ts",
+                "features/project-creation/handlers/executor.ts"
+            ],
+            "doors": {
+                "features/project-creation/handlers/createHandler.ts": {
+                    "verdict": "same-policy",
+                    "reason": "The wizard, through `runCreation`, which owns the 30-minute limit and the stop."
+                },
+                "features/ai/server/createProjectTool.ts": {
+                    "verdict": "same-policy",
+                    "reason": "create_project, create_project_from_file and copy_project, through `runCreation` with one `creationConfig` builder; cancel_project_creation stops it (PL-104 fix 14, F272)."
+                }
+            }
+        },
+        "create-github-repo": {
+            "auditRow": 17,
+            "entry": "\\.createFromTemplate\\(|\\bcreateRepoFromSource\\(",
+            "spine": [
+                "features/eds/services/github/githubRepoLifecycle.ts",
+                "features/eds/handlers/storefrontSetup/storefrontSetupPhase1.ts"
+            ],
+            "doors": {
+                "features/eds/handlers/edsGitHubHandlers.ts": {
+                    "verdict": "same-policy",
+                    "reason": "The wizard's `create-github-repo` message, through `createRepoFromSource`."
+                },
+                "features/ai/server/cloudResourceTools.ts": {
+                    "verdict": "same-policy",
+                    "reason": "`create_github_repo`, through `createRepoFromSource`: a source that is not a template gets an empty repository reset onto it, as in the wizard (PL-104 fix 13)."
+                }
+            }
+        },
+        "rename-project": {
+            "auditRow": 20,
+            "entry": "\\brenameProjectCore\\(",
+            "spine": ["features/projects-dashboard/services/projectRenameService.ts"],
+            "doors": {
+                "features/dashboard/handlers/projectManagementHandlers.ts": {
+                    "verdict": "same-policy",
+                    "reason": "Rename the current project."
+                },
+                "features/projects-dashboard/handlers/projectsListLifecycle.ts": {
+                    "verdict": "same-policy",
+                    "reason": "Rename a project by path from the projects list."
+                }
+            }
+        },
+        "apply-updates": {
+            "auditRow": 21,
+            "entry": "\\bapplyUpdatesHeadless\\(",
+            "spine": ["features/updates/services/updateApplyService.ts"],
+            "doors": {
+                "features/updates/handlers/updatesModalHandlers.ts": {
+                    "verdict": "same-policy",
+                    "reason": "The updates window; stops running demos."
+                },
+                "features/ai/server/applyUpdatesTool.ts": {
+                    "verdict": "same-policy",
+                    "reason": "The agent; refuses while demos run (deliberate, matches reset)."
+                }
+            }
+        },
+        "sync-storefront": {
+            "auditRow": 22,
+            "entry": "\\bsyncAndPublish\\(",
+            "spine": ["features/eds/services/storefront/storefrontSyncService.ts"],
+            "doors": {
+                "features/lifecycle/commands/syncStorefront.ts": {
+                    "verdict": "same-policy",
+                    "reason": "The palette command and the dashboard tile."
+                },
+                "mcp/storefrontSyncHandler.ts": {
+                    "verdict": "same-policy",
+                    "reason": "Read 2026-11-18; the audit's lead was stale. `sync_storefront` gets its tokens from the same session as the command (GitHubTokenService and DaLiveAuthService, injected at extension.ts:723-728, not env vars), reads the same githubRepo/edsBranch fields, and skips the Helix publish only when syncAndPublish itself has no token, as the command does. Conflicts differ by surface: one rebase-and-retry, no merge editor."
+                },
+                "mcp/blockLibraryPublish.ts": {
+                    "verdict": "same-policy",
+                    "reason": "Read 2026-11-18. Block-library promote and remove (`promote_block_to_library`, `remove_block_from_library`) end in the same syncAndPublish with the same injected tokens, then publish or unpublish the block's library page."
+                }
+            }
+        },
+        "delete-console-project": {
+            "auditRow": 23,
+            "entry": "\\bteardownConsoleProject\\(",
+            "spine": ["features/authentication/services/consoleProjectTeardown.ts"],
+            "doors": {
+                "features/authentication/handlers/deleteAdobeProjectHandler.ts": {
+                    "verdict": "same-policy",
+                    "reason": "The button. The teardown validates the ids, refuses a project the signed-in person did not create, and clears the Console selection itself (PL-104 fix 8, walk F270); the button asks the teardown's own `isProjectOwner` dep before its confirm dialog."
+                },
+                "features/ai/server/adobeResourceTools.ts": {
+                    "verdict": "same-policy",
+                    "reason": "`delete_adobe_project`: the same teardown, so the same id check, creator-only refusal (walk F270) and Console selection clear."
+                }
+            }
+        },
+        "token-write": {
+            "auditRow": 2,
+            "entry": "\\.storeToken\\(",
+            "spine": [
+                "features/eds/services/github/githubTokenService.ts",
+                "features/eds/services/daLive/daLiveAuthService.ts"
+            ],
+            "doors": {
+                "features/eds/handlers/edsGitHubHandlers.ts": {
+                    "verdict": "one-door",
+                    "reason": "The GitHub sign-in: stores a token with GITHUB_SCOPES."
+                },
+                "features/eds/handlers/daLive/edsDaLiveAuthHandlers.ts": {
+                    "verdict": "same-policy",
+                    "reason": "The wizard's DA.live sign-in; runs `validateDaLiveTokenStrict` before storing (audit row 3)."
+                },
+                "features/eds/handlers/daLive/daLiveAuthPrompt.ts": {
+                    "verdict": "same-policy",
+                    "reason": "The DA.live quick pick; runs `validateDaLiveTokenStrict` before storing (audit row 3)."
+                }
+            }
+        }
+    },
+    "agentOnlyHandlers": {
+        "deploy-api-mesh": {
+            "reason": "The agent's `deploy_mesh` door. A person deploys through `deployMesh` (screen) or the palette; all three run `deployMeshWithFeedback`, with the lock and the mesh prompt (audit row 10, PL-104 fix 4).",
+            "byDesign": true
+        },
+        "delete-api-mesh": {
+            "reason": "The agent's `delete_mesh` door. A person removes the mesh by removing its component (`removeAppBuilderComponent`); this door takes the same `meshDeployLock` and records the mesh gone (audit row 11, PL-104 fix 5).",
+            "byDesign": true
+        },
+        "exportProjectSettings": {
+            "reason": "Read 2026-11-18. Writes the project's settings to a JSON file inside the project, no credential in it (projectManagementHandlers.ts:89-93); the dashboard's export is the demo bundle, a different job. One door (audit row 29).",
+            "byDesign": true
+        },
+        "setErpSettings": {
+            "reason": "Read 2026-11-18. Saves an ERP's own settings through the ERP's API (updateErpSettings). The person's surface for this is the ERP's own screens, outside the extension; no screen here edits them.",
+            "byDesign": true
+        },
+        "setErpAppearance": {
+            "reason": "Read 2026-11-18. Themes the ERP's own screens; a person does that on those screens, outside the extension.",
+            "byDesign": true
+        },
+        "deleteUndeclaredRuntimeCode": {
+            "reason": "Read 2026-11-18. Same spine as the deploy: both call deleteUndeclaredActions (runtimeUndeclaredActions.ts), the deploy on every run (appBuilderDeployDispatch.ts:239), this tool for code left from before that.",
+            "byDesign": true
+        },
+        "setCommerceConfig": {
+            "reason": "Read 2026-11-18. The one tool that writes Commerce settings outside a catalog step, with its own preview, confirm and recorded undo (storePreparationHandlers.ts:280-303). A person's Commerce settings are in Commerce Admin.",
+            "byDesign": true
+        },
+        "writeErpApi": {
+            "reason": "Read 2026-11-18. The actions a person takes on the ERP's own screens (confirm, ship, invoice), made without the screen so an agent can drive the ERP-to-Commerce half (erpIntegrationHandlers.ts:295-300).",
+            "byDesign": true
+        },
+        "invokeRuntimeAction": {
+            "reason": "Read 2026-11-18. Runs one deployed action with a payload and returns its result and logs: a replay for diagnosis that no button offers.",
+            "byDesign": true
+        },
+        "verify-datapack-install": {
+            "reason": "Read 2026-11-18. Reads only: whether the store holds what the pack says (storeChangesHandlers.ts:361).",
+            "byDesign": true
+        },
+        "build-datapack-from-export": {
+            "reason": "Read 2026-11-18. Builds a pack file from a Commerce export inside the project; the module says no screen sends it (exportPackHandlers.ts header). Nothing reaches a store.",
+            "byDesign": true
+        },
+        "addConsoleApis": {
+            "reason": "Read 2026-11-18. The additive mode of the one API subscription: it and Manage APIs' setConsoleApis share loadProjectAndGuard and reconcileExtras. Both refuse an integration the project does not have, inside reconcileExtras (PL-104 fix 15, F273).",
+            "byDesign": true
+        },
+        "mark-team-datapack": {
+            "reason": "Read 2026-11-18. A maintainer's action: the Library's menu row was removed on purpose (packMenu.ts:21-25, walk F226) and the store refuses anyone not on its owner list. The handler's comment says so (corrected 2026-11-18).",
+            "byDesign": true
+        },
+        "setUpAcoCredential": {
+            "reason": "Read 2026-11-22 (PL-60). The agent's set_up_aco_credential door. A person turns ACO on in Configure's ACO tab, whose save runs applyAcoAddonChange, which calls the same setUpAcoCredential service with the same credentialDeps (acoCredentialHandlers.ts); creation runs it too (executorAcoPhase.ts).",
+            "byDesign": true
+        },
+        "removeAcoCredential": {
+            "reason": "Read 2026-11-22 (PL-60). The agent's remove_aco_credential door. A person turns ACO off in Configure's ACO tab, whose save runs applyAcoAddonChange, which calls the same removeAcoCredential service, refused the same way while an ACO datapack is loaded (acoCredentialHandlers.ts).",
+            "byDesign": true
+        },
+        "make-aco-pack-from-products": {
+            "reason": "Read 2026-11-22 (PL-60). Called by the project's AI after it reads a website, following the scrape-products-to-aco skill: the products arrive as the agent's typed reading, which no screen holds. A person's door is From a Website (scrape-website-to-aco-pack), which opens that AI with the page; it never calls this handler itself.",
+            "byDesign": true
+        }
+    }
+}

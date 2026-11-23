@@ -97,6 +97,18 @@ describe('removeAppBuilderComponent — a removed mesh is a mesh the project no 
         expect(saved.componentInstances?.['eds-accs-mesh']).toBeUndefined();
     });
 
+    it('drops the removed component\'s version record, keeping the others', async () => {
+        const project = meshProject();
+        project.componentVersions = {
+            'eds-accs-mesh': { version: '1.0.0', lastUpdated: 'then' },
+            other: { version: '2.0.0', lastUpdated: 'then' },
+        };
+
+        await removeAppBuilderComponent(project, 'eds-accs-mesh', createDeps());
+
+        expect(Object.keys(project.componentVersions ?? {})).toStrictEqual(['other']);
+    });
+
     it('drops the removed mesh\u2019s componentConfigs entry — an orphan copy outlives every write', async () => {
         // The fan-out audit (2026-08-23): Configure writes a shared field only to
         // SELECTED declaring components, but two readers sweep the WHOLE map —

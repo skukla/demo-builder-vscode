@@ -12,12 +12,15 @@
  * @module features/data-installer/handlers/importTargetHandlers
  */
 
+import { installStateOf } from '../services/demoBuilderEngine/installState';
 import { deriveImportInstance } from '../services/importInstance';
 import {
     buildScopeDiscoveryParams,
     groupStoreViewsByWebsite,
 } from '../services/importScopeDiscovery';
-import { resolveInstallTarget } from '../services/sampleDataInstall';
+import { installFailedOf } from '../services/installFailure';
+import { heldDisplayName } from './libraryWriter';
+import { resolveInstallTarget } from '@/features/data-installer/installTarget';
 import { discoverStoreStructure } from '@/features/eds/services/commerceStoreDiscovery';
 import type { Project } from '@/types/base';
 import { defineHandlers, type HandlerContext, type HandlerResponse } from '@/types/handlers';
@@ -76,14 +79,30 @@ export const importTargetHandlers = defineHandlers({
         // Two derivations would let the same pack land in different places
         // depending on which surface asked, with nothing to report the difference.
         const instance = deriveImportInstance(configs);
+        // When Demo Builder's engine installed the pack: so the demo's card can tell a team pack
+        // updated in place since (owner, 2026-11-03, `.rptc/complete/datapack-save-as/`).
+        const { installedAt, updateBehind } = await installStateOf(project?.path, datapack);
+        // By the name the SC knows it, for the form's "Replaces …" when another pack is imported (walk F97).
+        const heldName = installedAt && datapack ? await heldDisplayName(context, datapack) : undefined;
+        // A creation install of that datapack that did not succeed (step-04 S7): the card and flyout
+        // say "Install failed" and offer Retry, and an agent reads the same.
+        const installFailed = installFailedOf(project);
+        const held = {
+            datapack,
+            ...(installedAt ? { installedAt } : {}),
+            // An update left data types on the older version (step-07 U1): the amber dot stays.
+            ...(updateBehind ? { updateBehind: true } : {}),
+            ...(heldName ? { heldName } : {}),
+            ...(installFailed ? { installFailed } : {}),
+        };
         if (instance) {
             return {
                 success: true,
-                data: { instance, projectName, datapack, ...(scope && { scope }) },
+                data: { instance, projectName, ...held, ...(scope && { scope }) },
             };
         }
 
-        return { success: true, data: { datapack, ...(scope && { scope }) } };
+        return { success: true, data: { ...held, ...(scope && { scope }) } };
     },
 
     /**
@@ -123,3 +142,4 @@ export const importTargetHandlers = defineHandlers({
         return { success: true, data: { websites: groupStoreViewsByWebsite(result.data) } };
     },
 });
+

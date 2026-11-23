@@ -19,16 +19,20 @@
  */
 
 import * as vscode from 'vscode';
+import { failedRow, forgetTried, recordOutcome, rememberTried, triedRow } from './failedUpdateRows';
 import { forgetKeptRows, watchKeptRows, type KeptRow } from './fixEndedNotice';
 import { questionsInModal, stopRunningDemos } from './updateQuestionsInModal';
 import { ServiceLocator } from '@/core/di/serviceLocator';
+import { classifyTransience } from '@/core/errors';
 import { createNonSwitchingStateManager } from '@/core/state/workingProjectStateManager';
 import { UPDATES_OPERATION_ID } from '@/core/utils/operationIds';
+import { notYetPlain, plain, plainLine, type PlainText } from '@/core/utils/plainText';
 import { narrateOutcomeToModal } from '@/core/vscode/operationProgress';
 import { withOperationProgress, type OperationOutcome, type ReportStage } from '@/core/vscode/withOperationProgress';
 import { integrationUpdateProbe, updateIntegrationPairFor } from '@/features/dashboard/handlers/integrationUpdateHandlers';
 import { findAllUpdates, type FoundUpdates } from '@/features/updates/services/allUpdates';
 import { ExtensionUpdater } from '@/features/updates/services/extensionUpdater';
+import { failedUpdatePrompt } from '@/features/updates/services/failedUpdatePrompt';
 import { openFixWithAi } from '@/features/updates/services/fixWithAi';
 import {
     matchFresh,
@@ -49,6 +53,9 @@ import type { HandlerContext, HandlerResponse, MessageHandler } from '@/types/ha
 import {
     localCopyRowId,
     type ApplyUpdatesRequest,
+    type CheckUpdateRowsRequest,
+    type CheckUpdateRowsResponse,
+    type FixUpdateWithAiRequest,
     type PendingUpdateRow,
     type RecheckUpdatesResponse,
     type UpdateRowState,
@@ -73,7 +80,7 @@ const CHECKING = 'Checking for updates';
 /** Rows whose update lands in the storefront repository. */
 const STOREFRONT_KINDS = new Set(['forkSync', 'template', 'boilerplate', 'finish', 'blockLibrary', 'blockLibraryInstall']);
 const DEMO_RUNNING = 'Not updated — its demo is running.';
-const EXTENSION_FAILED = 'Not updated — details are in Debug Logs.';
+const EXTENSION_FAILED = "Not updated. Demo Builder couldn't tell what went wrong.";
 
 /** Tells the screen where one row has got to, and counts the rows that did not apply. */
 interface RowTeller {
@@ -96,7 +103,13 @@ function rowTellerFor(context: HandlerContext, shownId: (id: string) => string =
     return {
         tell: (id, state, message) => {
             if (state === 'failed' || state === 'skipped') notApplied++;
-            void tellScreen(context, { id: shownId(id), state, ...(message ? { message } : {}) });
+            recordOutcome(shownId(id), state, message);
+            // Read off the raw words, before they are made plain, by the one classifier the automatic
+            // retries use: can a retry help? (owner, 2026-11-19)
+            const raw = message ?? '';
+            const retry = state === 'failed' ? { retryable: classifyTransience(raw).retryable } : {};
+            // An update's line is not yet typed at its source (PL-102 slice 3).
+            void tellScreen(context, { id: shownId(id), state, ...(message ? { message: notYetPlain(message) } : {}), ...retry });
         },
         notApplied: () => notApplied,
     };
@@ -112,6 +125,7 @@ function rowTellerFor(context: HandlerContext, shownId: (id: string) => string =
 export function presentUpdates(found: FoundUpdates): PendingUpdateRow[] {
     // Another list: the last run's ids would name its rows.
     forgetKeptRows();
+    forgetTried();
     const rows = rowsOf(found);
     shown = { found, rows };
     return rows;
@@ -155,10 +169,12 @@ export const handleApplyUpdates: MessageHandler<ApplyUpdatesRequest> = narrateOu
         shown = undefined;
         applying = true;
         forgetKeptRows();
+        // Kept by the id the screen shows, so Fix with AI and Check Again can find each row.
+        rememberTried(presented ? presented.rows.filter((row) => payload?.ids?.includes(row.id)) : tickedRows);
         // The run saves every project it updates; none of them may become the open one.
         const runContext = { ...context, stateManager: createNonSwitchingStateManager(context.stateManager) };
         try {
-            return await withOperationProgress({ id: UPDATES_OPERATION_ID, title: 'Applying updates', inModal: true }, (report) =>
+            return await withOperationProgress({ id: UPDATES_OPERATION_ID, title: 'Applying Updates', inModal: true }, (report) =>
                 presented
                     ? applyTicked(runContext, { ...presented, ids: payload?.ids ?? [] }, report)
                     : applyOnFreshCheck(runContext, tickedRows, report),
@@ -169,6 +185,48 @@ export const handleApplyUpdates: MessageHandler<ApplyUpdatesRequest> = narrateOu
     },
     () => UPDATES_OPERATION_ID,
 );
+
+/**
+ * `fixUpdateWithAi`: Fix with AI on an update the run could not apply (owner, 2026-11-19). Only
+ * the row's id is read from the request; the prompt is built from the run's own record.
+ */
+export const handleFixUpdateWithAi: MessageHandler<FixUpdateWithAiRequest> = async (context, payload) => {
+    const failed = failedRow(typeof payload?.id === 'string' ? payload.id : '');
+    if (!failed) return { success: false, error: 'This update has no failure to fix.' };
+    // Named, so the chat acts on the project the failure is about, not whichever is open (walk F300).
+    await vscode.commands.executeCommand('demoBuilder.openInClaude', {
+        prompt: failedUpdatePrompt(failed.row, failed.message),
+        fresh: true,
+        aboutProject: failed.row.group.title,
+    });
+    context.logger.info(`[Updates] Opened Fix with AI on ${failed.row.label} in ${failed.row.group.title}`);
+    return { success: true };
+};
+
+/**
+ * `checkUpdateRows`: Check Again, as Prerequisites' Recheck (owner, 2026-11-19). Checks whether
+ * each update is still waiting, and applies nothing: one no longer listed has been applied (by the
+ * SC's AI, say) and its row is told done; the ids still listed are answered.
+ */
+export const handleCheckUpdateRows: MessageHandler<CheckUpdateRowsRequest, CheckUpdateRowsResponse> = async (
+    context,
+    payload,
+) => {
+    const rows = (payload?.ids ?? []).map(triedRow).filter((row): row is PendingUpdateRow => row !== undefined);
+    // Rows this window's runs never tried (the extension restarted): nothing known to check, so
+    // they stand as they are.
+    if (rows.length === 0) return { success: true, data: { waiting: payload?.ids ?? [] } };
+    const found = await findAllUpdates(context, integrationUpdateProbe(context));
+    const { shownIdOf, gone } = matchFresh(rows, rowsOf(found));
+    for (const { row, why } of gone) {
+        const status: UpdateRowStatus = why === 'newer'
+            ? { id: row.id, state: 'skipped', message: goneLine({ row, why }) }
+            : { id: row.id, state: 'done' };
+        recordOutcome(row.id, status.state, status.message);
+        void tellScreen(context, status);
+    }
+    return { success: true, data: { waiting: [...shownIdOf.values()] } };
+};
 
 /** The check the screen showed is gone: check again, say which rows dropped out, apply the rest. */
 async function applyOnFreshCheck(
@@ -191,14 +249,14 @@ async function applyOnFreshCheck(
 }
 
 /** What a ticked row that dropped out of the fresh check says. */
-function goneLine({ row, why }: GoneRow): string {
+function goneLine({ row, why }: GoneRow): PlainText {
     if (why === 'newer') {
-        const who = row.kind === 'adobeMcp' ? 'Adobe' : 'Demo Builder';
-        return `${who} released a newer version. You'll see it next time you check.`;
+        const who = row.kind === 'adobeMcp' ? plain('Adobe') : plain('Demo Builder');
+        return plainLine`${who} released a newer version. You'll see it next time you check.`;
     }
-    if (STOREFRONT_KINDS.has(row.kind)) return 'Demo Builder skipped this because the storefront already has it.';
-    if (row.kind === 'extension') return 'Demo Builder skipped this because it is already on this version.';
-    return 'Demo Builder skipped this because the project already has it.';
+    if (STOREFRONT_KINDS.has(row.kind)) return plain('Demo Builder skipped this because the storefront already has it.');
+    if (row.kind === 'extension') return plain('Demo Builder skipped this because it is already on this version.');
+    return plain('Demo Builder skipped this because the project already has it.');
 }
 
 /** One run: the check, the ids to apply from it, and how the screen knows its rows. */
@@ -227,7 +285,7 @@ async function applyTicked(
     const onItem: ItemObserver = (_kind, entry, outcome) => {
         const id = rowOf.get(entry);
         if (!id) return;
-        rows.tell(id, outcome.state, lineOf(outcome));
+        rows.tell(id, outcome.state, withoutProjectName(lineOf(outcome), entry));
     };
     const updateContext = updateContextFor(context);
     // Down the list the SC is watching: one project at a time, as its headings run.
@@ -239,8 +297,10 @@ async function applyTicked(
         // A step of its own, but not an update: told without counting toward "did not apply".
         onLocalCopy: (project, outcome) => {
             const message = lineOf(outcome);
-            void tellScreen(context, { id: localCopyRowId(project.path), state: outcome.state, ...(message ? { message } : {}) });
+            void tellScreen(context, { id: localCopyRowId(project.path), state: outcome.state, ...(message ? { message: notYetPlain(message) } : {}) });
         },
+        // Ahead of it, so the project's steps are counted with it from the first.
+        onLocalCopyAhead: (project) => void tellScreen(context, { id: localCopyRowId(project.path), state: 'waiting' }),
     });
     // A clash the SC chose to fix with AI is kept; open their AI on it (EDS-57), and leave
     // its row where the AI's finish can flip it while this run is on screen (EDS-56).
@@ -295,6 +355,19 @@ async function stillWaiting(context: HandlerContext, listed: PendingUpdateRow[],
 function lineOf(outcome: ItemOutcome): string | undefined {
     if (outcome.state === 'done') return outcome.note;
     return outcome.state === 'running' ? undefined : outcome.message;
+}
+
+/**
+ * A row's line without the project's name leading it ("acme: …", "acme (Adobe
+ * boilerplate): …"): the apply names the project for the agent's totals, and on screen the
+ * project's card already says it (owner, 2026-11-19).
+ */
+function withoutProjectName(line: string | undefined, entry: object): string | undefined {
+    const project = 'project' in entry ? entry.project : undefined;
+    const name = project && typeof project === 'object' && 'name' in project ? project.name : undefined;
+    if (!line || typeof name !== 'string') return line;
+    const lead = new RegExp(`^${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?: \\([^)]*\\))?: `);
+    return line.replace(lead, '');
 }
 
 /** A selection entry whose clash the apply kept for fixing. */

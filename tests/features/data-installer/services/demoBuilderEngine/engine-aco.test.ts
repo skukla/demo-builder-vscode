@@ -8,8 +8,9 @@
 import { AcoApiError } from '@/features/data-installer/services/aco/acoClient';
 import { NO_ACO, NO_READ_BACK } from '@/features/data-installer/services/aco/acoJobs';
 import type { DatapackEngine } from '@/features/data-installer/services/datapackEngine';
-import type { ImportRequest } from '@/features/data-installer/services/dataInstallerWriteClient';
-import { demoBuilderEngine, type DemoBuilderEngineDeps } from '@/features/data-installer/services/demoBuilderEngine/engine';
+import type { ImportRequest } from '@/features/data-installer/services/importRequest';
+import { demoBuilderEngine } from '@/features/data-installer/services/demoBuilderEngine/engine';
+import type { DemoBuilderEngineDeps } from '@/features/data-installer/services/demoBuilderEngine/engineDeps';
 import { openInstallRecord, readInstallRecord } from '@/features/data-installer/services/demoBuilderEngine/installRecord';
 import type { AcoInstance } from '@/types/aco';
 import type { AcoProductRow } from '@/types/acoPack';
@@ -175,7 +176,26 @@ describe('demoBuilderEngine with an ACO pack', () => {
         expect(aco.calls.map((c) => c.path)).toEqual(['/v1/catalog/price-books/delete', '/v1/catalog/products/delete']);
         expect(clientsFor.at(-1)).toEqual(ACO_INSTANCE);
         expect(await readInstallRecord(files, PROJECT, PACK)).toBeUndefined();
-        expect(status.note).toBe('Deleted 2 ACO rows by the pack\'s own keys.');
+        expect(status.note).toBe('Deleted 2 ACO rows by the datapack\'s own keys.');
+    });
+
+    it("checks an ACO pack's removal against ACO, though Commerce cannot be reached", async () => {
+        const { engine, commerce } = engineWith();
+        await settle(engine, (await engine.startImport(request())).activationId);
+        await expect(engine.validateRemoval(request())).resolves.toEqual({ valid: true });
+        expect(commerce).not.toHaveBeenCalled();
+    });
+
+    it("refuses an ACO pack's removal when the project's ACO cannot be opened — control: the check reads ACO", async () => {
+        const { engine, files } = engineWith({ aco: async () => ({ refusal: 'Set up the ACO credential first.' }) });
+        await openInstallRecord(files, PROJECT, PACK, () => 'then', { aco: ACO_INSTANCE }).then((r) => r.record({ kind: 'aco_products', id: '{}' }));
+        await expect(engine.validateRemoval(request())).resolves.toEqual({ valid: false, reason: 'Set up the ACO credential first.' });
+    });
+
+    it('times each ACO kind, as a Commerce install does', async () => {
+        const { engine } = engineWith();
+        const status = await settle(engine, (await engine.startImport(request())).activationId);
+        expect(Object.keys(status.timings ?? {}).sort()).toEqual(['aco_price_books', 'aco_products']);
     });
 
     it('ends every kind failed, with ACO\'s reason, when ACO stops the load', async () => {

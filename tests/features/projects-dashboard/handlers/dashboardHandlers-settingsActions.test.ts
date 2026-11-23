@@ -100,7 +100,7 @@ describe('settings transfer delegation', () => {
     it('handleImportFromFile picks a file, then reads a settings file or a demo bundle by its extension', async () => {
         const context = createProjectsDashboardContext([]);
         mockPickImportFile.mockResolvedValueOnce(undefined);
-        expect(await handleImportFromFile(context)).toEqual({ success: true, data: { success: false, error: 'cancelled' } });
+        expect(await handleImportFromFile(context)).toEqual({ success: true, data: { success: false, error: 'cancelled' }, cancelled: true });
 
         mockPickImportFile.mockResolvedValueOnce({ fsPath: '/x/settings.demo-builder.json' });
         mockImportSettingsFromUri.mockResolvedValue({ success: true, data: { imported: 1 } });
@@ -111,7 +111,27 @@ describe('settings transfer delegation', () => {
         mockPickImportFile.mockResolvedValueOnce({ fsPath: '/x/bodea-demo-bundle.ZIP' });
         mockImportDemoBundle.mockResolvedValue({ success: true, data: { success: true } });
         expect(await handleImportFromFile(context)).toEqual({ success: true, data: { success: true } });
-        expect(mockImportDemoBundle).toHaveBeenCalledWith(context, '/x/bodea-demo-bundle.ZIP');
+        expect(mockImportDemoBundle).toHaveBeenCalledWith(context, '/x/bodea-demo-bundle.ZIP', expect.any(Function));
+    });
+
+    // Walk F241 (owner: "I get nothing"): the list sent Import and never read the answer, so a
+    // failure went to Debug Logs only. Started in the list's progress window, a failure ends it
+    // with the reason; a dismissed picker ends nothing.
+    it('handleImportFromFile, from the progress window, ends it with the reason a file was refused', async () => {
+        const context = createProjectsDashboardContext([]);
+        mockPickImportFile.mockResolvedValueOnce({ fsPath: '/x/scratch.zip' });
+        mockImportDemoBundle.mockResolvedValueOnce({ success: true, data: { success: false, error: 'GitHub refused the repository.' } });
+
+        const result = await handleImportFromFile(context, { id: 'import-file', progress: 'modal' });
+
+        expect(result).toEqual({ success: false, error: 'GitHub refused the repository.' });
+
+        mockPickImportFile.mockResolvedValueOnce(undefined);
+        expect(await handleImportFromFile(context, { id: 'import-file', progress: 'modal' })).toEqual({
+            success: true,
+            data: { success: false, error: 'cancelled' },
+            cancelled: true,
+        });
     });
 
     it('handleCopyFromExisting hands the context straight to copySettingsFromProject', async () => {
@@ -134,10 +154,7 @@ describe('handleExportProject', () => {
         const result = await handleExportProject(context, { projectPath: project.path });
 
         expect(context.stateManager.loadProjectFromPath).toHaveBeenCalledWith(
-            project.path,
-            undefined,
-            { persistAfterLoad: false },
-        );
+            project.path);
         // Exporting must never move the current-project pointer.
         expect(context.stateManager.saveProject).not.toHaveBeenCalled();
         expect(mockExportProjectSettings).toHaveBeenCalledWith(context, project);
@@ -192,7 +209,8 @@ describe('demo control handlers', () => {
 
         const result = await handler(context, { projectPath: project.path });
 
-        expect(context.stateManager.saveProject).toHaveBeenCalledWith(project);
+        // Opening sets the pointer (walk F206: openProject reads, makes current, saves).
+        expect(context.stateManager.openProject).toHaveBeenCalledWith(project.path);
         expect(mockExecuteCommand).toHaveBeenCalledWith(commandId);
         expect(result).toEqual({ success: true });
     });
@@ -253,10 +271,7 @@ describe('handleSetProjectPinned', () => {
         await handleSetProjectPinned(context, { projectPath: project.path, pinned: true });
 
         expect(context.stateManager.loadProjectFromPath).toHaveBeenCalledWith(
-            project.path,
-            undefined,
-            { persistAfterLoad: false },
-        );
+            project.path);
     });
 
     it('refuses an absent payload instead of throwing', async () => {

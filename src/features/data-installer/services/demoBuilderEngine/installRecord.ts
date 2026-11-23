@@ -3,7 +3,7 @@
  * is created (DI-5, owner 2026-10-27).
  *
  * Removal reads this and takes away exactly what is in it, in reverse, and nothing the store
- * already had. The service's engine keeps no such list: it removes whatever a pack names,
+ * already had. The Data Installer service kept no such list: it removed whatever a pack named,
  * matched by SKU, code or name, including things that were there before it installed
  * (`.rptc/research/datapack-engine/catalog-spec.md`, "Installation record").
  *
@@ -27,8 +27,8 @@
 
 import * as fsPromises from 'fs/promises';
 import * as path from 'path';
-import { z } from 'zod';
-import { type PendingObject, pendingSchema } from './pendingRecord';
+import { recordSchema } from './installRecordSchema';
+import type { PendingObject } from './pendingRecord';
 import { writeFileAtomic } from '@/core/utils/writeFileAtomic';
 import type { AcoInstance } from '@/types/aco';
 import type { SetupCheckOutcome } from '@/types/base';
@@ -50,6 +50,8 @@ export interface CreatedObject {
     fingerprint?: string;
     /** The pack's row, hashed as it was installed: what "the pack changed" compares. */
     wrote?: string;
+    /** The store had it before (Create took it, or an install matched it): followed, never removed (walk F187). */
+    adopted?: true;
 }
 
 /** What an update may change about an object; the kind and id say which one. */
@@ -108,11 +110,15 @@ export interface InstallRecord {
     target?: TargetCodes;
     /** The ACO instance an ACO pack was loaded into (PL-60); absent on every Commerce record. */
     aco?: AcoInstance;
+    /** The Commerce instance it went into (`deriveImportInstance`): a removal from another stops (step-07 D6). Absent before (rule 3). */
+    instance?: string;
     /** The Admin step the pack left, when its root is a root of its own (step 12). */
     rootStep?: PackRootStep;
     created: CreatedObject[];
     /** Creates whose answer has not come back (step 14 item 1); absent on a record written before. */
     pending?: PendingObject[];
+    /** Data types an update left on the version before (step-07 U1): the amber dot stays. Absent: none. */
+    behind?: string[];
 }
 
 /** The four file operations the record needs, handed in so tests need no disk. */
@@ -137,13 +143,15 @@ export interface InstallRecorder {
     readonly rootStep?: PackRootStep;
     /** Write down where that step stands. */
     setRootStep(step: PackRootStep): Promise<void>;
+    /** This engine made it: an `adopted` object answers false, the store's own. */
     has(kind: string, id: string): boolean;
     record(object: CreatedObject): Promise<void>;
-    /** Change what is kept about an object already recorded; nothing for one that is not. */
-    update(update: ObjectUpdate): Promise<void>;
+    /** Change what is kept about objects already recorded, in one write; nothing for one that is not. */
+    update(...updates: ObjectUpdate[]): Promise<void>;
     /** The object of a kind the pack names `key`; an object recorded with no key answers by its id. */
     byKey(kind: string, key: string): CreatedObject | undefined;
-    drop(object: Pick<CreatedObject, 'kind' | 'id'>): Promise<void>;
+    /** Take objects off the record in one write, in place (a caller may hold `created`): one, or a bulk removal's batch. */
+    drop(...objects: Pick<CreatedObject, 'kind' | 'id'>[]): Promise<void>;
     /** Creates whose answer has not come back. */
     readonly pending: readonly PendingObject[];
     /** Write these down as about to be created, before the create is sent. */
@@ -152,55 +160,16 @@ export interface InstallRecorder {
     confirm(pending: readonly PendingObject[], objects: readonly CreatedObject[]): Promise<void>;
     /** Drop pending entries that certainly did not land. */
     forgetPending(pending: readonly PendingObject[]): Promise<void>;
+    keep(): Promise<void>; // write it, even empty: an install that created nothing still installed
 }
 
 /** The record is missing a safe name, unreadable, or belongs to another pack. */
-export class InstallRecordError extends Error {
-    constructor(message: string) {
-        super(message);
-        this.name = 'InstallRecordError';
-    }
-}
+export class InstallRecordError extends Error { override name = 'InstallRecordError'; }
 
 /** A pack name or version safe to use as part of a file name. */
 const SAFE_PART = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
 
-const recordSchema = z.object({
-    format: z.literal(1),
-    pack: z.object({ name: z.string(), version: z.string() }),
-    engine: z.literal('demo-builder'),
-    startedAt: z.string(),
-    target: z.object({ websiteCode: z.string(), storeCode: z.string() }).optional(),
-    aco: z.object({ tenantId: z.string(), region: z.string(), environment: z.enum(['sandbox', 'production']) }).optional(),
-    rootStep: z
-        .object({
-            state: z.enum(['open', 'done']),
-            storeCode: z.string(),
-            storeName: z.string(),
-            rootId: z.number(),
-            rootName: z.string(),
-            storeRootId: z.number(),
-            sharedWith: z.string(),
-            note: z.string().optional(),
-            lastCheck: z.enum(['passed', 'failed', 'unknown']).optional(),
-        })
-        .optional(),
-    created: z.array(
-        z.object({
-            kind: z.string(),
-            id: z.string(),
-            previous: z.unknown().optional(),
-            key: z.string().optional(),
-            fingerprint: z.string().optional(),
-            wrote: z.string().optional(),
-        }),
-    ),
-    pending: z.array(pendingSchema).optional(),
-});
-
-function packLabel(pack: DatapackId): string {
-    return `${pack.name}@${pack.version}`;
-}
+const packLabel = (pack: DatapackId): string => `${pack.name}@${pack.version}`;
 
 /**
  * Where a pack's record lives: `<project>/.demo-builder/datapacks/<name>@<version>.json`.
@@ -256,6 +225,14 @@ export async function readProjectRecords(files: RecordFiles, projectPath: string
     return records;
 }
 
+/**
+ * A project's records of what is in its Commerce store: an ACO pack's record lists rows in an ACO
+ * instance, which no Commerce wipe touches (PL-60). Every Commerce clearing reads through this.
+ */
+export async function readCommerceRecords(files: RecordFiles, projectPath: string): Promise<InstallRecord[]> {
+    return (await readProjectRecords(files, projectPath)).filter((record) => record.aco === undefined);
+}
+
 function parseRecord(text: string, label: string): InstallRecord {
     let json: unknown;
     try {
@@ -284,15 +261,15 @@ function newTarget(target: TargetCodes | AcoTarget | undefined): Pick<InstallRec
  * Start recording an install, or carry on the record a failed one left.
  *
  * @param now - the time to stamp a new record with
- * @param target - where a new record's install goes (a website and store view, or an ACO instance);
- *   a record carried on keeps the one it has
+ * @param target - where a new record's install goes (a website and store view, or an ACO instance),
+ *   and `instance` the Commerce instance; a record carried on keeps both
  */
 export async function openInstallRecord(
     files: RecordFiles,
     projectPath: string,
     pack: DatapackId,
     now: () => string,
-    target?: TargetCodes | AcoTarget,
+    target?: TargetCodes | AcoTarget, instance?: string,
 ): Promise<InstallRecorder> {
     const filePath = installRecordPath(projectPath, pack);
     const record: InstallRecord = (await readInstallRecord(files, projectPath, pack)) ?? {
@@ -301,14 +278,17 @@ export async function openInstallRecord(
         engine: 'demo-builder',
         startedAt: now(),
         ...newTarget(target),
+        ...(instance ? { instance } : {}),
         created: [],
     };
     const pending: PendingObject[] = [...(record.pending ?? [])];
-    // Written only while something is pending, so a record with none reads as one written before.
-    const save = () => {
+    // Written only while something is pending, so a record with none reads as one written before. Writes
+    // go in order, each with the state as it stands then: creates sent together never leave an older record.
+    let writing: Promise<unknown> = Promise.resolve();
+    const save = () => (writing = writing.catch(() => undefined).then(() => {
         const { pending: _was, ...rest } = record;
         return files.write(filePath, `${JSON.stringify(pending.length > 0 ? { ...rest, pending } : rest, null, 2)}\n`);
-    };
+    }));
     const indexOf = (kind: string, id: string) =>
         record.created.findIndex((o) => o.kind === kind && o.id === id);
     const samePending = (a: PendingObject) => (b: PendingObject) => a.kind === b.kind && a.key === b.key;
@@ -330,23 +310,22 @@ export async function openInstallRecord(
             record.rootStep = step;
             await save();
         },
-        has: (kind, id) => indexOf(kind, id) >= 0,
+        has: (kind, id) => record.created.some((o) => o.kind === kind && o.id === id && !o.adopted),
         async record(object) {
             if (indexOf(object.kind, object.id) >= 0) return;
             record.created.push(object);
             await save();
         },
-        async update(update) {
-            const index = indexOf(update.kind, update.id);
-            if (index < 0) return;
-            record.created[index] = { ...record.created[index], ...update };
-            await save();
+        async update(...updates) {
+            const found = updates.map((u) => [u, indexOf(u.kind, u.id)] as const).filter(([, i]) => i >= 0);
+            for (const [u, i] of found) record.created[i] = { ...record.created[i], ...u };
+            if (found.length > 0) await save();
         },
         byKey: (kind, key) => record.created.find((o) => o.kind === kind && (o.key ?? o.id) === key),
-        async drop({ kind, id }) {
-            const index = indexOf(kind, id);
-            if (index < 0) return;
-            record.created.splice(index, 1);
+        async drop(...gone) {
+            const kept = record.created.filter((o) => !gone.some((g) => g.kind === o.kind && g.id === o.id));
+            if (kept.length === record.created.length) return;
+            record.created.splice(0, record.created.length, ...kept);
             await save();
         },
         pending,
@@ -365,6 +344,7 @@ export async function openInstallRecord(
             withoutPending(gone);
             await save();
         },
+        keep: () => save().then(() => undefined),
     };
 }
 
@@ -382,17 +362,11 @@ export function removalOrder(record: InstallRecord): CreatedObject[] {
 }
 
 /** Delete a pack's record once everything in it has been removed. */
-export async function forgetInstallRecord(
-    files: RecordFiles,
-    projectPath: string,
-    pack: DatapackId,
-): Promise<void> {
+export async function forgetInstallRecord(files: RecordFiles, projectPath: string, pack: DatapackId): Promise<void> {
     await files.remove(installRecordPath(projectPath, pack));
 }
 
-function isMissing(error: unknown): boolean {
-    return (error as NodeJS.ErrnoException | undefined)?.code === 'ENOENT';
-}
+const isMissing = (error: unknown): boolean => (error as NodeJS.ErrnoException | undefined)?.code === 'ENOENT';
 
 /** The record on disk: written atomically, so a crash mid-write leaves the last good copy. */
 export const nodeRecordFiles: RecordFiles = {

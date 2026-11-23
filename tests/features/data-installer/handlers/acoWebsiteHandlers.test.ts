@@ -87,7 +87,7 @@ describe('make-aco-pack-from-products', () => {
         expect(file.id).toEqual({ name: 'aco_boots_shop', version: 'v1' });
         expect(file.source).toBe('library');
         expect(result.success).toBe(true);
-        expect(result.note).toMatch(/Saved the ACO pack aco_boots_shop@v1/);
+        expect(result.note).toMatch(/Saved the ACO datapack aco_boots_shop@v1 to My Datapacks/);
         expect(result.data).toMatchObject({ saved: { name: 'aco_boots_shop', version: 'v1' }, proposed: [] });
     });
 

@@ -10,7 +10,7 @@
  *   and its categories go straight under the store's root. That is what the storefront would
  *   show had the store's root been switched to the pack's, with nothing to do in the Admin, and
  *   removal takes them back with no store change.
- * - **the root is shared** with another store (`justrite_test_website` shows JustRite's root 119):
+ * - **the root is shared** with another store (`tailspin_test_website` shows Tailspin's root 119):
  *   the pack keeps its own root, and the SC is asked for the one Admin step (`packRootStep.ts`).
  *
  * The choice is made once, at the first install, and a repeat install follows what the record
@@ -23,16 +23,17 @@
  * (`installCategories`). A category's key leaves that first name out (`packForm.categoryKey`), so
  * the keys, the record and a repeat install are the same either way.
  *
- * Reads the store structure the wipe reads (`readWipeStructure`, `resolveWipeScope`): the three
- * store lists, and which other stores show the same root.
+ * Reads the store structure the wipe reads (`readWipeStructure`): the three store lists, and
+ * which other stores show the same root.
  *
  * @module features/data-installer/services/demoBuilderEngine/packRoot
  */
 
 import { readWipeStructure } from '../demoDataWipe/wipeReads';
-import { resolveWipeScope, storeOfView } from '../demoDataWipe/wipeScope';
+import { CATALOG_CATEGORIES_KIND } from './b2bKeys';
 import type { CreatedObject, TargetCodes } from './installRecord';
 import { ROOT_KEY } from './packForm';
+import type { CommerceStoreGroup, CommerceStoreStructure } from '@/types/commerceStore';
 import type { CommerceGet } from '@/types/commerceWire';
 
 /** The store a pack is installed for, and the root category it shows. */
@@ -42,7 +43,7 @@ export interface StoreRoot {
     storeName: string;
     /** `root_category_id` of that store, from `GET store/storeGroups`. */
     rootId: number;
-    /** The other stores showing the same root: "the store justrite_store (website justrite)". */
+    /** The other stores showing the same root: "the store tailspin_store (website tailspin)". */
     sharedWith: string[];
 }
 
@@ -50,6 +51,9 @@ export interface StoreRoot {
 export type RootPlacement = 'own' | 'store';
 
 type Row = Record<string, unknown>;
+
+/** The kinds whose rows are products, and so name their categories by url key. */
+const PRODUCT_ROW_KINDS = ['products', 'giftcards'];
 
 /** The pack's own root category row, when it has one. */
 export function packRootOf(categories: unknown): Row | undefined {
@@ -65,9 +69,22 @@ export async function readStoreRoot(get: CommerceGet, codes: TargetCodes): Promi
     const structure = await readWipeStructure(get);
     const group = storeOfView(structure, codes.websiteCode, codes.storeCode);
     if (!group) return undefined;
-    const root = String(group.root_category_id);
-    const scope = resolveWipeScope(structure, [{ websiteCode: codes.websiteCode, storeCode: group.code }]);
-    return { storeCode: group.code, storeName: group.name, rootId: Number(root), sharedWith: scope.sharedRoots.get(root) ?? [] };
+    return { storeCode: group.code, storeName: group.name, rootId: Number(group.root_category_id), sharedWith: othersShowing(structure, group) };
+}
+
+/** The store a store view belongs to, on that website: how an install target's view names its store. */
+function storeOfView(structure: CommerceStoreStructure, websiteCode: string, viewCode: string): CommerceStoreGroup | undefined {
+    const site = structure.websites.find((w) => w.code === websiteCode);
+    const view = structure.storeViews.find((v) => v.code === viewCode && String(v.website_id) === String(site?.id));
+    return view ? structure.storeGroups.find((g) => String(g.id) === String(view.store_group_id)) : undefined;
+}
+
+/** Every other store showing the store's root, by name: "the store Tailspin Store (website Tailspin)" (owner, 2026-11-15). */
+function othersShowing(structure: CommerceStoreStructure, group: CommerceStoreGroup): string[] {
+    const nameOf = new Map(structure.websites.map((w) => [String(w.id), w.name || w.code]));
+    return structure.storeGroups
+        .filter((g) => String(g.id) !== String(group.id) && String(g.root_category_id) === String(group.root_category_id))
+        .map((g) => `the store ${g.name || g.code} (website ${nameOf.get(String(g.website_id)) ?? g.website_id})`);
 }
 
 /**
@@ -89,11 +106,65 @@ export function rootPlacement(categories: unknown, created: readonly CreatedObje
     return storeRoot.sharedWith.length > 0 ? 'own' : 'store';
 }
 
+/** The url key a pack's root names, when it names one. */
+function rootUrlKey(root: Row | undefined): string | undefined {
+    const attributes = (root?.custom_attributes ?? []) as Row[];
+    const key = attributes.find((a) => a.attribute_code === 'url_key')?.value;
+    return typeof key === 'string' ? key : undefined;
+}
+
+/** One product row, with the root left out of the two places a product names its categories. */
+function productWithoutRoot(row: Row, key: string): Row {
+    const product = row.product as Row | undefined;
+    if (!product) return row;
+    const ext = product.extension_attributes as Row | undefined;
+    const links = ext?.category_links as Row[] | undefined;
+    const attributes = product.custom_attributes as Row[] | undefined;
+    return {
+        ...row,
+        product: {
+            ...product,
+            ...(links ? { extension_attributes: { ...ext, category_links: links.filter((l) => l.category_id !== key) } } : {}),
+            ...(attributes
+                ? {
+                      custom_attributes: attributes.map((a) =>
+                          a.attribute_code === 'category_ids' && Array.isArray(a.value)
+                              ? { ...a, value: a.value.filter((id) => id !== key) }
+                              : a,
+                      ),
+                  }
+                : {}),
+        },
+    };
+}
+
+/** A shared catalog's categories, with the root left out. */
+function catalogsWithoutRoot(records: Row, key: string): Row {
+    const catalogs = records.catalogs as Row[] | undefined;
+    if (!Array.isArray(catalogs)) return records;
+    return { ...records, catalogs: catalogs.map((c) => ({ ...c, categories: (c.categories as Row[]).filter((m) => m.id !== key) })) };
+}
+
+/**
+ * The rows that name the pack's root by its url key, with the root left out: it is not made, so no
+ * category has that key. A product keeps its other categories, and its place in the store's root
+ * is what the storefront shows anyway.
+ */
+function withoutRootLinks(items: Record<string, unknown>, key: string): Record<string, unknown> {
+    const out = { ...items };
+    for (const kind of PRODUCT_ROW_KINDS) {
+        if (Array.isArray(out[kind])) out[kind] = (out[kind] as Row[]).map((row) => productWithoutRoot(row, key));
+    }
+    if (out[CATALOG_CATEGORIES_KIND]) out[CATALOG_CATEGORIES_KIND] = catalogsWithoutRoot(out[CATALOG_CATEGORIES_KIND] as Row, key);
+    return out;
+}
+
 /** The pack's rows as this install places them: without the pack's root when its categories go under the store's. */
 export function placeCategories(items: Record<string, unknown>, placement: RootPlacement | undefined): Record<string, unknown> {
     if (placement !== 'store') return items;
-    const { root_category: _root, ...categories } = items.categories as Row;
-    return { ...items, categories };
+    const { root_category: root, ...categories } = items.categories as Row;
+    const key = rootUrlKey(root as Row | undefined);
+    return { ...(key ? withoutRootLinks(items, key) : items), categories };
 }
 
 /** The one line an install says when the pack's categories went under the store's root. */

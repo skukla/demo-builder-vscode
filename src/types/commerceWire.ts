@@ -119,7 +119,7 @@ export interface CommerceAttributeGroupList {
  * the demo setup's Apply (AB-77). Where each shape comes from:
  * - system/config GET and PUT: Adobe's Commerce as a Cloud Service REST reference,
  *   `saas-integrations/system-config` (fields `path`, `value`, `scope`, `scope_code`; the PUT
- *   answer's `items` and `errors`). The round trip was run live on Justrite on 2026-10-10
+ *   answer's `items` and `errors`). The round trip was run live on Tailspin on 2026-10-10
  *   (`sales/totals_sort/tax` 40 -> 41 -> 40; a refused path comes back in `errors` under
  *   HTTP 200). The literal JSON was not recorded in the repo.
  * - product attribute create: Magento's `Catalog/Api/Data/ProductAttributeInterface` and the
@@ -136,14 +136,21 @@ export interface CommerceAttributeGroupList {
 /** One row of `GET /V1/system/config`. */
 export interface CommerceSystemConfigRow {
     path: string;
-    value: string | null;
+    /** A list setting can answer as an array (`sales/cancellation/reasons`, live 2026-11-02). */
+    value: string | string[] | null;
     scope: 'default' | 'website' | 'store' | string;
     scope_code?: string | null;
 }
 
-/** `GET /V1/system/config?…`: the rows at the asked scope. */
+/**
+ * `GET /V1/system/config?…`: the rows at the asked scope. With no path filter it answers every path
+ * the caller may see, in pages, each with the value IN FORCE at that scope, so it cannot tell a value
+ * set on a website from one inherited (live on `tailspin_test_website`, 2026-11-02: 943 rows).
+ */
 export interface CommerceSystemConfigList {
-    items?: CommerceSystemConfigRow[];
+    items?: CommerceSystemConfigRow[] | null;
+    total_count?: number;
+    search_criteria?: { filter_groups?: unknown[]; page_size?: number; current_page?: number };
 }
 
 /** One item of the `PUT /V1/system/config` body. */

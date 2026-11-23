@@ -1,7 +1,7 @@
 # Updates
 
-Pulls extension and Headless storefront updates from GitHub Releases. An API Mesh updates from its branch, by the
-integration update check.
+Pulls extension and Headless storefront updates from GitHub Releases. A mesh, ERP or integration in a repository the
+builder owns updates to its newest release, by the integration update check.
 
 ## Check for Updates: the notification checks, the modal replaces the picker (PL-80)
 
@@ -111,7 +111,7 @@ of them, and our own storefront repositories keep only `sync-from-upstream.yml`.
 
 ## An update never clashes with Demo Builder's own additions (2026-10-30)
 
-JustRite's two updates both stopped. Of the five clashing files, four were Demo Builder's
+Tailspin's two updates both stopped. Of the five clashing files, four were Demo Builder's
 own: the `aem-assets-sku-sanitization` patch and the Quick Edit Sidekick listener (Adobe's
 boilerplate update), and the catalog-menu block the storefront's block library had already
 updated (the colleague's update). Only `blocks/header/header.js` was somebody's edit, and it
@@ -129,7 +129,7 @@ still stops the update (rule 2).
 ## A colleague's storefront follows two tracks (EDS-56)
 
 A storefront added from a colleague's demo follows the colleague's repository: the
-template row, worded "Changes from kmanns/justrite". When the Adobe commit its code
+template row, worded "Changes from org-e/tailspin". When the Adobe commit its code
 started from is known, it also follows our tested boilerplate: the "Adobe boilerplate"
 row, which applies Adobe's change from that commit to the patches repo's last-known-good,
 3-way, keeping the SC's and the colleague's edits. The two are independent; one Apply
@@ -138,11 +138,12 @@ runs the colleague's first, each its own commit.
 | | |
 |---|---|
 | The base | `boilerplateBase` in the storefront's metadata, its own field: never `lastSyncedCommit` (the colleague's track) or `lkgSource` (which would make the project thin-layer) |
-| Found by | `boilerplateBase.ts`: a saved package's `builtWith.lkg`; else GitHub says the colleague's repository was made from one of our templates and its first commit has the same files as one of that template's commits (`.github` aside). JustRite: 71a67e0, the 39th commit back |
+| Found by | `boilerplateBase.ts`: a saved package's `builtWith.lkg`; else GitHub says the colleague's repository was made from one of our templates and its first commit has the same files as one of that template's commits (`.github` aside). Tailspin: 71a67e0, the 39th commit back |
 | Recorded | by the check (`boilerplateCheck.ts`), the one path, so new and existing projects get it alike |
 | Kept true | reset forgets it; after the colleague's update, their `demo.demo-builder.json` moves it forward when it is ahead (`boilerplateBaseRefresh.ts`); Share Demo's link save writes it as `builtWith.lkg`; changing the demo source keeps it (the code did not change) |
 | Fixes | Demo Builder's repairs run in the update's clone before the change, and they apply every known patch that fits (EDS-64), so D6's "no fixes re-applied" no longer holds. A fix the storefront already had is set aside around the change and put back (see above) |
 | Never | a reset on a conflict, or a move backwards |
+| A reset source | when the colleague's new commits include Demo Builder's reset commit (`RESET_TO_TEMPLATE_MESSAGE`), the source was rebuilt, not edited: the row starts unticked and says so, and `apply_updates` leaves it out unless `includeSourceReset` (owner, 2026-11-03: a colleague reset their demo three times in a day, and Tailspin was offered it ticked) |
 
 ## A clash is fixed with AI (EDS-57)
 
@@ -215,10 +216,12 @@ notification, for a library the storefront has and the project no longer selects
 
 A deployed integration and its ERPs are one more category of the startup check and
 Check for Updates (AB-73), with the Integrations screen's own rule
-(`checkIntegrationUpdates`: the GitHub branch is ahead of the clone, a fetched commit
+(`checkIntegrationUpdates`: a newer release than the clone for a repository the builder
+owns, or the branch ahead of it for anyone else's; a release that cannot be read is a
+check that could not run, never "up to date"; a fetched commit
 was never deployed, or the clone's app version differs from the one installed in
-Commerce). It runs for ALL projects, one row per pair ("Justrite: ERP Integration and
-Justrite ERP"), alongside the other project checks so the extension's own update notice
+Commerce). It runs for ALL projects, one row per pair ("Tailspin: ERP Integration and
+Tailspin ERP"), alongside the other project checks so the extension's own update notice
 does not wait on it; a project with no deployed integration costs nothing, and each
 pair costs one `git fetch` per clone.
 
@@ -238,7 +241,7 @@ so nothing under `updates/services` reaches into the dashboard's handlers.
 ## Related
 
 - [component-version-management.md](../../../docs/architecture/component-version-management.md)
-  — the floating stable-tag model that decouples component updates from extension releases
+  — how each component ships by release, independently of extension releases
 
 ## Conventions that bind this
 

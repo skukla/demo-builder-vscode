@@ -10,7 +10,7 @@ import { readRepoBoilerplate } from '@/features/eds/services/storefront/storefro
 import { createMockLogger } from '../../../../helpers/loggerFake';
 
 const logger = createMockLogger();
-const AISTORE = { owner: 'sayurihanki', repo: 'aistore' };
+const AISTORE = { owner: 'org-j', repo: 'aistore' };
 
 function fileOps(answer: () => Promise<{ content: string } | null>) {
     return {
@@ -29,7 +29,7 @@ describe('readRepoBoilerplate', () => {
 
         const result = await readRepoBoilerplate(ops, AISTORE, logger, 'demo');
 
-        expect(ops.getFileContent).toHaveBeenCalledWith('sayurihanki', 'aistore', 'package.json', 'demo');
+        expect(ops.getFileContent).toHaveBeenCalledWith('org-j', 'aistore', 'package.json', 'demo');
         expect(result).toEqual({
             status: 'read',
             value: { name: '@adobe/aem-boilerplate-commerce', version: '4.0.1' },

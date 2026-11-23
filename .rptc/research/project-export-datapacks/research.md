@@ -5,7 +5,7 @@
 **Asked by:** the owner wants datapacks to travel with a project through export, import and copy in beta.153.
 **Prior research read:** `.rptc/research/project-import-export/research.md` (2026-09-11, before the v2
 file existed: its "datapack is not on SettingsFile" is no longer true), `.rptc/plans/portable-demos/`
-(D24, D26, D31), `.rptc/plans/datapack-engine/` (overview, steps 02, 03, 05, 07, 08, 09, 10, 13).
+(D24, D26, D31), `.rptc/complete/datapack-engine/` (overview, steps 02, 03, 05, 07, 08, 09, 10, 13).
 
 Labels: **Code** = what the code does. **Plan** = what a plan or decision says. **Inferred** = my
 reading, not run. **Open** = needs the owner or a live test.

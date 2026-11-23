@@ -23,6 +23,12 @@ import { AGENT_ALERT_COPY } from '@/features/ai/server/agentAlertCopy';
 
 const SERVER_DIR = 'src/features/ai/server';
 const EXTRA_REGISTRAR_FILES = ['src/mcp-server.ts'];
+/**
+ * Files outside the registrars that hold a tool's whole input shape as one named constant, used as
+ * `inputSchema: NAME` (make_aco_pack_from_products shares MAKE_ACO_PACK_INPUT with the handler's own
+ * parse, PL-60). Read for constants only; a new one is listed here, so the scan stays explicit.
+ */
+const SCHEMA_SOURCE_FILES = ['src/features/data-installer/services/acoWebsite/scrapedProductInput.ts'];
 
 /**
  * Argument keys named anywhere in a tool's registration.
@@ -42,7 +48,7 @@ function declaredArgumentKeys(): Map<string, Set<string>> {
     const spreads = new Map<string, string[]>();
     const out = new Map<string, Set<string>>();
 
-    for (const file of files) {
+    for (const file of [...files, ...SCHEMA_SOURCE_FILES]) {
         const source = readFileSync(file, 'utf8');
         // Shared schema fragments, e.g. `const DATAPACK_ID = { datapackName: …`
         for (const m of source.matchAll(/const ([A-Z_]+) = \{([^}]*)\}/g)) {
@@ -63,14 +69,17 @@ function declaredArgumentKeys(): Map<string, Set<string>> {
         for (const m of sites) {
             const name = m[1];
             if (!(name in AGENT_ALERT_COPY)) continue;
-            const window = source.slice(m.index, m.index + 2600);
+            // Up to the next registration: a fixed length (it was 2600) missed the schema of a tool
+            // whose description outgrew it, and a longer one would read the next tool's keys.
+            const next = sites.map((site) => site.index ?? 0).filter((at) => at > (m.index ?? 0)).sort((a, b) => a - b)[0];
+            const window = source.slice(m.index, next ?? source.length);
             const keys = new Set<string>();
             // `z\b`, not `z\.` — a multi-line field reads `blockId: z` then
             // `.string()` on the next line, and requiring the dot rejected it.
             for (const k of window.matchAll(/(\w+):\s*(?:z\b|projectNameSchema|pathField)/g)) {
                 keys.add(k[1]);
             }
-            for (const sp of window.matchAll(/\.\.\.([A-Z_]+)/g)) {
+            for (const sp of window.matchAll(/(?:\.\.\.|inputSchema: )([A-Z_]+)/g)) {
                 for (const k of spreads.get(sp[1]) ?? []) keys.add(k);
             }
             const existing = out.get(name) ?? new Set<string>();
@@ -103,7 +112,8 @@ describe('consent targets name real arguments', () => {
         for (const [tool, copy] of entries) {
             const keys = declared.get(tool);
             if (!keys) continue;
-            for (const key of copy.target) {
+            // The choices shown beneath the target are argument keys too (reset_project, step-05 S7).
+            for (const key of [...copy.target, ...(copy.choices ?? [])]) {
                 if (!keys.has(key)) bogus.push(`${tool}: ${key}`);
             }
         }

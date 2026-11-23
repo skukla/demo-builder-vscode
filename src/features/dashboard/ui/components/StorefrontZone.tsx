@@ -9,7 +9,8 @@ import { DashboardZone, RemedyTile } from './DashboardZone';
 /**
  * The Storefront zone (EDS only) — keeping the site itself in shape.
  *
- * Republish carries the drift dot, NOT Sync Storefront: Sync pushes storefront CODE
+ * Republish carries the drift dot, NOT Sync Storefront (and the dot of the Finish Setup step
+ * Republish the Code, PL-101): Sync pushes storefront CODE
  * and never touches edsStorefrontStatusSummary, so a dot there would point at a
  * button that does not fix the state it reports. Only storefrontRepublishService
  * clears it.
@@ -19,12 +20,15 @@ import { DashboardZone, RemedyTile } from './DashboardZone';
  */
 export function StorefrontZone({
     needsRepublish,
+    republishTooltip,
     handleRepublishContent,
     handleSyncStorefront,
     handleRefreshBlockLibrary,
     handleOpenSiteAccess,
 }: {
     needsRepublish: boolean;
+    /** Why Republish is needed, when a Finish Setup step says so (PL-101); else the drift's words. */
+    republishTooltip?: string;
     handleRepublishContent?: () => void;
     handleSyncStorefront?: () => void;
     handleRefreshBlockLibrary?: () => void;
@@ -35,7 +39,7 @@ export function StorefrontZone({
             {handleRepublishContent && (
                 <RemedyTile
                     label="Republish"
-                    tooltip="Republish needed — configuration changed since the last publish"
+                    tooltip={republishTooltip ?? 'Republish needed — configuration changed since the last publish'}
                     idleTooltip="Push config and authored content to the CDN"
                     needed={needsRepublish}
                     icon={<UploadToCloud size="L" />}

@@ -4,7 +4,7 @@ kind: fix
 area: platform
 needs: []
 value: high
-status: active
+status: backlog
 parent: PL-22
 ---
 
@@ -92,6 +92,8 @@ raised here so the next queue is generated with the answer.
 - 2026-10-04  feat: save a blank-starter app to GitHub; adding is a card on every grid (`79f8ed297`)
 - 2026-10-05  2026-10-04 day-b (staged, uncommitted): authCacheManager read on a fresh bail-off measurement (66 tests, 42 droppable). Deleted 6: three 'advance well past the TTL' expiry tests (validation, org list, console.where) that the boundaries suite pins at the exact instant; 'use custom TTL' (same input and assertions as 'cache as true', checked no TTL); 'cache validation as invalid' beside 'overwrite existing validation' (same false value + org); 'return true when flag is set' beside 'persist flag until read'. 66 -> 60. Proof: re-measured after deletion, 93/93 mutants killed before and after, no mutant changed status; plus 6 planted defects, each failed the deleted test on the old suite and at least one kept test on the new one. Kept the other 36 listed: per-cache default/empty pins, the jitter-band and granted/denied permission tests, the 'does not affect other caches' isolation pins.
 - 2026-10-04  refactor: prerequisites shared.ts split by job; six duplicate cache tests removed (EDS-8, PL-42) (`e598c5d5e`)
+- 2026-11-21  Reconciled 2026-11-21: 7 of 141 measured modules read and trimmed. Left: the other ~134, densest first (stateManager, adobeEntityFetcher, authenticationHandlers, adobeEntityService); the owner question on running the measure per goal session is still open.
+- 2026-11-22  Paused 2026-11-22: back to backlog, last work 2026-10-04. Where it stopped is the 2026-11-21 reconcile line above.
 
 ## The sweep finished — 2026-09-04 02:20, all 143 modules, no failures
 

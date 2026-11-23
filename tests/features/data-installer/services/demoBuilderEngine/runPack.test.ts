@@ -15,7 +15,8 @@ import {
     removePack,
 } from '@/features/data-installer/services/demoBuilderEngine/runPack';
 import { NOW, PACK, PROJECT, type SentCall, fakeContext, memoryFiles, page } from './demoBuilderEngine.testUtils';
-import { GRID, configStore, row, storeContext } from './storeConfig.testUtils';
+import { GRID, configStore, row, storeContext } from './storeConfig.testUtils';import { PREPARING_UNINSTALL } from '@/features/data-installer/types';
+
 
 describe('installPack', () => {
     it('runs the kinds the pack holds in the store\'s order, whatever order the pack lists them in', async () => {
@@ -24,7 +25,7 @@ describe('installPack', () => {
         });
         const seen: string[] = [];
 
-        await installPack(ctx, { source_items: { sourceItems: [] }, attribute_sets: [] }, (kind) => seen.push(kind));
+        await installPack(ctx, { source_items: { sourceItems: [] }, attribute_sets: [] }, (kind) => kind && seen.push(kind));
 
         expect(seen).toEqual(['attribute_sets', 'source_items']);
     });
@@ -32,8 +33,8 @@ describe('installPack', () => {
     it('refuses a pack holding a kind it cannot install, before writing anything', async () => {
         const ctx = await fakeContext();
 
-        await expect(installPack(ctx, { categories: { categories: [] }, customers_export: {}, product_export: [] })).rejects.toThrow(
-            new UnsupportedKindsError(['customers_export', 'product_export']),
+        await expect(installPack(ctx, { categories: { categories: [] }, aco_metadata: {}, aco_products: [] })).rejects.toThrow(
+            new UnsupportedKindsError(['aco_metadata', 'aco_products']),
         );
         expect(ctx.sent).toStrictEqual([]);
     });
@@ -58,10 +59,10 @@ describe('installPack', () => {
         expect(packRowProblems({ attribute_sets: [], categories: { categories: [] }, b2b_shared_catalog_products: { catalogs: [] } })).toStrictEqual([]);
     });
 
-    it('names a shared catalog assignment kind and a store settings kind whose rows are wrong', () => {
+    it('names a shared catalog assignment kind and a store configuration kind whose rows are wrong', () => {
         const problems = packRowProblems({ b2b_shared_catalog_products: { catalogs: [{ name: 'Retail' }] }, store_config: [{ path: 'web/unsecure/base_url', value: 'x', scope: 'default' }] });
 
-        expect(problems).toEqual([expect.stringMatching(/shared catalog products/u), expect.stringMatching(/store settings cannot be installed/u)]);
+        expect(problems).toEqual([expect.stringMatching(/shared catalog products/u), expect.stringMatching(/store configuration cannot be installed/iu)]);
     });
 
     // Step 08: groups before the products whose tier prices name them; customers before the
@@ -77,9 +78,13 @@ describe('installPack', () => {
             'sources',
             'stock_source_links',
             'products',
+            // Products in the service's import form, in the service's place (2026-11-06).
+            'product_export',
             // Step 11: gift cards after the products, as the service makes them.
             'giftcards',
             'source_items',
+            // Customers in the service's import form, in the service's place (2026-11-06).
+            'customers_export',
             'customers',
             // Step 11: cart rules and their coupons, before a shared catalog renames a group they name.
             'cart_rules',
@@ -94,12 +99,13 @@ describe('installPack', () => {
         ]);
     });
 
-    it('installs every kind the five kept packs with cart rules, coupons or gift cards hold, but their bulk product form', () => {
+    it('installs every kind the five kept packs with cart rules, coupons or gift cards hold, their bulk product form too', () => {
         // Health & Beauty, Carvello and wknd main (read 2026-10-30); Luma and Venia eds-compatible (get_datapack).
         const kinds = ['cart_rules', 'coupons', 'giftcards', 'customer_groups', 'customers', 'categories', 'products', 'stocks', 'sources', 'stock_source_links', 'source_items'];
 
         expect(kinds.filter((kind) => !INSTALLABLE_KINDS.includes(kind))).toStrictEqual([]);
-        expect(INSTALLABLE_KINDS).not.toContain('product_export');
+        // The service's import form of products (`productExportKind.ts`, 2026-11-06).
+        expect(INSTALLABLE_KINDS).toContain('product_export');
     });
 
     it("installs every one of Bodea's fourteen kinds", () => {
@@ -127,8 +133,64 @@ describe('removePack', () => {
             { method: 'DELETE', path: 'products/vrrack', body: undefined },
             { method: 'DELETE', path: 'categories/41', body: undefined },
         ]);
-        expect(result).toEqual({ removed: 2, noRecord: false, kept: [] });
+        expect(result).toEqual({ removed: 2, noRecord: false, kept: [], refused: [] });
         expect(files.data.has(installRecordPath(PROJECT, PACK))).toBe(false);
+    });
+
+    // Walk F187 (owner, 2026-11-16): what the store had before the datapack (Create took it, or an
+    // install matched it) stays in the store; it leaves the record only.
+    it('leaves in the store what the store had before, taking back only what the engine made', async () => {
+        const files = memoryFiles();
+        const recorder = await openInstallRecord(files, PROJECT, PACK, NOW);
+        await recorder.record({ kind: 'categories', id: '41', key: 'Server Racks', adopted: true });
+        await recorder.record({ kind: 'products', id: 'vrrack' });
+        const ctx = await fakeContext();
+
+        const result = await removePack(ctx, files, { projectPath: PROJECT, pack: PACK });
+
+        expect(ctx.sent).toEqual<SentCall[]>([{ method: 'DELETE', path: 'products/vrrack', body: undefined }]);
+        expect(result).toEqual({ removed: 1, noRecord: false, kept: [], refused: [] });
+        expect(files.data.has(installRecordPath(PROJECT, PACK))).toBe(false);
+    });
+
+    it('CONTROL: a record of only what the store had sends nothing and is forgotten', async () => {
+        const files = memoryFiles();
+        const recorder = await openInstallRecord(files, PROJECT, PACK, NOW);
+        await recorder.record({ kind: 'categories', id: '41', key: 'Server Racks', adopted: true });
+        const ctx = await fakeContext();
+
+        await removePack(ctx, files, { projectPath: PROJECT, pack: PACK });
+
+        expect(ctx.sent).toStrictEqual([]);
+        expect(files.data.has(installRecordPath(PROJECT, PACK))).toBe(false);
+    });
+
+    // Walk F161 (owner, 2026-11-16): the uninstall says what it does now, and how far, by data type. It
+    // was one bare count over every type ("10 of 10"), and nothing at all while it read what to take back.
+    it('says it is preparing to uninstall, then each type with its own count', async () => {
+        const files = memoryFiles();
+        await recorded(files);
+        const ctx = await fakeContext();
+        const progress = jest.fn();
+
+        await removePack(ctx, files, { projectPath: PROJECT, pack: PACK, progress });
+
+        expect(progress.mock.calls.map(([line]) => line)).toEqual([PREPARING_UNINSTALL, '0 of 1 products', '1 of 1 products', '1 of 1 categories']);
+    });
+
+    it('leaves what Commerce refuses in the store and the record on disk, so removing again tries it again', async () => {
+        const files = memoryFiles();
+        await recorded(files);
+        const ctx = await fakeContext({}, (call) => {
+            if (call.path === 'categories/41') throw new CommerceReadError('Commerce answered 400 for categories/41: {"message":"Cannot delete."}', 400);
+            return true;
+        });
+
+        const result = await removePack(ctx, files, { projectPath: PROJECT, pack: PACK });
+
+        expect(result.refused).toEqual([{ kind: 'categories', key: '41', reason: 'Cannot delete.' }]);
+        expect(result.removed).toBe(1);
+        expect((await readInstallRecord(files, PROJECT, PACK))?.created).toEqual([{ kind: 'categories', id: '41' }]);
     });
 
     it('keeps a set the pack made that holds products the SC added, taking out only what the pack put in', async () => {
@@ -137,7 +199,7 @@ describe('removePack', () => {
         await recorder.record({ kind: 'attribute_sets', id: '12' });
         await recorder.record({ kind: 'products', id: 'vrrack' });
         const ctx = await fakeContext({
-            [page('products', '&searchCriteria[filterGroups][0][filters][0][field]=attribute_set_id&searchCriteria[filterGroups][0][filters][0][value]=12')]: {
+            [page('products', '&searchCriteria[filterGroups][0][filters][0][field]=attribute_set_id&searchCriteria[filterGroups][0][filters][0][value]=12&fields=total_count,items[sku]')]: {
                 items: [{ sku: 'vrrack' }, { sku: 'their-a' }, { sku: 'their-b' }],
                 total_count: 3,
             },
@@ -153,10 +215,47 @@ describe('removePack', () => {
         expect((await readInstallRecord(files, PROJECT, PACK))?.created).toEqual([{ kind: 'attribute_sets', id: '12' }]);
     });
 
+    describe('an attribute place in a set the removal deletes too', () => {
+        const SET_READS = {
+            [page('products', '&searchCriteria[filterGroups][0][filters][0][field]=attribute_set_id&searchCriteria[filterGroups][0][filters][0][value]=12&fields=total_count,items[sku]')]: { items: [], total_count: 0 },
+            'products/attribute-sets/12': { attribute_set_id: 12, attribute_set_name: 'Racks' },
+        };
+        async function setWithPlaces(files: ReturnType<typeof memoryFiles>) {
+            const recorder = await openInstallRecord(files, PROJECT, PACK, NOW);
+            await recorder.record({ kind: 'attribute_sets', id: '12' });
+            await recorder.record({ kind: 'attribute_assign_to_set', id: '12/color' });
+            await recorder.record({ kind: 'attribute_assign_to_set', id: '12/size' });
+        }
+
+        // Live, 2026-11-06: Luma's removal sent about 540 of these before deleting the sets themselves.
+        it('is not sent on its own: Commerce takes it with the set, and both leave the record', async () => {
+            const files = memoryFiles();
+            await setWithPlaces(files);
+            const ctx = await fakeContext(SET_READS);
+
+            const result = await removePack(ctx, files, { projectPath: PROJECT, pack: PACK });
+
+            expect(ctx.sent).toEqual<SentCall[]>([{ method: 'DELETE', path: 'products/attribute-sets/12', body: undefined }]);
+            expect(result).toMatchObject({ removed: 3, kept: [] });
+            expect(files.data.has(installRecordPath(PROJECT, PACK))).toBe(false);
+        });
+
+        it('stays on the record when the set is refused, for the next removal to take', async () => {
+            const files = memoryFiles();
+            await setWithPlaces(files);
+            const ctx = await fakeContext(SET_READS, () => {
+                throw new CommerceReadError('Commerce answered 500', 500);
+            });
+
+            await expect(removePack(ctx, files, { projectPath: PROJECT, pack: PACK })).rejects.toThrow('Commerce answered 500');
+            expect((await readInstallRecord(files, PROJECT, PACK))?.created.map((o) => o.id)).toEqual(['12', '12/color', '12/size']);
+        });
+    });
+
     it('answers that there is no record when this engine never installed the pack', async () => {
         const ctx = await fakeContext();
 
-        await expect(removePack(ctx, memoryFiles(), { projectPath: PROJECT, pack: PACK })).resolves.toEqual({ removed: 0, noRecord: true, kept: [] });
+        await expect(removePack(ctx, memoryFiles(), { projectPath: PROJECT, pack: PACK })).resolves.toEqual({ removed: 0, noRecord: true, kept: [], refused: [] });
         expect(ctx.sent).toStrictEqual([]);
     });
 

@@ -5,7 +5,7 @@ area: app-builder
 parent: AB-26
 needs: []
 value: med
-status: built
+status: shipped
 ---
 
 # The ERP's Settings screen should be settings: a form an ERP user edits, not panels of text
@@ -57,3 +57,4 @@ Five cards, almost none of them a setting:
 - 2026-10-02  docs(backlog): owner decisions on AB-26y and AB-26s; AB-59 filed — the ERP's Settings screen should be a form (`70c62b232`)
 - 2026-10-02  refactor(erp): the ERP's look is set on its own screen, not its card (AB-59) (`058cf04eb`)
 - 2026-10-03  Reconciled 2026-10-03 (second pass): the ERP form commits are on ERP main: 42b8a94 (setup form, contract v15) and b559cf0 (Appearance: logo, navigation, four themes in a row). The body's 'Open' is answered.
+- 2026-11-20  Released in v1.0.0-beta.153

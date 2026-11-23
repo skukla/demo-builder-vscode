@@ -51,11 +51,11 @@ describe('getAutoSelectedOptionalDependencies', () => {
     // is the only stack it ships a storefront for. Its stack's optional
     // dependency is the mesh component that gets auto-selected.
     it('reads an injected package list, so a demo derived from a project row seeds the same mesh dependency', async () => {
-        const derived = packageFixture('added:jen/isle5-demo', { 'eds-paas': storefrontFixture('eds') }, { requiresMesh: true });
+        const derived = packageFixture('added:robin/isle5-demo', { 'eds-paas': storefrontFixture('eds') }, { requiresMesh: true });
         await expect(
-            getAutoSelectedOptionalDependencies('added:jen/isle5-demo', 'eds-paas', [derived]),
+            getAutoSelectedOptionalDependencies('added:robin/isle5-demo', 'eds-paas', [derived]),
         ).resolves.toEqual(['eds-commerce-mesh']);
-        await expect(getAutoSelectedOptionalDependencies('added:jen/isle5-demo', 'eds-paas')).resolves.toStrictEqual([]);
+        await expect(getAutoSelectedOptionalDependencies('added:robin/isle5-demo', 'eds-paas')).resolves.toStrictEqual([]);
     });
 
     it('returns the stack’s optional dependencies when the package requires mesh', async () => {

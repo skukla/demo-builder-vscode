@@ -1,8 +1,8 @@
 /**
  * The footer of the final wizard step: Cancel while creation runs or waits on a
- * GitHub App install, View Projects when it finished, Back when it failed or was
- * cancelled. The wizard's shared footer is hidden on this step
- * (`shouldShowWizardFooter`), so whatever this returns IS the footer — and a state
+ * GitHub App install, View Projects when it finished (with Finish Setup beside it
+ * when the run left steps, PL-101), Back when it failed or was cancelled. The
+ * wizard's shared footer is hidden on this step (`shouldShowWizardFooter`), so whatever this returns IS the footer — and a state
  * it does not cover is a state with no footer at all.
  *
  * Moved out of ProjectCreationStep.tsx on 2026-10-08 (EDS-8).
@@ -10,9 +10,10 @@
  * @module features/project-creation/ui/steps/projectCreationStepFooter
  */
 
-import { Button } from '@adobe/react-spectrum';
+import { Button, Flex } from '@adobe/react-spectrum';
 import React from 'react';
 import { getCancelButtonText } from '../helpers/buttonTextHelpers';
+import { answerPause } from './projectCreationStepContent';
 import { PageFooter } from '@/core/ui/components/layout/PageFooter';
 
 /**
@@ -44,6 +45,12 @@ export function StepFooterArea(props: {
     onOpenProject: () => void;
     /** Edit goes back to the project it came from; Create goes to the projects list. */
     isEdit?: boolean;
+    /** The steps the run left still to do (PL-101): any, and Finish Setup sits beside the exit. */
+    stepsRemaining?: number;
+    /** Opens the project's dashboard with its Finish Setup guide. */
+    onFinishSetup?: () => void;
+    /** A step failed and waits, and the project can do without it: Skip This Step (F307). */
+    canSkipStep?: boolean;
 }) {
     const {
         isActive,
@@ -58,6 +65,9 @@ export function StepFooterArea(props: {
         onCancel,
         onOpenProject,
         isEdit = false,
+        stepsRemaining = 0,
+        onFinishSetup,
+        canSkipStep = false,
     } = props;
 
     if (isActive || isStarting || isGitHubAppInstall) {
@@ -73,19 +83,36 @@ export function StepFooterArea(props: {
                         {getCancelButtonText(false, isCancelling)}
                     </Button>
                 }
+                rightContent={
+                    canSkipStep && !isCancelling && (
+                        <Button variant="secondary" onPress={() => answerPause('Skip This Step')}>
+                            Skip This Step
+                        </Button>
+                    )
+                }
                 constrainWidth={true}
             />
         );
     }
 
     if (isCompleted && !hasError) {
+        // Finish Setup BESIDE the way out, never in its place (owner, 2026-11-17): the SC may
+        // finish the steps later, from the dashboard's "N steps remaining".
+        const finishSetup = stepsRemaining > 0 && onFinishSetup;
         return (
             <PageFooter
                 rightContent={
                     !isOpeningProject && (
-                        <Button variant="cta" onPress={onOpenProject}>
-                            {isEdit ? 'Back to Project' : 'View Projects'}
-                        </Button>
+                        <Flex gap="size-100">
+                            {finishSetup && (
+                                <Button variant="secondary" onPress={onFinishSetup}>
+                                    Finish Setup
+                                </Button>
+                            )}
+                            <Button variant="cta" onPress={onOpenProject}>
+                                {isEdit ? 'Back to Project' : 'View Projects'}
+                            </Button>
+                        </Flex>
                     )
                 }
                 constrainWidth={true}

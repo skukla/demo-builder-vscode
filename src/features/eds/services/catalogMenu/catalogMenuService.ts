@@ -138,6 +138,17 @@ const NAV_PATH = '/nav';
 const NO_MENU_CATEGORIES =
     'Catalog Service returned no categories marked "Include in Menu" for this store view';
 
+/**
+ * The store view has no menu categories, so there is nothing to page: an empty store, as a reset
+ * that uninstalled the datapack leaves, or a demo with none. Not a failure (live run 6, 2026-11-15).
+ */
+export class NoMenuCategoriesError extends Error {
+    constructor() {
+        super(NO_MENU_CATEGORIES);
+        this.name = 'NoMenuCategoriesError';
+    }
+}
+
 /** The nav outcomes that leave the switch in the nav. */
 const IN_NAV: Array<ApplyReport['nav']> = ['added', 'line-updated', 'links-updated', 'already-present'];
 
@@ -240,7 +251,7 @@ export async function applyCatalogMenu(
 ): Promise<ApplyReport> {
     const categories = await deps.readCategories();
     if (!categories.some((c) => c.urlPath && c.inMenu !== false)) {
-        throw new Error(NO_MENU_CATEGORIES);
+        throw new NoMenuCategoriesError();
     }
     const plan = planCategoryPages(categories);
     const planned = plan.pages.map((p) => p.path);

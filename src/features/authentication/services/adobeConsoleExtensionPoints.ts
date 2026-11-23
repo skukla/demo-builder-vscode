@@ -24,7 +24,7 @@ import { getLogger } from '@/core/logging/debugLogger';
 /**
  * A workspace's published extension points, as Adobe's registry sends and takes them:
  * a BARE map, `{ '<extension point id>': { '<operation>': ... } }`, on the GET and on
- * the PUT (which replaces it). Measured live on 2026-10-08 against the two Justrite
+ * the PUT (which replaces it). Measured live on 2026-10-08 against the two Tailspin
  * workspaces: the GET body's top-level keys were `commerce/extensibility/1`,
  * `commerce/configuration/1` and `commerce/backend-ui/2`. The Console API spec and the
  * CLI's fixtures show `{ endpoints: {...} }`, and this code read `body.endpoints` for a

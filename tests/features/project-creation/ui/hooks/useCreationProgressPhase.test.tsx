@@ -51,6 +51,7 @@ import { ProjectCreationStep } from '@/features/project-creation/ui/steps/Projec
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 
 import { press, settle } from '../../../../helpers/reactSettle';
+import { plain } from '@/core/utils/plainText';
 
 const stateWith = (progress: WizardState['creationProgress']): WizardState =>
     ({
@@ -138,7 +139,7 @@ describe('useCreationProgressPhase (through ProjectCreationStep)', () => {
             const { container } = await renderStep(
                 progressOf({
                     currentOperation: 'Installing dependencies',
-                    error: 'npm ERR! network timeout',
+                    error: plain('npm ERR! network timeout'),
                 })
             );
 
@@ -150,7 +151,7 @@ describe('useCreationProgressPhase (through ProjectCreationStep)', () => {
         it('should show the success view when the operation is Project Created', async () => {
             await renderStep(progressOf({ currentOperation: 'Project Created' }));
 
-            expect(screen.getByText('Project Created Successfully')).toBeInTheDocument();
+            expect(screen.getByText('Project Created')).toBeInTheDocument();
             expect(screen.getByRole('button', { name: 'View Projects' })).toBeInTheDocument();
         });
     });
@@ -158,12 +159,12 @@ describe('useCreationProgressPhase (through ProjectCreationStep)', () => {
     describe('a phase outlives the progress event that set it', () => {
         it('should keep the success view when the progress event is cleared', async () => {
             const { rerender } = await renderStep(progressOf({ currentOperation: 'Project Created' }));
-            expect(screen.getByText('Project Created Successfully')).toBeInTheDocument();
+            expect(screen.getByText('Project Created')).toBeInTheDocument();
 
             rerender(step(stateWith(undefined)));
             await settle();
 
-            expect(screen.getByText('Project Created Successfully')).toBeInTheDocument();
+            expect(screen.getByText('Project Created')).toBeInTheDocument();
             // The footer has to agree: losing progress must not put the step back
             // into its starting window, which offers Cancel instead.
             expect(screen.getByRole('button', { name: 'View Projects' })).toBeInTheDocument();
@@ -227,6 +228,23 @@ describe('useCreationProgressPhase (through ProjectCreationStep)', () => {
             });
 
             expect(mockPostMessage).toHaveBeenCalledWith('backToProject');
+            expect(mockPostMessage).not.toHaveBeenCalledWith('openProject');
+        });
+
+        // PL-101: Finish Setup opens the new project's dashboard with its guide, not the list.
+        it('Finish Setup opens the project, then asks the extension for its Finish Setup guide', async () => {
+            await renderStep(progressOf({ currentOperation: 'Project Created', stepsRemaining: 2 }));
+
+            expect(screen.getByText('2 steps remaining')).toBeInTheDocument();
+            await press(screen.getByRole('button', { name: 'Finish Setup' }));
+            expect(screen.getByText('Opening your project')).toBeInTheDocument();
+            expect(screen.queryByRole('button', { name: 'Finish Setup' })).not.toBeInTheDocument();
+
+            await act(async () => {
+                jest.advanceTimersByTime(TIMEOUTS.PROJECT_OPEN_TRANSITION);
+            });
+
+            expect(mockPostMessage).toHaveBeenCalledWith('finishSetup');
             expect(mockPostMessage).not.toHaveBeenCalledWith('openProject');
         });
     });

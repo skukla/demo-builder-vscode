@@ -19,10 +19,8 @@ interface ProjectsSource {
 }
 
 /**
- * Every local project but one, loaded with `persistAfterLoad: false`: nothing is written, and the
- * saved current-project pointer does not move. This window's in-memory copy of the current project
- * is reassigned by each load; `StateManager.getCurrentProject` reads the saved pointer on every
- * call, so it answers the right project regardless.
+ * Every local project but one, read (`loadProjectFromPath`): nothing is written, and neither the
+ * saved current-project pointer nor this window's in-memory copy of it moves.
  *
  * @param source - anything carrying the state manager (a handler context)
  * @param excludePath - the project to leave out; undefined loads them all
@@ -33,7 +31,7 @@ export async function loadOtherProjects(source: ProjectsSource, excludePath: str
     const loaded = await Promise.all(
         summaries
             .filter((summary) => summary.path !== excludePath)
-            .map((summary) => source.stateManager.loadProjectFromPath(summary.path, undefined, { persistAfterLoad: false })),
+            .map((summary) => source.stateManager.loadProjectFromPath(summary.path)),
     );
     return loaded.filter((other): other is Project => other !== null);
 }

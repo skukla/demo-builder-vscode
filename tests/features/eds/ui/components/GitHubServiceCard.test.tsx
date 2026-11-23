@@ -194,7 +194,7 @@ describe('GitHubServiceCard', () => {
 
             // Then: Should show error message and try again button
             expect(screen.getByText('Authentication failed')).toBeInTheDocument();
-            expect(screen.getByRole('button', { name: /try again/i })).toBeInTheDocument();
+            expect(screen.getByRole('button', { name: /retry/i })).toBeInTheDocument();
         });
     });
 

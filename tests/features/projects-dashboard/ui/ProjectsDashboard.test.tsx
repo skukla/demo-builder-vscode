@@ -72,7 +72,7 @@ describe('ProjectsDashboard', () => {
             expect(screen.getByText('Project 3')).toBeInTheDocument();
         });
 
-        it('offers "New project" as a card (PL-62), not a header button', () => {
+        it('offers "New Project" as a card (PL-62), not a header button', () => {
             const projects = createMockProjects(2);
             renderWithProvider(
                 <ProjectsDashboard
@@ -83,7 +83,7 @@ describe('ProjectsDashboard', () => {
             );
 
             expect(
-                screen.getByRole('button', { name: 'New project' })
+                screen.getByRole('button', { name: 'New Project' })
             ).toBeInTheDocument();
         });
 

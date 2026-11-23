@@ -1,8 +1,7 @@
 /**
- * Deleting this demo's own pack (datapack-engine step 07, found live 2026-10-29): once the
- * library holds no version of it, the project stops naming it, so the dashboard's Datapacks
- * tile no longer says "This demo's pack: Scratch Q4" for a pack that is gone. While another
- * version remains, the project keeps it. The library is asked after the delete, by name.
+ * Deleting one of the SC's own library packs: the project is never written (there is no automatic
+ * pack per demo to clear any more, owner 2026-11-03, `.rptc/complete/datapack-save-as/`), and a
+ * version takes its settings layer of the same version with it (datapack-engine step 09).
  */
 
 // The shared wall first: it owns the access-guard mock and the subject's import.
@@ -34,8 +33,8 @@ function contextFor(project: Project | null) {
     return context;
 }
 
-const ownProject = (): Project =>
-    createMockProject({ name: 'scratch-1028', ownDatapack: { name: OWN, displayName: 'Scratch Q4', renamed: true } });
+const projectUsing = (): Project =>
+    createMockProject({ name: 'scratch-1028', datapack: { name: OWN, version: '20261029-183005', store: 'library' } });
 
 beforeEach(() => {
     jest.clearAllMocks();
@@ -43,45 +42,190 @@ beforeEach(() => {
     global.fetch = jest.fn(async () => ({ ok: true, status: 200, text: async () => '{"success":true}' })) as unknown as typeof fetch;
 });
 
-it("clears the project's own pack once the library holds no version of it", async () => {
-    // What the library lists after the delete: a colleague's version of the same name is not ours.
-    library.findDatapacks.mockResolvedValue({ items: [row(OWN, 'theirs', false)], count: 1 });
-    const project = ownProject();
-    const context = contextFor(project);
+// Phase 2, step-02 slice 3: deleting the save a project uses stranded it (its datapack and its
+// install record named a save that no longer existed). It is refused, saying which project uses it.
+describe('the save a project on this machine uses is never deleted', () => {
+    const deletes = () => (global.fetch as jest.Mock).mock.calls.filter(([, init]) => (init as RequestInit).method === 'DELETE');
 
-    const result = await remove(context, { datapackName: OWN, version: '20261029-183005', confirm: true });
+    it('refuses the save the open project uses, naming it, and deletes nothing', async () => {
+        const context = contextFor(projectUsing());
 
-    expect(library.findDatapacks).toHaveBeenCalledWith({ datapackName: OWN });
-    const saved = (context.stateManager.saveProject as jest.Mock).mock.calls[0]?.[0] as Project;
-    expect(saved.ownDatapack).toBeUndefined();
-    expect(result).toMatchObject({ success: true, data: { deleted: true, ownPackCleared: true } });
+        const result = await remove(context, { datapackName: OWN, version: '20261029-183005', confirm: true });
+
+        expect(result).toMatchObject({ success: false });
+        expect(result.error).toContain('scratch-1028 uses this save');
+        expect(deletes()).toHaveLength(0);
+        expect(context.stateManager.saveProject).not.toHaveBeenCalled();
+    });
+
+    it('refuses the save another local project uses', async () => {
+        const context = contextFor(null);
+        (context.stateManager.getAllProjects as jest.Mock).mockResolvedValue([{ path: '/p/other', name: 'other' }]);
+        (context.stateManager.loadProjectFromPath as jest.Mock).mockResolvedValue(
+            createMockProject({ name: 'other-demo', path: '/p/other', datapack: { name: OWN, version: '20261029-183005', store: 'library' } }),
+        );
+
+        const result = await remove(context, { datapackName: OWN, version: '20261029-183005', confirm: true });
+
+        expect(result.error).toContain('other-demo uses this save');
+        expect(deletes()).toHaveLength(0);
+    });
+
+    it('deletes an earlier save no project uses, and leaves the project as it was', async () => {
+        library.findDatapacks.mockResolvedValue({ items: [], count: 0 });
+        const context = contextFor(projectUsing());
+
+        const result = await remove(context, { datapackName: OWN, version: '20261028-090000', confirm: true });
+
+        expect(result).toMatchObject({ success: true, data: { deleted: true } });
+        expect(context.stateManager.saveProject).not.toHaveBeenCalled();
+    });
+
+    it('refuses deleting every version of a datapack a project uses', async () => {
+        library.findDatapacks.mockResolvedValue({ items: [row(OWN, '20261029-183005', true)], count: 1 });
+        const context = contextFor(projectUsing());
+
+        const result = await remove(context, { datapackName: OWN, everyVersion: true, confirm: true });
+
+        expect(result).toMatchObject({ success: false });
+        expect(result.error).toContain('scratch-1028 uses this datapack');
+        expect(deletes()).toHaveLength(0);
+    });
+
+    // Owner, 2026-11-20: the screen asked "will be deleted. This can't be undone." and only then said
+    // it could not be. The check without confirm says who uses it, so the screen says it first.
+    it('says who uses it on the check without confirm, and whether the open project does', async () => {
+        library.findDatapacks.mockResolvedValue({ items: [row(OWN, '20261029-183005', true)], count: 1 });
+        const context = contextFor(projectUsing());
+
+        const result = await remove(context, { datapackName: OWN, everyVersion: true });
+
+        expect(result).toStrictEqual({
+            success: false,
+            error: 'scratch-1028 uses this datapack. Uninstall it there first.',
+            code: 'INVALID_OPERATION',
+            data: { inUse: { users: ['scratch-1028'], open: true } },
+        });
+        expect(deletes()).toHaveLength(0);
+    });
+
+    it('says another project uses it, not the open one', async () => {
+        const context = contextFor(null);
+        (context.stateManager.getAllProjects as jest.Mock).mockResolvedValue([{ path: '/p/other', name: 'other' }]);
+        (context.stateManager.loadProjectFromPath as jest.Mock).mockResolvedValue(
+            createMockProject({ name: 'other-demo', path: '/p/other', datapack: { name: OWN, version: '20261029-183005', store: 'library' } }),
+        );
+
+        const result = await remove(context, { datapackName: OWN, version: '20261029-183005' });
+
+        expect(result.data).toStrictEqual({ inUse: { users: ['other-demo'], open: false } });
+    });
 });
 
-it('keeps it while another version of it remains', async () => {
-    library.findDatapacks.mockResolvedValue({ items: [row(OWN, '20261028-090000', true)], count: 1 });
-    const context = contextFor(ownProject());
+describe("the pack's settings layer (datapack-engine step 09): a version takes its layer of the same version with it", () => {
+    const deletes = () =>
+        (global.fetch as jest.Mock).mock.calls
+            .filter(([, init]) => (init as RequestInit).method === 'DELETE')
+            .map(([url]) => new URL(String(url)).searchParams.toString());
+    const layerRow = (version: string, extra: Partial<DatapackSummary> = {}): DatapackSummary => ({
+        ...row('bodea-settings', version, true),
+        dataTypes: ['store_config'],
+        ...extra,
+    });
 
-    const result = await remove(context, { datapackName: OWN, version: '20261029-183005', confirm: true });
+    it('deletes the layer at the same version, after the pack, and says so', async () => {
+        library.findDatapacks.mockResolvedValue({ items: [layerRow('v1'), layerRow('v2')], count: 2 });
 
-    expect(context.stateManager.saveProject).not.toHaveBeenCalled();
-    expect((result.data as Record<string, unknown>).ownPackCleared).toBeUndefined();
+        const result = await remove(contextFor(null), { datapackName: 'bodea', version: 'v1', confirm: true });
+
+        expect(library.findDatapacks).toHaveBeenCalledWith({ datapackName: 'bodea-settings' });
+        expect(deletes()).toEqual(['datapack_name=bodea&version=v1', 'datapack_name=bodea-settings&version=v1']);
+        expect(result).toMatchObject({ success: true, data: { deleted: true, settingsLayerDeleted: true } });
+    });
+
+    // Step-07 F2: the load result's one Delete removes only what the load made. A layer that was in
+    // My Datapacks before the load is not the load's to remove (owner rule 1, reversibility).
+    it('leaves the layer at the same version when asked to keep it, and never asks the library about it', async () => {
+        library.findDatapacks.mockResolvedValue({ items: [layerRow('v1')], count: 1 });
+
+        const result = await remove(contextFor(null), { datapackName: 'bodea', version: 'v1', confirm: true, keepSettingsLayer: true });
+
+        expect(deletes()).toEqual(['datapack_name=bodea&version=v1']);
+        expect(library.findDatapacks).not.toHaveBeenCalledWith({ datapackName: 'bodea-settings' });
+        expect(result).toMatchObject({ success: true, data: { deleted: true } });
+        expect(result.data).not.toHaveProperty('settingsLayerDeleted');
+    });
+
+    it.each([
+        ['another version', layerRow('v2')],
+        ['a colleague', layerRow('v1', { mine: undefined })],
+        ['a demo of that name, not a layer', layerRow('v1', { dataTypes: ['products'] })],
+    ])('leaves a pack of that name that is %s', async (_what, item) => {
+        library.findDatapacks.mockResolvedValue({ items: [item], count: 1 });
+
+        const result = await remove(contextFor(null), { datapackName: 'bodea', version: 'v1', confirm: true });
+
+        expect(deletes()).toEqual(['datapack_name=bodea&version=v1']);
+        expect(result.data).not.toHaveProperty('settingsLayerDeleted');
+    });
+
+    it('still answers deleted when the library cannot be asked about the layer, and says it may be there', async () => {
+        library.findDatapacks.mockRejectedValue(new Error('unreachable'));
+
+        const result = await remove(contextFor(null), { datapackName: 'bodea', version: 'v1', confirm: true });
+
+        expect(result).toMatchObject({ success: true, data: { deleted: true, settingsLayerLeft: expect.stringContaining('bodea-settings') } });
+    });
 });
 
-it("asks nothing more when the pack deleted is not this demo's own", async () => {
-    const context = contextFor(ownProject());
+// Owner, 2026-11-09 (walk F99): a pack of saves is one thing to the SC, so Remove Datapack takes it whole.
+describe('every version (everyVersion)', () => {
+    const deletes = () =>
+        (global.fetch as jest.Mock).mock.calls
+            .filter(([, init]) => (init as RequestInit).method === 'DELETE')
+            .map(([url]) => new URL(String(url)).searchParams.toString());
 
-    await remove(context, { datapackName: 'someone-else', version: 'v1', confirm: true });
+    it("deletes every version of the SC's own pack, and only theirs", async () => {
+        library.findDatapacks.mockImplementation(async ({ datapackName }: { datapackName: string }) =>
+            datapackName === OWN
+                ? { items: [row(OWN, '20261109-141504', true), row(OWN, '20261109-160124', true), row(OWN, '20261101-000000', false)], count: 3 }
+                : { items: [], count: 0 },
+        );
 
-    expect(library.findDatapacks).not.toHaveBeenCalled();
-    expect(context.stateManager.saveProject).not.toHaveBeenCalled();
+        const result = await remove(contextFor(null), { datapackName: OWN, everyVersion: true, confirm: true });
+
+        expect(deletes()).toEqual([`datapack_name=${OWN}&version=20261109-141504`, `datapack_name=${OWN}&version=20261109-160124`]);
+        expect(result).toMatchObject({ success: true, data: { datapackName: OWN, deleted: true, versions: 2 } });
+    });
+
+    it('CONTROL: deletes nothing without confirm, or when the SC has no pack of that name', async () => {
+        library.findDatapacks.mockResolvedValue({ items: [row(OWN, '20261109-141504', false)], count: 1 });
+
+        expect(await remove(contextFor(null), { datapackName: OWN, everyVersion: true })).toMatchObject({ success: false });
+        expect(await remove(contextFor(null), { datapackName: OWN, everyVersion: true, confirm: true })).toMatchObject({ success: false });
+        expect(deletes()).toStrictEqual([]);
+    });
 });
 
-it('still answers deleted when the library cannot be asked afterwards, and leaves the project as it was', async () => {
-    library.findDatapacks.mockRejectedValue(new Error('unreachable'));
-    const context = contextFor(ownProject());
+// Step-07 A1 (owner, P4-Q8): agents cannot delete Demo Builder datapacks, as the screen offers no
+// Delete on one. Even the SC who uploaded it, whom the library itself would let delete it.
+describe('a Demo Builder datapack', () => {
+    const deletes = () => (global.fetch as jest.Mock).mock.calls.filter(([, init]) => (init as RequestInit).method === 'DELETE');
+    const TEAM = (version: string): DatapackSummary => ({ ...row(OWN, version, true), team: true });
 
-    const result = await remove(context, { datapackName: OWN, version: '20261029-183005', confirm: true });
+    it.each([
+        ['one version', { version: '20261109-141504' }],
+        ['every version', { everyVersion: true }],
+    ])('is refused, %s, and nothing is deleted', async (_how, which) => {
+        library.findDatapacks.mockResolvedValue({ items: [TEAM('20261109-141504')], count: 1 });
 
-    expect(result).toMatchObject({ success: true, data: { deleted: true } });
-    expect(context.stateManager.saveProject).not.toHaveBeenCalled();
+        const result = await remove(contextFor(null), { datapackName: OWN, ...which, confirm: true });
+
+        expect(result).toStrictEqual({
+            success: false,
+            error: "Demo Builder datapacks can't be deleted.",
+            code: 'INVALID_OPERATION',
+        });
+        expect(deletes()).toHaveLength(0);
+    });
 });

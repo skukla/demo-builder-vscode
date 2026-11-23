@@ -32,16 +32,18 @@
  * @module features/data-installer/services/demoBuilderEngine/capture
  */
 
+import { STORE_CONFIG_KIND } from '../datapackCatalog';
 import { captureB2b } from './captureB2b';
 import { capturePromotions } from './capturePromotions';
 import type { CreatedObject } from './installRecord';
 import { type KindContext, segment } from './kindContext';
 import { ancestorIds, attributePackForm, categoryPackForm, productPackForm } from './packForm';
 import { packRootOf } from './packRoot';
+import { withPackSwatch } from './swatchCarry';
+import { GIFT_CARD_KIND } from './productKinds';
 import { type ProductLookups, type StoreCategory, productLookups } from './productLookups';
-import { GIFT_CARD_KIND } from './productsKind';
 import { captureSettings } from './storeConfigKind';
-import { onceInventory, readBySku, readCopies, readProducts } from './storeCopies';
+import { knowingSkus, onceInventory, productsOf, readBySku, readCopies } from './storeCopies';
 import type { CommerceProduct, CommerceSetAttribute } from '@/types/commerceWire';
 
 /** The set and the source every store has, which a pack never carries (export spec §1). */
@@ -58,6 +60,11 @@ export interface CaptureResult {
     counts: Record<string, number>;
     /** Each id kept because the store could not name it, as "category 57", once each (step 14). */
     unnamed: string[];
+    /**
+     * The lookups the capture read through, each answer kept: the record's rebase reads its
+     * categories, options and sets through them rather than ask the store again (`rebaseRecord`).
+     */
+    lookups: ProductLookups;
 }
 
 const idsOf = (created: readonly CreatedObject[], kind: string): string[] => created.filter((o) => o.kind === kind).map((o) => o.id);
@@ -117,14 +124,18 @@ function renamedTop(rows: Array<{ category: Row }>, rootName: string): Array<{ c
     return rows.map(({ category }) => ({ category: { ...category, path: [rootName, ...String(category.path ?? '').split('/').slice(1)].join('/') } }));
 }
 
-/** The user-defined attributes named, with their options; Commerce's own are every store's. */
-async function captureAttributes(lk: ProductLookups, codes: Set<string>): Promise<{ rows: unknown[]; codes: Set<string> }> {
+/**
+ * The user-defined attributes named, with their options; Commerce's own are every store's. A swatch
+ * keeps the installed version's type and colours, which the store cannot answer (`swatchCarry.ts`).
+ */
+async function captureAttributes(lk: ProductLookups, codes: Set<string>, installed: unknown): Promise<{ rows: unknown[]; codes: Set<string> }> {
+    const packRows = new Map(rowsOf(installed).map((row) => [fieldOf(row, 'attribute', 'attribute_code'), row]));
     const rows: unknown[] = [];
     const kept = new Set<string>();
     for (const code of codes) {
         const attribute = await lk.attribute(code).catch(() => undefined);
         if (!attribute?.is_user_defined) continue;
-        rows.push(attributePackForm({ attribute_code: code, ...attribute }));
+        rows.push(withPackSwatch(attributePackForm({ attribute_code: code, ...attribute }), packRows.get(code)));
         kept.add(code);
     }
     return { rows, codes: kept };
@@ -238,28 +249,62 @@ async function namedSetIds(lk: ProductLookups, names: string[]): Promise<string[
 }
 
 /**
+ * The reads a save makes, in order, each as the data types it reads: what the progress window
+ * counts through (`phaseLine`), as an install counts through its kinds (owner, 2026-11-04).
+ */
+export const CAPTURE_PHASES: readonly (readonly string[])[] = [
+    ['products', GIFT_CARD_KIND],
+    ['categories'],
+    ['product_attributes'],
+    ['attribute_sets'],
+    ['source_items'],
+    ['customer_groups', 'customers', 'b2b_companies', 'b2b_shared_catalogs'],
+    ['cart_rules'],
+    [STORE_CONFIG_KIND],
+];
+
+/**
  * Read back what the install record lists and what the installed version names, with what they
  * need, as a new version's rows.
  *
  * @param ctx - read access to the store; `session.rootCategory` is the install target's root
  * @param created - what the install record lists
  * @param installed - the installed version's own rows, by kind
+ * @param onPhase - told as each of `CAPTURE_PHASES` starts, by its place in the list
+ * @param known - products already read whole (a save's read of the website, walk F90); only the
+ *   SKUs not among them are read
  */
-export async function capturePack(ctx: KindContext, created: readonly CreatedObject[], installed: Record<string, unknown> = {}): Promise<CaptureResult> {
+export async function capturePack(
+    ctx: KindContext,
+    created: readonly CreatedObject[],
+    installed: Record<string, unknown> = {},
+    onPhase: (at: number) => void = () => undefined,
+    known: readonly CommerceProduct[] = [],
+): Promise<CaptureResult> {
     const unnamed = new Set<string>();
     const lk: ProductLookups = { ...productLookups(ctx), unnamed: (what, id) => void unnamed.add(`${what} ${id}`) };
     const names = installedNames(installed);
     const giftCards = new Set([...idsOf(created, GIFT_CARD_KIND), ...names.giftCards].map((sku) => sku.toLowerCase()));
     const skus = [...new Set([...idsOf(created, 'products'), ...names.skus, ...idsOf(created, GIFT_CARD_KIND), ...names.giftCards])];
-    const products = uniqueBySku(await readProducts(ctx, skus)).sort((a, b) => typeRank(a) - typeRank(b));
+    onPhase(0);
+    const started = Date.now();
+    const products = uniqueBySku(await productsOf(ctx, skus, known)).sort((a, b) => typeRank(a) - typeRank(b));
+    // Its two halves timed apart (walk F87): reading the products, and turning each into its row.
+    ctx.log(`capture: read ${products.length} products in ${Date.now() - started} ms`);
     // A gift card's set, categories and quantities are captured with the products'; its row goes under `giftcards`.
     const isGiftCard = (p: CommerceProduct) => giftCards.has(p.sku.toLowerCase());
-    const productRows = await Promise.all(products.filter((p) => !isGiftCard(p)).map((p) => productPackForm(lk, p)));
-    const giftCardRows = await Promise.all(products.filter(isGiftCard).map((p) => productPackForm(lk, p)));
+    // A configurable's children named from the products just read, not one request each (`knowingSkus`).
+    const named = knowingSkus(lk, products);
+    const productRows = await Promise.all(products.filter((p) => !isGiftCard(p)).map((p) => productPackForm(named, p)));
+    const giftCardRows = await Promise.all(products.filter(isGiftCard).map((p) => productPackForm(named, p)));
+    ctx.log(`capture: made their rows by ${Date.now() - started} ms`);
+    onPhase(1);
     const categories = await captureCategories(lk, idsOf(created, 'categories'), products.flatMap(linkedCategories), ctx.session.rootCategory.id, packRootOf(installed.categories));
+    onPhase(2);
     const codes = await attributeCodes(lk, products, created);
     for (const code of names.attributeCodes) codes.add(code);
-    const attributes = await captureAttributes(lk, codes);
+    const attributes = await captureAttributes(lk, codes, installed.product_attributes);
+    onPhase(3);
     const setIds = new Set(
         [
             ...idsOf(created, 'attribute_sets'),
@@ -269,6 +314,21 @@ export async function capturePack(ctx: KindContext, created: readonly CreatedObj
         ].filter(Boolean),
     );
     const { sets, assignments } = await captureSets(ctx, lk, setIds, attributes.codes);
+    onPhase(4);
+    const inventory = await captureInventory(ctx, lk, products.map((p) => p.sku), created);
+    onPhase(5);
+    // Customers, groups, companies, catalogs and what is assigned to them (step 08).
+    const b2b = await captureB2b(ctx, lk, created, installed, {
+        skus: products.map((p) => p.sku),
+        categoryKeys: categoryUrlKeys(categories.records),
+        tierGroups: products.flatMap((p) => (p.tier_prices ?? []).map((t) => t.customer_group_id)),
+    });
+    onPhase(6);
+    // Cart rules and their coupons (step 11).
+    const promotions = await capturePromotions(ctx, lk, created, installed);
+    onPhase(7);
+    // Store configuration at its values now, each setting at its own scope (step 09).
+    const settings = await captureSettings(ctx.get, created, installed, ctx.session.websiteCode);
     const items: Record<string, unknown> = {
         ...(sets.length > 0 ? { attribute_sets: sets } : {}),
         ...(attributes.rows.length > 0 ? { product_attributes: attributes.rows } : {}),
@@ -276,19 +336,12 @@ export async function capturePack(ctx: KindContext, created: readonly CreatedObj
         ...(categories.records ? { categories: categories.records } : {}),
         ...(productRows.length > 0 ? { products: productRows } : {}),
         ...(giftCardRows.length > 0 ? { [GIFT_CARD_KIND]: giftCardRows } : {}),
-        ...(await captureInventory(ctx, lk, products.map((p) => p.sku), created)),
-        // Customers, groups, companies, catalogs and what is assigned to them (step 08).
-        ...(await captureB2b(ctx, lk, created, installed, {
-            skus: products.map((p) => p.sku),
-            categoryKeys: categoryUrlKeys(categories.records),
-            tierGroups: products.flatMap((p) => (p.tier_prices ?? []).map((t) => t.customer_group_id)),
-        })),
-        // Cart rules and their coupons (step 11).
-        ...(await capturePromotions(ctx, lk, created, installed)),
-        // Store settings at their values now, each at its own scope (step 09).
-        ...(await captureSettings(ctx.get, created, installed, ctx.session.websiteCode)),
+        ...inventory,
+        ...b2b,
+        ...promotions,
+        ...settings,
     };
     const counts = Object.fromEntries(Object.entries(items).map(([kind, records]) => [kind, kind === 'categories' ? categories.count : countOf(records)]));
-    return { items, counts, unnamed: [...unnamed] };
+    return { items, counts, unnamed: [...unnamed], lookups: lk };
 }
 

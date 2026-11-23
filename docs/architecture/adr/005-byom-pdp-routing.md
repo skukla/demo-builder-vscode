@@ -156,7 +156,7 @@ each category to its own address.
 page at a product path, previewed and published, was not served: the overlay's template was.
 On preview the overlay is asked first and its answer beats authored content (the BYOM spec
 says so; this is the measurement). At a category's address that means an authored page —
-Justrite's hand-built `/apparel`, `/hazard-communication`, `/workplace-safety` — would be
+Tailspin's hand-built `/apparel`, `/hazard-communication`, `/workplace-safety` — would be
 replaced the next time anything previewed it.
 
 **So the overlay steps aside, and only on sites that opt in.** A public published sheet,
@@ -187,7 +187,7 @@ prefix no authored page could share a category's address, so the overlay could n
 one, with no list to keep. Its stated cost was that the URLs are not Adobe's canonical shape
 (Adobe's `aem-commerce-prerender` serves categories at their root paths). The owner chose the
 root shape on 2026-10-22; the opt-in sheet is what makes it safe. Design and history:
-`.rptc/plans/category-pages-overlay/overview.md`; behaviour: `docs/systems/category-pages.md`.
+`.rptc/complete/category-pages-overlay/overview.md`; behaviour: `docs/systems/category-pages.md`.
 
 ---
 

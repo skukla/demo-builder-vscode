@@ -61,7 +61,7 @@ the repository. With it, you choose the name and say the things a repository can
 | `integrations` | The integrations the demo depends on: catalog ids, and custom apps by repository |
 | `blockLibraries` | Shipped block libraries to pre-tick |
 | `contentSource` | The content site, when it is not the one `fstab.yaml` names, or to name its index path |
-| `builtWith` | Written by Share Demo's link save, never by hand: the shipped package, template, pin, fix list and boilerplate the storefront was built from, and the Demo Builder version that saved it |
+| `builtWith` | Written by Share Demo's link save and Save as Package, never by hand: the shipped package, template, pin, fix list and boilerplate the storefront was built from, and the Demo Builder version that saved it |
 
 A file that names a content site names its index path; the `indexPath` field is required
 inside `contentSource`. Only the SC's own actions guess a path, and only for a repository
@@ -80,7 +80,7 @@ A complete example:
 {
   "kind": "demo",
   "version": 2,
-  "name": "Isle5 by Jen",
+  "name": "Isle5 by Robin",
   "description": "A B2B outdoor-equipment demo with company accounts and quotes",
   "configDefaults": {
     "ADOBE_COMMERCE_WEBSITE_CODE": "isle5",
@@ -94,7 +94,7 @@ A complete example:
   "requiresMesh": false,
   "datapack": { "name": "isle5" },
   "blockLibraries": ["isle5"],
-  "contentSource": { "org": "jen", "site": "isle5-content", "indexPath": "/sitemap.json" }
+  "contentSource": { "org": "your-github-owner", "site": "isle5-content", "indexPath": "/sitemap.json" }
 }
 ```
 
@@ -142,7 +142,7 @@ The writes go to the SC's copy; your repository is never touched. If a patch lis
 downloaded, what was read still goes in, and the project shows Needs reset until a reset reads
 them all.
 
-Measured on JustRite, 2026-10-23: of the six fixes, two were already in its code and the other
+Measured on Tailspin, 2026-10-23: of the six fixes, two were already in its code and the other
 four fit (the AEM Assets image name, and the product teaser's link, import and image address).
 
 ## Boilerplate versions
@@ -164,9 +164,9 @@ creation, so a project already built keeps working whatever happens to yours. Re
 updates go back to your repository.
 
 **Keeping a demo nobody can take away.** An SC who wants to keep building on your demo even
-if you remove it builds one project from it and saves it with **Share Demo**, **Also show it
-on my Welcome step** ticked, on that project. The card that makes reads that project's own repository and pages, so it needs
-nothing of yours.
+if you remove it builds one project from it and presses **Save as Package** on that project.
+The card that makes reads that project's own repository and pages, so it needs nothing of
+yours.
 
 Your repository's history is readable by anyone who can read the repository. **Do not share a
 repository whose history ever held a secret.**
@@ -180,8 +180,8 @@ repository whose history ever held a secret.**
 - **If you delete it,** projects built on it keep working. Their reset refuses with one
   sentence, and their dashboard says the demo's repository can't be reached. "Change
   source" points a project at another copy of the same kind, for a demo that moved; on an
-  Edge Delivery project "Keep as my own demo" opens Share Demo to keep it as the SC's own,
-  for one that is gone.
+  Edge Delivery project "Keep as my own demo" opens Save as Package to keep it as the SC's
+  own, for one that is gone.
 
 ## The words
 
@@ -193,38 +193,42 @@ which the Storefront area configures. One demo, many storefronts.
 
 **Share Demo**, in the dashboard's Share row, is the one way to hand this demo on. It replaced
 two dialogs on 2026-10-22 (Export, and Save as demo package), which did the same job: both
-wrote the description file into your repository and put the card on your Welcome step. It
-asks **how** the demo travels first.
+wrote the description file into your repository and put the card on your Welcome step. The
+card on your own Welcome step is no longer Share Demo's: it is **Save as Package**'s, beside
+it (owner, 2026-11-18, EDS-72, below). It
+is two steps in one window, the way Add a Demo is (walk F228, 2026-11-18). Step 1, **How to
+Share**, is two cards, **Send a Link** and **Send a File**, with **Next**. Step 2 is the
+chosen form, with **Back** (which keeps the choice and what you set), **Close**, and the
+form's own button.
 
 ### Send a link
 
 For a colleague who can reach your GitHub and the shared services. Keeps the history, and
 they get your later changes. Edge Delivery projects only. Top to bottom, the form shows:
 
-- The link and one button. A link carries nothing itself, so while your repository lacks the
-  description file the button reads **Save details and copy link**: it writes the file from
-  what the project already holds, then copies. Once the file is there it reads **Copy link**
-  and only copies. It reads **Save details and copy link** again after you change the name,
-  the description or the box below, because the next press will write.
-- One line: "Colleagues paste this into "Add a demo package" and get your code, content and
-  later changes."
-- **Also show it on my Welcome step**, ticked by default (it was always on before the merge).
-  Ticked, the save also puts the card on your own Welcome step, the way Isle5 is one, so you
-  can build new projects from it. Unticked, the save writes the file only, and takes your
-  card off the list if it was there. For a demo already shared, the box shows where its
-  card is now.
-- **Change name or description**, a quiet link that opens the two fields. They are
+- What colleagues cannot use yet, first, one amber notice each: a private repository (they
+  need access, or make it public), a site with no published page list (points at Republish),
+  sample data only you can see, and custom integration code they cannot read. Only the
+  checks that need you show; nothing in them stops you saving. Nothing is uploaded.
+  Sample data only you can see comes with its fix, **Share Datapack**: it asks first
+  ("Share <name>?", the same question the Datapacks screen's Share asks), then shares the
+  datapack with the same handler (`share-library-datapack`, which the `share_datapack` tool
+  also runs). The button shows it is busy while it runs; once shared, the storefront is read
+  again and the notice goes. If the share fails, the notice's line says why.
+- **Repository**, the address of your storefront's repository, as a read-only field.
+- **Name** (required) and **Description**, always shown. They are
   prefilled from the description file when it is the one Demo Builder wrote, otherwise from
   the brand or demo the project was built on (the project's own title for a Starter build).
-- **What colleagues get**, one line each: whether colleagues can open the storefront's code
-  (a private repository needs access, or make it public), whether they start with your
-  published pages (a site with no published page list says so and points at Republish),
-  whether the sample data the demo uses is available to them, and whether each custom
-  integration's code can be read. The sample-data line only confirms; nothing is uploaded.
-  Nothing in the list stops you saving; it tells you what to fix first.
-- **Remove the details from my repository**, once there is something of yours to undo. It
-  takes the file out (only when it is ours) and the card off your list. The storefront is
-  untouched.
+
+There is no Welcome box and no undo here any more (EDS-72: Share Demo is not the place for
+them). The save writes the description file and leaves your Welcome step exactly as it is: a
+card already there stays, and none is added. Both moved to **Save as Package**.
+
+The footer button copies the link. A link carries nothing itself, so while your repository
+lacks the description file the button reads **Save and Copy Link**: it writes the
+file from what the project already holds, then copies. Once the file is there it reads
+**Copy Link** and only copies. It reads **Save and Copy Link** again after you change
+the name or the description, because the next press will write.
 
 Nothing else about the repository changes: it is not marked as a GitHub template. A project
 created from the card still works, because creation copies a repository that is not a
@@ -235,7 +239,7 @@ template's, and the description file rides along with `fstab.yaml` and `config.j
 card and its link keep working.
 
 Demo Builder rewrites only a description file it wrote itself, and knows it by the file's
-recorded revision. A file you wrote or edited by hand is left alone and the dialog says so;
+recorded revision. A file you wrote or edited by hand is left unchanged and the window says so ("The package file in your repository wasn't created by Demo Builder, so it was left unchanged.");
 the link is still copied. The card's own menu on the Welcome step, always visible, has
 **Edit** (rename the card and change its description) and **Remove** too: it takes the card
 off the list and nothing else, and never offers to delete a repository that is one of your
@@ -243,23 +247,75 @@ projects' storefronts. Colleagues who already added the demo keep it.
 
 ### Send a file
 
-For a colleague who can't reach your GitHub. One zip, `<project>-demo-bundle.zip`. **What to
-include** lists the two parts you can tick: **Setup** (your Commerce, Adobe, GitHub and
-DA.live settings, never a credential) and **Storefront** (the repository's code with the
-demo's description file inside). A colleague adds the storefront with Add a demo package's
-**From a zip file**, which reads the bundle. Setup alone writes the plain settings file the
-projects list imports today. Your setup travels only as a file.
+For a colleague who can't reach your GitHub. One zip, `<project>-demo-bundle.zip`. Top to
+bottom, the form shows (walk F230, 2026-11-18, laid out the way the link form is):
+
+- Sample data only you can see, first, as the link form's amber notice with the same
+  **Share Datapack** fix: the file names the datapack, and colleagues cannot install its data
+  until it is shared. It is the link form's own check (`datapackCheckFor`): an Edge Delivery
+  project reads it with the storefront, a headless one reads it alone
+  (`getShareDatapackCheck`), both behind the window's opening wait. The link form's other
+  checks are not shown here: the file carries the code itself. A check that cannot be read
+  shows nothing, and never holds the file up.
+- The two parts, as checkbox rows with no heading over them, each with its line under it:
+  **Setup** ("Your Commerce, Adobe, GitHub, DA.live and integration settings.": the integrations the project uses and their settings, and a custom integration's repository, never its code) and
+  **Storefront** ("The storefront's code and content site.", the repository's code with the
+  demo's description file inside). On a headless project the storefront row is off and
+  locked, and says the project has none.
+
+**Save File** in the footer saves the ticked parts; with nothing ticked it is greyed out, with no
+line about it, and nothing else arrives under the boxes, so the window fits them (walk F238). A
+save that fails becomes a result too: the red mark, **Couldn't Save File**, the reason, and
+**Try Again**. Once the file is written the window becomes the result (walk F236): a large green check, **File Saved**,
+the file and the folder it is in, and **Reveal in Finder** (Reveal in File Explorer on Windows),
+which shows the file through VS Code's own `revealFileInOS` (the `revealFile` handler). Dismissing
+the save dialog leaves the form as it was. It asks
+nothing more: before 2026-11-18 it asked a VS Code pop-up ("Your teammates can't use this
+datapack's data. Share it?") whose other answer saved the same file anyway, so with the notice
+already on screen a second question would only repeat it. A file saved without the share still
+works for the colleague: the settings and storefront arrive, and the wizard says it cannot read
+your datapack, offering the one it was made from when there is one, else building without
+sample data (`checkRecordedPack` in `recordedPack.ts`). The projects list's Export, which has no
+notice, still asks that question. An agent's `export_demo_bundle` never asked: its answer
+carries the same sentence as `packNote`.
+
+A colleague imports the file with the projects list's **Import from File**, which creates the
+project from it. Setup alone writes the plain settings file the projects list imports today. Your
+setup travels only as a file.
 
 Parts that do not exist yet are not listed. When one is built, it is added to the file form.
 
-**Receiving a file.** A colleague has two doors, and both read a bundle as well as a bare
-storefront zip. On the projects list, **Import** takes the bundle: the storefront becomes a
-repository in their account and a card on their Welcome step, and the setup part opens the
-wizard pre-filled on that card, with your repository and site names dropped so they name
-theirs. Inside the wizard, Add a demo package's **From a zip file** does the same for the storefront and,
-when the bundle carries setup, offers **Start a project with it**, which adds the card and
-reopens the wizard pre-filled. The setup never carries a credential; the colleague signs in
-to their own accounts as the wizard asks.
+**Receiving a file.** A colleague has two doors. On the projects list, **Import from File**
+creates the project (EDS-72, owner 2026-11-18): the wizard opens with only the imported demo on
+the Welcome step, chosen and fixed, and their storefront setup makes the project's own new
+repository from the bundle's code and copies the pages from your published site. No template
+repository and no Welcome card are made, and a later Reset puts the code back to the import.
+Inside the wizard, Add a demo package's **From a zip file** stays the template door: the
+storefront becomes a repository in their account and a card on their Welcome step, and when the
+bundle carries setup it offers **Start a project with it**. To hand over a reusable package rather
+than a project, use **Send a Link** or **Save as Package**. The setup never carries a credential;
+the colleague signs in to their own accounts as the wizard asks.
+
+## Save as Package
+
+**Save as Package**, in the dashboard's Share row beside Share Demo, puts this demo on your own
+Welcome step as a card, the way Isle5 is one, so you can build new projects from it (owner,
+2026-11-18, EDS-72 decision 4). Edge Delivery projects only; a headless project has no
+storefront of its own for the card to build from, so the tile is not shown.
+
+The window reads the storefront behind its opening wait, then shows **Name** (required) and
+**Description**, prefilled exactly as Send a Link's are. **Save as Package** in the footer writes
+the description file into your repository (the same ownership rule as the link's save) and puts
+the card on your Welcome step. The window then becomes the result: **Package Saved**, and
+"<Name> is on your Welcome step." A save that fails becomes **Couldn't Save the Package**, the
+reason, and **Try Again**.
+
+When the project is already on your Welcome step, the form shows a quiet **Remove Package**
+link: it takes the description file out (only when it is ours) and the card off your list. The
+storefront is untouched. Its outcome is a result too: **Package Removed**, with what it did in
+one sentence, or **Couldn't Remove the Package** and **Try Again**.
+
+"Keep as my own demo", on the notice for an added demo whose source is gone, opens this window.
 
 ## Headless demos
 
@@ -284,12 +340,15 @@ its description, and `forget_added_demo` takes a demo off the list. The demos an
 `add_shared_demo` also takes `zipPath` for a storefront that arrived as a zip file or a demo
 bundle: the repository it creates in the SC's account needs `confirm:true`. When
 the bundle carries setup, the answer says so and points at the projects list's Import, which
-is the door that opens the wizard pre-filled.
+is the door that opens the wizard pre-filled. `create_project_from_file` given the bundle's
+path creates the project from it, as Import from File does (EDS-72).
 
-Share Demo has the same doors: `get_demo_package_preview` reads what a project built from
-the card would get, `save_demo_package` writes the file, puts the card on the list (or, with
-`addToWelcome:false`, keeps it off, as the unticked box does) and answers the link, and
-`remove_demo_package` undoes it. Both writes need `confirm:true`. The file form is
+Save as Package and Share Demo have the same doors: `get_demo_package_preview` reads what a
+project built from the card would get, `save_demo_package` is Save as Package (it writes the
+file, puts the card on the list, and answers the link; with `addToWelcome:false` it is Send a
+Link's save, the file only, with the card kept off), and `remove_demo_package` is Remove
+Package. The handler leaves the Welcome list untouched only when `addToWelcome` is omitted,
+which only the link form does; the tool always sends true or false. Both writes need `confirm:true`. The file form is
 `export_demo_bundle`, which writes the bundle inside the project directory. Copying a link
 to the clipboard is a person's act and has no tool.
 

@@ -3,7 +3,7 @@
  *
  * Until 2026-10-30 an Adobe boilerplate update ran Demo Builder's repairs (head.html, 404.html,
  * the old scripts out of delayed.js, Quick Edit) against GitHub BEFORE it knew whether its own
- * change would apply. On JustRite the change then stopped on a clash, and those commits were
+ * change would apply. On Tailspin the change then stopped on a clash, and those commits were
  * already on GitHub while the update said nothing had changed. Handing the same repairs this
  * object instead puts their writes in the clone, where a stopped update throws them away and a
  * finished one pushes them once, with the update.

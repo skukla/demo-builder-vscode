@@ -21,7 +21,8 @@
 import * as fsPromises from 'fs/promises';
 import * as path from 'path';
 import { z } from 'zod';
-import type { JobEnd } from './demoBuilderEngine/engine';
+import { plainFailure } from '../plainFailure';
+import type { JobEnd } from './demoBuilderEngine/engineDeps';
 import type { TargetCodes } from './demoBuilderEngine/installRecord';
 import type { DatapackId } from '@/types/datapack';
 
@@ -39,8 +40,10 @@ export interface EngineActivityEntry {
     /** The store's instance when the job ran, as `get-datapack-import-target` names it. */
     commerceInstance?: string;
     target?: TargetCodes;
-    /** Why it failed, or what the engine said about a run that worked. */
+    /** Why it failed, or what the engine said about a run that worked, in Commerce's words (agents). */
     detail?: string;
+    /** The same for the Activity tab, in plain words (walk F221); absent on older entries. */
+    shown?: string;
 }
 
 /** The two file operations the log needs, handed in so tests need no disk. */
@@ -62,6 +65,7 @@ const entrySchema = z.object({
     commerceInstance: z.string().optional(),
     target: z.object({ websiteCode: z.string(), storeCode: z.string() }).optional(),
     detail: z.string().optional(),
+    shown: z.string().optional(),
 });
 
 /** Where the log lives: `<project>/.demo-builder/datapack-activity.jsonl`. */
@@ -73,6 +77,7 @@ export function engineActivityPath(projectPath: string): string {
 export function activityEntryFrom(end: JobEnd, commerceInstance: string | undefined): EngineActivityEntry {
     const succeeded = end.request.dataTypes.every((kind) => end.perType[kind] === 'success');
     const detail = end.reason ?? end.note;
+    const shown = shownOf(end, succeeded);
     const target = end.request.target;
     return {
         format: 1,
@@ -86,7 +91,15 @@ export function activityEntryFrom(end: JobEnd, commerceInstance: string | undefi
         ...(commerceInstance ? { commerceInstance } : {}),
         ...(target ? { target: { websiteCode: target.websiteCode, storeCode: target.storeCode } } : {}),
         ...(detail ? { detail } : {}),
+        ...(shown ? { shown } : {}),
     };
+}
+
+/** What the Activity tab says of a job: why it stopped, or the lines the SC read when it ended. */
+function shownOf(end: JobEnd, succeeded: boolean): string | undefined {
+    const work = end.operation === 'delete' ? 'uninstalling' : 'installing';
+    if (!succeeded && end.reason) return plainFailure(end.reason, { kind: end.stoppedAt, work });
+    return end.scLines?.length ? end.scLines.join(' ') : undefined;
 }
 
 /** Add one entry to the end of the log. */

@@ -1,5 +1,5 @@
 /**
- * The integration flyout's Demo setup section (AB-26x): how far the SC is through what
+ * The integration flyout's Demo Setup section (AB-26x): how far the SC is through what
  * they prepare in Commerce Admin for this integration's demo, the next step by name, and
  * the way into the guide.
  *
@@ -35,13 +35,13 @@ export function SetupChecklistSection({ model, onOpenGuide }: SetupChecklistSect
     if (!items || items.length === 0) return null;
     const next = nextSetupStep(items);
     return (
-        <section className="integration-panel-section" aria-label="Demo setup">
-            <div className="integration-panel-section-label">Demo setup</div>
+        <section className="integration-panel-section" aria-label="Demo Setup">
+            <div className="integration-panel-section-label">Demo Setup</div>
             <div className="integration-panel-setup">
                 <span className="integration-panel-setup-line">
                     <span>{setupSummary(items)}</span>
                     <Link isQuiet onPress={onOpenGuide}>
-                        {next ? 'Open demo setup' : 'Review setup'}
+                        {next ? 'Open Demo Setup' : 'Review Setup'}
                     </Link>
                 </span>
                 {next && (

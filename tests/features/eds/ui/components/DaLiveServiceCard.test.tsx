@@ -209,7 +209,7 @@ describe('DaLiveServiceCard', () => {
                         isAuthenticating={false}
                         isAuthenticated={false}
                         showInput={true}
-                        githubUser="leahrayard"
+                        githubUser="avery"
                         availableOrgs={['demo-system-stores', 'adobe']}
                         onSetup={mockOnSetup}
                         onSubmit={mockOnSubmit}
@@ -411,7 +411,7 @@ describe('DaLiveServiceCard', () => {
 
             // Then: Should show error and try again button
             expect(screen.getByText('Connection failed')).toBeInTheDocument();
-            expect(screen.getByRole('button', { name: /try again/i })).toBeInTheDocument();
+            expect(screen.getByRole('button', { name: /retry/i })).toBeInTheDocument();
         });
     });
 

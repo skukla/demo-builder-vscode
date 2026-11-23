@@ -14,6 +14,7 @@ import { makeEntry, mockRequest, resolveWith, resolveWithPage } from './Datapack
 
 // Below the mock on purpose (see useDataInstallerRequest's suite).
 import { DatapackActivityView } from '@/features/data-installer/ui/views/DatapackActivityView';
+import { plain } from '@/core/utils/plainText';
 
 describe('DatapackActivityView sources', () => {
     beforeEach(() => {
@@ -32,14 +33,33 @@ describe('DatapackActivityView sources', () => {
         expect(rows[1]).toHaveTextContent('Data Installer');
     });
 
-    it('says a run of Demo Builder\'s failed, and why', async () => {
+    it('says a run of Demo Builder\'s failed, and why, in plain words (walk F221)', async () => {
         resolveWith([makeEntry({ source: 'demo-builder', mode: 'delete', outcome: 'failed', detail: 'Commerce answered 500 for categories/40' })]);
 
         render(<DatapackActivityView />);
         const [row] = await screen.findAllByTestId('activity-row');
 
-        expect(row).toHaveTextContent('failed');
-        expect(row).toHaveTextContent('Commerce answered 500 for categories/40');
+        expect(row).toHaveTextContent('Failed');
+        // An entry from before walk F221 has no plain words of its own: the raw detail is translated.
+        expect(row).toHaveTextContent('Commerce ran into a problem.');
+        expect(row).not.toHaveTextContent('categories/40');
+    });
+
+    it('draws the plain words an entry keeps, never its raw detail', async () => {
+        resolveWith([
+            makeEntry({
+                source: 'demo-builder',
+                outcome: 'success',
+                detail: 'Skipped 1 row, and installed the rest: products p2 (Invalid SKU).',
+                shown: plain("Product p2 wasn't added: Commerce didn't accept its SKU."),
+            }),
+        ]);
+
+        render(<DatapackActivityView />);
+        const [row] = await screen.findAllByTestId('activity-row');
+
+        expect(row).toHaveTextContent("Product p2 wasn't added: Commerce didn't accept its SKU.");
+        expect(row).not.toHaveTextContent('products p2');
     });
 
     it('does not call a run that worked failed', async () => {
@@ -48,7 +68,7 @@ describe('DatapackActivityView sources', () => {
         render(<DatapackActivityView />);
         const [row] = await screen.findAllByTestId('activity-row');
 
-        expect(row).not.toHaveTextContent('failed');
+        expect(row).not.toHaveTextContent(/failed/i);
         expect(row).toHaveTextContent('Kept the category Sale.');
     });
 
@@ -63,7 +83,7 @@ describe('DatapackActivityView sources', () => {
         render(<DatapackActivityView />);
 
         await waitFor(() => expect(screen.getAllByTestId('activity-row')).toHaveLength(1));
-        expect(screen.getByText(/The Data Installer's own log could not be read: The Data Installer is turned off\./)).toBeInTheDocument();
+        expect(screen.getByText(/Couldn't read the Data Installer's activity: The Data Installer is turned off\./)).toBeInTheDocument();
     });
 
     it("says when Demo Builder's own records could not be read", async () => {

@@ -105,9 +105,10 @@ That splits cleanly, and the split is the actionable part:
 | 2026-08-25 | **`get_commerce_endpoints` shipped** (`commerceEndpointsTool.ts`) — the backend GraphQL endpoint, Catalog Service, the deployed mesh, which one the storefront queries, and the `Magento-*` request headers with the store scope they select. Headers come from `generateHeaders`, the same function that writes the storefront's `config.json`, so an agent and the site it is debugging cannot query two different stores. Returns nothing the registry marks `secret: true`, asserted by a test |
 | 2026-08-25 | **The bundle now announces it** — a `Querying Commerce` section in the generated `AGENTS.md`, `AI_CONTEXT_VERSION` 22 → 23. Added *because* of the measurement above: a tool nobody is told about is a tool nobody calls. It names the tool rather than baking values in, since the endpoint, mesh and scope all change between regenerations and a confidently stale endpoint is worse than none |
 
-**Still open:** the other 76 tools that are neither announced nor used. That is a
-triage — delete, consolidate, or announce — and it is the largest remaining piece
-of this item.
+**Was open:** the other 76 tools that are neither announced nor used. That triage
+(delete, consolidate, or announce) was answered by the 2026-08-26 battery: agents
+find them by searching, so per-tool decisions moved to `tool-verdicts`
+(`0e9c53ac0`) and AI-1q.
 
 ## What was measured
 

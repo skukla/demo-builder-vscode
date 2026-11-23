@@ -190,7 +190,24 @@ async function captureInteractions(page, {
     const out = {};
     for (const surface of surfaces) {
         await page.goto(`${base}/h.html?b=${surface}&t=${theme}&cb=${Date.now()}${Math.random()}`);
-        await page.waitForTimeout(3500);
+        // Settled, not a fixed 3.5s (owner, 2026-11-04: the waits made a capture take over half
+        // an hour): mounted, and the element count unchanged for four looks 100ms apart, as
+        // `capture.js`'s `settle` reads a surface. A surface that never settles is read at 3.5s.
+        await page
+            .waitForFunction(
+                () => {
+                    const root = document.getElementById('root');
+                    if (!root || root.children.length === 0) return false;
+                    const count = document.getElementsByTagName('*').length;
+                    const seen = window;
+                    seen.__vrSteady = seen.__vrLast === count ? (seen.__vrSteady || 0) + 1 : 0;
+                    seen.__vrLast = count;
+                    return seen.__vrSteady >= 4;
+                },
+                null,
+                { polling: 100, timeout: 3500 },
+            )
+            .catch(() => undefined);
 
         // AFTER the surface has mounted and settled, not before: freezing during
         // mount would also freeze whatever entrance animation the fixture needs to

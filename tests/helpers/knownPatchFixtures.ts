@@ -52,7 +52,7 @@ export const TEASER_JS =
 
 /**
  * The AEM Assets dropin patch, as `eds-demo-patches/b2b/code-patches.json` lists it (read
- * 2026-10-30). JustRite's Adobe boilerplate update stopped on this one: Adobe's new dropin build
+ * 2026-10-30). Tailspin's Adobe boilerplate update stopped on this one: Adobe's new dropin build
  * changed the lines around it.
  */
 export const ASSETS_SKU_SANITIZATION: CodePatch = {

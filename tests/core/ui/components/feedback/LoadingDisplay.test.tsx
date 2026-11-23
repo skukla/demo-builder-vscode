@@ -210,18 +210,6 @@ describe('LoadingDisplay', () => {
         });
     });
 
-    describe('Custom ClassName', () => {
-        it('applies custom className', () => {
-            const { container: _container } = renderWithProviders(
-                <LoadingDisplay message="Loading" className="custom-class" />
-            );
-            // The className is applied to the Flex element inside the status div
-            const statusDiv = screen.getByRole('status');
-            const flexElement = statusDiv.querySelector('.custom-class');
-            expect(flexElement).toBeInTheDocument();
-        });
-    });
-
     /**
      * THE THREE-ROW CONTRACT, asserted rather than assumed.
      *
@@ -371,6 +359,24 @@ describe('LoadingDisplay', () => {
      * move the spinner (owner, 2026-10-16: "make it so that the lines don't jump").
      */
     describe('steady', () => {
+        it('holds no second row with noBlankRows until there is something on it', () => {
+            const { container } = renderWithProviders(<LoadingDisplay steady noBlankRows message="Starting" />);
+
+            expect(container.querySelector('.text-sm')).toBeNull();
+        });
+
+        it('holds no third row with noBlankRows until there is something to say on it', () => {
+            const { container, rerender } = renderWithProviders(
+                <LoadingDisplay steady noBlankRows message="Installing" subMessage="0 of 1" />,
+            );
+            expect(container.querySelector('.text-xs')).toBeNull();
+
+            rerender(
+                <LoadingDisplay steady noBlankRows message="Stopped" subMessage="0 of 1" helperText="Carries on" />,
+            );
+            expect(screen.getByText('Carries on')).toBeInTheDocument();
+        });
+
         const LONG =
             'Publishing the pages: /products/outdoor/very-long-category-name/a-product-page-with-a-long-name';
 

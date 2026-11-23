@@ -77,9 +77,7 @@ export function registerCopyProjectTool(server: McpToolServer, ctxFactory: () =>
                     projects: summaries.map((p) => p.name),
                 });
             }
-            const project = await ctx.stateManager.loadProjectFromPath(match.path, undefined, {
-                persistAfterLoad: false,
-            });
+            const project = await ctx.stateManager.loadProjectFromPath(match.path);
             if (!project) return asText({ error: `Failed to load project "${sourceProject}"` });
 
             const read = copySeedFromProject(project);

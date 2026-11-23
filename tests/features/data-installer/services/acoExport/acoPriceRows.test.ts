@@ -43,8 +43,8 @@ describe('priceBookRows', () => {
 
 describe('childBookId', () => {
     it('is the id Commerce answers for a website and customer group', () => {
-        expect(childBookId({ id: 6, code: 'justrite_test_website', name: 'T' }, { id: 20, code: 'Any name' })).toBe(
-            'justrite_test_website::91032ad7bbcb6cf72875e8e8207dcfba80173f7c',
+        expect(childBookId({ id: 6, code: 'acme_test_website', name: 'T' }, { id: 20, code: 'Any name' })).toBe(
+            'acme_test_website::91032ad7bbcb6cf72875e8e8207dcfba80173f7c',
         );
     });
 

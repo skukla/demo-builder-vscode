@@ -12,7 +12,9 @@
 
 import { hasMeshDeploymentRecord } from '@/core/state/appBuilderComponentState';
 import { getProjectDisplayName } from '@/core/utils/projectDisplayName';
+import { finishSetupStatus } from '@/features/dashboard/services/finishSetup';
 import { storefrontNeedsReset } from '@/features/eds/services/storefront/storefrontChanges';
+import type { SetupChecklistItem } from '@/types/appBuilderComponents';
 import { Project } from '@/types/base';
 import {
     getProjectFrontendPort,
@@ -30,6 +32,8 @@ import type {
  * @param project - The project to build status for
  * @param frontendConfigChanged - Whether frontend config has changed
  * @param mesh - Optional mesh status info
+ * @param finishSetup - the steps a run left (`projectFinishSetup`), read by the dashboard's
+ *   callers; absent, the payload carries none (the agent's status tool, until its slice)
  * @returns Status payload for UI
  *
  * Note: org-context mismatch is NOT part of this payload — it's delivered
@@ -40,7 +44,9 @@ export function buildStatusPayload(
     project: Project,
     frontendConfigChanged: boolean,
     mesh?: MeshStatusInfo,
+    finishSetup?: SetupChecklistItem[],
 ): DashboardStatusUpdatePayload {
+    const steps = finishSetupStatus(finishSetup ?? []);
     return {
         // The dashboard heading AND its inline rename field read this. Both
         // want the title: the heading is what the user reads, and renaming
@@ -55,6 +61,7 @@ export function buildStatusPayload(
         mesh,
         edsStorefrontStatus: project.edsStorefrontStatusSummary,
         ...(storefrontNeedsReset(project) ? { storefrontNeedsReset: true as const } : {}),
+        ...(steps ? { finishSetup: steps } : {}),
     };
 }
 

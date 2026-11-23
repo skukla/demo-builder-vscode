@@ -15,7 +15,7 @@ import { buildComponentSettings, hasSettings } from './componentSettings';
 import { secretKey } from './secretKey';
 import { ensureScreenKeyEnv, type ScreenKeyStore } from './systemScreen';
 import { pairedInstanceId } from '@/features/components/services/appBuilderComponentLinks';
-import { moveSecret, type SecretWriter as SecretMover } from '@/features/components/services/commerceSecretMigration';
+import { moveSecret, type SecretWriter as SecretMover } from '@/features/components/services/declaredSecretStore';
 import type { AppBuilderComponentCatalogEntry, ComponentSettings } from '@/types/appBuilderComponents';
 import type { Project } from '@/types/base';
 import type { Logger } from '@/types/logger';

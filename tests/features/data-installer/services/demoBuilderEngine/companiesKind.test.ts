@@ -120,20 +120,23 @@ describe('installCompanies', () => {
         await installCompanies(ctx, parseCompanyRows([BODEA_COMPANY_ROW]));
 
         expect(ctx.sent.map((c) => `${c.method} ${c.path}`)).toEqual(['POST customers', 'POST company']);
-        expect(ctx.sent[0].body).toEqual({ customer: { email: ADMIN, firstname: 'Alex', lastname: 'Altura', website_id: 3, store_id: 4 } });
+        // Made through the Import API (this store refuses `POST customers`), which the fake runs as its create.
+        expect(ctx.sent[0].body).toEqual({ customer: { email: ADMIN, firstname: 'Alex', lastname: 'Altura' } });
+        expect((ctx.imports[0] as { source: { entity: string } }).source.entity).toBe('customer_composite');
         expect(ctx.recorder.created.map((o) => [o.kind, o.id, o.key])).toEqual([
             [CUSTOMER_KIND, '60', ADMIN],
             [COMPANY_KIND, '30', 'Altura'],
         ]);
     });
 
-    it('leaves a company the store has by that name', async () => {
+    // Walk F190 (owner, 2026-11-16): recorded, marked adopted, so a save follows it and no removal takes it.
+    it('leaves a company the store has by that name, recording it as the store\'s', async () => {
         const ctx = await store({ companies: [{ id: 5, company_name: 'Altura' }] });
 
         await installCompanies(ctx, parseCompanyRows([BODEA_COMPANY_ROW]));
 
         expect(ctx.sent).toStrictEqual([]);
-        expect(ctx.recorder.created).toStrictEqual([]);
+        expect(ctx.recorder.created).toStrictEqual([{ kind: 'b2b_companies', id: '5', key: 'Altura', adopted: true }]);
     });
 
     it("drops the source store's company id from its quote settings", async () => {
@@ -167,7 +170,7 @@ describe('installCompanies', () => {
         it('stops, naming it, at a region the country does not have, before the admin is made', async () => {
             const ctx = await store();
 
-            await expect(installCompanies(ctx, parseCompanyRows([withRegion({ region_code: 'ZZ' })]))).rejects.toThrow('The store has no region ZZ in US.');
+            await expect(installCompanies(ctx, parseCompanyRows([withRegion({ region_code: 'ZZ' })]))).rejects.toThrow('Commerce has no region ZZ in US.');
             expect(ctx.sent).toStrictEqual([]);
         });
     });

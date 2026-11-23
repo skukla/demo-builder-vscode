@@ -37,18 +37,18 @@ jest.mock('@/features/project-creation/services/addedDemoSettings', () => ({
     readAddedDemos: jest.fn(() => mockRemembered),
 }));
 
-const JEN = makeAddedDemo();
+const ROBIN = makeAddedDemo();
 const OWN = makeAddedDemo({ source: { owner: 'steve', repo: 'isle5-demo', branch: 'main' } });
 /** The same repository, remembered as made from a zip: the one card Remove offers to delete. */
 const ZIP: RememberedDemo = { ...OWN, createdFromZip: true };
 const ZIP_REQUEST = { name: ZIP.name, source: ZIP.source };
-const REQUEST = { name: JEN.name, source: JEN.source };
+const REQUEST = { name: ROBIN.name, source: ROBIN.source };
 const warn = vscode.window.showWarningMessage as jest.Mock;
 
-function ctx(projectsBuiltOnJen = 0) {
+function ctx(projectsBuiltOnRobin = 0) {
     const projects = [
-        ...Array.from({ length: projectsBuiltOnJen }, (_, i) =>
-            createMockProject({ name: `p${i}`, path: `/p${i}`, demo: JEN }),
+        ...Array.from({ length: projectsBuiltOnRobin }, (_, i) =>
+            createMockProject({ name: `p${i}`, path: `/p${i}`, demo: ROBIN }),
         ),
         createMockProject({ name: 'other', path: '/other', demo: OWN }),
         createMockProject({ name: 'shipped', path: '/shipped' }),
@@ -71,7 +71,7 @@ beforeEach(() => {
     getRepository.mockResolvedValue({ fullName: 'steve/isle5-demo', defaultBranch: 'main' });
     getLatestCommitMessage.mockResolvedValue('Update README');
     deleteRepository.mockResolvedValue(undefined);
-    mockRemembered = [JEN, ZIP];
+    mockRemembered = [ROBIN, ZIP];
 });
 
 describe('handleForgetAddedDemo', () => {
@@ -81,11 +81,11 @@ describe('handleForgetAddedDemo', () => {
         const result = await handleForgetAddedDemo(ctx(2), REQUEST);
 
         expect(warn).toHaveBeenCalledWith(
-            'Remove "Isle5 by Jen" from your Welcome step?',
+            'Remove "Isle5 by Robin" from your Welcome step?',
             { modal: true, detail: '2 projects on this computer were built on it and will keep working.' },
             'Remove',
         );
-        expect(forgetAddedDemo).toHaveBeenCalledWith(JEN.source);
+        expect(forgetAddedDemo).toHaveBeenCalledWith(ROBIN.source);
         expect(result).toEqual({ success: true, result: { forgotten: true } });
     });
 
@@ -117,7 +117,7 @@ describe('handleForgetAddedDemo', () => {
 
         expect(warn).toHaveBeenNthCalledWith(
             1,
-            'Remove "Isle5 by Jen" from your Welcome step?',
+            'Remove "Isle5 by Robin" from your Welcome step?',
             {
                 modal: true,
                 detail:
@@ -164,7 +164,7 @@ describe('handleForgetAddedDemo', () => {
     it.each([
         ['the card was not made from a zip and the repository\'s latest commit is not Demo Builder\'s upload', () => { mockRemembered = [OWN]; }],
         ['the repository is already gone', () => { getRepository.mockRejectedValue(new Error('Repository not found')); }],
-        ['someone else is signed in to GitHub', () => { validateToken.mockResolvedValue({ valid: true, user: { login: 'jen' } }); }],
+        ['someone else is signed in to GitHub', () => { validateToken.mockResolvedValue({ valid: true, user: { login: 'robin' } }); }],
         ['nobody is signed in to GitHub', () => { validateToken.mockResolvedValue({ valid: false }); }],
     ])('offers only Remove when %s', async (_why, arrange) => {
         arrange();
@@ -190,11 +190,11 @@ describe('handleForgetAddedDemo', () => {
     });
 
     it('refuses a request without a name and source, and a malformed repository name', async () => {
-        expect(await handleForgetAddedDemo(ctx(), { source: JEN.source })).toEqual({
+        expect(await handleForgetAddedDemo(ctx(), { source: ROBIN.source })).toEqual({
             success: false,
             error: 'A demo name and source are required',
         });
-        const bad = await handleForgetAddedDemo(ctx(), { name: 'x', source: { owner: 'jen', repo: '../x' } });
+        const bad = await handleForgetAddedDemo(ctx(), { name: 'x', source: { owner: 'robin', repo: '../x' } });
         expect(bad.success).toBe(false);
         expect(warn).not.toHaveBeenCalled();
     });

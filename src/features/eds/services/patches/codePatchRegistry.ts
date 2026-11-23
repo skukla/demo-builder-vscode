@@ -23,7 +23,7 @@
  *
  * Cross-references:
  *   - ADR-006 (the decision record)
- *   - `.rptc/plans/thin-layer-storefront-adr-006/v1-prior-art.md` (file inventory
+ *   - `.rptc/complete/thin-layer-storefront-adr-006/v1-prior-art.md` (file inventory
  *     + verified v1 shapes)
  *   - `contentPatchRegistry.ts` (uses the same `fetchExternalPatches` helper)
  *

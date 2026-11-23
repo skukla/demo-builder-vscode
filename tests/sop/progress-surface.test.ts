@@ -13,7 +13,7 @@
  * **Direct progress.** `withOperationProgress` routes by how an operation was
  * started — a screen's modal (R1), one notification (R2), an agent's notifier
  * (R3) — so a handler cannot pick the wrong one. A call to
- * `vscode.window.withProgress` bypasses that. Five modules are allowed it,
+ * `vscode.window.withProgress` bypasses that. Six modules are allowed it,
  * because they IMPLEMENT the surfaces; everything else is a known direct caller
  * with a reason, and the list may only shrink.
  *
@@ -52,6 +52,8 @@ const SURFACE_OWNERS = new Set([
     'src/core/base/baseCommand.ts',
     'src/core/vscode/progressRegister.ts',
     'src/core/vscode/operationBackgroundNotice.ts',
+    // The house self-closing popup, which BaseCommand and the background notice both end on (step-07 I1).
+    'src/core/vscode/selfClosingNotice.ts',
     'src/core/auth/browserSignInNotice.ts',
     'src/features/ai/server/agentOperationNotifier.ts',
 ]);
@@ -125,6 +127,7 @@ describe('a long operation reports where the SC is looking', () => {
                 current,
             );
 
+            // Code moved under a row? Re-key it: `npm run ledger -- move progress <section>:<old file:line> <new file:line>`.
             expect({ unlisted, stale, unexplained }).toEqual({
                 unlisted: [],
                 stale: [],
@@ -146,6 +149,7 @@ describe('a long operation reports where the SC is looking', () => {
                 current,
             );
 
+            // Code moved under a row? Re-key it: `npm run ledger -- move progress <section>:<old file:line> <new file:line>`.
             expect({ unlisted, stale, unexplained }).toEqual({
                 unlisted: [],
                 stale: [],

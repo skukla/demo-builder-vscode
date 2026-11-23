@@ -21,6 +21,13 @@ import type { Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
 import type { StateManager } from '@/types/state';
 
+/**
+ * A reset's line when the demo's content site cannot be reached, so it kept the storefront's content
+ * and reset the code only (P5-Q8, owner 2026-11-14): the window's row and the agent's caveat say it
+ * alike, in the words of the dashboard's pages notice.
+ */
+export const CONTENT_KEPT_LINE = "Content kept: the demo's pages can't be reached.";
+
 /** What the check needs from its caller: a logger, and a place to save a followed rename. */
 export interface DemoSourceCheckContext {
     logger: Logger;
@@ -30,6 +37,12 @@ export interface DemoSourceCheckContext {
 export interface DemoSourceCheck {
     /** The repository answers. */
     reachable: boolean;
+    /**
+     * GitHub gave an answer about the repository: it answered, or said it does not exist (404).
+     * False when the read failed for another reason (offline, a sign-in, a rate limit, an
+     * outage): nothing is known, and the dashboard says nothing (owner, 2026-11-05).
+     */
+    checked: boolean;
     /** The sentence the SC sees when it does not. */
     message: string;
     /** The content site publishes an index (true when the demo has no site to probe). */
@@ -40,7 +53,7 @@ export interface DemoSourceCheck {
     renamedTo?: string;
 }
 
-/** "Jen's demo" for a demo named "Isle5 by Jen": the owner's login is the person. */
+/** "Robin's demo" for a demo named "Isle5 by Robin": the owner's login is the person. */
 /**
  * The demo, by its demo package name: always known, where the repository's
  * GitHub owner is an account or an organization rather than the author's name
@@ -65,7 +78,7 @@ export async function checkDemoSource(
     fetchImpl: typeof fetch = fetch,
 ): Promise<DemoSourceCheck> {
     const demo = project.demo;
-    if (!demo) return { reachable: true, message: '', contentReachable: true };
+    if (!demo) return { reachable: true, checked: true, message: '', contentReachable: true };
     const unreachable = `${theDemo(project)}'s repository can't be reached. Reset and updates are unavailable until it is.`;
 
     let renamedTo: string | undefined;
@@ -78,12 +91,20 @@ export async function checkDemoSource(
         }
     } catch (error) {
         context.logger.warn(`[DemoSource] ${demo.source.owner}/${demo.source.repo}: ${(error as Error).message}`);
-        return { reachable: false, message: unreachable, contentReachable: false };
+        // Only GitHub saying the repository does not exist is "can't be reached". A failed read
+        // told the SC their demo's source might be gone when the network had dropped (owner,
+        // 2026-11-05: the Tailspin notice one night, gone the next morning).
+        if ((error as { status?: number }).status === 404) {
+            return { reachable: false, checked: true, message: unreachable, contentReachable: false };
+        }
+        const unchecked = `Couldn't check ${theDemo(project).replace(/^./, (first) => first.toLowerCase())}'s repository. Try again in a moment.`;
+        return { reachable: false, checked: false, message: unchecked, contentReachable: false };
     }
 
     const contentReachable = await indexReachable(demo.contentSource, fetchImpl, context.logger);
     return {
         reachable: true,
+        checked: true,
         message: '',
         contentReachable,
         ...(contentReachable

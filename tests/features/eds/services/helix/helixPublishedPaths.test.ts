@@ -56,7 +56,7 @@ const DETAILS_DONE = response(200, {
 
 let fetchMock: jest.Mock;
 const run = (a = auth()) =>
-    listPublishedPaths({ auth: a, logger: createMockLogger() }, 'skukla', 'kukla-justrite', 'main', '/products/*');
+    listPublishedPaths({ auth: a, logger: createMockLogger() }, 'skukla', 'kukla-tailspin', 'main', '/products/*');
 
 beforeEach(() => {
     fetchMock = jest.fn();
@@ -70,7 +70,7 @@ describe('listPublishedPaths', () => {
         await run();
 
         const [url, init] = fetchMock.mock.calls[0];
-        expect(url).toBe('https://admin.hlx.page/status/skukla/kukla-justrite/main/*');
+        expect(url).toBe('https://admin.hlx.page/status/skukla/kukla-tailspin/main/*');
         expect(init.method).toBe('POST');
         expect(JSON.parse(init.body)).toStrictEqual({ paths: ['/products/*'], select: ['preview', 'live'] });
         expect(init.headers).toMatchObject({
@@ -86,7 +86,7 @@ describe('listPublishedPaths', () => {
         const paths = await run();
 
         expect(fetchMock.mock.calls[1][0]).toBe(
-            'https://admin.hlx.page/job/skukla/kukla-justrite/main/status/job-2026-10-05-abc/details',
+            'https://admin.hlx.page/job/skukla/kukla-tailspin/main/status/job-2026-10-05-abc/details',
         );
         expect(paths).toStrictEqual(['/products/drum-cabinet/dc-100', '/products/default']);
     });

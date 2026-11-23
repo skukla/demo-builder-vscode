@@ -262,7 +262,7 @@ real project file was read). Added-demo projects also carry `project.demo` (`pro
   `COMPONENT_IDS.EDS_STOREFRONT` (`templateSyncService.ts:93`, `templateUpdateChecker.ts:115`,
   `updateTypes.ts:93`, `claudeSettingsWriter.ts:253-255`, `projectSecurity.ts:176`).
 - "D27": the label appears only in the backlog item. The decision it names is recorded unlabelled as
-  "Decided: Share is Edge Delivery only in v1" (`.rptc/plans/shareable-demo/overview.md:279-287`).
+  "Decided: Share is Edge Delivery only in v1" (`.rptc/complete/shareable-demo/overview.md:279-287`).
   Not verified that D27 is that decision.
 
 ---

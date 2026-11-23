@@ -4,7 +4,7 @@ kind: chore
 area: platform
 needs: []
 value: high
-status: active
+status: backlog
 layer: G
 ---
 # Files over the god-file threshold
@@ -142,7 +142,7 @@ layer: G
 > FIRST; everything above it is the original 2026-08-15 record, kept because its
 > reasoning about coupling-vs-size is still correct.
 
-**Filed:** 2026-08-15, from the `fix/leah-128-bugs` release prep.
+**Filed:** 2026-08-15, from the `fix/avery-128-bugs` release prep.
 **Severity:** low — a project guideline, not a gate. `eslint` does not flag these
 and CI does not fail on them.
 
@@ -1081,3 +1081,5 @@ date and what happened; a failure becomes its own `fix` item.
 - 2026-10-09  refactor(eds): storefront setup's failed and published screens use StatusDisplay (`ce4093c24`)
 - 2026-10-09  refactor(core): one JWT payload decoder for DA.live and IMS tokens (`d18d9dbbf`)
 - 2026-10-10  merge: the god-file splits (EDS-8) into the integration branch, with the fix branch's behaviour carried into the split files (`c6df529b1`)
+- 2026-11-21  Reconciled 2026-11-21: godFileCandidates still pins 17 (tests/sop/architecture-rules.exemptions.json); last splits 2026-10-09/10. Left: split the 17 or give each a dated one-job verdict until it reads 0.
+- 2026-11-22  Paused 2026-11-22: back to backlog, last work 2026-10-10. Where it stopped is the 2026-11-21 reconcile line above.

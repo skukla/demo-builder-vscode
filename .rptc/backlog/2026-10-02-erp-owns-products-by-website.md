@@ -4,7 +4,7 @@ kind: feature
 area: app-builder
 needs: []
 value: med
-status: built
+status: shipped
 parent: AB-26
 ---
 
@@ -41,3 +41,4 @@ this with attribute ownership.
 
 - 2026-10-03  feat(erp): "Add another ERP" asks which products it owns, with counts and a default (AB-64) (`5345df62f`)
 - 2026-10-03  Reconciled 2026-10-03 (second pass): the body's 'Open for the owner: confirm rule 2' is answered and built: an order goes to the ERP owning its website, and a product rule beats a website rule (integration 61d5dd1, Demo Builder 5345df62f).
+- 2026-11-20  Released in v1.0.0-beta.153

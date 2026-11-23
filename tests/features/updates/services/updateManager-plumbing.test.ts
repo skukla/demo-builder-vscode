@@ -76,7 +76,7 @@ function vsixRelease(version: string, extra: Record<string, unknown> = {}) {
     };
 }
 
-/** A single-object component release: no assets, a zipball. */
+/** A component release: no assets, a zipball. A component lookup reads the list, so answer in one. */
 function zipRelease(version: string, extra: Record<string, unknown> = {}) {
     return {
         tag_name: `v${version}`,
@@ -179,30 +179,30 @@ describe('component channel', () => {
             component('widget', '1.0.0', { repoUrl: 'https://github.com/acme/widget' }),
         ]);
 
-    it('stable stays stable: the latest-release endpoint of the component repo', async () => {
-        respond(zipRelease('1.1.0'));
+    it('stable reads the release list of the component repo, never its latest release', async () => {
+        respond([zipRelease('1.1.0')]);
 
         const results = await manager.checkAllProjectsForUpdates([project()]);
 
         expect(fetchMock).toHaveBeenCalledTimes(1);
         expect(fetchMock).toHaveBeenCalledWith(
-            'https://api.github.com/repos/acme/widget/releases/latest',
+            'https://api.github.com/repos/acme/widget/releases?per_page=20',
             expect.objectContaining({ headers: EXPECTED_HEADERS })
         );
         expect(results.map((r) => r.latestVersion)).toEqual(['1.1.0']);
     });
 
-    it('early-access collapses to beta: the list endpoint, the beta picked, the gate unasked', async () => {
-        setChannel('early-access');
-        const withZipball = createMockReleasesArray({
-            final: '1.1.0',
-            beta: '1.2.0-beta.1',
-            alpha: '2.0.0-alpha.1',
-        }).map((r) => ({
+    const withZipball = (releases: ReturnType<typeof createMockReleasesArray>) =>
+        releases.map((r) => ({
             ...r,
             zipball_url: `https://api.github.com/repos/acme/widget/zipball/${r.tag_name}`,
         }));
-        respond(withZipball);
+    const ALL_TRACKS = { final: '1.1.0', beta: '1.2.0-beta.1', alpha: '2.0.0-alpha.1' };
+
+    it('early access: a collaborator is offered the alpha, which is how a release is tried', async () => {
+        setChannel('early-access');
+        gateMock.mockResolvedValue(true);
+        respond(withZipball(createMockReleasesArray(ALL_TRACKS)));
 
         const results = await manager.checkAllProjectsForUpdates([project()]);
 
@@ -210,7 +210,52 @@ describe('component channel', () => {
             'https://api.github.com/repos/acme/widget/releases?per_page=20',
             expect.anything()
         );
+        expect(results.map((r) => r.latestVersion)).toEqual(['2.0.0-alpha.1']);
+    });
+
+    it('early access: anyone else gets what the beta channel gets, and never an alpha', async () => {
+        setChannel('early-access');
+        gateMock.mockResolvedValue(false);
+        respond(withZipball(createMockReleasesArray(ALL_TRACKS)));
+
+        const results = await manager.checkAllProjectsForUpdates([project()]);
+
         expect(results.map((r) => r.latestVersion)).toEqual(['1.2.0-beta.1']);
+    });
+
+    /** Answers as GitHub does: the latest-release endpoint never holds a prerelease, the list does. */
+    function respondByEndpoint(latest: unknown, list: unknown): void {
+        fetchMock.mockImplementation(async (url: string) => ({
+            ok: true,
+            status: 200,
+            json: async () => (url.endsWith('/releases/latest') ? latest : list),
+        }));
+    }
+
+    it('stable: a component is offered a beta, the track it is on until the extension reaches 1.x', async () => {
+        respondByEndpoint(zipRelease('1.0.0'), [zipRelease('1.0.0'), zipRelease('1.2.0-beta.1')]);
+
+        const results = await manager.checkAllProjectsForUpdates([project()]);
+
+        expect(results.map((r) => r.latestVersion)).toStrictEqual(['1.2.0-beta.1']);
+        expect(results[0].releaseInfo?.tag).toBe('v1.2.0-beta.1');
+    });
+
+    it('stable: the extension is not offered a beta, and its check still reads the latest release', async () => {
+        respondByEndpoint(vsixRelease('1.0.0'), [vsixRelease('1.0.0'), vsixRelease('1.2.0-beta.1')]);
+
+        const result = await manager.checkExtensionUpdate();
+
+        expect(fetchMock).toHaveBeenCalledTimes(1);
+        expect(fetchMock).toHaveBeenCalledWith(`${EXTENSION_API}/releases/latest`, expect.anything());
+        expect(result.hasUpdate).toBe(false);
+    });
+
+    it('the stable and beta channels never ask who the user is', async () => {
+        respond([zipRelease('1.1.0')]);
+
+        await manager.checkAllProjectsForUpdates([project()]);
+
         expect(gateMock).not.toHaveBeenCalled();
     });
 });
@@ -221,7 +266,7 @@ describe('which components are checked', () => {
             { id: 'ghost', version: '1.0.0' },
             component('widget', '1.0.0', { repoUrl: 'https://github.com/acme/widget' }),
         ]);
-        respond(zipRelease('1.1.0'));
+        respond([zipRelease('1.1.0')]);
 
         const results = await manager.checkAllProjectsForUpdates([project]);
 
@@ -239,7 +284,7 @@ describe('which components are checked', () => {
             component('gone', '1.0.0', { repoUrl: 'https://github.com/acme/gone' }),
             component('widget', '1.0.0', { repoUrl: 'https://github.com/acme/widget' }),
         ]);
-        respond(zipRelease('1.1.0'));
+        respond([zipRelease('1.1.0')]);
 
         const results = await manager.checkAllProjectsForUpdates([project]);
 
@@ -255,7 +300,7 @@ describe('which components are checked', () => {
             ]),
             componentVersions: {},
         };
-        respond(zipRelease('1.0.0'));
+        respond([zipRelease('1.0.0')]);
 
         const results = await manager.checkAllProjectsForUpdates([project]);
 
@@ -275,7 +320,7 @@ describe('which components are checked', () => {
             ]),
             name: 'behind',
         };
-        respond(zipRelease('1.1.0'));
+        respond([zipRelease('1.1.0')]);
 
         const results = await manager.checkAllProjectsForUpdates([current, behind]);
 
@@ -287,7 +332,7 @@ describe('which components are checked', () => {
         const project = createUpdateManagerProject([
             component('widget', '1.1.0', { repoUrl: 'https://github.com/acme/widget' }),
         ]);
-        respond(zipRelease('1.1.0'));
+        respond([zipRelease('1.1.0')]);
 
         await expect(manager.checkAllProjectsForUpdates([project])).resolves.toStrictEqual([]);
     });
@@ -303,12 +348,12 @@ describe('resolving the repository', () => {
         const project = createUpdateManagerProject([
             component('widget', '1.0.0', { repoUrl: 'https://github.com/acme/widget' }),
         ]);
-        respond(zipRelease('1.1.0'));
+        respond([zipRelease('1.1.0')]);
 
         await manager.checkAllProjectsForUpdates([project]);
 
         expect(fetchMock).toHaveBeenCalledWith(
-            'https://api.github.com/repos/registry/widget/releases/latest',
+            'https://api.github.com/repos/registry/widget/releases?per_page=20',
             expect.anything()
         );
     });
@@ -324,12 +369,12 @@ describe('resolving the repository', () => {
             ]),
             name: 'with-url',
         };
-        respond(zipRelease('1.1.0'));
+        respond([zipRelease('1.1.0')]);
 
         const results = await manager.checkAllProjectsForUpdates([bare, withUrl]);
 
         expect(fetchMock).toHaveBeenCalledWith(
-            'https://api.github.com/repos/acme/widget/releases/latest',
+            'https://api.github.com/repos/acme/widget/releases?per_page=20',
             expect.anything()
         );
         expect(results[0].outdatedProjects.map((o) => o.project.name)).toEqual([
@@ -349,13 +394,13 @@ describe('resolving the repository', () => {
             ...createUpdateManagerProject([component('widget', '1.0.0')]),
             name: 'bare',
         };
-        respond(zipRelease('1.1.0'));
+        respond([zipRelease('1.1.0')]);
 
         const results = await manager.checkAllProjectsForUpdates([first, bare]);
 
         expect(fetchMock).toHaveBeenCalledTimes(1);
         expect(fetchMock).toHaveBeenCalledWith(
-            'https://api.github.com/repos/acme/first/releases/latest',
+            'https://api.github.com/repos/acme/first/releases?per_page=20',
             expect.anything()
         );
         expect(results).toHaveLength(1);
@@ -384,7 +429,7 @@ describe('resolving the repository', () => {
         const project = createUpdateManagerProject([
             component('widget', '1.0.0', { repoUrl: 'https://github.com/acme/widget' }),
         ]);
-        respond(zipRelease('1.1.0'), 404);
+        respond([]);
 
         await expect(manager.checkAllProjectsForUpdates([project])).resolves.toStrictEqual([]);
     });
@@ -410,11 +455,23 @@ describe('how a release is read', () => {
         expect(result.releaseInfo?.downloadUrl).toBe(vsixUrl('1.1.0'));
     });
 
+    it('a component carries the raw tag, which its clone moves to', async () => {
+        const project = createUpdateManagerProject([
+            component('widget', '1.0.0', { repoUrl: 'https://github.com/acme/widget' }),
+        ]);
+        respond([zipRelease('1.1.0')]);
+
+        const results = await manager.checkAllProjectsForUpdates([project]);
+
+        expect(results[0].releaseInfo?.tag).toBe('v1.1.0');
+        expect(results[0].latestVersion).toBe('1.1.0');
+    });
+
     it('a component takes the zipball', async () => {
         const project = createUpdateManagerProject([
             component('widget', '1.0.0', { repoUrl: 'https://github.com/acme/widget' }),
         ]);
-        respond(zipRelease('1.1.0'));
+        respond([zipRelease('1.1.0')]);
 
         const results = await manager.checkAllProjectsForUpdates([project]);
 
@@ -427,7 +484,7 @@ describe('how a release is read', () => {
         const project = createUpdateManagerProject([
             component('widget', '1.0.0', { repoUrl: 'https://github.com/acme/widget' }),
         ]);
-        respond(zipRelease('1.1.0', { zipball_url: '' }));
+        respond([zipRelease('1.1.0', { zipball_url: '' })]);
 
         await expect(manager.checkAllProjectsForUpdates([project])).resolves.toStrictEqual([]);
 
@@ -451,6 +508,7 @@ describe('how a release is read', () => {
 
         expect(result.releaseInfo).toEqual({
             version: '1.1.0',
+            tag: 'v1.1.0',
             downloadUrl: vsixUrl('1.1.0'),
             releaseNotes: 'What changed',
             publishedAt: '2024-01-01T00:00:00Z',
@@ -467,19 +525,20 @@ describe('how a release is read', () => {
     });
 
     it('strips only a LEADING v from the tag', async () => {
-        respond(vsixRelease('1.1.0', { tag_name: '2.0.0-dev.1' }));
+        setChannel('beta');
+        respond([vsixRelease('1.1.0', { tag_name: '2.0.0-beta.v1' })]);
 
         const result = await manager.checkExtensionUpdate();
 
-        expect(result.latest).toBe('2.0.0-dev.1');
+        expect(result.latest).toBe('2.0.0-beta.v1');
     });
 
-    it('a tag that is not semver is no update, and says which tag', async () => {
+    it('a tag that is not a version is no update', async () => {
         respond(vsixRelease('1.1.0', { tag_name: 'nightly' }));
 
         const result = await manager.checkExtensionUpdate();
 
-        expect(result).toEqual({ hasUpdate: false, current: '1.0.0', latest: 'nightly' });
+        expect(result).toEqual({ hasUpdate: false, current: '1.0.0', latest: '1.0.0' });
     });
 
     it('a release list with nothing the channel accepts is a quiet no-update', async () => {
