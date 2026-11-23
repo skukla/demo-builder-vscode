@@ -148,7 +148,14 @@ went. Check which before reporting any of them.
 ### Coverage, measured 2026-09-08
 
 168 cells over 42 interactive elements, at dark/1280. Each element is captured at
-rest, hover, focus and active.
+rest, hover, focus and active. On 2026-11-23 headless Chrome counted 60 interactive
+elements across nine surfaces (240 cells), and three floors became enforced: a full
+interaction run refuses under `INTERACTION_CELL_FLOOR` (180); an interaction run refuses a
+surface under its `SURFACE_INTERACTIVE_FLOOR` (75% of its controls, or all of them under
+four); and a resting cell refuses under its surface's `SURFACE_ELEMENT_FLOOR` (75% of
+its elements). `stylesheet-bundles.test.ts` holds each equal to the ledger and to the
+measured counts. The table below is the
+September per-surface reading.
 
 | surface | interactive | responding to a forced state |
 |---|---|---|

@@ -54,10 +54,29 @@ const PROPS = [
 ];
 
 /**
- * The smallest real surface is aiOverview at 30 elements, so a cell under this
- * floor did not mount. See the throw in captureSurface for why a floor exists.
+ * Each surface's floor: a cell under it did not mount, or mounted part of itself. See
+ * the throw in captureSurface for why a floor exists.
+ *
+ * One number per surface, because the surfaces differ by a factor of four and a single
+ * floor of 20 let a wizard that rendered half its 108 elements through. Each is 75% of
+ * the surface's count, measured 2026-11-23 in headless Chrome against this harness (the
+ * same in both themes and all three widths): low enough that a design change of a few
+ * elements does not trip it, high enough that a partial mount does. When a surface
+ * renders more, raise its floor here and in `surfaceElementFloor` in
+ * `tests/sop/webview-architecture-rules.exemptions.json`; `stylesheet-bundles.test.ts`
+ * holds the two equal.
  */
-const MIN_ELEMENTS = 20;
+const SURFACE_ELEMENT_FLOOR = {
+    wizard: 81, // measured 108
+    dashboard: 85, // 114
+    configure: 22, // 30
+    sidebar: 39, // 52
+    projectsList: 69, // 93
+    aiOverview: 22, // 30
+    integrations: 64, // 86
+    dataInstaller: 36, // 49
+    siteAccess: 39, // 53
+};
 
 const SURFACES = [
     'wizard', 'dashboard', 'configure', 'sidebar',
@@ -147,6 +166,11 @@ async function inPool(items, limit, work) {
 }
 
 async function captureSurface(bundle, theme = 'dark', width = 1280) {
+    // Before loading anything: a surface with no floor (a new one, or a misspelling) is
+    // refused, so it cannot skip the floor check at the end.
+    if (!(bundle in SURFACE_ELEMENT_FLOOR)) {
+        throw new Error(`capture ${bundle}: no element floor for this surface — add one to SURFACE_ELEMENT_FLOOR.`);
+    }
     const frame = document.createElement('iframe');
     frame.style.cssText = `width:${width}px;height:900px;border:0;position:absolute;left:-9999px`;
     // CACHE-BUST, or the browser serves the previous build and a before/after
@@ -211,12 +235,13 @@ async function captureSurface(bundle, theme = 'dark', width = 1280) {
     // with SIX elements against its usual 105 and the diff reported it as a moved
     // element — visible only because the count changed. The dangerous direction is
     // the quiet one: a cell that under-renders in BOTH captures compares identical
-    // and reports clean. A real surface here never renders under 30 elements (the
-    // smallest, aiOverview, is 30), so anything under 20 is a failed mount.
-    if (lines.length < MIN_ELEMENTS) {
+    // and reports clean. So each surface has its own floor (SURFACE_ELEMENT_FLOOR);
+    // a surface without one was refused at the top of this function.
+    if (lines.length < SURFACE_ELEMENT_FLOOR[bundle]) {
         throw new Error(
             `capture ${bundle}@${theme}@${width} produced ${lines.length} elements ` +
-            `(floor ${MIN_ELEMENTS}) — the surface did not mount. Re-run; do not diff this.`
+            `(floor ${SURFACE_ELEMENT_FLOOR[bundle]}) — the surface did not mount, or mounted only ` +
+            `part of itself. Re-run; do not diff this.`
         );
     }
 
@@ -338,10 +363,15 @@ async function assertHarnessFaithful(sentinel) {
  *
  * Keys are `surface@theme@width`, so `diff()` needs no change: it compares by key
  * and a cell present in one capture and missing from the other is reported as
- * such. A run is 8 x 2 x 3 = 48 loads at the settle time above, so budget a
+ * such. A run is 9 x 2 x 3 = 54 loads at the settle time above, so budget a
  * couple of minutes; pass a narrower matrix while iterating on one surface.
  */
 async function capture({ surfaces = SURFACES, themes = THEMES, widths = WIDTHS, sentinel } = {}) {
+    // Before any load: a surface with no floor (new, or misspelled) is refused here.
+    const unfloored = surfaces.filter((s) => !(s in SURFACE_ELEMENT_FLOOR));
+    if (unfloored.length > 0) {
+        throw new Error(`no element floor for ${unfloored.join(', ')} — add one to SURFACE_ELEMENT_FLOOR.`);
+    }
     await assertHarnessFaithful(sentinel);
     const cells = [];
     for (const s of surfaces) for (const t of themes) for (const w of widths) cells.push([s, t, w]);

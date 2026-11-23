@@ -82,10 +82,40 @@ measurement and its definition cannot drift apart.
 | `capturedProperties` | 26 | a property joins the fingerprint | the letter-spacing blind spot |
 | `interactionCells` | 168 | a surface/state pair is added | hover/focus coverage |
 | `surfaceElementFloor` | per-surface map | a fixture renders more | a 6-element cell must fail |
+| `surfaceInteractiveFloor` | per-surface map (added 2026-11-23) | a surface gains controls | one surface losing its controls, which a cell total hides |
 
 `surfaceElementFloor` is a map rather than one number because the surfaces differ
 by an order of magnitude — wizard 105, aiOverview 30 — and a single global floor
 would be either useless or wrong for six of the eight.
+
+**Built 2026-11-23** (the last two of the seven). Until then `interactionCells` sat in
+the ledger read by nothing, and `surfaceElementFloor` did not exist (one global floor of
+20 in `capture.js`). Now `capture.js` carries `SURFACE_ELEMENT_FLOOR` and
+`capture-interactions.js` carries `INTERACTION_CELL_FLOOR`; each refuses a capture under
+it, and `stylesheet-bundles.test.ts` holds both equal to the ledger. The values are 75%
+of counts measured that day in headless Chrome (interaction cells 240 across nine
+surfaces, so the floor rose from 168 to 180). The review added a third map,
+`SURFACE_INTERACTIVE_FLOOR` (ledger `surfaceInteractiveFloor`), because a cell total
+cannot see one surface losing most of its controls, and the test pins the measured
+counts so a floor lowered in the script and the ledger together still fails. Proved by
+planting faults (a floor of 6, a surface with no floor, a lowered cell floor, element and
+interactive floors each lowered in both places, each refusal's `throw` removed, the
+full-run guard switched off): each failed the test. Later rounds added a check that, on a
+full run, each forced state changes at least one element from rest (forcing that silently
+does nothing still returns values).
+
+**Left for the first live capture** (none has run; the counts came from `--dump-dom`,
+which does not wait for the page to settle as `capture.js` does):
+- confirm the live element and interactive counts match the pinned ones, and re-set the
+  floors from the live run if they differ;
+- the cell total (180) adds little beyond the per-surface floors (they sum to 44
+  elements, 176 cells), so either derive it from them or say in its comment that it is a
+  backstop;
+- the full-count rule for small surfaces cuts at under four controls, but dataInstaller's
+  four can still lose one; decide the cutoff with the owner, along with whether a
+  full-count floor fits "may only rise" when a control is removed on purpose;
+- `Ledger` in `tests/sop/architectureScan.ts` has no number-map member for the two new
+  maps (it was string maps only before this change too).
 
 ### Step 3's metric is a floor, not a ceiling
 

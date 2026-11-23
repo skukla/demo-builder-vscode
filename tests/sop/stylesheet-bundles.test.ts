@@ -590,4 +590,88 @@ describe('the CSS migration ratchets', () => {
         expect(props).toContain('letter-spacing'); // the 2026-09-08 blind spot
         expectFloor(LEDGER, 'capturedProperties', props.length);
     });
+
+    /** A `const NAME = { key: 1, ... };` object literal of numbers, read from a skill script. */
+    const numberMap = (src: string, name: string): Record<string, number> => {
+        const block = new RegExp(`const ${name} = \\{([\\s\\S]*?)\\};`).exec(src);
+        expect(block).not.toBeNull();
+        return Object.fromEntries(
+            [...block![1].matchAll(/(\w+):\s*(\d+)/g)].map((m) => [m[1], Number(m[2])]),
+        );
+    };
+    const surfacesOf = (src: string): string[] => {
+        const block = /const SURFACES = \[([\s\S]*?)\];/.exec(src);
+        expect(block).not.toBeNull();
+        return [...block![1].matchAll(/'(\w+)'/g)].map((m) => m[1]);
+    };
+
+    /**
+     * Counts measured 2026-11-23 in headless Chrome against the harness (identical in both
+     * themes and all three widths). Each floor is 75% of its count, rounded down, so a floor
+     * lowered in the script and the ledger together still fails here. When a surface renders
+     * more, raise its count here and its floor in both places.
+     */
+    const MEASURED_ELEMENTS: Record<string, number> = {
+        wizard: 108, dashboard: 114, configure: 30, sidebar: 52, projectsList: 93,
+        aiOverview: 30, integrations: 86, dataInstaller: 49, siteAccess: 53,
+    };
+    const MEASURED_INTERACTIVE: Record<string, number> = {
+        wizard: 9, dashboard: 14, configure: 2, sidebar: 7, projectsList: 9,
+        aiOverview: 2, integrations: 10, dataInstaller: 4, siteAccess: 3,
+    };
+    const threeQuarters = (counts: Record<string, number>): Record<string, number> =>
+        Object.fromEntries(Object.entries(counts).map(([k, n]) => [k, Math.floor(n * 0.75)]));
+    /** Under four controls, 75% rounds to a floor that allows losing one; take the full count. */
+    const interactiveFloors = (counts: Record<string, number>): Record<string, number> =>
+        Object.fromEntries(
+            Object.entries(counts).map(([k, n]) => [k, n < 4 ? n : Math.floor(n * 0.75)]),
+        );
+    /** The comparison must lead straight to a refusal, not merely appear in the file. */
+    const refusesOn = (condition: string): RegExp =>
+        new RegExp(`${condition}\\) \\{\\s*(?:await cdp\\.detach\\(\\);\\s*)?throw new Error\\(`);
+    const CAPTURE = '.claude/skills/webview-visual-baseline/capture.js';
+    const INTERACTIONS = '.claude/skills/webview-visual-baseline/capture-interactions.js';
+
+    it('every surface keeps its element floor, and a six-element cell fails it', () => {
+        // ADR-018 step 1: one global floor of 20 would let a wizard that rendered half its
+        // 108 elements through, so each surface carries its own, set from a measured count.
+        const capture = readFileSync(CAPTURE, 'utf8');
+        const floors = numberMap(capture, 'SURFACE_ELEMENT_FLOOR');
+        expect(Object.keys(floors).sort()).toEqual(surfacesOf(capture).sort());
+        expect(Object.values(floors).every((n) => n > 6)).toBe(true); // the 2026-09-08 cell
+        expect(capture).toMatch(refusesOn('lines\\.length < SURFACE_ELEMENT_FLOOR\\[bundle\\]'));
+        expect(floors).toEqual(threeQuarters(MEASURED_ELEMENTS));
+        expect(floors).toEqual(LEDGER.surfaceElementFloor);
+        // A name outside the map would compare against undefined and pass, so both doors
+        // (one cell, and a whole run before it loads anything) refuse it.
+        expect(capture).toMatch(refusesOn('if \\(!\\(bundle in SURFACE_ELEMENT_FLOOR\\)'));
+        expect(capture).toMatch(refusesOn('if \\(unfloored\\.length > 0'));
+    });
+
+    it('every surface keeps its interactive floor, and a full run its cell floor', () => {
+        const interactions = readFileSync(INTERACTIONS, 'utf8');
+        const capture = readFileSync(CAPTURE, 'utf8');
+        expect(surfacesOf(interactions)).toEqual(surfacesOf(capture));
+        expect(interactions).toMatch(/const STATES = \['hover', 'focus', 'active'\];/);
+
+        const perSurface = numberMap(interactions, 'SURFACE_INTERACTIVE_FLOOR');
+        expect(perSurface).toEqual(interactiveFloors(MEASURED_INTERACTIVE));
+        expect(perSurface).toEqual(LEDGER.surfaceInteractiveFloor);
+        expect(interactions).toMatch(
+            refusesOn('nodeIds\\.length < SURFACE_INTERACTIVE_FLOOR\\[surface\\]'),
+        );
+
+        const floor = /const INTERACTION_CELL_FLOOR = (\d+);/.exec(interactions);
+        expect(floor).not.toBeNull();
+        expect(interactions).toMatch(refusesOn('if \\(fullRun && cells < INTERACTION_CELL_FLOOR'));
+        expect(interactions).toMatch(/const fullRun = SURFACES\.every\(\(s\) => surfaces\.includes\(s\)\);/);
+        expect(interactions).toMatch(refusesOn('if \\(unfloored\\.length > 0'));
+        // A forced state that changes nothing still returns values, so a full run must show
+        // each state changing some element from rest.
+        expect(interactions).toMatch(/fullRun \? STATES\.filter\(\(st\) => !changedFromRest\(st\)\)/);
+        expect(interactions).toMatch(refusesOn('if \\(unapplied\\.length > 0'));
+        const cellsMeasured = Object.values(MEASURED_INTERACTIVE).reduce((a, n) => a + n, 0) * 4;
+        expect(Number(floor![1])).toBe(Math.floor(cellsMeasured * 0.75)); // rest + 3 states
+        expectFloor(LEDGER, 'interactionCells', Number(floor![1]));
+    });
 });

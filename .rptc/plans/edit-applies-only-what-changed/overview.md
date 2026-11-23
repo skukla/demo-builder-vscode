@@ -51,7 +51,7 @@ storefront changed, and its reset runs instead when the package changed.
 | 4 | Datapack (built 2026-10-13) | done |
 | 5 | Adobe destination (built 2026-10-13) | done |
 | 6 | Package on an Edge Delivery stack (built 2026-10-13) | done |
-| 7 | One confirmation (today: up to four separate questions, all asked before anything runs, `executorEditApply.ts`; the single combined one is not built) | active |
+| 7 | Confirm before anything runs: up to four separate questions, all asked first, cancel on any stops everything (`executorEditApply.ts`). Owner 2026-11-23: accepted in place of one combined dialog, which would lose the datapack question's own choices | done |
 | 9 | Delete what the apply path makes dead (blocked: EDS-42, PL-77, PL-78 and PL-79 are not built yet) | not started |
 
 Step 8 (lock backend, stack, org, repository and site) was removed by the owner on 2026-10-13.

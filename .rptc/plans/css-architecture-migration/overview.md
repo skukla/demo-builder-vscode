@@ -115,7 +115,7 @@ a time instead of 762.
 
 | # | Step | Status | Done when | Reviewable? |
 |---|---|---|---|---|
-| 1 | Stop the growth | active | the ratchets exist and hold | no review needed |
+| 1 | Stop the growth | done | the ratchets exist and hold | no review needed |
 | 2 | **Split the god file by feature** | done | `featureRulesInGlobalSheet` at 0 | **empty diff — machine** |
 | 3 | Flip the cascade, per feature sheet | done | `vendorLayerBundles` at 8 | **owner, per surface** |
 | 4 | Sweep `!important`, per sheet | done | `importantCeiling` near 0 | empty diff — machine |

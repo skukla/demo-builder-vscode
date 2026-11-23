@@ -140,7 +140,7 @@ So step 2's realistic scope today is **259 rules, not 685**, and
 1. `npm run compile`, stage bundles, capture (48 cells, 2,700 elements)
 2. move one family, `npm run compile`, re-stage, re-capture
 3. `diff()` — **empty commits, non-empty reverts**
-4. interaction capture (168 cells) whenever the family contains a `:hover`,
+4. interaction capture (168 cells then; 240 measured 2026-11-23, floor 180) whenever the family contains a `:hover`,
    `:focus` or `:active` rule
 5. the two step-2 ceilings must fall by the number of rules moved, and
    `godFileTopLevelRules` must fall by the same amount as

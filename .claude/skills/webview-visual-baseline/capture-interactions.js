@@ -62,8 +62,38 @@ const INTERACTIVE =
 
 const STATES = ['hover', 'focus', 'active'];
 
-/** A real surface never has zero interactive elements; zero means it did not mount. */
-const MIN_INTERACTIVE = 1;
+/**
+ * Each surface's fewest interactive elements. Under it, the surface mounted part of
+ * itself (on 2026-09-09 integrations rendered 3 of its 9), and the cell total below
+ * cannot see that alone: one surface can lose a quarter of all cells and the total still
+ * passes. 75% of the counts measured 2026-11-23 in headless Chrome (in the comments),
+ * rounded down, except under four controls, where that would let a surface lose one, so
+ * the floor is the full count. Raise one here and in `surfaceInteractiveFloor` in
+ * `tests/sop/webview-architecture-rules.exemptions.json` together.
+ */
+const SURFACE_INTERACTIVE_FLOOR = {
+    wizard: 6, // measured 9
+    dashboard: 10, // 14
+    configure: 2, // 2
+    sidebar: 5, // 7
+    projectsList: 6, // 9
+    aiOverview: 2, // 2
+    integrations: 7, // 10
+    dataInstaller: 3, // 4
+    siteAccess: 3, // 3
+};
+
+/**
+ * The fewest cells a run over EVERY surface may capture (a cell is one element in one
+ * state: rest, hover, focus or active). Under it, surfaces mounted part of themselves, and
+ * a clean diff would mean nothing. (A state that stopped being applied is caught separately,
+ * below: each state must change some element from rest.) The interactive
+ * elements counted 60 across the nine surfaces on 2026-11-23 (240 cells); this is 75% of
+ * that, as `capture.js` sets its element floors. Raise it here and `interactionCells` in
+ * `tests/sop/webview-architecture-rules.exemptions.json` together when surfaces gain
+ * controls; `stylesheet-bundles.test.ts` holds the two equal.
+ */
+const INTERACTION_CELL_FLOOR = 180;
 
 /**
  * Kill transitions before forcing anything.
@@ -187,6 +217,10 @@ async function captureInteractions(page, {
 } = {}) {
     await assertServerIsOurs(page, base, sentinel);
     if (!allowWithoutResting) await assertRestingCaptureExists(page, base, sentinel);
+    const unfloored = surfaces.filter((s) => !(s in SURFACE_INTERACTIVE_FLOOR));
+    if (unfloored.length > 0) {
+        throw new Error(`no interactive floor for ${unfloored.join(', ')} — add one to SURFACE_INTERACTIVE_FLOOR.`);
+    }
     const out = {};
     for (const surface of surfaces) {
         await page.goto(`${base}/h.html?b=${surface}&t=${theme}&cb=${Date.now()}${Math.random()}`);
@@ -229,11 +263,12 @@ async function captureInteractions(page, {
             selector: INTERACTIVE,
         });
 
-        if (nodeIds.length < MIN_INTERACTIVE) {
+        if (nodeIds.length < SURFACE_INTERACTIVE_FLOOR[surface]) {
             await cdp.detach();
             throw new Error(
-                `${surface}: ${nodeIds.length} interactive elements — the surface did not mount. ` +
-                `Re-run; do not diff this.`
+                `${surface}: ${nodeIds.length} interactive elements (floor ` +
+                `${SURFACE_INTERACTIVE_FLOOR[surface]}) — the surface did not mount, or mounted only ` +
+                `part of itself. Re-run; do not diff this.`
             );
         }
 
@@ -273,6 +308,29 @@ async function captureInteractions(page, {
         }
         await cdp.detach();
     }
+    // The floor applies to a full run only: a run over some surfaces is a choice, not a
+    // failure. Checked before the record, so a run under it is never written as evidence.
+    const cells = Object.keys(out).length;
+    const fullRun = SURFACES.every((s) => surfaces.includes(s));
+    if (fullRun && cells < INTERACTION_CELL_FLOOR) {
+        throw new Error(
+            `interaction run captured ${cells} cells (floor ${INTERACTION_CELL_FLOOR}) — surfaces ` +
+            `mounted part of themselves. Re-run; do not diff this.`
+        );
+    }
+    // A full run: each forced state must change at least one element from its resting
+    // values. Forcing that silently does nothing still returns a value for every read, so
+    // only a difference from rest proves the state was applied. Full runs only: a single
+    // surface may genuinely respond to no forced state (the sidebar's recorded gap).
+    const changedFromRest = (st) =>
+        Object.entries(out).some(([k, v]) => k.endsWith(`|${st}`) && v !== out[k.replace(/\|[a-z]+$/, '|rest')]);
+    const unapplied = fullRun ? STATES.filter((st) => !changedFromRest(st)) : [];
+    if (unapplied.length > 0) {
+        throw new Error(
+            `interaction run: forcing ${unapplied.join(', ')} changed no element from rest — ` +
+            `the state was not applied. Re-run; do not diff this.`
+        );
+    }
     // Record this run too, so `records.json` shows what was actually measured
     // rather than only what was measured first. Not fatal: a capture that ran is
     // a real capture, and losing it to a bookkeeping failure would be worse.
@@ -290,7 +348,7 @@ async function captureInteractions(page, {
         surfaces,
         themes: [theme],
         widths: [width],
-        cells: Object.keys(out).length,
+        cells,
         note: allowWithoutResting ? 'ran with allowWithoutResting' : null,
     });
     return out;
