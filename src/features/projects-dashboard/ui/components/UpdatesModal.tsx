@@ -43,13 +43,13 @@ import {
     SOME_NOT_APPLIED_TITLE,
     type UpdatesModalControls,
 } from '../hooks/useUpdatesModal';
+import { BatchQuestionTable } from './BatchQuestionTable';
 import { endingRowOf, promptButtons } from './runWindowParts';
 import { groupsOf, updatesLiveSite, type RowGroup } from './updateGroups';
 import { UpdatesRunView, waitingLine } from './UpdatesRunView';
 import { OperationQuestion, questionTakesWindow } from '@/core/ui/components/feedback/OperationQuestion';
 import { ResultBody } from '@/core/ui/components/feedback/ResultBody';
 import { CheckboxRow } from '@/core/ui/components/selection/CheckboxRow';
-import { LeadText } from '@/core/ui/components/ui/LeadText';
 import type { ActionButton, ModalStatus } from '@/core/ui/components/ui/Modal';
 import { ProgressWindow } from '@/core/ui/components/ui/ProgressDialog';
 import { StepsWindow } from '@/core/ui/components/ui/StepsDialog';
@@ -98,32 +98,25 @@ function UpdateList({ rows, controls }: { rows: PendingUpdateRow[]; controls: Up
     const tickedCount = open.filter((id) => controls.ticked.has(id)).length;
     const all = open.length > 0 && tickedCount === open.length;
     return (
-        <div className="batch-confirm">
-            {updatesLiveSite(rows) && <LeadText>{LIVE_SITE_SENTENCE}</LeadText>}
-            <div className="batch-delete scroll-fade scroll-fade--capped">
-                <table className="batch-delete-table updates-table">
-                    <thead>
-                        <tr>
-                            <td className="batch-changes-head batch-project-head">Project</td>
-                            <th scope="col">
-                                <CheckboxRow
-                                    label="Apply"
-                                    isSelected={all}
-                                    isIndeterminate={tickedCount > 0 && !all}
-                                    isDisabled={open.length === 0}
-                                    onChange={() => controls.toggleGroup(open)}
-                                />
-                            </th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {groupsOf(rows).map((group) => (
-                            <GroupRow key={group.key} group={group} controls={controls} />
-                        ))}
-                    </tbody>
-                </table>
-            </div>
-        </div>
+        <BatchQuestionTable
+            lead={updatesLiveSite(rows) ? LIVE_SITE_SENTENCE : undefined}
+            className="updates-table"
+            columns={
+                <th scope="col">
+                    <CheckboxRow
+                        label="Apply"
+                        isSelected={all}
+                        isIndeterminate={tickedCount > 0 && !all}
+                        isDisabled={open.length === 0}
+                        onChange={() => controls.toggleGroup(open)}
+                    />
+                </th>
+            }
+        >
+            {groupsOf(rows).map((group) => (
+                <GroupRow key={group.key} group={group} controls={controls} />
+            ))}
+        </BatchQuestionTable>
     );
 }
 
