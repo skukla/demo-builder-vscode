@@ -4,7 +4,7 @@ kind: fix
 area: platform
 needs: []
 value: low
-status: backlog
+status: built
 ---
 
 # The record scan should take a second or two
@@ -21,3 +21,4 @@ findings as the old one on today's tree before replacing it.
 ## Shipped so far
 
 - 2026-11-20  docs(backlog): file the pipeline review's Demo Builder items (`2d3fa91a7`)
+- 2026-11-23  Loop 2026-11-23: built (4b0b6c404, on loop/2026-11-23-backlog). 16 s to 1.5 s; output identical to the old scan on today's tree, for planted finished files, and with the folder given as an absolute or ./ path. Reviewed (opus, 4 findings fixed).
