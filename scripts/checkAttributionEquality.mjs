@@ -26,7 +26,8 @@
  */
 import { readFileSync } from 'fs';
 
-import { suitesFor, mirroringSuites, relatedSuites } from './focusModule.mjs';
+import { mirroringSuites } from './moduleSuites.mjs';
+import { suitesFor, relatedSuites } from './focusModule.mjs';
 
 const BASELINE = 'reports/mutation/baseline.json';
 

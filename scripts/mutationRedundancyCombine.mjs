@@ -31,7 +31,7 @@ import { existsSync, readdirSync, readFileSync, realpathSync } from 'fs';
 import { join } from 'path';
 import { fileURLToPath } from 'url';
 
-import { mirroringSuites } from './focusModule.mjs';
+import { mirroringSuites } from './moduleSuites.mjs';
 
 /**
  * The report file a module's measurement is written to. The whole path, not the

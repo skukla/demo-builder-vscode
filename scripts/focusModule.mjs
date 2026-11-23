@@ -36,9 +36,10 @@
  */
 import { fileURLToPath } from 'url';
 import { execFileSync } from 'child_process';
-import { readFileSync, writeFileSync, existsSync, readdirSync, rmSync, realpathSync } from 'fs';
-import { dirname, basename, join, relative } from 'path';
+import { readFileSync, writeFileSync, existsSync, rmSync, realpathSync } from 'fs';
+import { relative } from 'path';
 
+import { mirroringSuites } from './moduleSuites.mjs';
 import { isReactSuite } from './mutationScope.mjs';
 
 const STRYKER = 'stryker.focus.config.json';
@@ -79,75 +80,21 @@ export function suitesFor(modulePath) {
     return mirrored.length ? mirrored : relatedSuites(modulePath);
 }
 
-/** Every suite that mirrors `modulePath`, sorted, as repo-relative paths. */
-export function mirroringSuites(modulePath) {
-    if (!modulePath.startsWith('src/')) {
-        throw new Error(`Expected a path under src/, got: ${modulePath}`);
-    }
-    const stem = basename(modulePath).replace(/\.tsx?$/, '');
-    const dir = join('tests', dirname(modulePath).slice('src/'.length));
-    if (!existsSync(dir)) return [];
-    // A split suite is `<stem>-<topic>` or `<stem>.<topic>` — BOTH separators are in use
-    // (`stateManager.disposal.test.ts` against `stateManager-projects.test.ts`), and
-    // matching only the hyphen silently left one suite out of a run on 2026-09-02, which
-    // understates the score for a module rather than failing.
-    //
-    // The separator is required: without it `stateManagerFake.test.ts` would be swept in
-    // as though it tested the same subject.
-    const isSplitSuite = (f) =>
-        (f.startsWith(`${stem}-`) || f.startsWith(`${stem}.`)) && /\.test\.tsx?$/.test(f);
-    const isSuiteFor = (f) => f === `${stem}.test.ts` || f === `${stem}.test.tsx` || isSplitSuite(f);
-    const mirrored = readdirSync(dir).filter(isSuiteFor).map((f) => join(dir, f));
-    return [...mirrored, ...strayedSuites(modulePath, stem, dir, isSuiteFor)].sort();
-}
-
-/**
- * Suites named for the module that live OUTSIDE its mirror directory — but only where
- * no other module of the same name could own them.
- *
- * The strict mirror is right for a same-named neighbour: twelve basenames under src/
- * name two different modules, and `tests/features/app-builder/services/
- * appBuilderComponentMigration.test.ts` tested the app-builder one, not core/state's
- * (until the app-builder module was renamed on 2026-11-15).
- * It is wrong for a suite that simply lives in the wrong folder: the four
- * `useSelectionStep-*.test.tsx` under `tests/features/authentication/ui/hooks` test
- * `core/ui/hooks/useSelectionStep.ts` — there is no authentication module of that
- * name — and the hook was measured without them (2026-09-03). The rule that separates
- * the two: a stray suite counts when its own mirror source directory has NO module of
- * that stem.
- */
-function strayedSuites(modulePath, stem, mirrorDir, isSuiteFor) {
-    const out = [];
-    const walk = (d) => {
-        for (const name of readdirSync(d, { withFileTypes: true })) {
-            const p = join(d, name.name);
-            if (name.isDirectory()) walk(p);
-            else if (isSuiteFor(name.name) && dirname(p) !== mirrorDir) {
-                const ownSrcDir = join('src', dirname(p).slice('tests/'.length));
-                const ownModule = ['.ts', '.tsx'].some((ext) => existsSync(join(ownSrcDir, stem + ext)));
-                if (!ownModule && dirname(p).startsWith('tests/') && !dirname(p).startsWith('tests/sop')) out.push(p);
-            }
-        }
-    };
-    walk('tests');
-    return out;
-}
-
 /**
  * Every suite that REACHES `modulePath` through jest's own inverse dependency graph.
  *
  * This is the same question Stryker already asks on every run: `enableFindRelatedTests`
  * hands the mutated file to `jest --findRelatedTests`, which walks `resolveInverse`
  * transitively over the whole file set and filters by `isTestFilePath`. Asking it here
- * too costs about half a second per module and is the only rule in this file that can
- * see an import — `mirroringSuites` above reads filenames, and the header note at the
+ * too costs about half a second per module and is the only rule here that can see an
+ * import — `mirroringSuites` (`moduleSuites.mjs`) reads filenames, and the header note at the
  * bottom of `main()` records two text heuristics that tried to see imports and were both
  * wrong.
  *
  * `tests/sop/` is EXCLUDED. An enforcer measures the repository, not a module's
  * behaviour, and several of them shell out to `git` or to jest itself — inside Stryker's
  * sandbox copy that either fails or re-enters the runner. The same directory is excluded
- * from `strayedSuites` above, for the same reason.
+ * from the strayed-suite rule in `moduleSuites.mjs`, for the same reason.
  *
  * Returns [] rather than throwing when jest cannot answer: the caller's job is to refuse
  * a barren module, and a refusal it can explain beats a stack trace here.

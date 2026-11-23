@@ -25,6 +25,8 @@ import { join, dirname, basename } from 'path';
 
 import micromatch from 'micromatch';
 
+import { mirroringSuites } from './moduleSuites.mjs';
+
 // jest's own project split, so `isReactSuite` answers exactly as jest would.
 import jestConfig from '../jest.config.js';
 
@@ -44,50 +46,13 @@ export function sourceFiles(root = 'src') {
     return out.sort();
 }
 
-/**
- * Every suite ANYWHERE in the test tree whose filename names this module.
- *
- * Deliberately NOT the path mirror. The tests do not mirror `src` reliably: dozens of
- * handlers are tested from a sibling feature's folder. A path-mirror census reported 232
- * files as untested, and the first control caught one that has a suite and a pinned
- * mutation score — `spectrumTokens.ts`, then tested from `tests/webview-ui/shared/utils`
- * (that whole tree moved to its subjects' mirror under `tests/core/ui` on 2026-09-02;
- * the handler scatter is what still makes the strict mirror the wrong question here).
- *
- * The looser question is the right one HERE ("is this module tested at all"), and the
- * strict path mirror stays the right one in `focusModule.mjs`, which must select the
- * suites for exactly one module and cannot afford a same-named neighbour.
- *
- * Same-named modules in different folders therefore share a match. `collisions()` reports
- * them rather than hiding them.
- */
-let testIndex = null;
-function buildTestIndex() {
-    const index = new Map();
-    const walk = (dir) => {
-        for (const name of readdirSync(dir)) {
-            const p = join(dir, name);
-            if (statSync(p).isDirectory()) walk(p);
-            else if (/\.test\.tsx?$/.test(name)) {
-                const stem = name.replace(/\.test\.tsx?$/, '');
-                // `foo.test.ts`, `foo-topic.test.ts` and `foo.topic.test.ts` all name `foo`.
-                const subject = stem.split(/[-.]/)[0];
-                for (const key of new Set([stem, subject])) {
-                    if (!index.has(key)) index.set(key, []);
-                    index.get(key).push(p);
-                }
-            }
-        }
-    };
-    walk('tests');
-    return index;
-}
-
-export function suitesFor(modulePath) {
-    testIndex ??= buildTestIndex();
-    const stem = basename(modulePath).replace(/\.tsx?$/, '');
-    return testIndex.get(stem) ?? [];
-}
+// A module's own suites come from `mirroringSuites` (`moduleSuites.mjs`, PL-116), the rule
+// the focused run uses too: the mirror directory, plus a suite named for the module in
+// another folder when that folder has no module of its own by the name. This script used to
+// match the stem ANYWHERE in `tests/`, because dozens of handlers are tested from a sibling
+// feature's folder; the strayed-suite half of the shared rule counts those. The loose match
+// also gave two same-named modules each other's suites, so the profile and a focused run
+// could measure one module against different suites.
 
 /**
  * How many test files so much as MENTION this module.
@@ -160,8 +125,8 @@ export function profile(path) {
         exports: count(/^export\s/gm),
         declarations: count(/^(export\s+)?(interface|type|enum)\s/gm),
         isTsx: path.endsWith('.tsx'),
-        suites: suitesFor(path).length,
-        nodeSuites: suitesFor(path).filter((s) => !isReactSuite(s)).length,
+        suites: mirroringSuites(path).length,
+        nodeSuites: mirroringSuites(path).filter((s) => !isReactSuite(s)).length,
         mentions: testMentions(path),
     };
 }
