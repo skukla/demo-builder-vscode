@@ -4,7 +4,7 @@ kind: feature
 area: app-builder
 needs: []
 value: low
-status: backlog
+status: dropped
 ---
 
 # The ERP setup checklist follows each ERP's ownership mode
@@ -43,3 +43,4 @@ not apply.
 
 - 2026-10-09  docs(backlog): file AB-76, the ERP setup checklist follows the ownership mode (`500073df6`)
 - 2026-11-23  Loop 2026-11-23: not started. The item was filed for the owner's review and changes what the SC sees in the ERP setup checklist (hiding the attribute steps for website-rule ERPs, a tagged-products line per ERP, a stock check per website). Owner decision first: build it as described?
+- 2026-11-23  Owner 2026-11-23: dropped. The common attribute path is covered by AB-74 and AB-75; this mostly hid one step that does not apply.
