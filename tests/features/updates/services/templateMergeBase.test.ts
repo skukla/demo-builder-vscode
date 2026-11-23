@@ -34,6 +34,7 @@ import * as path from 'path';
 import { pathToFileURL } from 'url';
 import type { ExecuteOptions } from '@/core/shell/types';
 import { GitHubFileOperations, type RepoFileAccess } from '@/features/eds/services/github/githubFileOperations';
+import { applyChangeKeepingConflicts, type GitStep } from '@/features/updates/services/templateMergeBase';
 import { TemplateSyncService } from '@/features/updates/services/templateSyncService';
 import type { Project } from '@/types/base';
 import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
@@ -113,20 +114,28 @@ function bareRepo(fx: Pick<Fixture, 'root' | 'home'>, ownerRepo: string): string
     return bare;
 }
 
+/**
+ * Files the template has at T1 and DELETES at T2 (Adobe's Universal Editor removal, EDS-71),
+ * written into both repositories so the storefront's first tree still equals T1.
+ */
+type DeletedAtT2 = Record<string, string>;
+
 /** The template: T1 (the recorded base) → T2 (changes A, adds binary B, changes config.json). */
-function buildTemplate(fx: Pick<Fixture, 'root' | 'home'>): { t1: string; t2: string } {
+function buildTemplate(fx: Pick<Fixture, 'root' | 'home'>, deleted: DeletedAtT2 = {}): { t1: string; t2: string } {
     const work = path.join(fx.root, 'template-work');
     fs.mkdirSync(work);
     git(fx, work, 'init', '-q', '-b', 'main');
     write(work, 'A.txt', BASE_A);
     write(work, 'C.txt', 'c from the template\n');
     write(work, 'config.json', '{"template":1}\n');
+    for (const [file, content] of Object.entries(deleted)) write(work, file, content);
     git(fx, work, 'add', '-A');
     git(fx, work, 'commit', '-q', '-m', 'T1');
     const t1 = git(fx, work, 'rev-parse', 'HEAD');
     write(work, 'A.txt', TEMPLATE_A);
     write(work, 'B.bin', BINARY_B);
     write(work, 'config.json', '{"template":2}\n');
+    for (const file of Object.keys(deleted)) fs.rmSync(path.join(work, file));
     git(fx, work, 'add', '-A');
     git(fx, work, 'commit', '-q', '-m', 'T2');
     const bare = bareRepo(fx, `${TEMPLATE.owner}/${TEMPLATE.repo}`);
@@ -141,6 +150,7 @@ function buildTemplate(fx: Pick<Fixture, 'root' | 'home'>): { t1: string; t2: st
 function buildStorefront(
     fx: Pick<Fixture, 'root' | 'home'>,
     scEdits: (work: string) => void,
+    deleted: DeletedAtT2 = {},
 ): string {
     const work = path.join(fx.root, 'sc-work');
     fs.mkdirSync(work);
@@ -148,6 +158,7 @@ function buildStorefront(
     write(work, 'A.txt', BASE_A);
     write(work, 'C.txt', 'c from the template\n');
     write(work, 'config.json', '{"template":1}\n');
+    for (const [file, content] of Object.entries(deleted)) write(work, file, content);
     git(fx, work, 'add', '-A');
     git(fx, work, 'commit', '-q', '-m', 'Initial commit');
     write(work, 'C.txt', 'c edited by the SC\n');
@@ -160,12 +171,12 @@ function buildStorefront(
     return bare;
 }
 
-function buildFixture(scEdits: (work: string) => void = () => undefined): Fixture {
+function buildFixture(scEdits: (work: string) => void = () => undefined, deleted: DeletedAtT2 = {}): Fixture {
     const root = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'template-merge-base-')));
     const home = path.join(root, 'home');
     fs.mkdirSync(home);
-    const { t1, t2 } = buildTemplate({ root, home });
-    const scBare = buildStorefront({ root, home }, scEdits);
+    const { t1, t2 } = buildTemplate({ root, home }, deleted);
+    const scBare = buildStorefront({ root, home }, scEdits, deleted);
     return { root, home, scBare, t1, t2 };
 }
 
@@ -366,6 +377,152 @@ describe('merging a template update from the recorded version (real git)', () =>
         expect(originFile(fx, 'D.txt')).toBe('d from the template');
         expect(originFile(fx, 'C.txt')).toBe('c edited by the SC');
     }, REAL_GIT_TIMEOUT_MS);
+
+    // Adobe deleted its Universal Editor files from the templates (EDS-71). Before this, a
+    // deletion of a file the storefront had changed failed the whole update with git's bare
+    // "patch failed", and nothing was offered (reported from a colleague's B2B storefront,
+    // 2026-11-23).
+    describe('when the template deletes a file', () => {
+        const UE_BASE = '{"groups":[{"components":[{"id":"cards"}]}]}\n';
+        const UE_WITH_OURS = '{"groups":[{"components":[{"id":"cards"},{"id":"catalog-menu"}]}]}\n';
+        const originHas = (file: string): boolean =>
+            spawnSync('git', ['cat-file', '-e', `main:${file}`], { cwd: fx.scBare, env: gitEnv(fx.home) }).status === 0;
+
+        it('keeps the storefront\'s component-definition.json that Demo Builder added to, and applies the rest', async () => {
+            fx = buildFixture((work) => write(work, 'component-definition.json', UE_WITH_OURS), {
+                'component-definition.json': UE_BASE,
+            });
+
+            const result = await merge(fx, fx.t1);
+
+            expect(result).toEqual({ success: true, strategy: 'merge', syncedCommit: fx.t2 });
+            // The block library is still built from this file, so the storefront's copy stays.
+            expect(originFile(fx, 'component-definition.json')).toBe(UE_WITH_OURS.trim());
+            expect(originFile(fx, 'A.txt')).toBe(TEMPLATE_A.trim());
+        }, REAL_GIT_TIMEOUT_MS);
+
+        it('keeps the Universal Editor files even when the storefront never changed them', async () => {
+            fx = buildFixture(() => undefined, { 'component-models.json': '[]\n' });
+
+            const result = await merge(fx, fx.t1);
+
+            expect(result).toEqual({ success: true, strategy: 'merge', syncedCommit: fx.t2 });
+            expect(originHas('component-models.json')).toBe(true);
+        }, REAL_GIT_TIMEOUT_MS);
+
+        it('stops on another file the storefront changed, says what to do, and pushes nothing', async () => {
+            fx = buildFixture((work) => write(work, 'D.txt', 'd edited by the SC\n'), { 'D.txt': 'd from the template\n' });
+            const before = originHead(fx);
+
+            const result = await merge(fx, fx.t1);
+
+            // Not offered as a clash: Fix with AI cannot settle a deletion in the local copy.
+            expect(result.success).toBe(false);
+            expect(result.conflicts).toBeUndefined();
+            expect(result.error).toBe(
+                'The template update could not be applied: the template deletes D.txt, which this storefront '
+                + "changed. Delete it from the storefront's repository on GitHub (save a copy first if you need "
+                + 'it) or put it back as the template had it, then update again.',
+            );
+            expect(originHead(fx)).toBe(before);
+        }, REAL_GIT_TIMEOUT_MS);
+
+        // A name double quotes cannot hold in both bash and cmd.exe never reaches a command:
+        // were `$(...)` expanded, git would be asked about a different name and find no change.
+        const UNSAFE_NAME_STOP =
+            'The template update could not be applied: the template deletes D$(touch ran-marker).txt, whose '
+            + 'name Demo Builder cannot handle safely. Reset the storefront to take this update.';
+
+        it('stops on a deleted file whose name it cannot put in a command, and names it', async () => {
+            fx = buildFixture((work) => write(work, 'D$(touch ran-marker).txt', 'd edited by the SC\n'), {
+                'D$(touch ran-marker).txt': 'd from the template\n',
+            });
+            const before = originHead(fx);
+
+            const result = await merge(fx, fx.t1);
+
+            expect(result.success).toBe(false);
+            expect(result.error).toBe(UNSAFE_NAME_STOP);
+            expect(originHead(fx)).toBe(before);
+        }, REAL_GIT_TIMEOUT_MS);
+
+        // Leaving it out of the change would put the name in a command too, so this rare case
+        // stops as well, rather than failing inside git with no name given.
+        it('stops on such a file even once the storefront no longer has it', async () => {
+            fx = buildFixture((work) => fs.rmSync(path.join(work, 'D$(touch ran-marker).txt')), {
+                'D$(touch ran-marker).txt': 'd from the template\n',
+            });
+
+            const result = await merge(fx, fx.t1);
+
+            expect(result.success).toBe(false);
+            expect(result.error).toBe(UNSAFE_NAME_STOP);
+        }, REAL_GIT_TIMEOUT_MS);
+
+        it('never stops on a file the update always leaves alone, like fstab.yaml', async () => {
+            fx = buildFixture((work) => write(work, 'fstab.yaml', 'mountpoints: the SC\'s own\n'), {
+                'fstab.yaml': 'mountpoints: the template\'s\n',
+            });
+
+            const result = await merge(fx, fx.t1);
+
+            expect(result).toEqual({ success: true, strategy: 'merge', syncedCommit: fx.t2 });
+            expect(originFile(fx, 'fstab.yaml')).toBe('mountpoints: the SC\'s own');
+        }, REAL_GIT_TIMEOUT_MS);
+
+        it('the local copy (Fix with AI) also keeps the Universal Editor file and applies the rest', async () => {
+            fx = buildFixture((work) => write(work, 'component-definition.json', UE_WITH_OURS), {
+                'component-definition.json': UE_BASE,
+            });
+            const copy = path.join(fx.root, 'local-copy');
+            git(fx, fx.root, 'clone', '-q', fx.scBare, copy);
+            git(fx, copy, 'fetch', '-q', path.join(fx.root, 'github', TEMPLATE.owner, `${TEMPLATE.repo}.git`), 'main');
+            const step: GitStep = async (command) => {
+                const run = spawnSync('/bin/bash', ['-c', command], { cwd: copy, env: gitEnv(fx.home), encoding: 'utf8' });
+                return { code: run.status ?? 1, stdout: run.stdout, stderr: run.stderr, duration: 0 };
+            };
+
+            const outcome = await applyChangeKeepingConflicts(step, {
+                base: fx.t1,
+                target: fx.t2,
+                // As the real flow passes them: the SC's config.json is never touched.
+                preserveFiles: ['config.json'],
+                patchFile: path.join(fx.root, 'local.patch'),
+            });
+
+            expect(outcome).toEqual({ kind: 'applied' });
+            expect(fs.readFileSync(path.join(copy, 'component-definition.json'), 'utf8')).toBe(UE_WITH_OURS);
+            expect(fs.readFileSync(path.join(copy, 'A.txt'), 'utf8')).toBe(TEMPLATE_A);
+        }, REAL_GIT_TIMEOUT_MS);
+
+        it('deletes a file the storefront left as the template had it', async () => {
+            fx = buildFixture(() => undefined, { 'D.txt': 'd from the template\n' });
+
+            const result = await merge(fx, fx.t1);
+
+            expect(result).toEqual({ success: true, strategy: 'merge', syncedCommit: fx.t2 });
+            expect(originHas('D.txt')).toBe(false);
+        }, REAL_GIT_TIMEOUT_MS);
+
+        it('skips the deletion of a file the storefront already removed', async () => {
+            fx = buildFixture((work) => fs.rmSync(path.join(work, 'D.txt')), { 'D.txt': 'd from the template\n' });
+
+            const result = await merge(fx, fx.t1);
+
+            expect(result).toEqual({ success: true, strategy: 'merge', syncedCommit: fx.t2 });
+            expect(originFile(fx, 'A.txt')).toBe(TEMPLATE_A.trim());
+        }, REAL_GIT_TIMEOUT_MS);
+
+        // Read as a pattern, `?.txt` would match A.txt and leave the template's change to it out.
+        it('skips a removed file whose name looks like a pattern, and nothing else', async () => {
+            fx = buildFixture((work) => fs.rmSync(path.join(work, '?.txt')), { '?.txt': 'q from the template\n' });
+
+            const result = await merge(fx, fx.t1);
+
+            expect(result).toEqual({ success: true, strategy: 'merge', syncedCommit: fx.t2 });
+            expect(originFile(fx, 'A.txt')).toBe(TEMPLATE_A.trim());
+        }, REAL_GIT_TIMEOUT_MS);
+    });
 
     it('reset (the explicit alternative) records the template commit too, not the storefront head', async () => {
         // Same reason as (a): the update checker compares the record against the

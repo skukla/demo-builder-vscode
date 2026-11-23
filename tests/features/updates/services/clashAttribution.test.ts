@@ -57,6 +57,15 @@ describe('whoseEdits', () => {
         await expect(whoseEdits(git, ['a"$(x).js'], demo)).resolves.toEqual([{ file: 'a"$(x).js', whose: 'storefront' }]);
         expect(git.mock.calls.some(([c]) => c.includes('$(x)'))).toBe(false);
     });
+
+    // Steps run in cmd.exe on Windows, where `%NAME%` (and `!NAME!`) expand inside double
+    // quotes; a line break ends the command in either shell.
+    it.each(['a%PATH%.js', 'a!x!.js', 'a\nb.js'])('never quotes %j, which a shell would not read as a name', async (name) => {
+        const git = scriptedGit([[/^git rev-parse /, { code: 0, stdout: `${BLOB}\n` }]]);
+
+        await expect(whoseEdits(git, [name], demo)).resolves.toEqual([{ file: name, whose: 'storefront' }]);
+        expect(git.mock.calls.some(([c]) => c.includes(name))).toBe(false);
+    });
 });
 
 describe('copiedDemoOf', () => {
