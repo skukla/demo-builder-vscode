@@ -137,6 +137,56 @@ describe('registerDiagnosticsTools (read_debug_logs)', () => {
         expect(text).not.toContain('noise');
     });
 
+    // AI-80: tracing one operation across channels needs an id AND an error word in one read.
+    describe('several filter terms', () => {
+        const LOG = [
+            '[info] [Data Installer #7] started',
+            '[error] [Data Installer #7] Failed to write products',
+            '[error] [Mesh] Failed to deploy',
+            '[info] [Mesh] idle',
+        ];
+
+        it('keeps a line that matches any of the terms, by default', async () => {
+            writeDebugLog(LOG);
+            const server = fakeServer();
+            registerDiagnosticsTools(server, logDir);
+
+            const text = (await server.text('read_debug_logs', { filter: ['#7', 'DEPLOY'] }))
+                .content[0].text;
+
+            expect(text).toContain('last 3 of 3 lines matching "#7" or "DEPLOY"');
+            expect(text).toContain('[Data Installer #7] started');
+            expect(text).toContain('[Mesh] Failed to deploy');
+            expect(text).not.toContain('idle');
+        });
+
+        it('keeps only a line that matches every term when matchAll is set', async () => {
+            writeDebugLog(LOG);
+            const server = fakeServer();
+            registerDiagnosticsTools(server, logDir);
+
+            const text = (
+                await server.text('read_debug_logs', { filter: ['#7', 'error'], matchAll: true })
+            ).content[0].text;
+
+            expect(text).toContain('last 1 of 1 lines matching "#7" and "error"');
+            expect(text).toContain('Failed to write products');
+            expect(text).not.toContain('started');
+            expect(text).not.toContain('[Mesh]');
+        });
+
+        it('treats a one-term list as that term', async () => {
+            writeDebugLog(LOG);
+            const server = fakeServer();
+            registerDiagnosticsTools(server, logDir);
+
+            const text = (await server.text('read_debug_logs', { filter: ['mesh'] })).content[0]
+                .text;
+
+            expect(text).toContain('last 2 of 2 lines matching "mesh"');
+        });
+    });
+
     it('reads the user channel when asked', async () => {
         fs.writeFileSync(path.join(logDir, 'Demo Builder User Logs.log'), 'user-facing line');
         const server = fakeServer();
@@ -253,6 +303,22 @@ describe('read_debug_logs — the response byte cap', () => {
 
         expect(result.content[0].text).toContain('last 20 of 20 lines');
     });
+
+    // AI-80 review: ten 200-character terms put ~2,100 characters into the header, which
+    // sat outside the line budget and could carry a response past its 46KB ceiling.
+    it('counts the echoed filter terms against the budget', async () => {
+        const terms = Array.from({ length: 10 }, (_, i) => `${i}`.padEnd(200, 't'));
+        const lines = Array.from({ length: 130 }, () => terms[0].padEnd(374, 'x'));
+        fs.writeFileSync(path.join(logDir, 'Demo Builder Debug Logs.log'), lines.join('\n'));
+        const server = fakeServer();
+        registerDiagnosticsTools(server, logDir);
+
+        const text = (await server.text('read_debug_logs', { lines: 130, filter: terms }))
+            .content[0].text;
+
+        expect(text.length).toBeLessThanOrEqual(46_000);
+        expect(text).toContain('of 130 lines matching');
+    });
 });
 
 /**
@@ -311,5 +377,15 @@ describe('read_debug_logs — the declaration', () => {
         expect(filter.safeParse('error').success).toBe(true);
         expect(filter.safeParse('x'.repeat(200)).success).toBe(true);
         expect(filter.safeParse('x'.repeat(201)).success).toBe(false);
+    });
+
+    it('takes a list of terms, each capped, and no more than ten of them', () => {
+        const filter = definition().inputSchema!.filter;
+
+        expect(filter.safeParse(['#7', 'error']).success).toBe(true);
+        expect(filter.safeParse(['x'.repeat(201)]).success).toBe(false);
+        expect(filter.safeParse([]).success).toBe(false);
+        expect(filter.safeParse(Array.from({ length: 11 }, (_, i) => `t${i}`)).success).toBe(false);
+        expect(definition().inputSchema!.matchAll.safeParse(true).success).toBe(true);
     });
 });
