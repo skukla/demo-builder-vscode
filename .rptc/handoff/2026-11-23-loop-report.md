@@ -5,7 +5,7 @@ develop; merging is your decision.
 
 ## The takeaway
 
-The loop worked the backlog's smallest items that need nothing from you, smallest first. Ten are
+The loop worked the backlog's smallest items that need nothing from you, smallest first. Eleven are
 built on the branch, one more is researched, each with the full checks passing and a review filed. Three need you: one
 was refused by the permission check, one turns out to be satisfied already, and one is a real bug
 whose fix needs a design choice, now written into the item.
@@ -24,6 +24,7 @@ whose fix needs a design choice, now written into the item.
 | AI-79 | All 20 untriaged handlers judged in the coverage scan: 8 reach an agent under another name, 12 are screen plumbing, 2 are new gaps | all done here |
 | PL-98 | One question-table shell for the projects list's Delete, Reset and Updates windows; markup unchanged, 978 tests pass, one new assertion | all done here |
 | PL-115 | 33 test files use the shared WebviewClient fake (only the recorded exception keeps its own); the import-order check was blind to the new import form and now sees it | all done here |
+| PL-114 | Of 56 test files with their own vscode mock, 7 now use the shared one and 49 say why they cannot; a new rule check keeps it that way | all done here |
 | AI-78 | Researched, not built: our MCP library has an older experimental "tasks" shape than the one Claude Code reportedly supports, nothing found for Copilot; keep the 45 s wait (`.rptc/research/mcp-tasks-for-long-jobs/`) | research |
 
 ## Handed off
