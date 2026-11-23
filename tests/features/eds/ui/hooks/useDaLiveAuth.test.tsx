@@ -14,7 +14,7 @@
 
 import {
     createDefaultState,
-    messageHandlers,
+    webviewClientHandlers,
     mockPostMessage,
 } from './edsAuthHooks.testUtils';
 import { renderHook, act, waitFor } from '@testing-library/react';
@@ -42,7 +42,7 @@ describe('useDaLiveAuth Hook', () => {
 
     beforeEach(() => {
         jest.clearAllMocks();
-        messageHandlers.clear();
+        webviewClientHandlers.clear();
         mockUpdateState = jest.fn();
     });
 
@@ -92,7 +92,7 @@ describe('useDaLiveAuth Hook', () => {
             }));
 
             // When: Receiving authenticated status with org
-            const authHandler = messageHandlers.get('dalive-auth-status');
+            const authHandler = webviewClientHandlers.get('dalive-auth-status');
             expect(authHandler).toBeDefined();
 
             act(() => {
@@ -129,7 +129,7 @@ describe('useDaLiveAuth Hook', () => {
             }));
 
             // When: Receiving unauthenticated status with orgName (from config setting)
-            const authHandler = messageHandlers.get('dalive-auth-status');
+            const authHandler = webviewClientHandlers.get('dalive-auth-status');
             expect(authHandler).toBeDefined();
 
             act(() => {
@@ -169,7 +169,7 @@ describe('useDaLiveAuth Hook', () => {
             expect(result.current.isChecking).toBe(true);
 
             // When: Receiving auth status
-            const authHandler = messageHandlers.get('dalive-auth-status');
+            const authHandler = webviewClientHandlers.get('dalive-auth-status');
             act(() => {
                 authHandler?.({ isAuthenticated: false });
             });
@@ -250,7 +250,7 @@ describe('useDaLiveAuth Hook', () => {
             }));
 
             // When: Receiving successful verification
-            const resultHandler = messageHandlers.get('dalive-token-with-org-result');
+            const resultHandler = webviewClientHandlers.get('dalive-token-with-org-result');
             expect(resultHandler).toBeDefined();
 
             act(() => {
@@ -287,7 +287,7 @@ describe('useDaLiveAuth Hook', () => {
             }));
 
             // When: Receiving failed verification
-            const resultHandler = messageHandlers.get('dalive-token-with-org-result');
+            const resultHandler = webviewClientHandlers.get('dalive-token-with-org-result');
 
             act(() => {
                 resultHandler?.({
@@ -426,7 +426,7 @@ describe('useDaLiveAuth Hook', () => {
                 updateState: mockUpdateState,
             }));
 
-            expect(messageHandlers.get('dalive-auth-error')).toBeUndefined();
+            expect(webviewClientHandlers.get('dalive-auth-error')).toBeUndefined();
         });
     });
 });

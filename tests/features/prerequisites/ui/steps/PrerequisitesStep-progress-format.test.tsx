@@ -1,20 +1,7 @@
+import '../../../../helpers/webviewClientMock';
 import { screen, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import { renderLoadedStep, setupScrollMock, resetAllMocks } from './PrerequisitesStep.testUtils';
-
-// Mock WebviewClient
-jest.mock('@/core/ui/utils/WebviewClient', () => ({
-    webviewClient: {
-        postMessage: (...args: any[]) => {
-            const { mockPostMessage } = require('./PrerequisitesStep.testUtils');
-            return mockPostMessage(...args);
-        },
-        onMessage: (...args: any[]) => {
-            const { mockOnMessage } = require('./PrerequisitesStep.testUtils');
-            return mockOnMessage(...args);
-        },
-    },
-}));
 
 /**
  * PrerequisitesStep - Unified Progress Format Display Tests

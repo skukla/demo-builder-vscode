@@ -13,23 +13,11 @@
  *   useSelectionStep-stateManagement.test.tsx
  */
 
-// Mock dependencies - must be in test file for proper hoisting
 jest.mock('@/core/ui/hooks/useDebouncedLoading', () => ({
     useDebouncedLoading: jest.fn((value) => value), // Pass through for testing
 }));
-// Mock WebviewClient - must be in test file for proper hoisting
-jest.mock('@/core/ui/utils/WebviewClient', () => ({
-    webviewClient: {
-        postMessage: (...args: any[]) => {
-            const { mockPostMessage } = require('./useSelectionStep.testUtils');
-            return mockPostMessage(...args);
-        },
-        onMessage: (...args: any[]) => {
-            const { mockOnMessage } = require('./useSelectionStep.testUtils');
-            return mockOnMessage(...args);
-        },
-    },
-}));
+// The WebviewClient wall is the shared double's, imported BEFORE the subject below.
+import { mockPostMessage, mockOnMessage } from '../../../helpers/webviewClientMock';
 
 export { useSelectionStep } from '@/core/ui/hooks/useSelectionStep';
 export type { UseSelectionStepOptions } from '@/core/ui/hooks/useSelectionStep';
@@ -37,21 +25,8 @@ export type { UseSelectionStepOptions } from '@/core/ui/hooks/useSelectionStep';
 import { WizardState } from '@/types/webview';
 import '@testing-library/jest-dom';
 
-// Mock dependencies
-jest.mock('@/core/ui/hooks/useDebouncedLoading', () => ({
-    useDebouncedLoading: jest.fn((value) => value), // Pass through for testing
-}));
-
-// Mock WebviewClient
-export const mockPostMessage = jest.fn();
-export const mockOnMessage = jest.fn().mockReturnValue(jest.fn());
-
-jest.mock('@/core/ui/utils/WebviewClient', () => ({
-    webviewClient: {
-        postMessage: (...args: any[]) => mockPostMessage(...args),
-        onMessage: (...args: any[]) => mockOnMessage(...args),
-    },
-}));
+// The shared double's handles, re-exported for the specs.
+export { mockPostMessage, mockOnMessage };
 
 export interface TestItem {
     id: string;

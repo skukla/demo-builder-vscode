@@ -6,6 +6,7 @@
  *
  */
 
+import '../../../../helpers/webviewClientMock';
 import { renderHook, act } from '@testing-library/react';
 
 // Mock TIMEOUTS - uses semantic categories
@@ -26,14 +27,6 @@ jest.mock('@/core/ui/utils/frontendTimeouts', () => ({
     },
 }));
 
-// Mock the WebviewClient - must be before import
-jest.mock('@/core/ui/utils/WebviewClient', () => ({
-    webviewClient: {
-        postMessage: jest.fn(),
-        request: jest.fn().mockResolvedValue({ success: true }),
-    },
-}));
-
 import {
     useDashboardActions,
     UseDashboardActionsProps,
@@ -48,6 +41,7 @@ describe('useDashboardActions', () => {
     beforeEach(() => {
         jest.clearAllMocks();
         jest.useFakeTimers();
+        (webviewClient.request as jest.Mock).mockResolvedValue({ success: true });
         mockSetIsTransitioning = jest.fn();
         mockSetIsOpeningBrowser = jest.fn();
     });

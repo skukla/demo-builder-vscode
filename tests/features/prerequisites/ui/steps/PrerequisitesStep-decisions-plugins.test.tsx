@@ -6,6 +6,7 @@
  * versions the tool is installed for — had no test go near it.
  */
 
+import '../../../../helpers/webviewClientMock';
 import { screen, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import {
@@ -13,19 +14,6 @@ import {
     resetAllMocks,
     setupScrollMock,
 } from './PrerequisitesStep.testUtils';
-
-jest.mock('@/core/ui/utils/WebviewClient', () => ({
-    webviewClient: {
-        postMessage: (...args: unknown[]) => {
-            const { mockPostMessage } = require('./PrerequisitesStep.testUtils');
-            return mockPostMessage(...args);
-        },
-        onMessage: (...args: unknown[]) => {
-            const { mockOnMessage } = require('./PrerequisitesStep.testUtils');
-            return mockOnMessage(...args);
-        },
-    },
-}));
 
 const AIO = [{ id: 0, name: 'Adobe I/O CLI', description: 'Adobe CLI', optional: false }];
 

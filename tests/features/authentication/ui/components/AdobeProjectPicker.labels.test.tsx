@@ -5,21 +5,13 @@
  * org-switch request were never pinned. Here the list is the double, and the
  * assertions are on its ARGUMENTS.
  */
+import { mockRequest } from '../../../../helpers/webviewClientMock';
 import { render, screen } from '@testing-library/react';
 import React from 'react';
 import { Provider, defaultTheme } from '@adobe/react-spectrum';
 import '@testing-library/jest-dom';
 import type { SelectionStepContentProps } from '@/core/ui/components/selection/SelectionStepContent';
 import type { AdobeProject, WizardState } from '@/types/webview';
-
-const mockRequest = jest.fn();
-jest.mock('@/core/ui/utils/WebviewClient', () => ({
-    webviewClient: {
-        postMessage: jest.fn(),
-        request: (...args: unknown[]) => mockRequest(...args),
-        onMessage: jest.fn(() => jest.fn()),
-    },
-}));
 
 jest.mock('@/core/ui/hooks/useSelectionStep', () => ({
     useSelectionStep: jest.fn(),

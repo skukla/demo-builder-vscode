@@ -14,6 +14,7 @@
  * would only say what survived it.
  */
 
+import { mockPostMessage } from '../../../../helpers/webviewClientMock';
 import { fireEvent, screen } from '@testing-library/react';
 import React from 'react';
 import '@testing-library/jest-dom';
@@ -45,11 +46,6 @@ jest.mock('@adobe/react-spectrum', () => ({
     Heading: ({ children }: any) => <h3>{children}</h3>,
     View: ({ children }: any) => <div>{children}</div>,
     Divider: () => <hr />,
-}));
-
-const mockPostMessage = jest.fn();
-jest.mock('@/core/ui/utils/WebviewClient', () => ({
-    webviewClient: { postMessage: (...a: unknown[]) => mockPostMessage(...a) },
 }));
 
 // Below the mocks deliberately: testUtils owns the component import, so every

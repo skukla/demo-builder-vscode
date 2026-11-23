@@ -1,3 +1,4 @@
+import { mockPostMessage, mockOnMessage } from '../../../../helpers/webviewClientMock';
 import { render, screen, waitFor, act } from '@testing-library/react';
 
 import { settle } from '../../../../helpers/reactSettle';
@@ -10,13 +11,12 @@ import { WizardState } from '@/types/webview';
  * Shared test utilities for PrerequisitesStep tests
  * Created from test-suite-reorganization-memory-optimization plan
  *
- * NOTE: Each test file must include its own jest.mock() declaration for WebviewClient
- * This file exports the mock functions to be referenced by each test file's mock
+ * NOTE: Each test file imports tests/helpers/webviewClientMock BEFORE the component
+ * under test; that import installs the WebviewClient wall. The two handles below are
+ * that double's, re-exported for the specs.
  */
 
-// Export mock functions (must be used in each test file's jest.mock())
-export const mockPostMessage = jest.fn();
-export const mockOnMessage = jest.fn().mockReturnValue(jest.fn());
+export { mockPostMessage, mockOnMessage };
 
 // Base state for tests (new project - no components selected yet)
 export const baseState: Partial<WizardState> = {

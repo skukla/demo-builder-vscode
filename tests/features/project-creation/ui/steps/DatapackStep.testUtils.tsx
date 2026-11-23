@@ -29,6 +29,7 @@
  * tests said otherwise. Mocking the envelope makes the real unwrapping run.
  */
 
+import { mockPostMessage, webviewClientHandlers } from '../../../../helpers/webviewClientMock';
 import React from 'react';
 import { render, screen, within } from '@testing-library/react';
 
@@ -59,18 +60,8 @@ export function answerFor(type: string, state: { loading: boolean; error: Error 
     return execute;
 }
 
-export const mockPostMessage = jest.fn();
-/** What the step listens for from the extension, by message type. */
-export const mockMessageHandlers = new Map<string, (data: unknown) => void>();
-jest.mock('@/core/ui/utils/WebviewClient', () => ({
-    webviewClient: {
-        postMessage: (...args: unknown[]) => mockPostMessage(...args),
-        onMessage: (type: string, handler: (data: unknown) => void) => {
-            mockMessageHandlers.set(type, handler);
-            return () => mockMessageHandlers.delete(type);
-        },
-    },
-}));
+/** The shared WebviewClient double's handles; `webviewClientHandlers` is what the step listens for, by message type. */
+export { mockPostMessage, webviewClientHandlers };
 
 /** A handler reply as it really arrives: the whole envelope, not the payload. */
 export function envelope(data: unknown) {

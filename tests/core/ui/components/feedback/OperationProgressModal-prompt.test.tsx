@@ -7,6 +7,7 @@
  * the extension half is `tests/core/vscode/operationPrompt.test.ts`.
  */
 
+import { mockPostMessage } from '../../../../helpers/webviewClientMock';
 import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import React from 'react';
@@ -52,11 +53,6 @@ jest.mock('@/core/ui/components/ui/Modal', () => ({
 
 jest.mock('@/core/ui/components/feedback/LoadingDisplay', () => ({
     LoadingDisplay: ({ message }: { message: string }) => <div data-testid="loading">{message}</div>,
-}));
-
-const mockPostMessage = jest.fn();
-jest.mock('@/core/ui/utils/WebviewClient', () => ({
-    webviewClient: { postMessage: (...args: unknown[]) => mockPostMessage(...args) },
 }));
 
 let progress: OperationProgressPayload | null = null;

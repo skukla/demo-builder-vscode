@@ -4,19 +4,16 @@
  * import (webview-test-authoring §3).
  */
 
+// Every request goes through the shared WebviewClient double: `vscode-api` only re-exports
+// `webviewClient` from `WebviewClient`, so the share modules that import it reach the same
+// `mockRequest` as the Datapacks screen's hook.
+import { mockRequest } from '../../../../../helpers/webviewClientMock';
 import { fireEvent, render, screen } from '@testing-library/react';
 import React from 'react';
 import { settle } from '../../../../../helpers/reactSettle';
 import '@testing-library/jest-dom';
 
-export const mockRequest = jest.fn();
-jest.mock('@/core/ui/utils/vscode-api', () => ({
-    webviewClient: { request: (...args: unknown[]) => mockRequest(...args) },
-}));
-// Share Datapack asks through the Datapacks screen's hook, which reaches the client this way.
-jest.mock('@/core/ui/utils/WebviewClient', () => ({
-    webviewClient: { request: (...args: unknown[]) => mockRequest(...args) },
-}));
+export { mockRequest };
 
 /** The clipboard the link button writes to; jsdom has none. */
 export const mockWriteText = jest.fn();

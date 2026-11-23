@@ -1,10 +1,10 @@
 /**
  * Shared test utilities for useDashboardStatus tests.
  *
- * IMPORTANT: each test file MUST declare its own
- * `jest.mock('@/core/ui/utils/WebviewClient', ...)` at the top. Jest only
- * hoists jest.mock calls within a single file — placing the mock here
- * would NOT apply to importing test files.
+ * IMPORTANT: each test file MUST import `tests/helpers/webviewClientMock` BEFORE
+ * the hook under test; that import installs the WebviewClient wall. Jest only
+ * hoists jest.mock calls within a single file, so a mock declared here would
+ * NOT apply to importing test files.
  *
  * The `setupMocks()` factory captures the `statusUpdate` and
  * `meshStatusUpdate` handlers registered by the hook on mount, so tests

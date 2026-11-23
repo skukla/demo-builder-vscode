@@ -18,7 +18,7 @@ import { act, screen, fireEvent, waitFor, within } from '@testing-library/react'
 
 import {
     mockExecute,
-    mockMessageHandlers,
+    webviewClientHandlers,
     envelope,
     notYetAsked,
     refusal,
@@ -100,7 +100,7 @@ describe('DatapackStep — the Show list', () => {
         renderStep();
         await waitFor(() => expect(mockExecute).toHaveBeenCalledTimes(1));
 
-        act(() => mockMessageHandlers.get('datapack-list-changed')?.(undefined));
+        act(() => webviewClientHandlers.get('datapack-list-changed')?.(undefined));
 
         expect(mockExecute).toHaveBeenCalledTimes(2);
         expect(mockExecute).toHaveBeenLastCalledWith({ includeCommunity: true });

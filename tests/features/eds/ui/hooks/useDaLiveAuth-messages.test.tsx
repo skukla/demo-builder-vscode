@@ -16,7 +16,7 @@
  * the module it appears in, not across modules.
  */
 
-import { createDefaultState, messageHandlers, mockPostMessage } from './edsAuthHooks.testUtils';
+import { createDefaultState, webviewClientHandlers, mockPostMessage } from './edsAuthHooks.testUtils';
 import { renderHook, act } from '@testing-library/react';
 import type { WizardState, EDSConfig } from '@/types/webview';
 
@@ -43,12 +43,12 @@ describe('useDaLiveAuth - incoming messages', () => {
 
     const push = (type: string, data: unknown) =>
         act(() => {
-            messageHandlers.get(type)?.(data);
+            webviewClientHandlers.get(type)?.(data);
         });
 
     beforeEach(() => {
         jest.clearAllMocks();
-        messageHandlers.clear();
+        webviewClientHandlers.clear();
         updateState = jest.fn();
     });
 
@@ -284,7 +284,7 @@ describe('useDaLiveAuth - incoming messages', () => {
         it('listens for all four pushes', async () => {
             await mount();
 
-            expect([...messageHandlers.keys()].sort()).toEqual([
+            expect([...webviewClientHandlers.keys()].sort()).toEqual([
                 'dalive-auth-status',
                 'dalive-login-opened',
                 'dalive-token-stored',
@@ -298,7 +298,7 @@ describe('useDaLiveAuth - incoming messages', () => {
 
             unmount();
 
-            expect([...messageHandlers.keys()]).toStrictEqual([]);
+            expect([...webviewClientHandlers.keys()]).toStrictEqual([]);
         });
 
         it('asks the extension for the current status again on demand', async () => {

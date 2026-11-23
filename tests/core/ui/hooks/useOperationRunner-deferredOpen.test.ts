@@ -6,18 +6,11 @@
  * question, so `startWhenItBegins` waits for the run to report (PL-59 slice 2).
  */
 
+import '../../../helpers/webviewClientMock';
 import { act, renderHook } from '@testing-library/react';
 import { useOperationRunner } from '@/core/ui/hooks/useOperationRunner';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { ErrorCode } from '@/types/errorCodes';
-
-jest.mock('@/core/ui/utils/WebviewClient', () => ({
-    webviewClient: {
-        postMessage: jest.fn(),
-        request: jest.fn(),
-        onMessage: jest.fn(() => jest.fn()),
-    },
-}));
 
 const request = webviewClient.request as jest.Mock;
 const onMessage = webviewClient.onMessage as jest.Mock;

@@ -5,6 +5,7 @@
  * names datapacks, never the Data Installer: that failure is the datapack store's.
  */
 
+import '../../../helpers/webviewClientMock';
 import { fireEvent, render, screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
@@ -12,8 +13,6 @@ import { renderDataInstallerFailure } from '@/features/data-installer/ui/dataIns
 import { ErrorCode } from '@/types/errorCodes';
 import { plainFailure } from '@/features/data-installer/plainFailure';
 import { plain } from '@/core/utils/plainText';
-
-jest.mock('@/core/ui/utils/WebviewClient', () => ({ webviewClient: { postMessage: jest.fn() } }));
 
 const ADDRESS = 'demoBuilder.dataInstaller.apiBaseUrl';
 const refused = (message: string, setting?: string) => ({ message: plainFailure(message), code: ErrorCode.AUTH_FORBIDDEN, ...(setting ? { setting } : {}) });

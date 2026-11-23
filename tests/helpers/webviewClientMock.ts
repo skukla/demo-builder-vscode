@@ -5,8 +5,8 @@
  * different bodies, and the divergence was shallow: nearly all were subsets of
  * the same members, and most "different implementations" were the identical
  * pattern — delegate to a local `jest.fn` so the test can drive it — written out
- * per suite. 31 of them now import this instead; 23 files and 14 walls remain,
- * each keeping its own for a reason below.
+ * per suite. All but the recorded exception below now import this (PL-115
+ * converted the suite-local-handle walls).
  *
  * IMPORT THIS BEFORE the component under test: `jest.mock` hoists above the
  * imports of the module it appears in, not across modules. Pinned by
@@ -32,10 +32,7 @@
  * of the other seven. A spare member on a double costs nothing; a missing one
  * crashes.
  *
- * WHO DOES NOT USE THIS, and why — 23 files keep their own wall:
- *   - 21 whose wall delegates to suite-local handles they assert on. Converting
- *     them means renaming those handles across the suite and its consumers, and
- *     is worth doing separately from this change.
+ * WHO DOES NOT USE THIS, and why:
  *   - `ProjectDashboardScreen.testUtils` and its consumers: this double's
  *     `ready` RESOLVES, where that suite's wall omits `ready` entirely, so
  *     adopting it settles a promise outside `act()` and trips the console gate.

@@ -2,6 +2,7 @@
  * AdobeProjectPicker — renaming a project from its row: the pencil opens the title
  * for editing, Enter asks the extension to rename it, a refusal stays inline.
  */
+import { mockRequest } from '../../../../helpers/webviewClientMock';
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import React from 'react';
 import { Provider, defaultTheme } from '@adobe/react-spectrum';
@@ -9,15 +10,6 @@ import { AdobeProjectPicker } from '@/features/authentication/ui/components/Adob
 import { WizardState } from '@/types/webview';
 import '@testing-library/jest-dom';
 import { mockProjects, baseState, createMockSelectionStep } from './AdobeProjectPicker.testUtils';
-
-const mockRequest = jest.fn();
-jest.mock('@/core/ui/utils/WebviewClient', () => ({
-    webviewClient: {
-        postMessage: jest.fn(),
-        request: (...args: unknown[]) => mockRequest(...args),
-        onMessage: jest.fn(() => jest.fn()),
-    },
-}));
 
 jest.mock('@/core/ui/hooks/useSelectionStep', () => ({
     useSelectionStep: jest.fn(),

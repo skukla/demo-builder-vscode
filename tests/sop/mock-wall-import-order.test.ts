@@ -25,11 +25,45 @@ import { workingTreeFiles } from './architectureScan';
 
 const ROOT = join(__dirname, '../..');
 
-/** Files under tests/ that install a module wall at the top level. */
+/**
+ * A relative import, named or bare: `import { x } from './wall';` and `import './wall';`.
+ * The bare form is how a suite pulls in a wall it needs only for its side effect, and the
+ * first version of this pattern required `from`, so 18 suites that imported the shared
+ * WebviewClient double that way were invisible to the check (PL-115 review, 2026-11-23).
+ */
+const RELATIVE_IMPORT = /^import (?:[^']*from )?'(\.[^']+)';/;
+
+const baseName = (f: string): string => f.split('/').pop()!.replace(/\.tsx?$/, '');
+
+/**
+ * Files under tests/ that install a module wall: at the top level, or by importing one.
+ *
+ * A `.testUtils` file that imports the shared double and holds no `jest.mock` of its own is
+ * still a wall to the suites that import it: the mock registers when its import runs. So the
+ * set grows until no other helper imports a member of it.
+ */
 function wallModules(): string[] {
-    return workingTreeFiles('tests/**/*.ts', 'tests/**/*.tsx')
-        .filter((f) => !/\.test\.tsx?$/.test(f))
-        .filter((f) => /^jest\.mock\(/m.test(readFileSync(join(ROOT, f), 'utf8')));
+    const helpers = workingTreeFiles('tests/**/*.ts', 'tests/**/*.tsx').filter((f) => !/\.test\.tsx?$/.test(f));
+    const sources = new Map(helpers.map((f) => [f, readFileSync(join(ROOT, f), 'utf8')]));
+    const walls = new Set(helpers.filter((f) => /^jest\.mock\(/m.test(sources.get(f) as string)));
+    const names = (): Set<string> => new Set([...walls].map(baseName));
+    let grew = true;
+    while (grew) {
+        grew = false;
+        const known = names();
+        for (const f of helpers) {
+            if (walls.has(f)) continue;
+            const imports = (sources.get(f) as string)
+                .split('\n')
+                .map((l) => l.match(RELATIVE_IMPORT)?.[1].split('/').pop())
+                .filter((n): n is string => Boolean(n));
+            if (imports.some((n) => known.has(n))) {
+                walls.add(f);
+                grew = true;
+            }
+        }
+    }
+    return [...walls];
 }
 
 /**
@@ -49,7 +83,7 @@ function misorderedSuites(walls: Set<string>): string[] {
         // while the one that mattered sat below the subject.
         const wallLines = lines
             .map((l, i) => {
-                const m = l.match(/^import [^']*from '(\.[^']+)';/);
+                const m = l.match(RELATIVE_IMPORT);
                 const name = m?.[1].split('/').pop();
                 return name && walls.has(name) ? i : -1;
             })
@@ -104,12 +138,21 @@ const LEDGERED = [
 ];
 
 describe('a shared mock wall is imported before the subject', () => {
-    const walls = new Set(wallModules().map((f) => f.split('/').pop()!.replace(/\.tsx?$/, '')));
+    const walls = new Set(wallModules().map(baseName));
 
     it('CONTROL: the detector can see the wall modules this repo has', () => {
         // If this is 0 the detector is broken and the assertion below is vacuous.
         expect(walls.size).toBeGreaterThan(5);
         expect(walls.has('aiBundleFsMock')).toBe(true);
+        // The shared WebviewClient double, and a helper that is a wall only by importing it.
+        expect(walls.has('webviewClientMock')).toBe(true);
+        expect(walls.has('PrerequisitesStep.testUtils')).toBe(true);
+    });
+
+    it('CONTROL: a bare side-effect import of a wall is read as a wall import', () => {
+        expect("import '../../../helpers/webviewClientMock';".match(RELATIVE_IMPORT)?.[1]).toBe(
+            '../../../helpers/webviewClientMock',
+        );
     });
 
     it('CONTROL: a suite with its wall import moved below the subject is caught', () => {

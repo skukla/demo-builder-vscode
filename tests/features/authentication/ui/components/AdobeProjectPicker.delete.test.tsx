@@ -18,6 +18,7 @@
  * Split from AdobeProjectPicker.test.tsx (471 lines) to keep both files
  * comfortably under the test-file size cap; shares its testUtils.
  */
+import { mockRequest, mockOnMessage } from '../../../../helpers/webviewClientMock';
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import React from 'react';
 import { Provider, defaultTheme } from '@adobe/react-spectrum';
@@ -29,19 +30,6 @@ import {
     baseState,
     createMockSelectionStep,
 } from './AdobeProjectPicker.testUtils';
-
-// Mock WebviewClient (postMessage for the hook contract, request for delete,
-// onMessage for the extension's project-delete-started push)
-const mockPostMessage = jest.fn();
-const mockRequest = jest.fn();
-const mockOnMessage = jest.fn();
-jest.mock('@/core/ui/utils/WebviewClient', () => ({
-    webviewClient: {
-        postMessage: (...args: unknown[]) => mockPostMessage(...args),
-        request: (...args: unknown[]) => mockRequest(...args),
-        onMessage: (...args: unknown[]) => mockOnMessage(...args),
-    },
-}));
 
 // Mock useSelectionStep hook (list data supplied per-test)
 jest.mock('@/core/ui/hooks/useSelectionStep', () => ({

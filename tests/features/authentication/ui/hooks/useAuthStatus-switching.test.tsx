@@ -8,6 +8,7 @@
  * see them is through the next call.
  */
 
+import '../../../../helpers/webviewClientMock';
 import {
     mockPostMessage,
     mockOnMessage,
@@ -21,24 +22,6 @@ import {
     reAuthDifferentOrgData,
     resetMocks,
 } from './useAuthStatus.testUtils';
-
-// Mock WebviewClient - must be in test file for proper hoisting
-jest.mock('@/core/ui/utils/WebviewClient', () => ({
-    webviewClient: {
-        postMessage: (...args: any[]) => {
-            const { mockPostMessage } = require('./useAuthStatus.testUtils');
-            return mockPostMessage(...args);
-        },
-        onMessage: (...args: any[]) => {
-            const { mockOnMessage } = require('./useAuthStatus.testUtils');
-            return mockOnMessage(...args);
-        },
-        requestAuth: (...args: any[]) => {
-            const { mockRequestAuth } = require('./useAuthStatus.testUtils');
-            return mockRequestAuth(...args);
-        },
-    },
-}));
 
 import { renderHook, act } from '@testing-library/react';
 import { useAuthStatus } from '@/features/authentication/ui/hooks/useAuthStatus';
