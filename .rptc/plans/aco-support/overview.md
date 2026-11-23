@@ -7,6 +7,79 @@ the unreachable code this item exists to remove.
 Evidence: `.rptc/research/aco-support/research.md` (Adobe's ACO docs and the three local ACO
 repos, each claim labelled), and a re-check of the item against the code on 2026-10-04.
 
+## The three setups (2026-11-23) — read this first
+
+This section supersedes the rest of the plan where they disagree. The owner asked for the
+connectors and the Data Installer service to be re-researched; the earlier plan assumed every ACO
+project loads ACO datapacks straight into ACO, and that is true of only one setup.
+
+### What is true (sources: Experience League, read 2026-11-23)
+
+**ACCS with Merchandising Services.** `experienceleague.adobe.com/en/docs/commerce/cloud-service/merchandising-services`
+(updated 2026-11-11): on an ACCS instance provisioned with the Composable Catalog Data Model
+(CCDM), product and price data "synchronize one way to CCDM through a native ... integration", with
+no connector to install. It "does not require a separate Adobe Commerce Optimizer purchase,
+entitlement, or tenant", and the page says: "Do not create a second product catalog." Catalog
+sources and price books are generated from store views, websites and customer groups ("They are
+not manually created"). B2C catalog views and policies are made by hand in Commerce Admin
+(Catalog > Catalog Views, Catalog > Policies); for B2B they are generated from shared catalogs.
+New organizations get it by default; an existing organization can switch on "Enable CCDM" only
+when creating a new instance, it cannot be switched off, and existing instances are not migrated.
+
+**PaaS with the ACO connector.** `experienceleague.adobe.com/en/docs/commerce/aco-optimizer-connector/`:
+package `adobe-commerce/commerce-data-export-aco-adapter`, Commerce 2.4.7+, generally available.
+One way, Commerce to ACO: products, categories, attributes, prices and price books, by a cron job
+every minute. It makes a price book per website and per customer group and a catalog source per
+store view. It does not make catalog views or policies ("Create catalog views and policies in the
+Commerce Optimizer UI"); its B2B add-on does, and is still marked private beta. Rows written to ACO
+directly "can be overwritten during a later sync"; the docs suggest product layers for outside
+changes.
+
+**The Data Installer service** (its source as of 2026-10-01, `config/data_processors_aco_import.json`):
+the same seven ACO data types as our engine, sent straight to ACO's ingestion API in the same
+order; never to Commerce. A mixed pack's Commerce rows are skipped. Removal sends ACO's deletes for
+the pack's current rows.
+
+**Our own probe** (read-only, the scratch ACCS store, 2026-11-23): the store's GraphQL address
+takes ACO's request headers (`AC-View-ID`, then it asks for `AC-Scope-Locale`), and the ACO admin
+GraphQL path exists on the same tenant. So on ACCS the ACO instance is the ACCS tenant.
+
+### What follows
+
+| Setup | Datapack | ACO writes Demo Builder makes |
+|---|---|---|
+| ACCS with CCDM | A Commerce datapack, through the engine as on any ACCS project | Catalog views and policies (or the SC makes them in Commerce Admin) |
+| PaaS with the connector | A Commerce datapack | Catalog views, policies, product layers |
+| ACO with no sync from Commerce | An ACO datapack, straight to ACO (built on the branch) | Everything in the pack |
+
+Inference, not tested: our add-on keeps carts and orders in Commerce, so in the third setup a
+product loaded only into ACO shows on the storefront but cannot be added to a cart unless Commerce
+has the same SKU.
+
+### Build order (replaces "Build order once P1–P4 are answered" for the data and config steps)
+
+1. **Know the setup.** Decide from the project which of the three it is. PaaS: the connector is
+   installed AND configured. ACCS: CCDM or not. How to tell CCDM from outside is open (below).
+2. **Narrow the refusal.** With a sync on, refuse ACO catalog rows (products, categories,
+   attributes, prices, price books) and allow catalog views, policies and product layers. Reword
+   the message: the docs support "overwritten by the next sync", not "left behind".
+3. **Commerce datapacks for the synced setups.** No ACO path: develop's engine, replace, save and
+   update features as they are.
+4. **The ACO instance on ACCS** is filled from the ACCS endpoint's tenant, not typed or picked.
+5. **The wizard gap** (owner, 2026-11-01): the instance and catalog view in the wizard; on CCDM the
+   view is made in Commerce Admin, elsewhere through the admin API (`createCatalogView`).
+6. **The third setup:** owner's decision. Recommended: the datapack stays a Commerce datapack in
+   all three setups, and in the third Demo Builder sends its ACO rows itself (the Commerce-instance
+   export already builds them), so the storefront and the cart agree.
+7. **Live checks** on the first CCDM instance, below.
+
+### Open, needs a live check
+
+- Whether the sync (CCDM or the connector) deletes or overwrites ACO rows it never sent.
+- How to tell an ACCS instance has CCDM from outside: ACO's request headers are accepted even on
+  an instance made before CCDM shipped, so they do not tell.
+- Whether ACO's admin GraphQL accepts our credential on a CCDM instance (views and policies).
+
 ## Staleness check — the item is still accurate
 
 No commit since the item was filed (2026-09-17) changed ACO code in `src/`. Every claim held, and

@@ -125,6 +125,39 @@ Three slices run in parallel: A `aco/aco-scrape-to-pack` (website → pack), B
 `aco/aco-loader-and-config` (ACO client, loading, Console credential), C (wizard, Configure,
 storefront config).
 
+## Three ACO setups, re-researched 2026-11-23
+
+The owner said our reading of the connectors was wrong, and it was. The catalog reaches ACO in
+three different ways, and only one of them takes an ACO datapack. Full plan:
+`.rptc/plans/aco-support/overview.md`, "The three setups (2026-11-23)".
+
+| Setup | How the catalog gets to ACO | What Demo Builder loads |
+|---|---|---|
+| ACCS with Merchandising Services (CCDM) | Built in: ACCS syncs products and prices one way. No connector and no separate ACO tenant | A normal Commerce datapack. ACO side: catalog views and policies only |
+| PaaS with the ACO connector | The connector sends products, categories, attributes, prices and price books one way, about a minute after each change | A normal Commerce datapack. ACO side: views, policies and product layers |
+| ACO with no sync from Commerce | Nothing; ACO has only what is written to it | An ACO datapack, straight to ACO (what the branch builds today) |
+
+What this changes on `loop/2026-10-31-aco-clear`:
+
+1. **The connector check misses ACCS.** It reads the PaaS module's GraphQL field, which says the
+   module is installed, not that it is set up, and says nothing about ACCS with CCDM.
+2. **The refusal is too wide.** With the connector on, the branch refuses every ACO write. The
+   connector never makes catalog views or policies (outside its B2B add-on), so those must still be
+   writable. Adobe's docs say direct rows with the same key get overwritten by the next sync; they
+   say nothing about rows it never sent.
+3. **The datapack gaps found after the merge shrink.** In the first two setups the datapack is a
+   Commerce datapack, so develop's replace, save-changes and update features apply unchanged.
+4. **The ACO instance on ACCS is the ACCS tenant.** Probed read-only on our scratch store: its
+   GraphQL address takes ACO's request headers (`AC-View-ID`, then asks for `AC-Scope-Locale`), and
+   the ACO admin GraphQL path exists on the same tenant (403 without a token).
+5. **The Data Installer service matches our engine.** Its ACO data types are ours, and an ACO pack
+   goes straight to ACO. One difference: it skips the Commerce half of a mixed pack silently; we
+   refuse the pack, which is plainer. (Read from its 2026-10-01 source; newer code not readable.)
+
+Open, settled on the first CCDM instance: whether the sync deletes or overwrites ACO rows it never
+sent, and how to tell a CCDM instance from outside (our probe shows ACO's request headers are
+accepted on an instance made before CCDM shipped, so headers alone do not tell).
+
 ## Open: a new project has to finish ACO in the wizard (owner, 2026-11-01)
 
 The wizard's Catalog step offers only the ACO tick box. The credential is made during creation, and the catalog view
