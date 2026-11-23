@@ -39,3 +39,7 @@ and `main`, demo-builder-vscode `loop/2026-09-30-erp-programme`, the integration
 
 `git log origin/<branch>` matches local; the deleted branches no longer list under
 `git branch -r`. Nothing else changes.
+
+## Shipped so far
+
+- 2026-11-23  Rechecked 2026-11-23: the four demo-builder-vscode docs commits are on develop, and origin/feature/erp-integration is gone. Left: delete two remote branches whose commits are on main (git cherry: commerce-erp-integration loop/2026-09-29-ab-26e-sync-validation, all six; demo-erp loop/erp-local-date, 7e119fe by patch and 8a96803 as 15136e2, same subject, rebased). Needs the owner's yes.

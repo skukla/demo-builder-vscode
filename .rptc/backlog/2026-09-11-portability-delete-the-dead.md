@@ -5,7 +5,7 @@ area: platform
 parent: PL-56
 needs: [PL-56d]
 value: low
-status: gated
+status: shipped
 ---
 
 # Portability: delete what is already dead
@@ -28,3 +28,4 @@ first and alone; nothing waits on it, and nothing here is soft-deprecated afterw
 - 2026-10-03  Reconciled 2026-10-03 (second pass): 6817f5486 deleted ImportResult and installedBlockLibraries; additionalConsoleApis stays while the version-1 reader still reads it, so the rest waits on PL-56d.
 - 2026-10-03  Remainder 2026-10-03, uncommitted on loop/2026-10-03-night2-a: the wizard's additionalConsoleApis fallback is deleted (integrationStateFromSettings reads componentApiPicks only; a v1 file's flat list is folded on read). additionalConsoleApis STAYS on SettingsFile, now documented as the read-only version-1 type, because the migration reads it to keep v1 picks. SETTINGS_FILE_VERSION, parseSettingsFile, isValidSettingsFile, isNewerVersion deleted.
 - 2026-10-03  docs(backlog): PL-56b cites a deleted type by name, not a dead line (`e5f0bd434`)
+- 2026-11-23  Rechecked 2026-11-23: done. ImportResult and installedBlockLibraries were deleted in 6817f5486. SettingsFile.additionalConsoleApis is NOT dead: removing it fails tsc at projectFileReader.ts:182, where a version-1 file's flat list is folded into componentApiPicks, and old export files keep working only through that read (property 3). Nothing dead is left.

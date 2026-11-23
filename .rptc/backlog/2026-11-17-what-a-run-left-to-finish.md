@@ -115,3 +115,7 @@ which belong to an integration's setup. Owner-approved words:
 | Project dashboard | "2 steps remaining" with **Finish Setup**, and the amber dot on the tile that fixes a step |
 
 This replaces the first revision's "Demo Setup: 0 of 2 done" and "Open Demo Setup".
+
+## Shipped so far
+
+- 2026-11-23  Rechecked 2026-11-23: not built. No commit names it, and beta.153 shipped without it. Still open, as its own item.
