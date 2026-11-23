@@ -24,8 +24,8 @@ describe('authenticationHandlers - handleAuthenticate - New Authentication', () 
 		it('should authenticate successfully when not authenticated (normal flow)', async () => {
 			(mockContext.authManager!.isAuthenticated as jest.Mock).mockResolvedValue(false);
 			(mockContext.authManager!.login as jest.Mock).mockResolvedValue(true);
-			(entityServicesOf(mockContext.authManager!).resolver.getCurrentOrganization as jest.Mock).mockResolvedValue(mockOrg);
-			(entityServicesOf(mockContext.authManager!).resolver.getCurrentProject as jest.Mock).mockResolvedValue(mockProject);
+			(entityServicesOf(mockContext.authManager).resolver.getCurrentOrganization as jest.Mock).mockResolvedValue(mockOrg);
+			(entityServicesOf(mockContext.authManager).resolver.getCurrentProject as jest.Mock).mockResolvedValue(mockProject);
 			(mockContext.authManager!.testDeveloperPermissions as jest.Mock).mockResolvedValue({
 				hasPermissions: true,
 			});
@@ -41,8 +41,8 @@ describe('authenticationHandlers - handleAuthenticate - New Authentication', () 
 		it('should send "opening browser" message before login', async () => {
 			(mockContext.authManager!.isAuthenticated as jest.Mock).mockResolvedValue(false);
 			(mockContext.authManager!.login as jest.Mock).mockResolvedValue(true);
-			(entityServicesOf(mockContext.authManager!).resolver.getCurrentOrganization as jest.Mock).mockResolvedValue(mockOrg);
-			(entityServicesOf(mockContext.authManager!).resolver.getCurrentProject as jest.Mock).mockResolvedValue(mockProject);
+			(entityServicesOf(mockContext.authManager).resolver.getCurrentOrganization as jest.Mock).mockResolvedValue(mockOrg);
+			(entityServicesOf(mockContext.authManager).resolver.getCurrentProject as jest.Mock).mockResolvedValue(mockProject);
 			(mockContext.authManager!.testDeveloperPermissions as jest.Mock).mockResolvedValue({
 				hasPermissions: true,
 			});

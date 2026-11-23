@@ -89,9 +89,9 @@ describe('ComponentRegistryManager - Mesh Entries', () => {
 
     describe('no legacy references', () => {
         it('should have no references to old "commerce-mesh" in frontend dependencies', () => {
-            const frontends = Object.values(componentsJson.frontends || {}) as Array<{
+            const frontends = Object.values<{
                 dependencies?: { required?: string[]; optional?: string[] };
-            }>;
+            }>(componentsJson.frontends || {});
 
             for (const frontend of frontends) {
                 const allDeps = [

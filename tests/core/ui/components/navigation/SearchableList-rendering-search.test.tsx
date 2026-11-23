@@ -96,7 +96,7 @@ describe('SearchableList - Rendering and Search', () => {
                 />
             );
 
-            const searchBox = screen.getByRole('searchbox') as HTMLInputElement;
+            const searchBox = screen.getByRole<HTMLInputElement>('searchbox');
             expect(searchBox.value).toBe('Project');
         });
     });

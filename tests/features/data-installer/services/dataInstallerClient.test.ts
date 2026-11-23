@@ -15,6 +15,7 @@
  * `dataInstallerTransport.test.ts` with the transport (2026-10-08).
  */
 
+import { toText } from '../../../helpers/toText';
 import * as path from 'path';
 
 import { DataInstallerClient } from '@/features/data-installer/services/dataInstallerClient';
@@ -137,7 +138,7 @@ describe('DataInstallerClient', () => {
             expect(url).toContain('/batch-get-data-items');
             expect(init.method).toBe('POST');
             expect(headerOf(init, 'Content-Type')).toBe('application/json');
-            expect(JSON.parse(String(init.body))).toMatchObject({
+            expect(JSON.parse(toText(init.body))).toMatchObject({
                 datapack_name: 'citisignal_new',
                 version: 'main',
                 data_types: ['categories'],
@@ -437,7 +438,7 @@ describe('DataInstallerClient', () => {
 
             await makeClient(f).batchGetDataItems({ name: 'x', version: 'main' }, ['categories']);
 
-            expect(JSON.parse(String(callArgs(f).init.body)).include_content).toBe(false);
+            expect(JSON.parse(toText(callArgs(f).init.body)).include_content).toBe(false);
         });
 
         it('sends include_content true when the caller asks for payloads', async () => {
@@ -449,7 +450,7 @@ describe('DataInstallerClient', () => {
                 true,
             );
 
-            expect(JSON.parse(String(callArgs(f).init.body)).include_content).toBe(true);
+            expect(JSON.parse(toText(callArgs(f).init.body)).include_content).toBe(true);
         });
     });
 

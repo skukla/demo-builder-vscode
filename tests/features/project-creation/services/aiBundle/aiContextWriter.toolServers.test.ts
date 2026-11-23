@@ -32,8 +32,8 @@ import {
 // ─── Helpers (the parent suite's, copied so each spec stands alone) ──────────
 
 describe('Your MCP Servers — the agent is told what it has', () => {
-    it('names every server an EDS project actually gets', async () => {
-        const md = await generateAgentsMd(makeEdsProject(), STACKS);
+    it('names every server an EDS project actually gets', () => {
+        const md = generateAgentsMd(makeEdsProject(), STACKS);
 
         expect(md).toContain('## Your MCP Servers');
         // The three the agent was never told about.
@@ -42,20 +42,20 @@ describe('Your MCP Servers — the agent is told what it has', () => {
         expect(md).toContain('commerce-extensibility');
     });
 
-    it("carries dropins' projectDir trap, which an agent gets wrong by default", async () => {
+    it("carries dropins' projectDir trap, which an agent gets wrong by default", () => {
         // `ai-defaults.json` says it plainly: "Project-touching tools take a
         // required projectDir argument — pass the EDS storefront component path,
         // not the project root." Naming the server without that just moves the
         // failure one step later.
-        const md = await generateAgentsMd(makeEdsProject(), STACKS);
+        const md = generateAgentsMd(makeEdsProject(), STACKS);
         expect(md).toContain('projectDir');
     });
 
-    it('does NOT name servers a headless project never receives', async () => {
+    it('does NOT name servers a headless project never receives', () => {
         // `playwright` and `dropins` are gated on `eds-storefront`. Telling a
         // headless project about tools it does not have is worse than silence —
         // it sends the agent looking for something that is not there.
-        const md = await generateAgentsMd(makeHeadlessProject(), STACKS);
+        const md = generateAgentsMd(makeHeadlessProject(), STACKS);
         expect(md).not.toContain('mcp__dropins__');
         expect(md).not.toContain('@dropins/mcp');
     });

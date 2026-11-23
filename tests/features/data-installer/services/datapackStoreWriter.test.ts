@@ -5,6 +5,7 @@
  * and the body actually sent — a mocked store answers the same whatever it is handed.
  */
 
+import { toText } from '../../../helpers/toText';
 import { DatapackStoreWriter } from '@/features/data-installer/services/datapackStoreWriter';
 import { DataInstallerApiError } from '@/features/data-installer/services/dataInstallerErrors';
 import { cachedPackRead, forgetPackReads } from '@/features/data-installer/services/packReadCache';
@@ -34,7 +35,7 @@ function sent(
     call = 0
 ): { url: string; init: RequestInit; body: Record<string, unknown> } {
     const [url, init] = fetchImpl.mock.calls[call] as [string, RequestInit];
-    return { url, init, body: JSON.parse(String(init.body)) as Record<string, unknown> };
+    return { url, init, body: JSON.parse(toText(init.body)) as Record<string, unknown> };
 }
 
 describe('createDatapack', () => {
@@ -203,7 +204,7 @@ describe('updateDisplayName', () => {
         const [url, init] = fetchImpl.mock.calls[0] as [string, RequestInit];
         expect(url).toBe(`${BASE}/update-datapack-metadata`);
         expect(init.method).toBe('PUT');
-        expect(JSON.parse(String(init.body))).toEqual({ datapack_name: 'acme-1a2b3c', version: '20261029-183005', display_name: 'Acme Q4' });
+        expect(JSON.parse(toText(init.body))).toEqual({ datapack_name: 'acme-1a2b3c', version: '20261029-183005', display_name: 'Acme Q4' });
     });
 
     it('answers not-found on the 404 the library gives for a pack that is not the caller\'s', async () => {
@@ -227,7 +228,7 @@ describe('updateShared', () => {
         const [url, init] = fetchImpl.mock.calls[0] as [string, RequestInit];
         expect(url).toBe(`${BASE}/update-datapack-metadata`);
         expect(init.method).toBe('PUT');
-        expect(JSON.parse(String(init.body))).toEqual({ datapack_name: 'acme-1a2b3c', version: '20261029-183005', shared: true });
+        expect(JSON.parse(toText(init.body))).toEqual({ datapack_name: 'acme-1a2b3c', version: '20261029-183005', shared: true });
     });
 
     it("answers not-found on the 404 for a pack that is not the caller's", async () => {
@@ -247,7 +248,7 @@ describe('updateTeam', () => {
         const [url, init] = fetchImpl.mock.calls[0] as [string, RequestInit];
         expect(url).toBe(`${BASE}/update-datapack-metadata`);
         expect(init.method).toBe('PUT');
-        expect(JSON.parse(String(init.body))).toEqual({ datapack_name: 'frescopa', version: '1.0.0', team: true });
+        expect(JSON.parse(toText(init.body))).toEqual({ datapack_name: 'frescopa', version: '1.0.0', team: true });
     });
 
     it('sends false to take the mark off', async () => {
@@ -256,7 +257,7 @@ describe('updateTeam', () => {
         await writer(fetchImpl).updateTeam({ name: 'frescopa', version: '1.0.0' }, false);
 
         const [, init] = fetchImpl.mock.calls[0] as [string, RequestInit];
-        expect(JSON.parse(String(init.body))).toEqual({ datapack_name: 'frescopa', version: '1.0.0', team: false });
+        expect(JSON.parse(toText(init.body))).toEqual({ datapack_name: 'frescopa', version: '1.0.0', team: false });
     });
 
     it("answers not-found on the 404 for a pack that is not the caller's", async () => {

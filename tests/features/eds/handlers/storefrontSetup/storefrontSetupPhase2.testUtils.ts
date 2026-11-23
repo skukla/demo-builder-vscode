@@ -33,26 +33,24 @@ import { executePhaseHelixConfig } from '@/features/eds/handlers/storefrontSetup
 export { executePhaseHelixConfig };
 
 /** Handles onto the walls installed by the shared mock file. */
-export const blockLibraryLoader = jest.requireMock(
-    '@/features/components/services/blockLibraryLoader',
-) as {
+export const blockLibraryLoader = jest.requireMock<{
     getBlockLibrarySource: jest.Mock;
     getBlockLibraryName: jest.Mock;
     isBlockLibraryAvailableForPackage: jest.Mock;
-};
-export const blockCollectionHelpers = jest.requireMock(
-    '@/features/eds/services/blockCollectionHelpers',
-) as { installBlockCollections: jest.Mock };
-export const fstabGenerator = jest.requireMock('@/features/eds/services/fstabGenerator') as {
+}>('@/features/components/services/blockLibraryLoader');
+export const blockCollectionHelpers = jest.requireMock<{
+    installBlockCollections: jest.Mock;
+}>('@/features/eds/services/blockCollectionHelpers');
+export const fstabGenerator = jest.requireMock<{
     generateFstabContent: jest.Mock;
-};
-export const inspectorHelpers = jest.requireMock('@/features/eds/services/inspectorHelpers') as {
+}>('@/features/eds/services/fstabGenerator');
+export const inspectorHelpers = jest.requireMock<{
     generateInspectorTreeEntries: jest.Mock;
     installInspectorTagging: jest.Mock;
-};
-export const quickEditPublisher = jest.requireMock(
-    '@/features/eds/services/quickEditPublisher',
-) as { installQuickEdit: jest.Mock };
+}>('@/features/eds/services/inspectorHelpers');
+export const quickEditPublisher = jest.requireMock<{
+    installQuickEdit: jest.Mock;
+}>('@/features/eds/services/quickEditPublisher');
 
 export const EDS_CONFIG: StorefrontSetupStartPayload['edsConfig'] = {
     repoName: 'shop',

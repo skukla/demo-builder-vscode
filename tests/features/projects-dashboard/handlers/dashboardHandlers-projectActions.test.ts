@@ -44,7 +44,7 @@ function malformedRename(payload: object): { projectPath: string; newName: strin
 function edsMetadataOf(project: Project): Record<string, unknown> {
     const metadata = project.componentInstances?.['eds-storefront']?.metadata;
     if (!metadata) throw new Error('fixture is missing its eds-storefront metadata');
-    return metadata as Record<string, unknown>;
+    return metadata;
 }
 
 /** An EDS project whose live/DA.live URLs resolve from real stored metadata. */

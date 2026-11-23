@@ -1,4 +1,5 @@
-// Ad-hoc, TYPE-AWARE lint config for cast work. Not part of `npm run lint`.
+// TYPE-AWARE lint config for the test tree. Not part of `npm run lint`; the periodic
+// sweep runs it as `npm run lint:types`, which holds four rules at zero (PL-113).
 //
 // The repo's main config is deliberately `tseslint.configs.recommended` — "Basic
 // TS rules, not type-checked" — because type-aware linting needs a full program
@@ -16,6 +17,11 @@
 import tseslint from 'typescript-eslint';
 
 export default tseslint.config({
+    // Never lint (or `--fix`) these: the fixtures are verbatim upstream copies the main
+    // config ignores too, and the plain `.js` files carry disable comments for rules this
+    // config does not load, which `--fix` would delete as unused (it did, 2026-11-23).
+    ignores: ['tests/fixtures/**', 'tests/**/*.js'],
+}, {
     // `.eslint-probe/` is where tests/sop/eslint-type-aware.test.ts plants the file
     // that proves this config still works. It sits outside `tests/` so the suites
     // that walk that tree cannot meet it mid-run (PL-44) — and it has to be named
@@ -46,9 +52,14 @@ export default tseslint.config({
         // ALREADY has. Auto-fixable, and decided by the type checker rather than
         // by my reading of the site.
         '@typescript-eslint/no-unnecessary-type-assertion': 'error',
+        // The other three `npm run lint:types` (scripts/check-type-aware-lint.mjs) holds
+        // the test tree clean of, named so the check does not depend on a preset (PL-113).
+        '@typescript-eslint/no-base-to-string': 'error',
+        '@typescript-eslint/only-throw-error': 'error',
+        '@typescript-eslint/await-thenable': 'error',
 
-        // Everything else off — this config exists to answer one question, and a
-        // wall of unrelated findings is how a useful signal gets ignored.
+        // Everything else off: this config answers four questions, and a wall of
+        // unrelated findings is how a useful signal gets ignored.
         '@typescript-eslint/no-unsafe-assignment': 'off',
         '@typescript-eslint/no-unsafe-member-access': 'off',
         '@typescript-eslint/no-unsafe-call': 'off',
@@ -68,4 +79,16 @@ export default tseslint.config({
         '@typescript-eslint/no-require-imports': 'off',
         '@typescript-eslint/no-unused-vars': 'off',
     },
+}, {
+    // These suites throw a non-Error ON PURPOSE: each tests how the code handles a
+    // thrown string, object or null (the "[object Object]" and "null" cause messages,
+    // "a non-Error .env failure"). Throwing an Error would stop testing that case.
+    files: [
+        'tests/core/shell/processCleanup-decisions.test.ts',
+        'tests/core/ui/hooks/useAsyncOperation.test.tsx',
+        'tests/features/ai/server/deleteProjectTool.test.ts',
+        'tests/features/projects-dashboard/services/projectRenameService.test.ts',
+        'tests/core/state/projectConfigWriter-saveGuard.test.ts',
+    ],
+    rules: { '@typescript-eslint/only-throw-error': 'off' },
 });

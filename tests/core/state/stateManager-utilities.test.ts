@@ -14,7 +14,6 @@ import {
 import * as vscode from 'vscode';
 import * as fs from 'fs/promises';
 import * as path from 'path';
-import type { Project } from '@/types/base';
 
 describe('StateManager - Utilities', () => {
     let testMocks: TestMocks;
@@ -353,8 +352,8 @@ describe('StateManager - Utilities', () => {
             const project2 = createStateManagerProject('project2');
 
             await Promise.all([
-                stateManager.saveProject(project1 as Project),
-                stateManager.saveProject(project2 as Project),
+                stateManager.saveProject(project1),
+                stateManager.saveProject(project2),
             ]);
 
             const current = await stateManager.getCurrentProject();
@@ -372,7 +371,7 @@ describe('StateManager - Utilities', () => {
             const project = createStateManagerProject();
 
             // FIXED: Errors should now be propagated (not swallowed)
-            await expect(stateManager.saveProject(project as Project)).rejects.toThrow('Disk full');
+            await expect(stateManager.saveProject(project)).rejects.toThrow('Disk full');
         });
 
         it('should handle invalid project data gracefully', async () => {

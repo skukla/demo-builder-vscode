@@ -104,7 +104,7 @@ describe("the project's scope as a fallback target", () => {
 
         await importHandlers['start-datapack-import'](context, PAYLOAD);
 
-        expect(sentRequest(client.startImport as jest.Mock).target).toEqual({
+        expect(sentRequest(client.startImport).target).toEqual({
             websiteCode: 'project_site',
             storeCode: 'project_view',
         });
@@ -120,7 +120,7 @@ describe("the project's scope as a fallback target", () => {
             storeCode: 'chosen_view',
         });
 
-        expect(sentRequest(client.startImport as jest.Mock).target).toEqual({
+        expect(sentRequest(client.startImport).target).toEqual({
             websiteCode: 'chosen_site',
             storeCode: 'chosen_view',
         });

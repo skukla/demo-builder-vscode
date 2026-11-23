@@ -7,6 +7,7 @@
  * write, asserted by route, pack and version. Files are real, in a temp project.
  */
 
+import { toText } from '../../../helpers/toText';
 import * as fs from 'fs';
 import {
     contextFor,
@@ -42,7 +43,7 @@ const fileWith = (pack: DatapackFile): string => zipFile(dir, pack);
 /** Each write, in order: route, then the pack and version it went to, and the name it shows. */
 function writes(): Array<{ route: string; name: string; version: string; displayName?: string }> {
     return fetchMock.mock.calls.map(([url, init]) => {
-        const body = JSON.parse(String((init as RequestInit).body)) as {
+        const body = JSON.parse(toText((init as RequestInit).body)) as {
             datapack_name: string;
             version: string;
             display_name?: string;
@@ -125,7 +126,7 @@ describe('load-datapack-zip with saveAs (Keep Both)', () => {
         });
         // Named for the new datapack, as a save names the layer it writes (`layerWords`).
         expect(sent[2].displayName).toBe('My Tailspin 2 settings');
-        const layerBody = JSON.parse(String((fetchMock.mock.calls[2] as [string, RequestInit])[1].body)) as { description?: string };
+        const layerBody = JSON.parse(toText((fetchMock.mock.calls[2] as [string, RequestInit])[1].body)) as { description?: string };
         expect(layerBody.description).toBe('Store configuration for My Tailspin 2, applied after its data when Demo Builder installs it.');
     });
 

@@ -18,7 +18,7 @@ import { renderShare, renderShareFile, renderShareLink, resetShareMocks } from '
 
 /** The hidden steps the window measured as it opened. */
 function reserved(): HTMLElement[] {
-    return Array.from(document.querySelectorAll('.modal-steps-ghost')) as HTMLElement[];
+    return Array.from(document.querySelectorAll('.modal-steps-ghost'));
 }
 
 beforeEach(resetShareMocks);

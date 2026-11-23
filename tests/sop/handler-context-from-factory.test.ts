@@ -84,8 +84,8 @@ describe('SOP: HandlerContext comes from a factory', () => {
     it.each(PRODUCERS.map((f) => [path.basename(f), f]))(
         '%s builds its context through a factory',
         (base, file) => {
-            if (BUILDERS[base as string]) return;
-            const source = fs.readFileSync(file as string, 'utf-8');
+            if (BUILDERS[base]) return;
+            const source = fs.readFileSync(file, 'utf-8');
             expect(FACTORY_CALL.test(source)).toBe(true);
         },
     );

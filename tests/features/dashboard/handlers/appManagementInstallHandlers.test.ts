@@ -535,7 +535,7 @@ describe('handleReinstallAppBuilderComponent', () => {
 
     it('still refuses an integration that is not deployed', async () => {
         const project = kitProject();
-        project.appBuilderComponents!['kit-app']!.status = 'error';
+        project.appBuilderComponents!['kit-app'].status = 'error';
         const { mockContext } = setupMocks(project);
 
         const result = await handleReinstallAppBuilderComponent(mockContext, { id: 'kit-app' });

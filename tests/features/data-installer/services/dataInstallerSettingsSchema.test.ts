@@ -28,6 +28,7 @@
  * — they are develop's status quo, not this feature's to change.
  */
 
+import { toText } from '../../../helpers/toText';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -81,7 +82,7 @@ describe('Data Installer settings schema', () => {
      * the current value.
      */
     it('carries no credential if a default is ever set', () => {
-        const value = String(loadSettingSchema(SETTING)?.default ?? '');
+        const value = toText(loadSettingSchema(SETTING)?.default ?? '');
         if (!value) {
             // Passes vacuously on the empty default BY DESIGN — see above. There is
             // nothing to assert about a setting with no default, and saying

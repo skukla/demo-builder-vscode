@@ -16,6 +16,7 @@
  * the writer itself could bind it before the mock was registered.
  */
 
+import { toText } from '../../helpers/toText';
 import * as fs from 'fs/promises';
 import type { Project } from '@/types/base';
 import { createMockLogger } from '../../helpers/loggerFake';
@@ -53,9 +54,9 @@ export function createTestProject(overrides: Partial<Project> = {}): Project {
  */
 export function writtenManifest(): Record<string, unknown> {
     const call = mockFs.writeFile.mock.calls.find(([target]) =>
-        String(target).endsWith('.demo-builder.json.tmp'),
+        toText(target).endsWith('.demo-builder.json.tmp'),
     );
-    return JSON.parse(String(call?.[1]));
+    return JSON.parse(toText(call?.[1]));
 }
 
 /**

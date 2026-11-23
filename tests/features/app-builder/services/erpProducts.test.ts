@@ -5,6 +5,7 @@
  * 2026-10-09), and a 400 in its words when a status is not one it knows.
  */
 
+import { toText } from '../../../helpers/toText';
 import { discontinueErpProduct, listErpProducts, setErpProductStatus } from '@/features/app-builder/services/erpProducts';
 
 const AUTH = { accessToken: 'fake-test-pw-not-a-secret', imsOrgId: 'ABC@AdobeOrg' };
@@ -57,7 +58,7 @@ describe('setErpProductStatus', () => {
 
         const [, init] = fetchImpl.mock.calls[0] as [string, RequestInit];
         expect(init.method).toBe('PATCH');
-        expect(JSON.parse(String(init.body))).toStrictEqual({ salesStatus: 'sellable' });
+        expect(JSON.parse(toText(init.body))).toStrictEqual({ salesStatus: 'sellable' });
     });
 });
 
@@ -70,7 +71,7 @@ describe('discontinueErpProduct', () => {
         const [url, init] = fetchImpl.mock.calls[0] as [string, RequestInit];
         expect(url).toBe('https://ns.adobeioruntime.net/api/v1/web/demo-erp/products/A%20B');
         expect(init.method).toBe('PATCH');
-        expect(JSON.parse(String(init.body))).toStrictEqual({ salesStatus: 'discontinued' });
+        expect(JSON.parse(toText(init.body))).toStrictEqual({ salesStatus: 'discontinued' });
     });
 
     it('throws in the ERP\'s words when the status is not one it knows yet', async () => {

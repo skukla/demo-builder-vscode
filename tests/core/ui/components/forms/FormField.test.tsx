@@ -112,7 +112,7 @@ describe('FormField', () => {
                     onChange={handleChange}
                 />
             );
-            const input = screen.getByLabelText('Password') as HTMLInputElement;
+            const input = screen.getByLabelText<HTMLInputElement>('Password');
             expect(input.type).toBe('password');
         });
     });
@@ -306,7 +306,7 @@ describe('FormField', () => {
                     onChange={handleChange}
                 />
             );
-            const input = screen.getByLabelText('Test') as HTMLInputElement;
+            const input = screen.getByLabelText<HTMLInputElement>('Test');
             expect(input.value).toBe('');
         });
 

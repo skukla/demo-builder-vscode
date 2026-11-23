@@ -550,9 +550,9 @@ describe('ConfigureProjectWebviewCommand - save spine', () => {
         });
 
         it('refuses a non-EDS project', () => {
-            const typeGuards = jest.requireMock('@/types/typeGuards') as {
+            const typeGuards = jest.requireMock<{
                 isEdsProject: jest.Mock;
-            };
+            }>('@/types/typeGuards');
             typeGuards.isEdsProject.mockReturnValueOnce(false);
 
             expect(

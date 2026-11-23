@@ -115,7 +115,7 @@ describe('extractResetParams - daLiveSite repo-name fallback (caught live 2026-0
     // shipped.
     it('derives daLiveSite from the repo name when the manifest carries none', () => {
         const project = createProject('eds-paas');
-        const metadata = (project.componentInstances!['eds-storefront']! as { metadata: Record<string, unknown> })
+        const metadata = (project.componentInstances!['eds-storefront'] as { metadata: Record<string, unknown> })
             .metadata;
         delete metadata.daLiveSite;
 
@@ -144,7 +144,7 @@ describe('extractResetParams - daLiveSite repo-name fallback (caught live 2026-0
 const CONFIG_INVALID = 'CONFIG_INVALID';
 
 function metadataOf(project: Project): Record<string, unknown> {
-    return (project.componentInstances!['eds-storefront']! as { metadata: Record<string, unknown> })
+    return (project.componentInstances!['eds-storefront'] as { metadata: Record<string, unknown> })
         .metadata;
 }
 

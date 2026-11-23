@@ -122,7 +122,7 @@ describe('deployAppComponent — refresh-and-retry', () => {
         });
 
         expect(consent).toHaveBeenCalledTimes(1);
-        const commands = cm.execute.mock.calls.map((c) => c[0] as string);
+        const commands = cm.execute.mock.calls.map((c) => c[0]);
         expect(commands.filter((c) => c.startsWith('npm install -g @adobe/aio-cli'))).toHaveLength(
             1
         );
@@ -140,7 +140,7 @@ describe('deployAppComponent — refresh-and-retry', () => {
         expect(result.success).toBe(false);
         expect(result.error).toContain('Self-reference dependency');
         expect(result.error).toContain('refreshCli: true');
-        const commands = cm.execute.mock.calls.map((c) => c[0] as string);
+        const commands = cm.execute.mock.calls.map((c) => c[0]);
         expect(commands.some((c) => c.startsWith('npm install -g'))).toBe(false);
     });
 

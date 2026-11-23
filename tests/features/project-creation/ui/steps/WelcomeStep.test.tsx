@@ -71,7 +71,7 @@ describe('WelcomeStep', () => {
                 </Provider>
             );
 
-            const input = screen.getByLabelText(/name/i) as HTMLInputElement;
+            const input = screen.getByLabelText<HTMLInputElement>(/name/i);
             expect(input.value).toBe('my-demo-project');
 
             // setCanProceed should be called with true for valid name

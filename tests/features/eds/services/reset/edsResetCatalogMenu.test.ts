@@ -100,7 +100,7 @@ function params(p: Project): EdsResetParams {
 describe('takeOutCatalogMenu', () => {
     it('removes exactly what the record claims, shows it while clearing old content, and returns the site for the put-back', async () => {
         const p = project();
-        p.componentInstances![COMPONENT_IDS.EDS_STOREFRONT]!.metadata!.catalogMenu = {
+        p.componentInstances![COMPONENT_IDS.EDS_STOREFRONT].metadata!.catalogMenu = {
             pages: [{ path: '/signs', hash: 'stale-hash' }],
             navSwitch: false,
             categoryPaths: ['/apparel'],
@@ -159,7 +159,7 @@ describe('putBackCatalogMenu', () => {
 
     it("puts the take-out's sentence in front of the put-back's, so the result says both", async () => {
         const p = project();
-        p.componentInstances![COMPONENT_IDS.EDS_STOREFRONT]!.metadata!.catalogMenu = {
+        p.componentInstances![COMPONENT_IDS.EDS_STOREFRONT].metadata!.catalogMenu = {
             pages: [{ path: '/signs', hash: 'stale-hash' }],
             navSwitch: false,
         };

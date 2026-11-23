@@ -5,6 +5,7 @@
  * are on the calls that leave: which URL, which method, which body.
  */
 
+import { toText } from '../../../helpers/toText';
 import { ErpIntegrationClient } from '@/features/app-builder/services/erpIntegrationClient';
 import { mapAfterFill } from '@/features/project-creation/services/erpMappingAfterFill';
 import type { CommerceGet } from '@/types/commerceWire';
@@ -38,9 +39,9 @@ function answer(status: number, body: unknown): Response {
 function worldOf(world: World): { fetchImpl: typeof fetch; sent: Sent[] } {
     const sent: Sent[] = [];
     const fetchImpl = (async (input: RequestInfo | URL, init?: RequestInit) => {
-        const url = String(input);
+        const url = toText(input);
         const method = init?.method ?? 'GET';
-        sent.push({ url, method, ...(init?.body ? { body: JSON.parse(String(init.body)) } : {}) });
+        sent.push({ url, method, ...(init?.body ? { body: JSON.parse(toText(init.body)) } : {}) });
         if (url === `${SETTINGS_URL}/setup`) {
             return answer(world.setupStatus ?? 200, world.setup ?? {});
         }

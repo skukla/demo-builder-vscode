@@ -14,7 +14,7 @@ import { firstSuccess, withTimeout, tryWithTimeout, runInBatches } from '@/core/
 function rejectedWith(reason: unknown): Promise<never> {
     const rejected = Promise.reject(reason);
     rejected.catch(() => undefined);
-    return rejected as Promise<never>;
+    return rejected;
 }
 
 describe('promiseUtils', () => {

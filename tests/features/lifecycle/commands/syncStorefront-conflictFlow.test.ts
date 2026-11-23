@@ -68,9 +68,9 @@ function conflictOn(files: string[], extra: Parameters<typeof answerGit>[0] = {}
 }
 
 function pollingMock(): { pollUntilCondition: jest.Mock } {
-    const { PollingService } = jest.requireMock('@/core/shell/pollingService') as {
+    const { PollingService } = jest.requireMock<{
         PollingService: jest.Mock;
-    };
+    }>('@/core/shell/pollingService');
     return PollingService.mock.results[0].value;
 }
 
@@ -219,9 +219,9 @@ describe('the manual conflict flow', () => {
     it('a poll that times out aborts the rebase and says so, without pushing', async () => {
         const git = conflictOn(['blocks/hero/hero.js']);
         showWarningMessage.mockResolvedValue('Continue');
-        const { PollingService } = jest.requireMock('@/core/shell/pollingService') as {
+        const { PollingService } = jest.requireMock<{
             PollingService: jest.Mock;
-        };
+        }>('@/core/shell/pollingService');
         PollingService.mockImplementationOnce(() => ({
             pollUntilCondition: jest.fn(async () => {
                 throw new Error('timed out');
@@ -264,9 +264,9 @@ describe('the manual conflict flow', () => {
             'Sync canceled. Your local changes are intact.',
             'OK'
         );
-        const { PollingService } = jest.requireMock('@/core/shell/pollingService') as {
+        const { PollingService } = jest.requireMock<{
             PollingService: jest.Mock;
-        };
+        }>('@/core/shell/pollingService');
         expect(PollingService).not.toHaveBeenCalled();
         expect(syncAndPublishMock).toHaveBeenCalledTimes(1);
     });

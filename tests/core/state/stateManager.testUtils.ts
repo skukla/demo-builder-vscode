@@ -40,9 +40,9 @@ type MockLoggerShape = {
     debug: jest.Mock;
     trace: jest.Mock;
 };
-const loggingModule = jest.requireMock('@/core/logging/debugLogger') as {
-    __mockLoggerInstance: MockLoggerShape;
-};
+const loggingModule = jest.requireMock<{ __mockLoggerInstance: MockLoggerShape }>(
+    '@/core/logging/debugLogger',
+);
 export const mockLoggerInstance = loggingModule.__mockLoggerInstance;
 
 export const mockHomedir = '/mock/home';

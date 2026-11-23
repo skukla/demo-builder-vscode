@@ -9,6 +9,7 @@
  * `unknown` and stays silent — it can never false-alarm.
  */
 
+import { toText } from '../../../helpers/toText';
 import { detectB2bReadiness } from '@/features/eds/services/b2bReadinessDetection';
 
 describe('detectB2bReadiness', () => {
@@ -108,7 +109,7 @@ describe('detectB2bReadiness', () => {
         const [calledUrl, init] = fetchImpl.mock.calls[0];
         expect(calledUrl).toBe(endpoint);
         expect((init as RequestInit).method).toBe('POST');
-        expect(String((init as RequestInit).body)).toContain('is_requisition_list_active');
+        expect(toText((init as RequestInit).body)).toContain('is_requisition_list_active');
         // No Authorization header — storefront-scoped, anonymous query.
         const headers = (init as RequestInit).headers as Record<string, string>;
         expect(Object.keys(headers).map((k) => k.toLowerCase())).not.toContain('authorization');

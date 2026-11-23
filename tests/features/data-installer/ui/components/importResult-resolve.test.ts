@@ -33,7 +33,7 @@ describe('resolveResult — no action yet', () => {
         ['null', null],
         ['an action the switch does not name', 'rebuild' as LastAction],
     ])('shows nothing for %s, however much request state is lying around', (_label, action) => {
-        expect(resolveResult(action as LastAction | null, sources())).toBeNull();
+        expect(resolveResult(action, sources())).toBeNull();
     });
 });
 

@@ -7,6 +7,7 @@
  * manifests, and loading a project does NOT mutate the on-disk manifest.
  */
 
+import { toText } from '../../helpers/toText';
 import * as fs from 'fs/promises';
 import { ProjectConfigWriter } from '@/core/state/projectConfigWriter';
 import { resolveDesiredApis } from '@/core/state/componentApiPicks';
@@ -279,7 +280,7 @@ describe('ProjectFileLoader — persisted appBuilderComponents (ADR-011 D3 Step 
         await writer.saveProjectConfig(project, PROJECT_PATH);
 
         const manifestWrite = mockedFs.writeFile.mock.calls.find((call) =>
-            call[0].toString().endsWith('.tmp')
+            toText(call[0]).endsWith('.tmp')
         );
         expect(manifestWrite).toBeDefined();
 
@@ -323,7 +324,7 @@ describe('ProjectFileLoader — persisted appBuilderComponents (ADR-011 D3 Step 
         await writer.saveProjectConfig(project!, PROJECT_PATH);
 
         const manifestWrite = mockedFs.writeFile.mock.calls.find((call) =>
-            call[0].toString().endsWith('.tmp')
+            toText(call[0]).endsWith('.tmp')
         );
         expect(manifestWrite).toBeDefined();
         const written = JSON.parse(manifestWrite![1] as string);
@@ -380,7 +381,7 @@ describe('additionalConsoleApis — manifest persistence (§E)', () => {
         await writer.saveProjectConfig(project, PROJECT_PATH);
 
         const manifestWrite = mockedFs.writeFile.mock.calls.find((call) =>
-            call[0].toString().endsWith('.tmp')
+            toText(call[0]).endsWith('.tmp')
         );
         expect(manifestWrite).toBeDefined();
         return JSON.parse(manifestWrite![1] as string) as Record<string, unknown>;
@@ -547,7 +548,7 @@ describe('§E edit-mode round-trip — keyed instances → manifest → edit set
         await writer.saveProjectConfig(project, PROJECT_PATH);
 
         const manifestWrite = mockedFs.writeFile.mock.calls.find((call) =>
-            call[0].toString().endsWith('.tmp')
+            toText(call[0]).endsWith('.tmp')
         );
         mockedFs.readFile.mockResolvedValue(manifestWrite![1] as string);
         mockedFs.readdir.mockRejectedValue(new Error('no components dir'));

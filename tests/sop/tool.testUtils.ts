@@ -52,7 +52,7 @@ export function toolDeclarations(): ToolDeclaration[] {
             ...[...src.matchAll(/registerTool\(\s*'([a-z0-9_]+)'/g)],
             ...[...src.matchAll(/tool:\s*'([a-z0-9_]+)'/g)],
         ]
-            .map((m) => ({ name: m[1], at: m.index as number }))
+            .map((m) => ({ name: m[1], at: m.index }))
             .sort((a, b) => a.at - b.at);
 
         sites.forEach(({ name, at }, i) => {

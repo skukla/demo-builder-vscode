@@ -93,7 +93,7 @@ describe('ProjectsBatchModal: the run', () => {
             ['B', 'failed'],
             ['C', 'running'],
         ]);
-        const [a, b, c] = Array.from(document.querySelectorAll('.work-row')) as HTMLElement[];
+        const [a, b, c] = Array.from(document.querySelectorAll<HTMLElement>('.work-row'));
         expect(within(a).getByText('Finished')).toHaveClass('work-row-detail');
         // A failure's reason takes the working line's room, red (rule 15, step-07 follow-up).
         expect(within(b).getByText('The repository could not be deleted.')).toHaveClass('work-row-problem', 'text-negative');
@@ -106,7 +106,7 @@ describe('ProjectsBatchModal: the run', () => {
         await running();
         await push('projectsBatchRow', { path: '/p/a', state: 'done', message: 'Saved to My Luma.' });
 
-        const [a] = Array.from(document.querySelectorAll('.work-row')) as HTMLElement[];
+        const [a] = Array.from(document.querySelectorAll<HTMLElement>('.work-row'));
         expect(within(a).getByText('Saved to My Luma.')).toBeInTheDocument();
         expect(a.querySelector('.text-notice')).toBeNull();
         expect(rows()[0]).toEqual(['A', 'done']);

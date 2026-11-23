@@ -127,7 +127,7 @@ describe('Executor - Edit Mode Mesh Reuse', () => {
 
             // When: extracting mesh data for linkExistingMesh
             const meshData = {
-                endpoint: existingProject.appBuilderComponents!.mesh!.endpoint,
+                endpoint: existingProject.appBuilderComponents!.mesh.endpoint,
                 meshId:
                     existingProject.componentInstances?.['commerce-mesh']?.metadata?.meshId || '',
                 meshStatus: 'deployed' as const,
@@ -173,7 +173,7 @@ describe('Executor - Edit Mode Mesh Reuse', () => {
 
             // When: extracting mesh data
             const meshData = {
-                endpoint: existingProject.appBuilderComponents!.mesh!.endpoint,
+                endpoint: existingProject.appBuilderComponents!.mesh.endpoint,
                 meshId:
                     existingProject.componentInstances?.['commerce-mesh']?.metadata?.meshId || '',
                 meshStatus: 'deployed' as const,

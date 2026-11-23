@@ -9,6 +9,7 @@
 // The family helper owns the fs/promises mock and the writer import: a direct
 // import of the writer here could bind the real fs before the mock registers.
 import { ProjectConfigWriter, mockFs, mockLogger } from './projectConfigWriter.testUtils';
+import { toText } from '../../helpers/toText';
 import * as path from 'path';
 import type { Project } from '@/types/base';
 import { createMockProject } from '../../helpers/projectFake';
@@ -135,7 +136,7 @@ describe('ProjectConfigWriter atomic writes', () => {
 
             // Then: Written content should be valid JSON with expected structure
             const writeCall = mockFs.writeFile.mock.calls.find((call) =>
-                call[0].toString().endsWith('.tmp')
+                toText(call[0]).endsWith('.tmp')
             );
             expect(writeCall).toBeDefined();
 
@@ -161,7 +162,7 @@ describe('ProjectConfigWriter atomic writes', () => {
 
             // Then: Written content should include selectedAddons
             const writeCall = mockFs.writeFile.mock.calls.find((call) =>
-                call[0].toString().endsWith('.tmp')
+                toText(call[0]).endsWith('.tmp')
             );
             expect(writeCall).toBeDefined();
 
@@ -194,7 +195,7 @@ describe('ProjectConfigWriter atomic writes', () => {
 
             // Then: Written content should include customBlockLibraries
             const writeCall = mockFs.writeFile.mock.calls.find((call) =>
-                call[0].toString().endsWith('.tmp')
+                toText(call[0]).endsWith('.tmp')
             );
             expect(writeCall).toBeDefined();
 
@@ -225,7 +226,7 @@ describe('ProjectConfigWriter atomic writes', () => {
             await writer.saveProjectConfig(project, project.path);
 
             const writeCall = mockFs.writeFile.mock.calls.find((call) =>
-                call[0].toString().endsWith('.tmp')
+                toText(call[0]).endsWith('.tmp')
             );
             expect(writeCall).toBeDefined();
             const parsed = JSON.parse(writeCall![1] as string);
@@ -240,7 +241,7 @@ describe('ProjectConfigWriter atomic writes', () => {
             await writer.saveProjectConfig(project, project.path);
 
             const writeCall = mockFs.writeFile.mock.calls.find((call) =>
-                call[0].toString().endsWith('.tmp')
+                toText(call[0]).endsWith('.tmp')
             );
             const parsed = JSON.parse(writeCall![1] as string);
             expect(parsed.aiPrompts).toBeUndefined();
@@ -251,7 +252,7 @@ describe('ProjectConfigWriter atomic writes', () => {
             await writer.saveProjectConfig(project, project.path);
 
             const writeCall = mockFs.writeFile.mock.calls.find((call) =>
-                call[0].toString().endsWith('.tmp')
+                toText(call[0]).endsWith('.tmp')
             );
             const parsed = JSON.parse(writeCall![1] as string);
             expect(parsed.aiPrompts).toBeUndefined();
@@ -265,7 +266,7 @@ describe('ProjectConfigWriter atomic writes', () => {
             await writer.saveProjectConfig(project, project.path);
 
             const writeCall = mockFs.writeFile.mock.calls.find((call) =>
-                call[0].toString().endsWith('.tmp')
+                toText(call[0]).endsWith('.tmp')
             );
             const parsed = JSON.parse(writeCall![1] as string);
             expect(parsed.aiContextVersion).toBe(3);
@@ -282,7 +283,7 @@ describe('ProjectConfigWriter atomic writes', () => {
             await writer.saveProjectConfig(project, project.path);
 
             const writeCall = mockFs.writeFile.mock.calls.find((call) =>
-                call[0].toString().endsWith('.tmp')
+                toText(call[0]).endsWith('.tmp')
             );
             const parsed = JSON.parse(writeCall![1] as string);
             expect(parsed.aiFileHashes).toEqual({ 'AGENTS.md': 'abc123', '.mcp.json': 'def456' });
@@ -293,7 +294,7 @@ describe('ProjectConfigWriter atomic writes', () => {
             await writer.saveProjectConfig(project, project.path);
 
             const writeCall = mockFs.writeFile.mock.calls.find((call) =>
-                call[0].toString().endsWith('.tmp')
+                toText(call[0]).endsWith('.tmp')
             );
             const parsed = JSON.parse(writeCall![1] as string);
             expect(parsed.aiFileHashes).toBeUndefined();
@@ -306,7 +307,7 @@ describe('ProjectConfigWriter atomic writes', () => {
             await writer.saveProjectConfig(project, project.path);
 
             const writeCall = mockFs.writeFile.mock.calls.find((call) =>
-                call[0].toString().endsWith('.tmp')
+                toText(call[0]).endsWith('.tmp')
             );
             const parsed = JSON.parse(writeCall![1] as string);
             expect(parsed.aiFileHashes).toBeUndefined();
@@ -324,7 +325,7 @@ describe('ProjectConfigWriter atomic writes', () => {
             await writer.saveProjectConfig(project, project.path);
 
             const writeCall = mockFs.writeFile.mock.calls.find((call) =>
-                call[0].toString().endsWith('.tmp')
+                toText(call[0]).endsWith('.tmp')
             );
             const parsed = JSON.parse(writeCall![1] as string);
             expect(parsed.publishKeyRegisteredAt).toBe('2026-08-15T12:00:00.000Z');
@@ -338,7 +339,7 @@ describe('ProjectConfigWriter atomic writes', () => {
             await writer.saveProjectConfig(project, project.path);
 
             const writeCall = mockFs.writeFile.mock.calls.find((call) =>
-                call[0].toString().endsWith('.tmp')
+                toText(call[0]).endsWith('.tmp')
             );
             const parsed = JSON.parse(writeCall![1] as string);
             expect(parsed.publishKeyRegisteredAt).toBeUndefined();
@@ -376,7 +377,7 @@ describe('ProjectConfigWriter atomic writes', () => {
             await writer.saveProjectConfig(project, project.path);
 
             const writeCall = mockFs.writeFile.mock.calls.find((call) =>
-                call[0].toString().endsWith('.tmp')
+                toText(call[0]).endsWith('.tmp')
             );
             const parsed = JSON.parse(writeCall![1] as string);
             expect(parsed.meshState).toBeUndefined();
@@ -411,7 +412,7 @@ describe('ProjectConfigWriter atomic writes', () => {
 
             function parsedManifest(): Record<string, unknown> {
                 const writeCall = mockFs.writeFile.mock.calls.find((call) =>
-                    call[0].toString().endsWith('.tmp')
+                    toText(call[0]).endsWith('.tmp')
                 );
                 expect(writeCall).toBeDefined();
                 return JSON.parse(writeCall![1] as string);

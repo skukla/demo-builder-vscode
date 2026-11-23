@@ -33,7 +33,7 @@ function build() {
 /** Every command execa was asked to run, with the options it was handed. */
 function execaCalls(): Array<{ command: string; options: Record<string, unknown> }> {
     return mockExeca.mock.calls.map((c) => ({
-        command: c[0] as string,
+        command: c[0],
         options: (c[1] ?? {}) as Record<string, unknown>,
     }));
 }

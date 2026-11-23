@@ -207,7 +207,7 @@ describe('Dashboard Action Handlers', () => {
 
     describe('handleOpenAdminPanel', () => {
         const mockShowInformationMessage = mockWindow
-            .showInformationMessage as jest.Mock;
+            .showInformationMessage;
         const { validateURL } = require('@/core/validation/URLValidator');
 
         /** Flush the fire-and-forget notification .then chain. */

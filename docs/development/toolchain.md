@@ -72,14 +72,16 @@ say "Basic TS rules, not type-checked". Correct for a per-push gate: no TypeScri
 program is built, so it is fast. It also means every rule that needs to reason
 about a TYPE is switched off.
 
-### Ad-hoc: type-aware, for refactors
+### Type-aware: a periodic check, and for refactors
 
 ```bash
 npx eslint --config eslint.casts.mjs tests/ --fix
 ```
 
-`eslint.casts.mjs` turns on `recommendedTypeChecked` scoped to one rule. This is
-where `no-unnecessary-type-assertion` lives — it asks the type checker whether an
+`eslint.casts.mjs` turns on `recommendedTypeChecked` for the test tree, and since
+2026-11-23 the periodic sweep runs it as `npm run lint:types`, holding four rules at
+zero: `no-unnecessary-type-assertion`, `no-base-to-string`, `only-throw-error` and
+`await-thenable` (PL-113). `no-unnecessary-type-assertion` asks the type checker whether an
 assertion changes anything, and auto-fixes the ones that do not. It found 36
 unnecessary casts in a single feature directory.
 

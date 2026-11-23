@@ -279,9 +279,9 @@ export function rejectPushOnce(): void {
 
 /** The condition the conflict poll was handed, so a spec can drive it directly. */
 export function capturedPollCondition(): () => Promise<boolean> {
-    const { PollingService } = jest.requireMock('@/core/shell/pollingService') as {
+    const { PollingService } = jest.requireMock<{
         PollingService: jest.Mock;
-    };
+    }>('@/core/shell/pollingService');
     const instance = PollingService.mock.results[0]?.value as {
         pollUntilCondition: jest.Mock;
     };

@@ -20,19 +20,19 @@ describe('READ_DESCRIPTORS', () => {
     it('exposes get_project_urls as a no-arg read dispatching to getProjectUrls', () => {
         const d = row('get_project_urls');
         expect(d).toBeDefined();
-        expect(d!.map).toBe(dashboardHandlers);
-        expect(d!.type).toBe('getProjectUrls');
-        expect(d!.confirm).toBeUndefined();
-        expect(d!.inputSchema).toBeUndefined();
+        expect(d.map).toBe(dashboardHandlers);
+        expect(d.type).toBe('getProjectUrls');
+        expect(d.confirm).toBeUndefined();
+        expect(d.inputSchema).toBeUndefined();
     });
 
     it('exposes get_store_structure as a no-arg read dispatching to edsHandlers', () => {
         const d = row('get_store_structure');
         expect(d).toBeDefined();
-        expect(d!.map).toBe(edsHandlers);
-        expect(d!.type).toBe('get-store-structure');
+        expect(d.map).toBe(edsHandlers);
+        expect(d.type).toBe('get-store-structure');
         // No inputSchema: the project is the only input, and it comes from state.
-        expect(d!.inputSchema).toBeUndefined();
+        expect(d.inputSchema).toBeUndefined();
     });
 
     // Regression: check_mesh shipped with no inputSchema at all. The registration
@@ -44,11 +44,11 @@ describe('READ_DESCRIPTORS', () => {
     it('exposes check_mesh with an optional workspaceId, not a bare no-arg row', () => {
         const d = row('check_mesh');
         expect(d).toBeDefined();
-        expect(d!.map).toBe(meshHandlers);
-        expect(d!.type).toBe('check-api-mesh');
-        expect(d!.inputSchema).toBeDefined();
-        expect(d!.inputSchema!.workspaceId).toBeDefined();
-        expect(d!.inputSchema!.workspaceId.isOptional()).toBe(true);
+        expect(d.map).toBe(meshHandlers);
+        expect(d.type).toBe('check-api-mesh');
+        expect(d.inputSchema).toBeDefined();
+        expect(d.inputSchema!.workspaceId).toBeDefined();
+        expect(d.inputSchema!.workspaceId.isOptional()).toBe(true);
     });
 
     it('never confirm-gates a read row', () => {
@@ -72,7 +72,7 @@ describe('paged list reads default to an agent-sized page', () => {
     it.each(['find_datapacks', 'list_installed_datapacks', 'get_datapack_activity'])(
         '%s declares a limit default so `{}` is not "everything"',
         (tool) => {
-            const schema = row(tool)!.inputSchema!;
+            const schema = row(tool).inputSchema!;
             expect(schema.limit).toBeDefined();
             // The SDK parses args through this schema and passes parseResult.data
             // to the handler, so a zod default lands without any handler change.
@@ -83,7 +83,7 @@ describe('paged list reads default to an agent-sized page', () => {
     );
 
     it('leaves skip optional — paging is opt-in, page size is not', () => {
-        expect(row('find_datapacks')!.inputSchema!.skip.parse(undefined)).toBeUndefined();
+        expect(row('find_datapacks').inputSchema!.skip.parse(undefined)).toBeUndefined();
     });
 });
 
@@ -91,7 +91,7 @@ describe('paged list reads default to an agent-sized page', () => {
 // as the four Show choices on the screen name them.
 describe('find_datapacks lists every datapack by default, each with its source', () => {
     it('asks for colleagues\' and uncurated packs unless told not to', () => {
-        const schema = row('find_datapacks')!.inputSchema!;
+        const schema = row('find_datapacks').inputSchema!;
         expect(schema.includeCommunity.parse(undefined)).toBe(true);
         expect(schema.includeCommunity.parse(false)).toBe(false);
     });
@@ -103,13 +103,13 @@ describe('find_datapacks lists every datapack by default, each with its source',
         ['a Data Installer pack', { store: 'installer', shared: true }, 'data-installer'],
     ])('marks %s', (_what, fields, source) => {
         const res = { success: true as const, data: { items: [{ id: { name: 'p', version: 'main' }, ...fields }], count: 1 } };
-        const out = JSON.parse(row('find_datapacks')!.shape!(res, {}));
+        const out = JSON.parse(row('find_datapacks').shape!(res, {}));
         expect(out.items[0].source).toBe(source);
     });
 });
 
 describe('datapack list rows drop dashboard-only fields', () => {
-    const shapeOf = (tool: string) => row(tool)!.shape!;
+    const shapeOf = (tool: string) => row(tool).shape!;
     const RESPONSE = {
         success: true as const,
         data: {
@@ -177,7 +177,7 @@ describe('verify_ai_setup returns the verdict, not the whole inventory', () => {
     };
 
     it('collapses inventory to counts by default', () => {
-        const out = JSON.parse(row('verify_ai_setup')!.shape!(RESPONSE, { inventory: 'counts' }));
+        const out = JSON.parse(row('verify_ai_setup').shape!(RESPONSE, { inventory: 'counts' }));
 
         expect(out.status).toBe('ok');
         expect(out.checks).toEqual([{ name: 'mcp', ok: true }]);
@@ -189,7 +189,7 @@ describe('verify_ai_setup returns the verdict, not the whole inventory', () => {
     // project actually loads — that is how the audit established Playwright
     // exposes 23 tools, not the 66 its README lists. It must stay reachable.
     it('returns the complete inventory when asked for full', () => {
-        const out = JSON.parse(row('verify_ai_setup')!.shape!(RESPONSE, { inventory: 'full' }));
+        const out = JSON.parse(row('verify_ai_setup').shape!(RESPONSE, { inventory: 'full' }));
 
         expect(out.inventory.skills).toHaveLength(2);
         expect(out.inventory.mcps[0].tools).toEqual(['x', 'y', 'z']);
@@ -197,7 +197,7 @@ describe('verify_ai_setup returns the verdict, not the whole inventory', () => {
     });
 
     it('declares the inventory argument with a counts default', () => {
-        expect(row('verify_ai_setup')!.inputSchema!.inventory.parse(undefined)).toBe('counts');
+        expect(row('verify_ai_setup').inputSchema!.inventory.parse(undefined)).toBe('counts');
     });
 });
 
@@ -217,7 +217,7 @@ describe('list_console_apis emits the group legend once, not per row', () => {
     };
 
     it('replaces the per-row group object with its code and adds a legend', () => {
-        const out = JSON.parse(row('list_console_apis')!.shape!(RESPONSE, {}));
+        const out = JSON.parse(row('list_console_apis').shape!(RESPONSE, {}));
 
         expect(out.apis.map((a: { group: string }) => a.group)).toEqual(['g1', 'g1', 'g2']);
         expect(out.groups).toEqual({ g1: 'Group One', g2: 'Group Two' });
@@ -226,7 +226,7 @@ describe('list_console_apis emits the group legend once, not per row', () => {
     });
 
     it('preserves the other row fields and the envelope', () => {
-        const out = JSON.parse(row('list_console_apis')!.shape!(RESPONSE, {}));
+        const out = JSON.parse(row('list_console_apis').shape!(RESPONSE, {}));
         expect(out.apis[0]).toMatchObject({ code: 'A', name: 'Alpha' });
         expect(out.added).toStrictEqual([]);
     });
@@ -237,7 +237,7 @@ describe('list_console_apis emits the group legend once, not per row', () => {
 // ran and an agent only ever saw the project's union (found live, 2026-09-21).
 describe('list_console_apis takes an integration to scope to', () => {
     it('declares componentId, so it reaches the handler instead of being stripped', () => {
-        const schema = z.object(row('list_console_apis')!.inputSchema ?? {});
+        const schema = z.object(row('list_console_apis').inputSchema ?? {});
 
         expect(schema.parse({ componentId: 'erp-integration' })).toEqual({
             componentId: 'erp-integration',
@@ -251,7 +251,7 @@ describe('list_console_apis takes an integration to scope to', () => {
  * inside it parses, the first value outside it does not.
  */
 describe('the Runtime reads bound their arguments', () => {
-    const schemaFor = (tool: string) => z.object(row(tool)!.inputSchema ?? {});
+    const schemaFor = (tool: string) => z.object(row(tool).inputSchema ?? {});
     const ACTIVATION = { activationId: 'a'.repeat(32) };
 
     it.each([
@@ -300,7 +300,7 @@ describe('list_ai_prompts indexes by default and fetches one in full', () => {
             ],
         },
     };
-    const shape = () => row('list_ai_prompts')!.shape!;
+    const shape = () => row('list_ai_prompts').shape!;
 
     it('returns previews and sizes, not bodies', () => {
         const out = JSON.parse(shape()(RESPONSE, {}));
@@ -336,7 +336,7 @@ describe('list_ai_prompts indexes by default and fetches one in full', () => {
     });
 
     it('declares promptId as optional so the index stays the default', () => {
-        expect(row('list_ai_prompts')!.inputSchema!.promptId.parse(undefined)).toBeUndefined();
+        expect(row('list_ai_prompts').inputSchema!.promptId.parse(undefined)).toBeUndefined();
     });
 });
 
@@ -350,7 +350,7 @@ describe('list_console_apis search', () => {
             ],
         },
     };
-    const shape = () => row('list_console_apis')!.shape!;
+    const shape = () => row('list_console_apis').shape!;
 
     it('filters on code, name or group and reports the unfiltered total', () => {
         const out = JSON.parse(shape()(RESPONSE, { search: 'firefly' }));

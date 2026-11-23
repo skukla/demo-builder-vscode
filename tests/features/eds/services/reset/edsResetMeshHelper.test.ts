@@ -193,7 +193,7 @@ describe('redeployApiMesh — skip and preflight', () => {
 
     it('returns null when the mesh component has no path to deploy from', async () => {
         const project = makeProject();
-        delete project.componentInstances!['eds-accs-mesh']!.path;
+        delete project.componentInstances!['eds-accs-mesh'].path;
 
         const { result } = await run(project);
 

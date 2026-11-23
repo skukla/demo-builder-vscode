@@ -30,6 +30,7 @@
  *   prints its own report); it is errors and warnings that indicate a defect.
  */
 
+import { toText } from '../helpers/toText';
 import { appendFileSync, readFileSync } from 'fs';
 import { join, relative } from 'path';
 
@@ -65,7 +66,7 @@ beforeEach(() => {
     const capture =
         (original: (...args: unknown[]) => void) =>
         (...args: unknown[]): void => {
-            captured.push(String(args[0] ?? '').slice(0, 200));
+            captured.push(toText(args[0] ?? '').slice(0, 200));
             original(...args);
         };
     console.error = capture(originalError) as typeof console.error;

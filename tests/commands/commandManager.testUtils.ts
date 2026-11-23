@@ -147,7 +147,7 @@ export interface Harness {
 export function harness(contextOverrides: Partial<vscode.ExtensionContext> = {}): Harness {
     const context = createMockExtensionContext(contextOverrides);
     const stateManager = createMockStateManager();
-    const logger = createMockLogger() as jest.Mocked<Logger>;
+    const logger = createMockLogger();
     const manager = new CommandManager(context, stateManager, logger);
     manager.registerCommands();
 
@@ -176,7 +176,7 @@ export function harness(contextOverrides: Partial<vscode.ExtensionContext> = {})
  * the class is what makes "this id delegates to THAT command" checkable.
  */
 export function commandInstance(cls: unknown): { execute: jest.Mock } {
-    const instances = (cls as unknown as jest.Mock).mock.instances;
+    const instances = (cls as jest.Mock).mock.instances;
     if (!instances.length) {
         throw new Error('the command class was never constructed');
     }

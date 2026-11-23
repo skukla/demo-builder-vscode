@@ -37,7 +37,7 @@ beforeEach(resetDataInstallerMocks);
 function versionSelect(displayName: string): HTMLSelectElement {
     return within(cardFor(displayName)).getByTestId(
         'spectrum-picker-select'
-    ) as HTMLSelectElement;
+    );
 }
 
 /** The version a card is currently showing, read off its own aria-label. */

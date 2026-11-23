@@ -89,8 +89,8 @@ describe('AiOverviewScreen — user prompts', () => {
                 fireEvent.click(screen.getByTestId('ai-new-prompt-tile'));
             });
             expect(screen.getByRole('heading', { name: /new prompt/i })).toBeInTheDocument();
-            const titleInput = screen.getByLabelText(/title/i) as HTMLInputElement;
-            const promptInput = screen.getByLabelText(/prompt/i, { selector: 'textarea' }) as HTMLTextAreaElement;
+            const titleInput = screen.getByLabelText<HTMLInputElement>(/title/i);
+            const promptInput = screen.getByLabelText<HTMLTextAreaElement>(/prompt/i, { selector: 'textarea' });
             expect(titleInput.value).toBe('');
             expect(promptInput.value).toBe('');
         });
@@ -106,8 +106,8 @@ describe('AiOverviewScreen — user prompts', () => {
             await act(async () => {
                 screen.getAllByText('Edit')[0].click();
             });
-            const titleInput = screen.getByLabelText(/title/i) as HTMLInputElement;
-            const promptInput = screen.getByLabelText(/prompt/i, { selector: 'textarea' }) as HTMLTextAreaElement;
+            const titleInput = screen.getByLabelText<HTMLInputElement>(/title/i);
+            const promptInput = screen.getByLabelText<HTMLTextAreaElement>(/prompt/i, { selector: 'textarea' });
             expect(titleInput.value).toBe('My first user prompt');
             expect(promptInput.value).toBe('Do thing one');
         });

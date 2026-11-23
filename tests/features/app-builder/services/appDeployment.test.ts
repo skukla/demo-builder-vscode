@@ -683,9 +683,9 @@ describe('deployAppComponent — an app that asks for the project credentials', 
         IMS_OAUTH_S2S_ORG_ID: 'ABC123@AdobeOrg',
         IMS_OAUTH_S2S_SCOPES: '["AdobeID"]',
     };
-    const { fetchRuntimeCredentials } = jest.requireMock('@/features/app-builder/services/runtimeCredentials') as {
+    const { fetchRuntimeCredentials } = jest.requireMock<{
         fetchRuntimeCredentials: jest.Mock;
-    };
+    }>('@/features/app-builder/services/runtimeCredentials');
     let cm: ReturnType<typeof createMockCommandManager>;
     let logger: ReturnType<typeof createMockLogger>;
 

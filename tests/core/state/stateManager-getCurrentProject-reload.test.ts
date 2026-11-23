@@ -12,7 +12,6 @@
 
 import { setupMocks, createStateManagerProject, type TestMocks } from './stateManager.testUtils';
 import * as fs from 'fs/promises';
-import type { Project } from '@/types/base';
 
 describe('StateManager - getCurrentProject Reload Behavior', () => {
     let testMocks: TestMocks;
@@ -340,7 +339,7 @@ describe('StateManager - getCurrentProject Reload Behavior', () => {
             // Initialize with cached project that has stale selectedPackage
             const cachedProject = createStateManagerProject();
             cachedProject.path = '/mock/home/.demo-builder/projects/test-project';
-            (cachedProject as Project).selectedPackage = 'old-package';
+            (cachedProject).selectedPackage = 'old-package';
 
             const mockState = {
                 version: 1,

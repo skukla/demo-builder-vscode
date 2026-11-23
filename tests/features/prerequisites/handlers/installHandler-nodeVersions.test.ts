@@ -50,7 +50,7 @@ describe('Install Handler - Node Versions Parameter Passing', () => {
         ]);
 
         // Spy on getInstallSteps to verify parameters
-        const getInstallStepsSpy = jest.spyOn(mockContext.prereqManager!, 'getInstallSteps');
+        const getInstallStepsSpy = jest.spyOn(mockContext.prereqManager, 'getInstallSteps');
 
         await handleInstallPrerequisite(mockContext, { prereqId: 0 });
 
@@ -68,7 +68,7 @@ describe('Install Handler - Node Versions Parameter Passing', () => {
         states.set(0, { prereq: mockNodePrereq, result: mockNodeResult });
         mockContext.sharedState.currentPrerequisiteStates = states;
 
-        const getInstallStepsSpy = jest.spyOn(mockContext.prereqManager!, 'getInstallSteps');
+        const getInstallStepsSpy = jest.spyOn(mockContext.prereqManager, 'getInstallSteps');
 
         await handleInstallPrerequisite(mockContext, { prereqId: 0, version: '24' });
 
@@ -92,7 +92,7 @@ describe('Install Handler - Node Versions Parameter Passing', () => {
         // Mock checkMultipleNodeVersions returns empty array (no versions to check)
         (mockContext.prereqManager!.checkMultipleNodeVersions as jest.Mock).mockResolvedValueOnce([]);
 
-        const getInstallStepsSpy = jest.spyOn(mockContext.prereqManager!, 'getInstallSteps');
+        const getInstallStepsSpy = jest.spyOn(mockContext.prereqManager, 'getInstallSteps');
 
         const result = await handleInstallPrerequisite(mockContext, { prereqId: 0 });
 
@@ -106,7 +106,7 @@ describe('Install Handler - Node Versions Parameter Passing', () => {
         states.set(0, { prereq: mockNpmPrereq, result: mockNodeResult });
         mockContext.sharedState.currentPrerequisiteStates = states;
 
-        const getInstallStepsSpy = jest.spyOn(mockContext.prereqManager!, 'getInstallSteps');
+        const getInstallStepsSpy = jest.spyOn(mockContext.prereqManager, 'getInstallSteps');
 
         await handleInstallPrerequisite(mockContext, { prereqId: 0 });
 

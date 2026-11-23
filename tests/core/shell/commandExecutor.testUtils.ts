@@ -189,7 +189,7 @@ export async function runThroughExeca(
     return {
         result,
         subprocess,
-        execaCommand: call[0] as string,
+        execaCommand: call[0],
         execaOptions: call[1] as ExecOptions,
     };
 }

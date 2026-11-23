@@ -207,7 +207,7 @@ describe('OperationProgressBody, a run whose rows are steps with rows under them
     // Decisions Phase 1b (J1-3d growth): the reason was a sentence under the steps, a line nothing
     // held. It takes the stopped step's line instead, once, red.
     it('ends a failed run on its steps, the reason on the stopped step in place of its line', () => {
-        const stopped: OperationRow[] = [SAVE_WRITING[0] as OperationRow, { kind: 'save', label: 'Save My Luma', status: 'error', line: 'Stopped' }];
+        const stopped: OperationRow[] = [SAVE_WRITING[0], { kind: 'save', label: 'Save My Luma', status: 'error', line: 'Stopped' }];
         const { container } = render(<OperationProgressBody failed succeeded={false} onTyped={jest.fn()} progress={{ id: 'x', state: 'failed', error: plain('My Luma could not be saved.'), rows: stopped }} />);
 
         expect(screen.queryByText('Stopped')).not.toBeInTheDocument();

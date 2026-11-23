@@ -20,7 +20,6 @@ import {
     type ConfigGeneratorParams,
 } from '@/features/eds/services/configGenerator';
 import type { Logger } from '@/types/logger';
-import type { Project } from '@/types/base';
 import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockProject } from '../../../helpers/projectFake';
 
@@ -194,7 +193,7 @@ describe('configGenerator — environment fork and failure reporting', () => {
             const project = createMockProject({
                 componentInstances: undefined,
                 componentConfigs: {},
-            }) as Project;
+            });
 
             const params = buildConfigGeneratorParams(project);
 
@@ -207,7 +206,7 @@ describe('configGenerator — environment fork and failure reporting', () => {
             const project = createMockProject({
                 componentSelections: undefined,
                 componentConfigs: {},
-            }) as Project;
+            });
 
             const params = extractConfigParams(project);
 

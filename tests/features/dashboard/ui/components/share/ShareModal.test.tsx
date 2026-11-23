@@ -168,7 +168,7 @@ describe('ShareModal', () => {
     // the read-only field Edit Demo uses, its label above like Name and Description.
     it('shows the repository as a read-only field, its label above, in the body font', async () => {
         await renderShareLink();
-        const repository = screen.getByRole('textbox', { name: 'Repository' }) as HTMLInputElement;
+        const repository = screen.getByRole<HTMLInputElement>('textbox', { name: 'Repository' });
         expect(repository.value).toBe(LINK);
         expect(repository).toHaveAttribute('readonly');
         expect(screen.getByTestId('share-link').querySelector('code')).toBeNull();
@@ -177,7 +177,7 @@ describe('ShareModal', () => {
     describe('the link and its button', () => {
         it('a storefront that already carries its details: the button only copies', async () => {
             await renderShareLink(answer({ ...PREVIEW, saved: true, onList: true }));
-            expect((screen.getByRole('textbox', { name: 'Repository' }) as HTMLInputElement).value).toBe(LINK);
+            expect((screen.getByRole<HTMLInputElement>('textbox', { name: 'Repository' })).value).toBe(LINK);
             expect(screen.queryByRole('button', { name: SAVE_AND_COPY })).not.toBeInTheDocument();
 
             await click('Copy Link');

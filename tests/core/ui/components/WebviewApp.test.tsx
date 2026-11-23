@@ -5,6 +5,7 @@
  * This is CRITICAL infrastructure - handles theme sync, handshake, and Provider setup.
  */
 
+import { toText } from '../../../helpers/toText';
 import '../../../helpers/webviewClientMock';
 import React from 'react';
 import { act, render, screen, waitFor } from '@testing-library/react';
@@ -268,7 +269,7 @@ describe('WebviewApp', () => {
         it('passes init data to render function', async () => {
             render(
                 <WebviewApp>
-                    {(data) => <div>Custom: {String(data?.customProp || 'missing')}</div>}
+                    {(data) => <div>Custom: {toText(data?.customProp || 'missing')}</div>}
                 </WebviewApp>
             );
 

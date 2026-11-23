@@ -565,16 +565,14 @@ describe('the add answer names what the SC named', () => {
     // a saved-config assertion alone would pass if the name landed under a key the
     // ERP's deploy never reads.
     it('hands the deploy a project whose ERP deploys under the typed name', async () => {
-        const catalog = (
-            jest.requireActual('@/features/components/config/app-builder-components.json') as {
-                appBuilderComponents: AppBuilderComponentCatalogEntry[];
-            }
-        ).appBuilderComponents;
+        const catalog = jest.requireActual<{
+            appBuilderComponents: AppBuilderComponentCatalogEntry[];
+        }>('@/features/components/config/app-builder-components.json').appBuilderComponents;
         const integration = catalog.find((entry) => entry.id === 'erp-integration')!;
         const erp = catalog.find((entry) => entry.id === 'demo-erp')!;
-        const { resolveDeployInputs } = jest.requireActual(
-            '@/features/app-builder/services/deployInputs'
-        ) as typeof import('@/features/app-builder/services/deployInputs');
+        const { resolveDeployInputs } = jest.requireActual<
+            typeof import('@/features/app-builder/services/deployInputs')
+        >('@/features/app-builder/services/deployInputs');
         // The real entry declares Commerce backends; the add door's stack gate is real too.
         const { mockContext } = setupMocks({
             componentSelections: { backend: 'adobe-commerce-accs', frontend: 'eds-storefront' },

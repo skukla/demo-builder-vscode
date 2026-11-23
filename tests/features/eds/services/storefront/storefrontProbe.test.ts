@@ -21,6 +21,7 @@
  * PDP came back "Storefront delivery looks correct."
  */
 
+import { toText } from '../../../../helpers/toText';
 import {
     aemLiveBaseUrl,
     probeOverlayVersion,
@@ -41,7 +42,7 @@ const logger = createMockLogger();
  */
 function mockFetch(routes: Record<string, { status: number; body?: string }>) {
     global.fetch = jest.fn(async (url: RequestInfo | URL) => {
-        const hit = routes[new URL(String(url)).pathname] ?? { status: 404, body: '' };
+        const hit = routes[new URL(toText(url)).pathname] ?? { status: 404, body: '' };
         // Only the three members the probe reads; the rest of Response is not built.
         return {
             ok: hit.status >= 200 && hit.status < 300,
@@ -429,7 +430,7 @@ describe('probeStorefrontDelivery — no answer, and the edges of "reachable"', 
     /** Canned responses, but a listed path may instead throw the way fetch does. */
     function mockFetchOrThrow(routes: Record<string, { status: number; body?: string } | Error>) {
         global.fetch = jest.fn(async (url: RequestInfo | URL) => {
-            const hit = routes[new URL(String(url)).pathname] ?? { status: 404, body: '' };
+            const hit = routes[new URL(toText(url)).pathname] ?? { status: 404, body: '' };
             if (hit instanceof Error) throw hit;
             return {
                 ok: hit.status >= 200 && hit.status < 300,

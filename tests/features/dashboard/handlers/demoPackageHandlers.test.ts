@@ -5,6 +5,7 @@
  * service are the boundaries; everything else is real.
  */
 
+import { toText } from '../../../helpers/toText';
 import { COMPONENT_IDS } from '@/core/constants';
 import {
     EDS_ONLY,
@@ -97,7 +98,7 @@ beforeEach(() => {
     repoOperations.setTemplateFlag.mockResolvedValue(undefined);
     // The site's index: only /full-index.json answers, with two pages.
     global.fetch = jest.fn(async (url: string | URL | Request) => ({
-        ok: String(url).endsWith('/full-index.json'),
+        ok: toText(url).endsWith('/full-index.json'),
         status: 200,
         json: async () => ({ data: [{}, {}] }),
     })) as unknown as typeof fetch;

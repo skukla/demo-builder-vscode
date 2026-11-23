@@ -84,7 +84,7 @@ describe("renaming the ERP integration, whose name is one of its inputs", () => 
         expect(note).toContain('next update');
         expect(note).toContain('update_integration');
         // The person who renamed from the card is told too, without waiting on them.
-        const { window } = jest.requireMock('vscode') as { window: { showInformationMessage: jest.Mock } };
+        const { window } = jest.requireMock<{ window: { showInformationMessage: jest.Mock } }>('vscode');
         expect(window.showInformationMessage).toHaveBeenCalledWith(note);
     });
 

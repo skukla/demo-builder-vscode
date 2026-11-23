@@ -172,8 +172,8 @@ describe('authenticationHandlers - handleAuthenticate - Edge Cases', () => {
 		it('should handle payload = undefined (default force = false)', async () => {
 			(mockContext.authManager!.isAuthenticated as jest.Mock).mockResolvedValue(true);
 			(mockContext.authManager!.getSdkClient().ensureInitialized as jest.Mock).mockResolvedValue(undefined);
-			(entityServicesOf(mockContext.authManager!).resolver.getCurrentOrganization as jest.Mock).mockResolvedValue(mockOrg);
-			(entityServicesOf(mockContext.authManager!).resolver.getCurrentProject as jest.Mock).mockResolvedValue(mockProject);
+			(entityServicesOf(mockContext.authManager).resolver.getCurrentOrganization as jest.Mock).mockResolvedValue(mockOrg);
+			(entityServicesOf(mockContext.authManager).resolver.getCurrentProject as jest.Mock).mockResolvedValue(mockProject);
 			(mockContext.authManager!.getCacheManager().wasOrgClearedDueToValidation as jest.Mock).mockReturnValue(false);
 
 			await handleAuthenticate(mockContext);
@@ -184,8 +184,8 @@ describe('authenticationHandlers - handleAuthenticate - Edge Cases', () => {
 		it('should handle payload.force = undefined (default false)', async () => {
 			(mockContext.authManager!.isAuthenticated as jest.Mock).mockResolvedValue(true);
 			(mockContext.authManager!.getSdkClient().ensureInitialized as jest.Mock).mockResolvedValue(undefined);
-			(entityServicesOf(mockContext.authManager!).resolver.getCurrentOrganization as jest.Mock).mockResolvedValue(mockOrg);
-			(entityServicesOf(mockContext.authManager!).resolver.getCurrentProject as jest.Mock).mockResolvedValue(mockProject);
+			(entityServicesOf(mockContext.authManager).resolver.getCurrentOrganization as jest.Mock).mockResolvedValue(mockOrg);
+			(entityServicesOf(mockContext.authManager).resolver.getCurrentProject as jest.Mock).mockResolvedValue(mockProject);
 			(mockContext.authManager!.getCacheManager().wasOrgClearedDueToValidation as jest.Mock).mockReturnValue(false);
 
 			await handleAuthenticate(mockContext, {});

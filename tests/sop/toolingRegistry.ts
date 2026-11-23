@@ -157,6 +157,14 @@ const PERIODIC: readonly Instrument[] = [
         runs: 'npm run components:ci',
     },
     {
+        id: 'lint:types',
+        kind: 'npm-script',
+        cadence: 'periodic',
+        resultKind: 'gate',
+        what: 'the test tree stays clean of four type-aware lint rules the per-push lint cannot run (unneeded type assertions, object-to-string, throwing a non-Error, awaiting a non-promise); they grew to 325 while nothing ran them (PL-113)',
+        runs: 'npm run lint:types',
+    },
+    {
         id: 'health',
         kind: 'npm-script',
         cadence: 'periodic',

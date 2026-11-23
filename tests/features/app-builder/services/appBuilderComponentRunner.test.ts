@@ -98,7 +98,7 @@ describe('addAppBuilderComponent (mesh)', () => {
         await addAppBuilderComponent(project, MESH_ENTRY, deps);
 
         expect(deps.refreshAiBundle).toHaveBeenCalledTimes(1);
-        const refreshed = deps.refreshAiBundle.mock.calls[0][0] as Project;
+        const refreshed = deps.refreshAiBundle.mock.calls[0][0];
         expect(refreshed.appBuilderComponents?.[MESH_ENTRY.id]).toBeDefined();
     });
 
@@ -192,7 +192,7 @@ describe('addAppBuilderComponent (mesh)', () => {
 
         await addAppBuilderComponent(project, MESH_ENTRY, deps);
 
-        const subscribed = deps.subscribeRequiredApis.mock.calls[0][0] as AppBuilderComponentCatalogEntry[];
+        const subscribed = deps.subscribeRequiredApis.mock.calls[0][0];
         expect(subscribed.map((e) => e.id)).not.toContain(INTEGRATION_ENTRY.id);
     });
 });
@@ -229,7 +229,7 @@ describe('addAppBuilderComponent (integration)', () => {
         await addAppBuilderComponent(project, INTEGRATION_ENTRY, deps);
 
         // The app deploy tail is handed the resolved ow.package distinct from defaults.
-        const owPackage = deps.deployApp.mock.calls[0][1] as string;
+        const owPackage = deps.deployApp.mock.calls[0][1];
         expect(owPackage).toBeTruthy();
         expect(owPackage).not.toBe('application');
         expect(owPackage).not.toBe('dx-excshell-1');
@@ -497,7 +497,7 @@ describe('addAppBuilderComponent partial-failure', () => {
 
         await deployAppBuilderComponent(project, 'erp-bridge', deps);
 
-        const saved = deps.saveProject.mock.calls.at(-1)![0] as Project;
+        const saved = deps.saveProject.mock.calls.at(-1)![0];
         const entry = saved.appBuilderComponents?.['erp-bridge'];
         expect(entry?.status).toBe('deployed');
         expect(entry?.sourceHash).toBe('abc123');

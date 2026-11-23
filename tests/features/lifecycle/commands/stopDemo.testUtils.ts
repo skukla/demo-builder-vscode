@@ -121,9 +121,9 @@ export function setupStopDemo(project: Project = runningProject()): StopDemoHarn
     const mockStateManager = createMockStateManager({
         getCurrentProject: jest.fn().mockResolvedValue(project),
         saveProject: jest.fn().mockResolvedValue(undefined),
-    }) as jest.Mocked<StateManager>;
+    });
 
-    const mockLogger = createMockLogger() as jest.Mocked<Logger>;
+    const mockLogger = createMockLogger();
 
     mockWindow.withProgress = jest
         .fn()

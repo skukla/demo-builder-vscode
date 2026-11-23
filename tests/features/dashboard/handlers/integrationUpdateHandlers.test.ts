@@ -368,7 +368,7 @@ function keepReporter(): void {
 // screen narrates to its modal, like Deploy, Install and Remove.
 describe('handleUpdateAppBuilderComponent — started from the integrations screen', () => {
     it('runs in the modal, ends there, and opens no notification', async () => {
-        const vscode = jest.requireMock('vscode') as { window: { withProgress: (...args: unknown[]) => unknown } };
+        const vscode = jest.requireMock<{ window: { withProgress: (...args: unknown[]) => unknown } }>('vscode');
         const withProgress = jest.spyOn(vscode.window, 'withProgress');
         const { mockContext } = setup(pairProject());
 

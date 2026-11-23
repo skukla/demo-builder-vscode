@@ -11,6 +11,7 @@
  * any call; the mocked fs answers the same whatever it is handed.
  */
 
+import { toText } from '../../helpers/toText';
 import * as path from 'path';
 import type { Project } from '@/types/base';
 import {
@@ -36,8 +37,8 @@ function projectWithPath(value: unknown): Project {
 }
 
 function envWrite(): [string, string] | undefined {
-    const call = mockFs.writeFile.mock.calls.find(([target]) => String(target).endsWith('.env'));
-    return call ? [String(call[0]), String(call[1])] : undefined;
+    const call = mockFs.writeFile.mock.calls.find(([target]) => toText(target).endsWith('.env'));
+    return call ? [toText(call[0]), toText(call[1])] : undefined;
 }
 
 describe('ProjectConfigWriter.saveProjectConfig — the stale-save guard', () => {
@@ -240,7 +241,7 @@ describe('ProjectConfigWriter.saveProjectConfig — the .env file', () => {
         await writer.saveProjectConfig(createTestProject({ path: PROJECT_PATH }), PROJECT_PATH);
 
         const envIndex = mockFs.writeFile.mock.calls.findIndex(([target]) =>
-            String(target).endsWith('.env'),
+            toText(target).endsWith('.env'),
         );
         expect(envIndex).toBeGreaterThanOrEqual(0);
         expect(mockFs.writeFile.mock.invocationCallOrder[envIndex]).toBeGreaterThan(
@@ -251,7 +252,7 @@ describe('ProjectConfigWriter.saveProjectConfig — the .env file', () => {
     it('logs and rethrows when the .env write fails', async () => {
         const failure = new Error('EROFS: read-only file system');
         mockFs.writeFile.mockImplementation(async (target) => {
-            if (String(target).endsWith('.env')) throw failure;
+            if (toText(target).endsWith('.env')) throw failure;
         });
 
         await expect(
@@ -263,7 +264,7 @@ describe('ProjectConfigWriter.saveProjectConfig — the .env file', () => {
 
     it('logs a non-Error .env failure without a cause', async () => {
         mockFs.writeFile.mockImplementation(async (target) => {
-            if (String(target).endsWith('.env')) throw 'quota';
+            if (toText(target).endsWith('.env')) throw 'quota';
         });
 
         await expect(

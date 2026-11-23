@@ -73,7 +73,7 @@ function declaredIdentifiers(): Set<string> {
         for (const key of Object.keys(block?.properties ?? {})) out.add(key);
     }
     for (const c of pkg.contributes?.commands ?? []) out.add(c.command);
-    for (const v of Object.values(pkg.contributes?.views ?? {}) as { id: string }[][]) {
+    for (const v of Object.values<{ id: string }[]>(pkg.contributes?.views ?? {})) {
         for (const view of v) out.add(view.id);
     }
     return out;

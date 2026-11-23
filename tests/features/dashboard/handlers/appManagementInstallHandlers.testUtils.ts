@@ -25,9 +25,7 @@ export const mockProgressSteps: unknown[] = [];
 // Own vscode mock: window.withProgress records each title and step into
 //   mockProgressTitles/mockProgressSteps; the shared one discards them.
 jest.mock('vscode', () => {
-    const vscode = jest.requireActual('../../../__mocks__/vscode') as {
-        window: Record<string, unknown>;
-    };
+    const vscode = jest.requireActual<{ window: Record<string, unknown> }>('../../../__mocks__/vscode');
     vscode.window.withProgress = async (
         options: { title: string },
         task: (p: { report: (value: { message?: string }) => void }) => unknown

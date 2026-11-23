@@ -130,7 +130,7 @@ describe('executeCatalogMenuPhase', () => {
 
     it('edit mode onto a different storefront: the old record does not follow', async () => {
         const before = storefront('skukla/old-site');
-        before.componentInstances![COMPONENT_IDS.EDS_STOREFRONT]!.metadata!.catalogMenu = {
+        before.componentInstances![COMPONENT_IDS.EDS_STOREFRONT].metadata!.catalogMenu = {
             pages: [{ path: '/signs', hash: 'x' }],
             navSwitch: true,
         };

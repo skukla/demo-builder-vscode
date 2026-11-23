@@ -8,6 +8,7 @@
  * own export columns, trimmed.
  */
 
+import { toText } from '../../../../helpers/toText';
 import { CommerceReadError } from '@/features/app-builder/services/erpFillReaders';
 import {
     PARENTS_PER_IMPORT,
@@ -61,7 +62,7 @@ async function store(existing: string[] = [], bareConfigurables: string[] = []) 
     ctx.session.storeCode = 'tailspin_test_store_us';
     ctx.session.rootCategory = { id: 2, name: 'Default Category' };
     const takes = (row: Row) =>
-        !String(row.additional_attributes ?? '').includes(BAD) &&
+        !toText(row.additional_attributes ?? '').includes(BAD) &&
         (row.product_type !== 'configurable' ||
             String(row.configurable_variations)
                 .split('|')

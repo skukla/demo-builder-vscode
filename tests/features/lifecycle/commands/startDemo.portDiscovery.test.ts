@@ -83,7 +83,7 @@ afterEach(() => {
 });
 
 describe('naming the occupant in the prompt', () => {
-    const prompt = () => (mockWindow.showWarningMessage as jest.Mock).mock.calls[0];
+    const prompt = () => (mockWindow.showWarningMessage).mock.calls[0];
 
     it('asks lsof for the port with a quick, bare shell call', async () => {
         await command.execute();

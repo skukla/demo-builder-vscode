@@ -124,7 +124,7 @@ describe('ensureCommerceAppId', () => {
         expect(project.appBuilderComponents?.['erp-integration-2']?.commerceAppId).toBe('contoso-erp');
 
         // A rename must not move it: Commerce refuses an id change on an upgrade.
-        project.componentConfigs!['erp-integration-2']!.ERP_DISPLAY_NAME = 'Renamed ERP';
+        project.componentConfigs!['erp-integration-2'].ERP_DISPLAY_NAME = 'Renamed ERP';
         expect(ensureCommerceAppId(project, COPY, [SYSTEM, COPY])).toBe('contoso-erp');
     });
 

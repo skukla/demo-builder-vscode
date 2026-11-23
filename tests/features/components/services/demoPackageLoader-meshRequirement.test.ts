@@ -41,7 +41,7 @@ describe('getResolvedMeshRequirement', () => {
             storefronts: {
                 ...basePkg.storefronts,
                 'eds-accs': {
-                    ...basePkg.storefronts!['eds-accs'],
+                    ...basePkg.storefronts['eds-accs'],
                     requiresMesh: 'optional' as const,
                 },
             },
@@ -80,7 +80,7 @@ describe('getResolvedMeshRequirement', () => {
             storefronts: {
                 ...basePkg.storefronts,
                 'eds-accs': {
-                    ...basePkg.storefronts!['eds-accs'],
+                    ...basePkg.storefronts['eds-accs'],
                     requiresMesh: false as const,
                 },
             },

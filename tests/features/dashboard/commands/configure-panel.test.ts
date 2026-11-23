@@ -311,9 +311,9 @@ describe('ConfigureProjectWebviewCommand - panel lifecycle and initial data', ()
 
     describe('createHandlerContext', () => {
         it('gives handlers a sendMessage that reaches THIS command webview', async () => {
-            const factory = jest.requireMock('@/commands/handlerContextFactory') as {
+            const factory = jest.requireMock<{
                 createPanelHandlerContext: jest.Mock;
-            };
+            }>('@/commands/handlerContextFactory');
             const sendSpy = jest
                 .spyOn(
                     command as unknown as {

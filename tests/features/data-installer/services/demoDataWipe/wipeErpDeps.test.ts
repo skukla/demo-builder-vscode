@@ -7,6 +7,7 @@
  * URLs. The catalog is the bundled one.
  */
 
+import { toText } from '../../../../helpers/toText';
 import { findWipeErp } from '@/features/data-installer/services/demoDataWipe/wipeErpDeps';
 import type { AppBuilderComponentState, Project } from '@/types/base';
 import type { HandlerContext } from '@/types/handlers';
@@ -48,7 +49,7 @@ function signedIn(valid = true): HandlerContext {
 
 function answering(): jest.MockedFunction<typeof fetch> {
     return jest.fn(async (url: string | URL | Request) => {
-        const body = String(url).includes('/erp/status') ? STATUS_BY_STORE : TAILSPIN_SETTINGS;
+        const body = toText(url).includes('/erp/status') ? STATUS_BY_STORE : TAILSPIN_SETTINGS;
         return { ok: true, status: 200, text: async () => JSON.stringify(body) };
     }) as unknown as jest.MockedFunction<typeof fetch>;
 }
@@ -68,7 +69,7 @@ describe('findWipeErp', () => {
 
         expect(erp?.name).toBe('Tailspin');
         expect(route).toEqual({ name: 'Tailspin', websites: ['tailspin_test_website'] });
-        expect(fetchImpl.mock.calls.map(([url]) => String(url)).sort()).toEqual([`${WEB}/erp/settings?websites=tailspin_test_website`, `${WEB}/erp/status`]);
+        expect(fetchImpl.mock.calls.map(([url]) => toText(url)).sort()).toEqual([`${WEB}/erp/settings?websites=tailspin_test_website`, `${WEB}/erp/status`]);
         expect((fetchImpl.mock.calls[0][1] as RequestInit).headers).toMatchObject({ Authorization: 'Bearer fake-test-pw-not-a-secret', 'x-gw-ims-org-id': 'ABC@AdobeOrg' });
     });
 

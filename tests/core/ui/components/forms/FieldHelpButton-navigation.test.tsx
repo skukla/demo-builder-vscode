@@ -21,7 +21,7 @@ function counter(): string {
 }
 
 function button(name: RegExp): HTMLButtonElement {
-    return screen.getByRole('button', { name }) as HTMLButtonElement;
+    return screen.getByRole('button', { name });
 }
 
 async function press(name: RegExp, settled: string) {

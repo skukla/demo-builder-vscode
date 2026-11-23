@@ -15,6 +15,7 @@
  * - src/core/state/projectConfigWriter.ts (atomic write)
  */
 
+import { toText } from '../../helpers/toText';
 import * as fs from 'fs/promises';
 import { ProjectConfigWriter } from '@/core/state/projectConfigWriter';
 import type { Project } from '@/types/base';
@@ -267,7 +268,7 @@ describe('Manifest Error Investigation', () => {
 
             // Then: Should write to temp file first
             const writeCalls = mockFs.writeFile.mock.calls;
-            expect(writeCalls.some((call) => String(call[0]).endsWith('.tmp'))).toBe(true);
+            expect(writeCalls.some((call) => toText(call[0]).endsWith('.tmp'))).toBe(true);
         });
 
         it('should rename temp file to manifest', async () => {
@@ -327,7 +328,7 @@ describe('Manifest Error Investigation', () => {
 
             mockFs.writeFile.mockImplementation(async (filePath) => {
                 // Count only manifest temp file writes (not .env writes)
-                if (String(filePath).endsWith('.tmp')) {
+                if (toText(filePath).endsWith('.tmp')) {
                     manifestWriteCount++;
                 }
                 // Simulate some async work

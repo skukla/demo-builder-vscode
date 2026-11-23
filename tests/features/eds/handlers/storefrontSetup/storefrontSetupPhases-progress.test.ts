@@ -172,7 +172,7 @@ describe('every pipeline operation maps to a wizard phase and a bar position', (
         });
         const library = await reportProgress({ operation: 'library-publish', message: 'library' });
 
-        expect(library.progress).toBeGreaterThan(contentEnd.progress as number);
+        expect(library.progress).toBeGreaterThan(contentEnd.progress);
     });
 
     it('falls back to the content phase for an operation it has never heard of', async () => {

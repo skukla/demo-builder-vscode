@@ -67,7 +67,7 @@ const mockForget = jest.mocked(forgetInstallRecord);
 const HELD = { name: NAME, version: INSTALLED };
 const TARGET = { name: NAME, version: NEWER };
 /** The call order of a mock's first call, to prove one write came before another. */
-const order = (mock: jest.Mock | jest.MockedFunction<never>, nth = 0): number => (mock as jest.Mock).mock.invocationCallOrder[nth];
+const order = (mock: jest.Mock | jest.MockedFunction<never>, nth = 0): number => (mock).mock.invocationCallOrder[nth];
 
 /** A Demo Builder datapack's version, as `find-datapacks` lists it. */
 function row(version: string): DatapackSummary {

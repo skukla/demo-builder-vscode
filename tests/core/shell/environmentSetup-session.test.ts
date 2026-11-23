@@ -117,7 +117,7 @@ describe('EnvironmentSetup — session decisions', () => {
 
     describe('resetting the session', () => {
         it('forgets the remembered fnm lookup, so the next one reads the disk again', () => {
-            const fs = jest.requireMock('fs') as { existsSync: jest.Mock };
+            const fs = jest.requireMock<{ existsSync: jest.Mock }>('fs');
             fs.existsSync.mockReturnValue(false);
             expect(environmentSetup.findFnmPath()).toBeNull();
 

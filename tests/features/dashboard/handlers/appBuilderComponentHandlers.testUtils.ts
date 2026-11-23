@@ -145,13 +145,13 @@ export { setupMocks };
  * moduleNameMapper's copy and watches a different object than the handler calls.
  * That presented as "Number of calls: 0" on an assertion that was right.
  */
-export const vscodeMock = jest.requireMock('vscode') as {
+export const vscodeMock = jest.requireMock<{
     window: {
         showWarningMessage: jest.Mock;
         withProgress: jest.Mock;
     };
     commands: { executeCommand: jest.Mock };
-};
+}>('vscode');
 
 export const ERP_ENTRY = {
     id: 'erp-sync',

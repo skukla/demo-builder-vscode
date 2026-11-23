@@ -186,7 +186,7 @@ describe('IntegrationDetailPanel', () => {
                 makeModel({ status: 'error', statusLabel: 'Deploy failed', dotVariant: 'error' })
             );
 
-            expect(panel!.querySelector('.integration-panel-status-aside')).toBeNull();
+            expect(panel.querySelector('.integration-panel-status-aside')).toBeNull();
         });
 
         it('marks a failed Status with the error colour, as the card does', () => {
@@ -215,7 +215,7 @@ describe('IntegrationDetailPanel', () => {
             // holding the row open for nothing.
             const { panel } = renderPanel(makeModel({ message: undefined }));
 
-            expect(panel!.querySelectorAll('.integration-panel-status-message')).toHaveLength(0);
+            expect(panel.querySelectorAll('.integration-panel-status-message')).toHaveLength(0);
         });
 
         it('omits every row whose datum is absent', () => {

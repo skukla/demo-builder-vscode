@@ -141,7 +141,7 @@ describe('handleStartStorefrontSetup — required parameters', () => {
 
         const result = await handleStartStorefrontSetup(
             context,
-            payload({ projectName: '' }) as StorefrontSetupStartPayload
+            payload({ projectName: '' })
         );
 
         expect(result).toEqual({ success: false, error: 'Missing required parameters' });
@@ -597,7 +597,7 @@ describe('handleStartStorefrontSetup — the abort controller never outlives the
         // The cancel handler reads it from exactly here.
         let seen: unknown;
         mockExecutePhases.mockImplementation(async (ctx) => {
-            seen = (ctx as HandlerContext).sharedState.storefrontSetupAbortController;
+            seen = (ctx).sharedState.storefrontSetupAbortController;
             return { success: true, repoUrl: 'https://github.com/demo-org/demo-repo' };
         });
         const context = createContext();

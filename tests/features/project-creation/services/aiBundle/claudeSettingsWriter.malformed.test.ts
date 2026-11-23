@@ -28,7 +28,7 @@ const GIT_SYNC_SIGNATURE = 'AI: sync files';
 type Matcher = { matcher: string; hooks: Array<{ type?: string; command?: string }> };
 
 const listOf = (settings: Record<string, unknown>, key: 'PreToolUse' | 'PostToolUse'): Matcher[] =>
-    ((settings.hooks as Record<string, Matcher[]> | undefined)?.[key] ?? []) as Matcher[];
+    ((settings.hooks as Record<string, Matcher[]> | undefined)?.[key] ?? []);
 
 /** A settings object whose hook list is the malformed one under test. */
 const existingWith = (key: 'PreToolUse' | 'PostToolUse', list: unknown[]) => ({

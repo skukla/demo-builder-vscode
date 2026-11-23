@@ -117,7 +117,7 @@ describe('InlineRenameField', () => {
             rerender(field(1));
 
             expect(screen.getByRole('textbox')).toHaveFocus();
-            expect((screen.getByRole('textbox') as HTMLInputElement).value).toBe('My Project');
+            expect((screen.getByRole<HTMLInputElement>('textbox')).value).toBe('My Project');
         });
     });
 
@@ -138,7 +138,7 @@ describe('InlineRenameField', () => {
 
         fireEvent.click(pencil('Second Name'));
 
-        expect((screen.getByRole('textbox') as HTMLInputElement).value).toBe('Second Name');
+        expect((screen.getByRole<HTMLInputElement>('textbox')).value).toBe('Second Name');
     });
 
     describe('commit and cancel', () => {

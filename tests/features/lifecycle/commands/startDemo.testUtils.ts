@@ -173,7 +173,7 @@ export function setupStartDemo(project = startableProject()): StartDemoHarness {
 
     const mockContext = startDemoExtensionContext();
     const mockStateManager = startableStateManager(project) as jest.Mocked<StateManager>;
-    const mockLogger = createMockLogger() as jest.Mocked<Logger>;
+    const mockLogger = createMockLogger();
 
     mockWindow.withProgress = jest
         .fn()

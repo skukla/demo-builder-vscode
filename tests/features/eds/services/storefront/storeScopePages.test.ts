@@ -187,7 +187,7 @@ describe('replaceStoreScopePages', () => {
         const p = project();
         const { deps, s } = await setUp(p, {}, { '/old-0': '<body><main><div><h1>Edited by hand</h1></div></main></body>' });
         // A page the old model wrote (one DA.live page per category), edited since.
-        const metadata = p.componentInstances![COMPONENT_IDS.EDS_STOREFRONT]!.metadata!;
+        const metadata = p.componentInstances![COMPONENT_IDS.EDS_STOREFRONT].metadata!;
         metadata.catalogMenu = { ...(metadata.catalogMenu as object), pages: [{ path: '/old-0', hash: hashOf(old) }] };
 
         const result = await replaceStoreScopePages(p, deps);

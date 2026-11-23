@@ -493,7 +493,7 @@ describe('projectFinalizationService', () => {
 
             await finalizeProject(context);
 
-            expect(mockProject.componentVersions!['removed-component']).toEqual({
+            expect(mockProject.componentVersions['removed-component']).toEqual({
                 version: '0.9.0',
                 lastUpdated: '2026-01-01T00:00:00.000Z',
             });

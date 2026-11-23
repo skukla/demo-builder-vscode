@@ -571,5 +571,5 @@ describe("the site's code on aem.live, after the repository", () => {
 function metadataOf(project: ReturnType<typeof edsProject>): Record<string, unknown> {
     const metadata = project.componentInstances?.['eds-storefront']?.metadata;
     if (!metadata) throw new Error('fixture is missing its eds-storefront metadata');
-    return metadata as Record<string, unknown>;
+    return metadata;
 }

@@ -65,7 +65,7 @@ describe('ownStorefrontOf', () => {
 
     it('honours a legacy daLiveSite when an unmigrated project still carries one', () => {
         const project = edsProject();
-        const instance = project.componentInstances![COMPONENT_IDS.EDS_STOREFRONT]!;
+        const instance = project.componentInstances![COMPONENT_IDS.EDS_STOREFRONT];
         instance.metadata = { ...instance.metadata, daLiveSite: 'kukla-bodea-content' };
         expect(ownStorefrontOf(project)?.daLiveSite).toBe('kukla-bodea-content');
     });
@@ -182,7 +182,7 @@ describe('describeProject — builtWith (EDS-13f step 02)', () => {
     /** The storefront record creation writes: template, pin and ledger, and the boilerplate read back. */
     function pinnedProject(overrides: Partial<Project> = {}): Project {
         const project = edsProject(overrides);
-        const instance = project.componentInstances![COMPONENT_IDS.EDS_STOREFRONT]!;
+        const instance = project.componentInstances![COMPONENT_IDS.EDS_STOREFRONT];
         instance.metadata = {
             ...instance.metadata,
             templateOwner: B2B.owner,
@@ -216,7 +216,7 @@ describe('describeProject — builtWith (EDS-13f step 02)', () => {
     // code last matched, so a colleague's import counts updates from there.
     it('records the template commit the code last matched, with or without a patches layer', () => {
         const project = pinnedProject();
-        const metadata = project.componentInstances![COMPONENT_IDS.EDS_STOREFRONT]!.metadata!;
+        const metadata = project.componentInstances![COMPONENT_IDS.EDS_STOREFRONT].metadata!;
         delete metadata.lkgSource;
 
         const file = describeProject(project, { name: '', description: '' }, CONTENT, { packages: THIN_LAYER });
@@ -227,7 +227,7 @@ describe('describeProject — builtWith (EDS-13f step 02)', () => {
 
     it('records no pin when the storefront holds no commit it last matched', () => {
         const project = pinnedProject();
-        const metadata = project.componentInstances![COMPONENT_IDS.EDS_STOREFRONT]!.metadata!;
+        const metadata = project.componentInstances![COMPONENT_IDS.EDS_STOREFRONT].metadata!;
         delete metadata.lkgSource;
         metadata.lastSyncedCommit = 'main';
 
@@ -240,7 +240,7 @@ describe('describeProject — builtWith (EDS-13f step 02)', () => {
     // so the description names the release the storefront was last built or updated from.
     it('records the patches release the storefront was last built or updated from', () => {
         const project = pinnedProject();
-        project.componentInstances![COMPONENT_IDS.EDS_STOREFRONT]!.metadata!.patchesRelease = 'v1.1.5';
+        project.componentInstances![COMPONENT_IDS.EDS_STOREFRONT].metadata!.patchesRelease = 'v1.1.5';
 
         const file = describeProject(project, { name: '', description: '' }, CONTENT, { packages: THIN_LAYER });
 
@@ -250,8 +250,8 @@ describe('describeProject — builtWith (EDS-13f step 02)', () => {
     it("writes the storefront's release over the one a saved package's record carried", () => {
         const builtWith = { template: B2B, lkg: LKG, patchesRelease: 'v1.0.0', extension: '1.0.0-beta.149' };
         const project = edsProject({ demo: makeAddedDemo({ builtWith }) });
-        project.componentInstances![COMPONENT_IDS.EDS_STOREFRONT]!.metadata = {
-            ...project.componentInstances![COMPONENT_IDS.EDS_STOREFRONT]!.metadata,
+        project.componentInstances![COMPONENT_IDS.EDS_STOREFRONT].metadata = {
+            ...project.componentInstances![COMPONENT_IDS.EDS_STOREFRONT].metadata,
             patchesRelease: 'v1.1.5',
         };
 

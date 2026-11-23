@@ -3,6 +3,7 @@
  * the signed-in IMS identity, addressed by the URLs the deploy answered.
  */
 
+import { toText } from '../../../helpers/toText';
 import {
     ErpIntegrationApiError,
     ErpIntegrationClient,
@@ -93,7 +94,7 @@ describe('ErpIntegrationClient', () => {
         const init = fetchImpl.mock.calls[0][1] as RequestInit;
         expect(init.method).toBe('POST');
         // Always a run id, and nothing else unless asked (AB-61).
-        expect(JSON.parse(String(init.body))).toEqual({ run: expect.stringMatching(RUN_ID) });
+        expect(JSON.parse(toText(init.body))).toEqual({ run: expect.stringMatching(RUN_ID) });
         expect(report).toEqual(body);
     });
 
@@ -105,7 +106,7 @@ describe('ErpIntegrationClient', () => {
         expect(fetchImpl.mock.calls[0][0]).toBe(URLS['runtime/erp/detach']);
         const init = fetchImpl.mock.calls[0][1] as RequestInit;
         expect(init.method).toBe('POST');
-        expect(JSON.parse(String(init.body))).toEqual({
+        expect(JSON.parse(toText(init.body))).toEqual({
             run: expect.stringMatching(RUN_ID),
             closeOrders: true,
         });
@@ -121,7 +122,7 @@ describe('ErpIntegrationClient', () => {
         expect(fetchImpl.mock.calls[0][0]).toBe(URLS['runtime/erp/close-orders']);
         const init = fetchImpl.mock.calls[0][1] as RequestInit;
         expect(init.method).toBe('POST');
-        expect(JSON.parse(String(init.body))).toEqual({ run: expect.stringMatching(RUN_ID), stores: ['tailspin_test_store'] });
+        expect(JSON.parse(toText(init.body))).toEqual({ run: expect.stringMatching(RUN_ID), stores: ['tailspin_test_store'] });
         expect(report).toEqual(STORE_CLOSE);
     });
 
@@ -134,7 +135,7 @@ describe('ErpIntegrationClient', () => {
         expect(fetchImpl.mock.calls[0][0]).toBe(URLS['runtime/erp/keymap']);
         const init = fetchImpl.mock.calls[0][1] as RequestInit;
         expect(init.method).toBe('PUT');
-        expect(JSON.parse(String(init.body))).toEqual({ entries });
+        expect(JSON.parse(toText(init.body))).toEqual({ entries });
         expect(new ErpIntegrationClient(URLS, AUTH, fetchImpl).keepsKeyMap()).toBe(true);
         const { ['runtime/erp/keymap']: _gone, ...older } = URLS;
         expect(new ErpIntegrationClient(older, AUTH, fetchImpl).keepsKeyMap()).toBe(false);
@@ -167,7 +168,7 @@ describe('ErpIntegrationClient', () => {
         const init = fetchImpl.mock.calls[0][1] as RequestInit;
         expect(init.method).toBe('POST');
         // Every publish is named with a run id, so one cut off at 60 s can be followed.
-        expect(JSON.parse(String(init.body))).toEqual({
+        expect(JSON.parse(toText(init.body))).toEqual({
             erpId: 'demo-erp-2',
             run: expect.stringMatching(RUN_ID),
         });
@@ -190,7 +191,7 @@ describe('ErpIntegrationClient', () => {
 
         await new ErpIntegrationClient(urls, AUTH, fetchImpl).publishPrices();
 
-        expect(JSON.parse(String((fetchImpl.mock.calls[0][1] as RequestInit).body))).toEqual({
+        expect(JSON.parse(toText((fetchImpl.mock.calls[0][1] as RequestInit).body))).toEqual({
             run: expect.stringMatching(RUN_ID),
         });
         expect(new ErpIntegrationClient(urls, AUTH, fetchImpl).publishesPrices()).toBe(true);
@@ -221,7 +222,7 @@ describe('ErpIntegrationClient', () => {
         expect((fetchImpl.mock.calls[0][1] as RequestInit).method).toBe('GET');
         const put = fetchImpl.mock.calls[1][1] as RequestInit;
         expect(put.method).toBe('PUT');
-        expect(JSON.parse(String(put.body))).toEqual({ entries });
+        expect(JSON.parse(toText(put.body))).toEqual({ entries });
         expect(client.keepsErpList()).toBe(true);
         const { ['runtime/erp/erps']: _gone, ...older } = URLS;
         expect(new ErpIntegrationClient(older, AUTH, fetchImpl).keepsErpList()).toBe(false);
@@ -246,7 +247,7 @@ describe('ErpIntegrationClient', () => {
         expect(fetchImpl.mock.calls[0][0]).toBe(URLS['runtime/erp/erps']);
         const patch = fetchImpl.mock.calls[0][1] as RequestInit;
         expect(patch.method).toBe('PATCH');
-        expect(JSON.parse(String(patch.body))).toEqual({
+        expect(JSON.parse(toText(patch.body))).toEqual({
             id: 'demo-erp-2',
             values: { structure_sales_org: '2000' },
             website: 'bodea',
@@ -261,7 +262,7 @@ describe('ErpIntegrationClient', () => {
             { structure_owns: null }
         );
 
-        expect(JSON.parse(String((fetchImpl.mock.calls[0][1] as RequestInit).body))).toEqual({
+        expect(JSON.parse(toText((fetchImpl.mock.calls[0][1] as RequestInit).body))).toEqual({
             id: 'demo-erp-2',
             values: { structure_owns: null },
         });
@@ -405,14 +406,14 @@ describe('ErpIntegrationClient.detach, when the answer is cut off at 60 seconds 
     /** Every call made to erp/detach, as `<METHOD> <url>`, in order. */
     function detachCalls(fetchImpl: jest.MockedFunction<typeof fetch>): string[] {
         return fetchImpl.mock.calls
-            .filter(([url]) => String(url).startsWith(DETACH))
-            .map(([url, init]) => `${init?.method} ${String(url)}`);
+            .filter(([url]) => toText(url).startsWith(DETACH))
+            .map(([url, init]) => `${init?.method} ${toText(url)}`);
     }
 
     /** The run id the POST carried. */
     function sentRun(fetchImpl: jest.MockedFunction<typeof fetch>): string {
         const post = fetchImpl.mock.calls.find(([, init]) => init?.method === 'POST');
-        return (JSON.parse(String(post?.[1]?.body)) as { run: string }).run;
+        return (JSON.parse(toText(post?.[1]?.body)) as { run: string }).run;
     }
 
     const record = (status: string, more: Record<string, unknown> = {}): Answer => ({
@@ -431,7 +432,7 @@ describe('ErpIntegrationClient.detach, when the answer is cut off at 60 seconds 
         await client.detach({ closeOrders: true });
 
         const runs = fetchImpl.mock.calls.map(
-            ([, init]) => (JSON.parse(String(init?.body)) as { run: string }).run
+            ([, init]) => (JSON.parse(toText(init?.body)) as { run: string }).run
         );
         expect(runs[0]).toMatch(RUN_ID);
         expect(runs[1]).toMatch(RUN_ID);
@@ -471,7 +472,7 @@ describe('ErpIntegrationClient.detach, when the answer is cut off at 60 seconds 
         const report = await new ErpIntegrationClient(URLS, AUTH, fetchImpl, noWait()).closeOrders(['tailspin_test_store']);
 
         expect(report).toEqual(STORE_CLOSE);
-        expect(fetchImpl.mock.calls.map(([url, init]) => `${init?.method} ${String(url)}`)).toContain(`GET ${CLOSE}?run=${sentRun(fetchImpl)}`);
+        expect(fetchImpl.mock.calls.map(([url, init]) => `${init?.method} ${toText(url)}`)).toContain(`GET ${CLOSE}?run=${sentRun(fetchImpl)}`);
     });
 
     it("throws the run's own error when the run failed", async () => {
@@ -666,13 +667,13 @@ describe('ErpIntegrationClient.publishPrices, when the answer is cut off at 60 s
 
     function priceCalls(fetchImpl: jest.MockedFunction<typeof fetch>): string[] {
         return fetchImpl.mock.calls
-            .filter(([url]) => String(url).startsWith(PRICES))
-            .map(([url, init]) => `${init?.method} ${String(url)}`);
+            .filter(([url]) => toText(url).startsWith(PRICES))
+            .map(([url, init]) => `${init?.method} ${toText(url)}`);
     }
 
     function sentRun(fetchImpl: jest.MockedFunction<typeof fetch>): string {
         const post = fetchImpl.mock.calls.find(([, init]) => init?.method === 'POST');
-        return (JSON.parse(String(post?.[1]?.body)) as { run: string }).run;
+        return (JSON.parse(toText(post?.[1]?.body)) as { run: string }).run;
     }
 
     const record = (status: string, more: Record<string, unknown> = {}): Answer => ({

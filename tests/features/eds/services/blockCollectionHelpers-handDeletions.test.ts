@@ -246,7 +246,7 @@ describe('installBlockCollections — entries removed by hand (EDS-36)', () => {
 
 /** The block files in the tree handed to the commit, by path. */
 function committedBlockPaths(mock: MockGithubFileOps): string[] {
-    const tree = mock.commitTreeToBranch.mock.calls[0][3] as GitHubTreeInput[];
+    const tree = mock.commitTreeToBranch.mock.calls[0][3];
     return tree.map((e) => e.path).filter((path) => path.startsWith('blocks/'));
 }
 

@@ -5,6 +5,7 @@
  * every test asserts what reached which store, in order. Files are real, in a temp project.
  */
 
+import { toText } from '../../../helpers/toText';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
@@ -48,7 +49,7 @@ function writes(): string[] {
     return fetchMock.mock.calls.map(([url, init]) => {
         const address = String(url);
         const store = address.startsWith(LIBRARY) ? 'library' : 'installer';
-        const body = JSON.parse(String((init as RequestInit).body)) as { datapack_name: string; version: string; data_type?: string };
+        const body = JSON.parse(toText((init as RequestInit).body)) as { datapack_name: string; version: string; data_type?: string };
         const route = address.slice(address.lastIndexOf('/') + 1);
         return `${store} ${route} ${body.datapack_name}@${body.version}${body.data_type ? ` ${body.data_type}` : ''}`;
     });
@@ -223,7 +224,7 @@ describe('load-datapack-zip', () => {
 
     it('keeps the data and says why when the library refuses the layer', async () => {
         fetchMock.mockImplementation(async (url: string, init: RequestInit) => {
-            const refused = String(init.body).includes('tailspin-settings');
+            const refused = toText(init.body).includes('tailspin-settings');
             return refused ? { ok: false, status: 403, text: async () => '{"error":"not yours"}' } : { ok: true, status: 201, text: async () => '{}' };
         });
 

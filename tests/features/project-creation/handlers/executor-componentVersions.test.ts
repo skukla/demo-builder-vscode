@@ -116,7 +116,7 @@ describe('Executor - Component Version Initialization', () => {
 
         it('should handle commit hash versions', () => {
             // Component with commit hash (not on tagged release)
-            mockProject.componentInstances!['headless']!.version = 'abc123de';
+            mockProject.componentInstances!['headless'].version = 'abc123de';
 
             // Simulate executor logic
             const project = mockProject;
@@ -141,7 +141,7 @@ describe('Executor - Component Version Initialization', () => {
 
         it('should handle beta/pre-release versions', () => {
             // Component with pre-release version
-            mockProject.componentInstances!['commerce-mesh']!.version = '1.0.0-beta.2';
+            mockProject.componentInstances!['commerce-mesh'].version = '1.0.0-beta.2';
 
             // Simulate executor logic
             const project = mockProject;
@@ -204,7 +204,7 @@ describe('Executor - Component Version Initialization', () => {
             // Before fix: version would be 'unknown' even though component has version
             // After fix: version should match component instance
 
-            const component = mockProject.componentInstances!['headless']!;
+            const component = mockProject.componentInstances!['headless'];
             expect(component.version).toBe('1.0.0');
 
             // Simulate executor logic

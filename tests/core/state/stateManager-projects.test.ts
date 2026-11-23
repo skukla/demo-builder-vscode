@@ -13,7 +13,6 @@ import {
 } from './stateManager.testUtils';
 import * as fs from 'fs/promises';
 import * as path from 'path';
-import type { Project } from '@/types/base';
 import { assertDefined } from '../../helpers/resultAssertions';
 
 describe('StateManager - Project Management', () => {
@@ -34,7 +33,7 @@ describe('StateManager - Project Management', () => {
                 backend: 'adobe-commerce-paas',
             };
 
-            await stateManager.saveProject(project as Project);
+            await stateManager.saveProject(project);
 
             // Verify state file was written. saveState writes atomically, so the
             // write lands on `<stateFile>.tmp` and is renamed into place —
@@ -56,7 +55,7 @@ describe('StateManager - Project Management', () => {
             await stateManager.initialize();
 
             const project = createStateManagerProject();
-            await stateManager.saveProject(project as Project);
+            await stateManager.saveProject(project);
 
             expect(fs.mkdir).toHaveBeenCalledWith(project.path, { recursive: true });
         });
@@ -74,7 +73,7 @@ describe('StateManager - Project Management', () => {
                 authenticated: true,
             };
 
-            await stateManager.saveProject(project as Project);
+            await stateManager.saveProject(project);
 
             // Check if any writeFile call includes .demo-builder.json.tmp (atomic write pattern)
             const manifestCall = (fs.writeFile as jest.Mock).mock.calls.find(
@@ -104,9 +103,9 @@ describe('StateManager - Project Management', () => {
                 },
             };
 
-            await stateManager.saveProject(project as Project);
+            await stateManager.saveProject(project);
 
-            const envPath = path.join(project.path!, '.env');
+            const envPath = path.join(project.path, '.env');
             const envCall = (fs.writeFile as jest.Mock).mock.calls.find(
                 (call) => call[0] === envPath
             );
@@ -123,7 +122,7 @@ describe('StateManager - Project Management', () => {
             stateManager.onProjectChanged(eventHandler);
 
             const project = createStateManagerProject();
-            await stateManager.saveProject(project as Project);
+            await stateManager.saveProject(project);
 
             expect(eventHandler).toHaveBeenCalledWith(project);
         });
@@ -142,7 +141,7 @@ describe('StateManager - Project Management', () => {
             const project = createStateManagerProject();
 
             // FIXED: Errors should now be propagated (not swallowed)
-            await expect(stateManager.saveProject(project as Project)).rejects.toThrow(
+            await expect(stateManager.saveProject(project)).rejects.toThrow(
                 'Permission denied'
             );
         });
@@ -159,7 +158,7 @@ describe('StateManager - Project Management', () => {
             // Ensure async operation completes
             await new Promise((resolve) => process.nextTick(resolve));
 
-            await stateManager.saveProject(project as Project);
+            await stateManager.saveProject(project);
 
             // Capture time after save
             const timeAfter = new Date().toISOString();
@@ -186,7 +185,7 @@ describe('StateManager - Project Management', () => {
             await stateManager.initialize();
 
             const project = createStateManagerProject();
-            await stateManager.saveProject(project as Project);
+            await stateManager.saveProject(project);
             expect(await stateManager.getCurrentProject()).toBeDefined();
 
             await stateManager.clearProject();
@@ -247,7 +246,7 @@ describe('StateManager - Project Management', () => {
             await stateManager.initialize();
 
             const project = createStateManagerProject();
-            await stateManager.saveProject(project as Project);
+            await stateManager.saveProject(project);
             await stateManager.clearAll();
 
             expect(mockWorkspaceState.update).toHaveBeenCalledWith('demoBuilder.state', undefined);

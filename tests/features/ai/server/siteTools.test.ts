@@ -20,6 +20,7 @@
  * - `connect_dalive` never dispatches. It is a handoff by construction.
  */
 
+import { toText } from '../../../helpers/toText';
 import {
     buildHarness,
     candidate,
@@ -568,7 +569,7 @@ describe('migrate_storefront_name', () => {
             projectPath: '  /projects/demo\n',
         });
 
-        expect(String(out.error ?? '')).not.toMatch(/No project found/);
+        expect(toText(out.error ?? '')).not.toMatch(/No project found/);
         expect(out.from).toBe('someone/citisignal-one');
     });
 

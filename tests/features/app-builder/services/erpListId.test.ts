@@ -116,7 +116,7 @@ describe('ensureListId', () => {
         expect(ensureListId(project, SYSTEM)).toBe(true);
         expect(project.appBuilderComponents?.['demo-erp']?.listId).toBe('northwind');
 
-        project.appBuilderComponents!['demo-erp']!.name = 'Tailspin ERP';
+        project.appBuilderComponents!['demo-erp'].name = 'Tailspin ERP';
         expect(ensureListId(project, SYSTEM)).toBe(false);
         expect(project.appBuilderComponents?.['demo-erp']?.listId).toBe('northwind');
     });

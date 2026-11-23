@@ -57,7 +57,7 @@ beforeEach(() => {
 
 /** The static every tab-replacing surface exposes. */
 const disposeOf = (cls: unknown): jest.Mock =>
-    (cls as unknown as { disposeActivePanel: jest.Mock }).disposeActivePanel;
+    (cls as { disposeActivePanel: jest.Mock }).disposeActivePanel;
 
 // =============================================================================
 // The ids that do nothing but run one command

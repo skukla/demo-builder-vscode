@@ -45,7 +45,7 @@ const TARGET = { owner: 'me', repo: 'store' };
 function github(files: Record<string, string | undefined>): GithubFake {
     return createMockGithub({
         getFileContent: jest.fn(async (_o: string, _r: string, path: string) =>
-            files[path] === undefined ? null : { content: files[path]!, sha: `${path}-sha`, path },
+            files[path] === undefined ? null : { content: files[path], sha: `${path}-sha`, path },
         ),
     });
 }

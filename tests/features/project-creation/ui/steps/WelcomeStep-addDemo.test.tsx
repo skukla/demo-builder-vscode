@@ -143,13 +143,13 @@ describe('WelcomeStep — editing an added demo', () => {
 
         await openEdit();
         expect(screen.getByRole('heading', { name: 'Edit Demo Package' })).toBeInTheDocument();
-        const name = screen.getByLabelText('Demo Name', { selector: 'input' }) as HTMLInputElement;
-        const description = screen.getByLabelText('Description', { selector: 'textarea' }) as HTMLTextAreaElement;
+        const name = screen.getByLabelText<HTMLInputElement>('Demo Name', { selector: 'input' });
+        const description = screen.getByLabelText<HTMLTextAreaElement>('Description', { selector: 'textarea' });
         expect(name.value).toBe('Isle5 by Robin');
         expect(description.value).toBe('Old words');
         // Where the card reads from, in a plain read-only field (owner, 2026-09-15): a new
         // repository is re-added through Add a demo package, which reads it.
-        const repository = screen.getByLabelText(/^GitHub Repository/, { selector: 'input' }) as HTMLInputElement;
+        const repository = screen.getByLabelText<HTMLInputElement>(/^GitHub Repository/, { selector: 'input' });
         expect(repository.value).toBe('https://github.com/robin/isle5-demo');
         expect(repository).toHaveAttribute('readonly');
         expect(screen.getByText('To use a different repository, remove this demo package and add it again.')).toBeInTheDocument();

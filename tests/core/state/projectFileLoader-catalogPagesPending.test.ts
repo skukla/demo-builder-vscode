@@ -8,6 +8,7 @@
  * the fields they carry.
  */
 
+import { toText } from '../../helpers/toText';
 import * as fs from 'fs/promises';
 import { ProjectConfigWriter } from '@/core/state/projectConfigWriter';
 import { ProjectFileLoader } from '@/core/state/projectFileLoader';
@@ -47,7 +48,7 @@ it('round-trips catalogPagesPending through the real writer and loader', async (
     });
 
     await new ProjectConfigWriter(createMockLogger()).saveProjectConfig(project, PROJECT_PATH);
-    const manifestWrite = mockedFs.writeFile.mock.calls.find((call) => call[0].toString().endsWith('.tmp'));
+    const manifestWrite = mockedFs.writeFile.mock.calls.find((call) => toText(call[0]).endsWith('.tmp'));
     expect(manifestWrite).toBeDefined();
     mockedFs.readFile.mockResolvedValue(manifestWrite![1] as string);
     mockedFs.readdir.mockRejectedValue(new Error('no components dir'));

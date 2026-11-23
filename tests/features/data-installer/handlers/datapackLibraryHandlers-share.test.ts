@@ -6,6 +6,7 @@
 
 // The shared wall first: it owns the access-guard mock and the subject's import.
 import { STORE, datapackLibraryHandlers, mockAccess } from './datapackLibraryHandlers.testUtils';
+import { toText } from '../../../helpers/toText';
 import { importHandlers } from '@/features/data-installer/handlers/importHandlers';
 import type { DatapackSummary } from '@/features/data-installer/types';
 import { ErrorCode } from '@/types/errorCodes';
@@ -30,7 +31,7 @@ let fetchMock: jest.Mock;
 function puts(): unknown[] {
     return fetchMock.mock.calls
         .filter(([url, init]) => String(url) === `${STORE}/update-datapack-metadata` && (init as RequestInit).method === 'PUT')
-        .map(([, init]) => JSON.parse(String((init as RequestInit).body)));
+        .map(([, init]) => JSON.parse(toText((init as RequestInit).body)));
 }
 
 beforeEach(() => {

@@ -163,7 +163,7 @@ describe('ConfigureScreen - Authoring Experience radio (EDS only)', () => {
         );
 
         selectSection('Storefront');
-        const radios = screen.getAllByRole('radio') as HTMLInputElement[];
+        const radios = screen.getAllByRole<HTMLInputElement>('radio');
         const ew = radios.find((r) => r.value === 'experience-workspace');
         const ue = radios.find((r) => r.value === 'da-live-classic');
         expect(ew?.checked).toBe(true);
@@ -195,7 +195,7 @@ describe('ConfigureScreen - Authoring Experience radio (EDS only)', () => {
 
         // Flip to Experience Workspace
         selectSection('Storefront');
-        const radios = screen.getAllByRole('radio') as HTMLInputElement[];
+        const radios = screen.getAllByRole<HTMLInputElement>('radio');
         const ew = radios.find((r) => r.value === 'experience-workspace')!;
         await user.click(ew);
 

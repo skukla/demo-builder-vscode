@@ -74,7 +74,7 @@ describe('IntegrationSettingsModal', () => {
         expect(screen.getByText('ERP integration Settings')).toBeInTheDocument();
         expect(field('ERP Name').value).toBe('Acme ERP');
         expect(field('Region').value).toBe('eu');
-        expect((screen.getByLabelText('API key') as HTMLInputElement).value).toBe('');
+        expect((screen.getByLabelText<HTMLInputElement>('API key')).value).toBe('');
         expect(screen.getByText('Secret is set')).toBeInTheDocument();
         expect(screen.getByText(/ERP address: https:\/\/ns\.example\/web\/demo-erp \(from Acme ERP\)/)).toBeInTheDocument();
         expect(screen.queryByText(SECRET)).not.toBeInTheDocument();

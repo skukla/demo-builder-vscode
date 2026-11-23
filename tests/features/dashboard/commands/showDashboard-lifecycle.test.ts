@@ -274,9 +274,9 @@ describe('ProjectDashboardWebviewCommand - lifecycle and push channels', () => {
         });
 
         it('builds ONE complete handler context from the shared factory', async () => {
-            const factory = jest.requireMock('@/commands/handlerContextFactory') as {
+            const factory = jest.requireMock<{
                 createPanelHandlerContext: jest.Mock;
-            };
+            }>('@/commands/handlerContextFactory');
             const { command, stateManager } = commandFor(createMockProject());
             const handlers = new Map<string, (data: unknown) => Promise<unknown>>();
             internals(command).initializeMessageHandlers({
@@ -297,9 +297,9 @@ describe('ProjectDashboardWebviewCommand - lifecycle and push channels', () => {
         });
 
         it('gives handlers a sendMessage that reaches THIS command webview', async () => {
-            const factory = jest.requireMock('@/commands/handlerContextFactory') as {
+            const factory = jest.requireMock<{
                 createPanelHandlerContext: jest.Mock;
-            };
+            }>('@/commands/handlerContextFactory');
             const { command } = commandFor(createMockProject());
             const sendSpy = jest
                 .spyOn(

@@ -6,6 +6,7 @@
  * records what was sent. Files are real, written into a temp project.
  */
 
+import { toText } from '../../../helpers/toText';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
@@ -326,7 +327,7 @@ describe('load-datapack-zip', () => {
 
         expect(mockAccess).toHaveBeenCalledWith(expect.anything(), 'library');
         expect(sentRoutes()).toEqual(['create-datapack', 'add-data-item']);
-        const body = JSON.parse(String((fetchMock.mock.calls[1] as [string, RequestInit])[1].body));
+        const body = JSON.parse(toText((fetchMock.mock.calls[1] as [string, RequestInit])[1].body));
         expect(body).toEqual({
             datapack_name: 'tailspin',
             version: 'v1',

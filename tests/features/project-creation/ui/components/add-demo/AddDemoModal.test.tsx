@@ -117,7 +117,7 @@ describe('AddDemoModal', () => {
 
         expect(screen.getByText('Package Details')).toBeInTheDocument();
         // The name is filled in, not a grey placeholder that reads as read-only (owner, 2026-09-15).
-        const name = screen.getByLabelText('Demo Name', { selector: 'input' }) as HTMLInputElement;
+        const name = screen.getByLabelText<HTMLInputElement>('Demo Name', { selector: 'input' });
         expect(name.value).toBe('Isle5 Demo');
         expect(name).not.toHaveAttribute('placeholder');
         expect(screen.getByTestId('found-Type')).toHaveTextContent('Edge Delivery');
@@ -153,7 +153,7 @@ describe('AddDemoModal', () => {
             result: { ...READ, description: { kind: 'demo', version: 1, name: 'Isle5', description: 'Luxury B2C demo from the file' } },
         });
 
-        const description = screen.getByLabelText('Description', { selector: 'textarea' }) as HTMLTextAreaElement;
+        const description = screen.getByLabelText<HTMLTextAreaElement>('Description', { selector: 'textarea' });
         expect(description.value).toBe('Luxury B2C demo from the file');
         expect(description).not.toHaveAttribute('placeholder');
     });

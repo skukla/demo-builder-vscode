@@ -6,6 +6,7 @@
  * ERP's rule saves is asserted, and the read's product rows are asserted against the capture.
  */
 
+import { toText } from '../../../helpers/toText';
 import * as fs from 'fs';
 import * as path from 'path';
 import { ErpIntegrationClient } from '@/features/app-builder/services/erpIntegrationClient';
@@ -50,7 +51,7 @@ function integration(settingsByErp: Record<string, Record<string, string>>) {
             return new Response(JSON.stringify({ default: settingsByErp[erp] ?? {}, websites: {} }), { status: 200 });
         }
         if (url.endsWith('/erp/erps') && init?.method === 'PATCH') {
-            patched.push(JSON.parse(String(init.body)));
+            patched.push(JSON.parse(toText(init.body)));
             return new Response(JSON.stringify({ entry: { id: 'x' } }), { status: 200 });
         }
         return new Response('{"error":"unexpected"}', { status: 500 });

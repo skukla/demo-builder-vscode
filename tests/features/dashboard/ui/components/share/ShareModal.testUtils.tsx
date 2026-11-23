@@ -158,7 +158,7 @@ function control<T extends HTMLElement>(testId: string, tag: string): T {
 
 /** A part on the file form, a house checkbox row, found by its label (its line follows in the name). */
 export function partBox(label: 'Setup' | 'Storefront'): HTMLInputElement {
-    return screen.getByRole('checkbox', { name: new RegExp(`^${label}`) }) as HTMLInputElement;
+    return screen.getByRole('checkbox', { name: new RegExp(`^${label}`) });
 }
 
 export function nameInput(): HTMLInputElement {

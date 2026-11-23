@@ -73,9 +73,9 @@ describe('configGenerator — data-driven config flags', () => {
     describe('an addon that declares configFlags', () => {
         /** The real catalog with one flag added to the addon that already exists. */
         const catalogWithAddonFlags = () => {
-            const real = jest.requireActual(COMPONENTS) as {
+            const real = jest.requireActual<{
                 addons: Record<string, { configuration?: Record<string, unknown> }>;
-            };
+            }>(COMPONENTS);
             return {
                 ...real,
                 addons: {
@@ -131,9 +131,7 @@ describe('configGenerator — data-driven config flags', () => {
          * for a project that merely selected an addon with no flags.
          */
         const catalogWithoutAddonConfiguration = () => {
-            const real = jest.requireActual(COMPONENTS) as {
-                addons: Record<string, unknown>;
-            };
+            const real = jest.requireActual<{ addons: Record<string, unknown> }>(COMPONENTS);
             return {
                 ...real,
                 addons: { ...real.addons, 'adobe-commerce-aco': { id: 'adobe-commerce-aco' } },
@@ -206,9 +204,9 @@ describe('configGenerator — data-driven config flags', () => {
         it('still generates when an addon carrying flags is selected', async () => {
             const { generateConfigJson } = await loadGeneratorWith({
                 components: () => {
-                    const real = jest.requireActual(COMPONENTS) as {
+                    const real = jest.requireActual<{
                         addons: Record<string, { configuration?: Record<string, unknown> }>;
-                    };
+                    }>(COMPONENTS);
                     return {
                         ...real,
                         addons: {

@@ -111,7 +111,7 @@ describe('AiOverviewScreen — decisions', () => {
             await renderScreen({ projectOverrides: { aiPrompts: TWO_PROMPTS } });
             await chooseFromKebab(1, 'Edit');
 
-            expect((screen.getByLabelText(/title/i) as HTMLInputElement).value).toBe(
+            expect((screen.getByLabelText<HTMLInputElement>(/title/i)).value).toBe(
                 'Beta prompt'
             );
         });
@@ -267,7 +267,7 @@ describe('AiOverviewScreen — decisions', () => {
 
             await chooseFromKebab(1, 'Edit');
 
-            expect((screen.getByLabelText(/title/i) as HTMLInputElement).value).toBe(
+            expect((screen.getByLabelText<HTMLInputElement>(/title/i)).value).toBe(
                 'Gamma prompt'
             );
         });

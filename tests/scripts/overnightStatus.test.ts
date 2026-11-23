@@ -142,7 +142,7 @@ describe('the burn-down status command', () => {
     });
 
     it('is STALLED when the batch it lists as open has no live process', () => {
-        fx.log(runningLog(deadPid() as number));
+        fx.log(runningLog(deadPid()));
 
         const { code, json } = fx.status();
 

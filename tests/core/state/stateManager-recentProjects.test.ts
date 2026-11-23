@@ -7,7 +7,6 @@
 
 import { setupMocks, mockRecentProjectsFile, createStateManagerProject, type TestMocks } from './stateManager.testUtils';
 import * as fs from 'fs/promises';
-import type { Project } from '@/types/base';
 
 describe('StateManager - Recent Projects', () => {
     let testMocks: TestMocks;
@@ -120,7 +119,7 @@ describe('StateManager - Recent Projects', () => {
             const project = createStateManagerProject();
             project.organization = 'Test Org';
 
-            await stateManager.addToRecentProjects(project as Project);
+            await stateManager.addToRecentProjects(project);
 
             expect(fs.writeFile).toHaveBeenCalled();
             const writeCall = (fs.writeFile as jest.Mock).mock.calls.find(
@@ -149,7 +148,7 @@ describe('StateManager - Recent Projects', () => {
             project.path = '/test/project1';
             project.name = 'Project 1';
 
-            await stateManager.addToRecentProjects(project as Project);
+            await stateManager.addToRecentProjects(project);
 
             const recent = await stateManager.getRecentProjects();
             expect(recent[0].path).toBe('/test/project1');
@@ -184,7 +183,7 @@ describe('StateManager - Recent Projects', () => {
             newProject.path = '/test/new-project';
             newProject.name = 'New Project';
 
-            await stateManager.addToRecentProjects(newProject as Project);
+            await stateManager.addToRecentProjects(newProject);
 
             const recent = await stateManager.getRecentProjects();
             expect(recent).toHaveLength(10);
@@ -205,7 +204,7 @@ describe('StateManager - Recent Projects', () => {
                 authenticated: true
             };
 
-            await stateManager.addToRecentProjects(project as Project);
+            await stateManager.addToRecentProjects(project);
 
             const writeCall = (fs.writeFile as jest.Mock).mock.calls.find(
                 call => call[0] === mockRecentProjectsFile

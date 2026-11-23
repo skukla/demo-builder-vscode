@@ -269,7 +269,7 @@ describe('deleteUndeclaredActions — rules and triggers (AB-58)', () => {
             failed: [],
         });
         const deletes = deps.commandManager.execute.mock.calls
-            .map((call) => call[0] as string)
+            .map((call) => call[0])
             .filter((command) => / delete /u.test(command));
         // The same commands a removal uses (`deleteRuntimeEntity`), rule before trigger.
         expect(deletes).toEqual([
@@ -307,7 +307,7 @@ describe('deleteUndeclaredActions — rules and triggers (AB-58)', () => {
         const result = await deleteUndeclaredActions(deps, ['/c/erp-integration']);
 
         expect(result.note).toMatch(/could not check/i);
-        const commands = deps.commandManager.execute.mock.calls.map((call) => call[0] as string);
+        const commands = deps.commandManager.execute.mock.calls.map((call) => call[0]);
         expect(commands.some((c) => / delete /u.test(c))).toBe(false);
     });
 
@@ -322,7 +322,7 @@ describe('deleteUndeclaredActions — rules and triggers (AB-58)', () => {
         const result = await deleteUndeclaredActions(deps, ['/c/erp-integration']);
 
         expect(result.note).toMatch(/could not check/i);
-        const commands = deps.commandManager.execute.mock.calls.map((call) => call[0] as string);
+        const commands = deps.commandManager.execute.mock.calls.map((call) => call[0]);
         expect(commands.some((c) => / delete /u.test(c))).toBe(false);
     });
 

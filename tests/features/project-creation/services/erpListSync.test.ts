@@ -9,6 +9,7 @@
  * the outcome, a warning or a log.
  */
 
+import { toText } from '../../../helpers/toText';
 import type { ErpAuth } from '@/features/app-builder/services/erpList';
 import { syncErpList, unlistErp } from '@/features/project-creation/services/erpListSync';
 import type { AppBuilderComponentState } from '@/types/base';
@@ -60,7 +61,7 @@ function fakeFetch() {
 function sentEntries(fetchImpl: ReturnType<typeof fakeFetch>) {
     const put = fetchImpl.mock.calls.find(([, init]) => init?.method === 'PUT');
     expect(put?.[0]).toBe(ERPS_URL);
-    return (JSON.parse(String(put?.[1]?.body)) as { entries: Array<{ id: string; connection: Record<string, unknown> }> }).entries;
+    return (JSON.parse(toText(put?.[1]?.body)) as { entries: Array<{ id: string; connection: Record<string, unknown> }> }).entries;
 }
 
 describe('syncErpList — each added ERP with its own credential', () => {
@@ -181,7 +182,7 @@ describe('syncErpList — growing from one ERP keeps the first ERP on its rule',
 
     function settingsSent(fetchImpl: ReturnType<typeof fetchWith>) {
         const put = fetchImpl.mock.calls.find(([, init]) => init?.method === 'PUT');
-        const { entries } = JSON.parse(String(put?.[1]?.body)) as { entries: Array<{ id: string; settings?: Record<string, string> }> };
+        const { entries } = JSON.parse(toText(put?.[1]?.body)) as { entries: Array<{ id: string; settings?: Record<string, string> }> };
         return Object.fromEntries(entries.map((entry) => [entry.id, entry.settings]));
     }
 

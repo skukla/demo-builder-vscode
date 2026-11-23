@@ -10,6 +10,7 @@
  * DELETE settings/maintenance, GET health → { appearance, maintenance }.
  */
 
+import { toText } from '../../../helpers/toText';
 import {
     ERP,
     ERP_URLS,
@@ -74,7 +75,7 @@ function sent(): { url: string; method: string; body: unknown; auth: string } {
     return {
         url,
         method: String(init.method),
-        body: init.body === undefined ? undefined : JSON.parse(String(init.body)),
+        body: init.body === undefined ? undefined : JSON.parse(toText(init.body)),
         auth: headers.Authorization,
     };
 }

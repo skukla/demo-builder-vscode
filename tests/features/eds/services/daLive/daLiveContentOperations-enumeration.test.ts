@@ -138,7 +138,7 @@ describe('DaLiveContentOperations - Content Enumeration', () => {
             const essentialConfigUrls = ['/redirects.json', '/metadata.json', '/sitemap.json'];
             const essentialConfigHeadCalls = mockFetch.mock.calls.filter(
                 ([url, opts]: [string, RequestInit | undefined]) =>
-                    opts?.method === 'HEAD' && essentialConfigUrls.some(p => (url as string).endsWith(p)),
+                    opts?.method === 'HEAD' && essentialConfigUrls.some(p => (url).endsWith(p)),
             );
             expect(essentialConfigHeadCalls).toHaveLength(0);
         });
@@ -248,10 +248,10 @@ describe('DaLiveContentOperations - Content Enumeration', () => {
             // URL-based mock: customer/login exists, customer/account returns 404
             mockFetch.mockImplementation(async (url: string, options?: RequestInit) => {
                 if (options?.method === 'HEAD') {
-                    if ((url as string).includes('/customer/login')) {
+                    if ((url).includes('/customer/login')) {
                         return mockFetchResponse(200);
                     }
-                    if ((url as string).includes('/customer/account')) {
+                    if ((url).includes('/customer/account')) {
                         return mockFetchResponse(404);
                     }
                     // Spreadsheets and fragments succeed
@@ -309,8 +309,8 @@ describe('DaLiveContentOperations - Content Enumeration', () => {
             const customerAuthProbes = mockFetch.mock.calls.filter(
                 ([url, opts]: [string, RequestInit | undefined]) =>
                     opts?.method === 'HEAD' &&
-                    (url as string).includes('/customer/') &&
-                    !(url as string).endsWith('.json'),
+                    (url).includes('/customer/') &&
+                    !(url).endsWith('.json'),
             );
             expect(customerAuthProbes).toHaveLength(0);
         });
@@ -327,16 +327,16 @@ describe('DaLiveContentOperations - Content Enumeration', () => {
             mockFetch.mockImplementation(async (url: string, options?: RequestInit) => {
                 if (options?.method === 'HEAD') {
                     // login and account exist on source, create-account does NOT
-                    if ((url as string).includes('/customer/login') || (url as string).includes('/customer/account')) {
+                    if ((url).includes('/customer/login') || (url).includes('/customer/account')) {
                         return mockFetchResponse(200);
                     }
-                    if ((url as string).includes('/customer/create-account')) {
+                    if ((url).includes('/customer/create-account')) {
                         return mockFetchResponse(404);
                     }
                     return mockFetchResponse(200);
                 }
                 if (options?.method === 'POST') {
-                    postCalls.push({ url: url as string, body: options.body as FormData | null });
+                    postCalls.push({ url: url, body: options.body as FormData | null });
                 }
                 return mockFetchResponse(200);
             });

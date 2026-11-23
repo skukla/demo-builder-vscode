@@ -6,6 +6,7 @@
 
 // The shared wall first: it owns the access-guard mock and the subject's import.
 import { STORE, datapackLibraryHandlers, mockAccess } from './datapackLibraryHandlers.testUtils';
+import { toText } from '../../../helpers/toText';
 import { INSTALLER_WRITE_REFUSED, installerEchoRefusal } from '@/features/data-installer/handlers/datapackZipHandlers';
 import { importHandlers } from '@/features/data-installer/handlers/importHandlers';
 import { SHARED_IN_FILES_KEY } from '@/features/data-installer/services/sharedInFiles';
@@ -202,7 +203,7 @@ describe('copy-library-datapack-to-installer', () => {
             `${INSTALLER}/add-data-item`,
             `${INSTALLER}/add-data-item`,
         ]);
-        const body = JSON.parse(String((fetchMock.mock.calls[1] as [string, RequestInit])[1].body));
+        const body = JSON.parse(toText((fetchMock.mock.calls[1] as [string, RequestInit])[1].body));
         expect(body).toEqual({
             datapack_name: 'tailspin',
             version: 'v1',
@@ -283,7 +284,7 @@ describe('copy-library-datapack-to-installer', () => {
 
         const result = await copy(contextFor(null, false), { datapackName: 'tailspin', version: 'v1', confirmName: 'tailspin' });
 
-        const sent = JSON.parse(String((fetchMock.mock.calls[1] as [string, RequestInit])[1].body)) as { data: string };
+        const sent = JSON.parse(toText((fetchMock.mock.calls[1] as [string, RequestInit])[1].body)) as { data: string };
         expect(JSON.parse(sent.data)).toEqual([{ product: { ...card.product, attribute_set_id: 4 } }]);
         expect(result).toMatchObject({ success: true, data: { changed: [expect.stringContaining('1 gift card goes in the Default attribute set')] } });
     });

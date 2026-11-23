@@ -228,7 +228,7 @@ describe('dataInstallerHandlers', () => {
                 const perCall = orgs.length > 0 && orgs.every((entry) => entry === undefined || Array.isArray(entry));
                 if (!perCall) return jest.fn().mockResolvedValue(orgs);
                 const mock = jest.fn();
-                for (const answer of orgs as Array<AdobeOrg[] | undefined>) mock.mockResolvedValueOnce(answer);
+                for (const answer of orgs) mock.mockResolvedValueOnce(answer);
                 return mock;
             }
 
