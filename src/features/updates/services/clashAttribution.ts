@@ -14,7 +14,7 @@
 
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { injectTokenIntoUrl } from '@/features/eds/services/github/githubHelpers';
-import type { GitStep } from '@/features/updates/services/templateMergeBase';
+import { safeInQuotes, type GitStep } from '@/features/updates/services/templateMergeBase';
 import { describeTemplateConflicts, failure } from '@/features/updates/services/templateSyncMessages';
 import type { ClashEdit, TemplateClash, TemplateSyncResult } from '@/features/updates/services/templateSyncTypes';
 
@@ -67,8 +67,9 @@ const FULL_SHA = /^[0-9a-f]{40}$/;
 
 /** The blob id of `file` at `rev`, or undefined when git cannot name it. */
 async function blobOf(git: GitStep, rev: string, file: string): Promise<string | undefined> {
-    // The name goes into a shell command: one that could break out of the quotes is not read.
-    if (/["$`\\]/.test(file)) return undefined;
+    // The name goes into a shell command: one either shell would read as more than a name
+    // inside double quotes is not read (safeInQuotes).
+    if (!safeInQuotes(file)) return undefined;
     const found = await git(`git rev-parse "${rev}:${file}"`, TIMEOUTS.QUICK);
     const id = found.stdout.trim();
     return found.code === 0 && FULL_SHA.test(id) ? id : undefined;

@@ -199,6 +199,8 @@ describe('merge strategy — the exact git conversation', () => {
             ...FETCH_STEPS,
             ...BASE_CHECK_STEPS,
             ['git rev-parse template/main', opts(REPO_DIR, TIMEOUTS.QUICK)],
+            // What the template deletes, checked against the storefront before anything applies.
+            [`git diff-tree -r -z --name-only --diff-filter=D ${RANGE_AND_SPEC}`, opts(REPO_DIR, TIMEOUTS.NORMAL)],
             [`git diff-tree -r --name-only ${RANGE_AND_SPEC}`, opts(REPO_DIR, TIMEOUTS.NORMAL)],
             [
                 `git diff-tree -r -p --binary --full-index --output="${PATCH_FILE}" ${RANGE_AND_SPEC}`,
@@ -245,6 +247,27 @@ describe('merge strategy — the exact git conversation', () => {
         const result = await service().syncWithTemplate(edsProject(), { strategy: 'merge' });
 
         expect(result).toEqual({ success: false, strategy: 'merge', syncedCommit: '', error });
+        expect(pushed()).toBe(false);
+    });
+
+    // git answers 1 for "this file differs"; anything else is git failing, never an edit.
+    it('a git error while checking a deleted file is reported as one, and never pushed', async () => {
+        mockExecute.mockImplementation(async (cmd: string) => {
+            if (/--diff-filter=D /.test(cmd)) return { code: 0, stdout: 'blocks/old/old.js\0', stderr: '' };
+            if (/^git ls-files -z$/.test(cmd)) return { code: 0, stdout: 'blocks/old/old.js\0', stderr: '' };
+            if (/^git diff --quiet /.test(cmd)) return { code: 128, stdout: '', stderr: 'fatal: bad object' };
+            return happyGit(cmd);
+        });
+
+        const result = await service().syncWithTemplate(edsProject(), { strategy: 'merge' });
+
+        expect(result).toEqual({
+            success: false,
+            strategy: 'merge',
+            syncedCommit: '',
+            error: 'Could not compare blocks/old/old.js with the template\'s.',
+        });
+        expect(gitCalls()).toContainEqual(`git diff --quiet ${BASE_SHA} -- "blocks/old/old.js"`);
         expect(pushed()).toBe(false);
     });
 

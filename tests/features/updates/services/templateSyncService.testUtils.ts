@@ -85,6 +85,10 @@ export function happyGit(cmd: string): { code: number; stdout: string; stderr: s
     if (/^git rev-parse template\/main$/.test(cmd)) {
         return { code: 0, stdout: `${TEMPLATE_HEAD}\n`, stderr: '' };
     }
+    // The template deletes nothing in the happy path (deleted files: templateMergeBase.test.ts).
+    if (/ diff-tree -r -z --name-only --diff-filter=D /.test(cmd)) {
+        return { code: 0, stdout: '', stderr: '' };
+    }
     if (/^git diff-tree -r --name-only /.test(cmd)) {
         return { code: 0, stdout: 'blocks/hero/hero.js\n', stderr: '' };
     }
