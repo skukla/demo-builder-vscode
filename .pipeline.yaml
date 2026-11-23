@@ -84,6 +84,7 @@ tools:
   check_ledger: { run: node .rptc/plans/pattern-conformance-audit/harness/check-ledger.mjs, about: "Every src file has an adjudicated dependency-injection verdict (test-strategy-scan)", listed: false }
   node_resolve_check: { run: npm run node:resolve -- --check, about: "The Node version Demo Builder ships on still matches every component (cut-release precondition)", listed: false }
   docs_tools: { run: npm run docs:tools, about: "Regenerate docs/systems/mcp-tools.md from the tool registrations", listed: false, copy: false }
-# Paused by the owner 2026-11-16: since 11-09 automatic reflect put 258 proposals on the ledger
-# (about 32 a day, many duplicates), more than anyone can answer. By-hand reflect is unaffected.
-auto_reflect: { enabled: false }
+# Paused by the owner 2026-11-16 (258 proposals in a week, 84% repeats). Back on 2026-11-23 on the
+# owner's word, once dev-pipeline 5c53eb8 and 727b9e5 made the reviewer drop a repeat of any
+# proposal already made, date each proposal's evidence, and refuse evidence from a deleted script.
+auto_reflect: { enabled: true }
