@@ -5,7 +5,7 @@ develop; merging is your decision.
 
 ## The takeaway
 
-The loop worked the backlog's smallest items that need nothing from you, smallest first. Eight are
+The loop worked the backlog's smallest items that need nothing from you, smallest first. Nine are
 built on the branch, each with the full checks passing and a review filed. Three need you: one
 was refused by the permission check, one turns out to be satisfied already, and one is a real bug
 whose fix needs a design choice, now written into the item.
@@ -22,6 +22,7 @@ whose fix needs a design choice, now written into the item.
 | PL-116 | Both mutation scripts use one rule for which suites are a module's own. Nine modules move from included to blocked; each had been credited a same-named module's suite. No pinned measurement moves | all done here |
 | PL-120 | Re-measured `authentication/services` (45 files): verdict leave, new bar 50. Four Adobe I/O Events files are the one subfolder candidate | all done here |
 | AI-79 | All 20 untriaged handlers judged in the coverage scan: 8 reach an agent under another name, 12 are screen plumbing, 2 are new gaps | all done here |
+| PL-98 | One question-table shell for the projects list's Delete, Reset and Updates windows; markup unchanged, 978 tests pass, one new assertion | all done here |
 
 ## Handed off
 
