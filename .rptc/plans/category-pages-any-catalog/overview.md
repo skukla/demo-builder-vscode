@@ -48,6 +48,15 @@ pages however they like, and the menu and category pages follow.
 
 ## Steps
 
+Step 2 shipped in beta.153 (`c1d6ec45d`); the work was paused 2026-11-22 (backlog EDS-61).
+
+| # | Step | Status |
+|---|---|---|
+| 1 | Service: ask the store before calling `/products/a/b` a product page | parked |
+| 2 | Service: publish a category on first visit | done |
+| 3 | Menu block: link the category's own address | parked |
+| 4 | Deploy and prove | parked |
+
 1. **Service: ask the store before calling `/products/a/b` a product page.** Two segments under
    `products/` and four or more are never product pages; for exactly three, look the product up
    and, when there is none, render the category whose url path matches. Same rule in Demo

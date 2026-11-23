@@ -4,6 +4,17 @@ Owner, 2026-11-19: build slices 1 and 2 of the research's six now, in beta.153; 
 the release, and PL-102 stays open until they are built. Research and the five owner decisions:
 `.rptc/research/plain-failure-wording-everywhere/research.md`, `.rptc/backlog/2026-11-17-plain-failure-wording-everywhere.md`.
 
+## Steps
+
+| # | Step | Status |
+|---|---|---|
+| 1 | Slice 1: the door | done |
+| 2 | Slice 2: the funnels | done |
+| 3 | Provider translators | not started |
+| 4 | `OperationOutcome`, `HandlerResponse.error`, `SimpleResult.error` typed | not started |
+| 5 | ResultBody, StatusDisplay, InlineNotice, typed notification wrapper | not started |
+| 6 | Words check widened; rule retired; convention in the handbook | not started |
+
 ## The one design point to know
 
 Until slice 4 types the handler errors, some text reaching a progress window is untyped: it may be a

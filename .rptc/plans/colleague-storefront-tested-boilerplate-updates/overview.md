@@ -59,13 +59,17 @@ resets.
 
 ## Steps
 
-1. `step-01-record-the-base.md`: the base field, seeded at creation and lazily for existing projects
-2. `step-02-check.md`: the second check and its selection entry
-3. `step-03-rows.md`: the two rows, worded for the SC
-4. `step-04-apply.md`: applying the Adobe track without touching the colleague track
-5. `step-05-keep-the-base-honest.md`: reset, change source, save as package, the colleague's own boilerplate moves
-6. `step-06-agent-surface.md`: `apply_updates` and `get_storefront_report`
-7. `step-07-docs-and-test-plan.md`
+Built 2026-10-20 (see As built); shipped in the changelog under EDS-56.
+
+| # | Step | Status |
+|---|---|---|
+| 01 | `step-01-record-the-base.md`: the base field, seeded at creation and lazily for existing projects | done |
+| 02 | `step-02-check.md`: the second check and its selection entry | done |
+| 03 | `step-03-rows.md`: the two rows, worded for the SC | done |
+| 04 | `step-04-apply.md`: applying the Adobe track without touching the colleague track | done |
+| 05 | `step-05-keep-the-base-honest.md`: reset, change source, save as package, the colleague's own boilerplate moves | done |
+| 06 | `step-06-agent-surface.md`: `apply_updates` and `get_storefront_report` | done |
+| 07 | `step-07-docs-and-test-plan.md` | done |
 
 ## The five properties (root CLAUDE.md)
 

@@ -61,12 +61,14 @@ kept, and finishes the update once the markers are gone.
 
 ## Steps
 
-1. `step-01-refresh-local-copy.md`: bring the local copy up to date after every update push.
-2. `step-02-keep-the-clash.md`: on a clash, apply the same change in the local copy and record it.
-3. `step-03-choices.md`: the three choices in the Updates modal, and the file list for the agent.
-4. `step-04-fix-with-ai.md`: open the chosen engine on the clash.
-5. `step-05-finish.md`: the next Apply checks, commits, pushes and records the version.
-6. `step-06-docs-and-test-plan.md`.
+| # | Step | Status |
+|---|---|---|
+| 01 | `step-01-refresh-local-copy.md`: bring the local copy up to date after every update push | done |
+| 02 | `step-02-keep-the-clash.md`: on a clash, apply the same change in the local copy and record it | done |
+| 03 | `step-03-choices.md`: the three choices in the Updates modal, and the file list for the agent | done |
+| 04 | `step-04-fix-with-ai.md`: open the chosen engine on the clash | done |
+| 05 | `step-05-finish.md`: the next Apply checks, commits, pushes and records the version | done |
+| 06 | `step-06-docs-and-test-plan.md` | done |
 
 ## Open questions (found by the research; each is answered in the step that needs it)
 

@@ -88,21 +88,21 @@ needs, as "Add a demo" already guarantees).
 
 ## Proposed work (not filed)
 
-| # | Item | Builds on | Lane |
-|---|---|---|---|
-| 1 | Settle decisions 1 to 8 | this plan | owner |
-| 2 | Demo manifest: the project file, version 3, naming every part and its version, with places for sites and ACO; reads version 2 | project file v2 (PL-56) | fully local |
-| 3 | Demo library in the service: demo entries, versions, owner, shared, withdraw | datapack library service | service change, then a deploy (owner's go) |
-| 4 | Content snapshot: export a site to a zip, import a zip into a site | DA.live copy code (`daLiveContentCopy`) | local, then one live check |
-| 5 | Add to the demo library: from the Share dialog, run the existing checks, save the packs, the content snapshot and the manifest | Share dialog, `packageChecks`, pack sharing | local, then live |
-| 6 | Browse the library on the Welcome step | added-demo cards, the resolver | local |
-| 7 | Build from the library: the manifest's parts installed in order | `create_project_from_file`, copy-on-arrival, zip storefront import | local, then live |
-| 8 | Integration state as replayable steps | store preparation records, ERP settings tools | local, then live |
-| 9 | Versions and updates: a new version offered to projects built from an old one | `builtWith`, EDS-56 | local |
-| 10 | Withdraw, and taking a demo back to zero in a project | reset, pack removal | local, then live |
-| 11 | Sites in a demo | EDS-1 | after EDS-1 |
-| 12 | ACO in a demo | PL-60 | after PL-60 |
-| 13 | The agent surface: every action above as an MCP tool | descriptor pattern | with each item |
+| # | Step | Builds on | Lane | Status |
+|---|---|---|---|---|
+| 1 | Settle decisions 1 to 8 | this plan | owner | not started |
+| 2 | Demo manifest: the project file, version 3, naming every part and its version, with places for sites and ACO; reads version 2 | project file v2 (PL-56) | fully local | not started |
+| 3 | Demo library in the service: demo entries, versions, owner, shared, withdraw | datapack library service | service change, then a deploy (owner's go) | not started |
+| 4 | Content snapshot: export a site to a zip, import a zip into a site | DA.live copy code (`daLiveContentCopy`) | local, then one live check | not started |
+| 5 | Add to the demo library: from the Share dialog, run the existing checks, save the packs, the content snapshot and the manifest | Share dialog, `packageChecks`, pack sharing | local, then live | not started |
+| 6 | Browse the library on the Welcome step | added-demo cards, the resolver | local | not started |
+| 7 | Build from the library: the manifest's parts installed in order | `create_project_from_file`, copy-on-arrival, zip storefront import | local, then live | not started |
+| 8 | Integration state as replayable steps | store preparation records, ERP settings tools | local, then live | not started |
+| 9 | Versions and updates: a new version offered to projects built from an old one | `builtWith`, EDS-56 | local | not started |
+| 10 | Withdraw, and taking a demo back to zero in a project | reset, pack removal | local, then live | not started |
+| 11 | Sites in a demo | EDS-1 | after EDS-1 | not started |
+| 12 | ACO in a demo | PL-60 | after PL-60 | not started |
+| 13 | The agent surface: every action above as an MCP tool | descriptor pattern | with each item | not started |
 
 **What this supersedes:** EDS-13d (team catalog) becomes item 6; EDS-13 closes into this
 epic once its open children (EDS-13f's last line, EDS-22's intake) land or move here.

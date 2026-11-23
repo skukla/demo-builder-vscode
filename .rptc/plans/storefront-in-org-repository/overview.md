@@ -4,6 +4,15 @@ Unattended loop, 2026-10-04 (night 4, stream A). Lane: to the supervised edge. T
 adoption of an organization repository, and the first real SSO refusal, are the owner's live
 checks.
 
+## Steps
+
+| # | Step | Status |
+|---|---|---|
+| 1 | The two organization refusals GitHub gives, explained | done |
+| 2 | A repository list GitHub cut short for single sign-on is logged | done |
+| 3 | An empty repository is adopted | done |
+| 4 | Owner's live checks (adopt an empty org repo; an SSO refusal) | parked |
+
 ## Staleness check (re-verified against the code before building)
 
 Most of what the item asks for already exists. Filed 2026-09-16; the code moved since.

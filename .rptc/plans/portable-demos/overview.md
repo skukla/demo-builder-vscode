@@ -119,13 +119,13 @@ export, import and copy carry the whole project, on one versioned file.
 
 ## Slices, in order, with what each depends on
 
-| Step | Slice | Depends on | Item |
-|---|---|---|---|
-| 01 | Define the project file format (`step-01-contract.md`) | — | PL-56a |
-| — | The Shareable Demo feature: nine steps in its own plan, `../shareable-demo/overview.md` (look up a storefront in one place; rename Custom to Starter; read a colleague's repository; the Add a demo card and dialog; create from an added demo; reset, update, edit and forget; the same actions for agents; the how-to; Share this demo) | 01 | EDS-13a, 13b, 13c |
-| later | Publishing a pack from an instance ([[DI-3]], spiked: the service cannot hand back rows today; not a gate on anything above) | — | DI-3, DI-1 |
-| later | Team catalog | shareable-demo 04, 09 | EDS-13d |
-| later | Export completeness, import parity, dead-code deletion, docs | 01 | PL-56 children |
+| Step | Slice | Depends on | Item | Status |
+|---|---|---|---|---|
+| 01 | Define the project file format (`step-01-contract.md`) | — | PL-56a | done |
+| — | The Shareable Demo feature: nine steps in its own plan, `../shareable-demo/overview.md` (look up a storefront in one place; rename Custom to Starter; read a colleague's repository; the Add a demo card and dialog; create from an added demo; reset, update, edit and forget; the same actions for agents; the how-to; Share this demo) | 01 | EDS-13a, 13b, 13c | done |
+| later | Publishing a pack from an instance ([[DI-3]], spiked: the service cannot hand back rows today; not a gate on anything above) | — | DI-3, DI-1 | not started |
+| later | Team catalog | shareable-demo 04, 09 | EDS-13d | not started |
+| later | Export completeness, import parity, dead-code deletion, docs | 01 | PL-56 children | not started |
 
 The contract, the resolver and the Starter rename can start in parallel. The resolver is the
 representative vertical slice: if the eleven sites fight it, the design is revised before

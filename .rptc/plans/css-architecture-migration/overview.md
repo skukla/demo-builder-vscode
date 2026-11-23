@@ -113,12 +113,12 @@ a time instead of 762.
 
 ## The four steps
 
-| | Step | Done when | Reviewable? |
-|---|---|---|---|
-| 1 | Stop the growth | the ratchets exist and hold | no review needed |
-| 2 | **Split the god file by feature** | `featureRulesInGlobalSheet` at 0 | **empty diff — machine** |
-| 3 | Flip the cascade, per feature sheet | `vendorLayerBundles` at 8 | **owner, per surface** |
-| 4 | Sweep `!important`, per sheet | `importantCeiling` near 0 | empty diff — machine |
+| # | Step | Status | Done when | Reviewable? |
+|---|---|---|---|---|
+| 1 | Stop the growth | done | the ratchets exist and hold | no review needed |
+| 2 | **Split the god file by feature** | done | `featureRulesInGlobalSheet` at 0 | **empty diff — machine** |
+| 3 | Flip the cascade, per feature sheet | done | `vendorLayerBundles` at 8 | **owner, per surface** |
+| 4 | Sweep `!important`, per sheet | done | `importantCeiling` near 0 | empty diff — machine |
 
 **Steps 1 and 2 need no decision from the owner and change no pixels.** Step 3 is
 where the 762 elements arrive, in reviewable batches. Step 4 is downstream of 3

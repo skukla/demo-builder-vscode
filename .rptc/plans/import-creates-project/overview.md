@@ -2,6 +2,14 @@
 
 Backlog: EDS-72. Owner, 2026-11-18 (beta.153 walk, U3.1): in beta.153.
 
+## Steps
+
+| # | Step | Status |
+|---|---|---|
+| 1 | Save as Package, and Send a Link without the box | done |
+| 2 | Import creates the project | done |
+| 3 | Docs, walk and live cycle | not started |
+
 ## What the SC gets, after this
 
 | The SC wants | Door | Gets |

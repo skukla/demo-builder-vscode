@@ -14,6 +14,37 @@ it says what, why, in what order, and what has to be true before each step start
 
 ---
 
+## Steps
+
+The programme's slices are the table in §6 (its status is §7); this is the same list in the
+plan format. What is left now is tracked in `../several-erps/overview.md`.
+
+| # | Step | Status |
+|---|---|---|
+| 1 | Order document, customer document, shipments and invoices, credit hold | done |
+| CE | Composite-entity research | done |
+| API-1 | Commerce API inventory and validation (inventory document written; live validation waits on a credential) | active |
+| 2 | Hold to Commerce hold/unhold | not started |
+| 3 | Commerce-side order changes to the ERP | not started |
+| 4 | Per-source stock to the ERP and the small decisions | not started |
+| 5 | Pricing conditions | done |
+| 6 | Business structure | done |
+| 7 | Product master | done |
+| 8 | Home and search | done |
+| 9 | The entity map | done |
+| 10 | Live webhooks AB-19 and AB-20 | not started |
+| 11 | Second pair installs | active |
+| 12 | The routing consumer inside the one ERP integration | not started |
+| 13 | Credit memo and Repeat order | not started |
+| 14 | Order to cash, the payment leg | not started |
+| T-1 | Pair-in-a-box harness | not started |
+| T-2 | Headless screen checks | done |
+| V | Sync validation | not started |
+| UI-1 | Shell and navigation redesign | done |
+| UI-2 | Lists redesign | done |
+| UI-3 | Documents redesign | done |
+| UI-4 | Settings and journal redesign | done |
+
 ## 1. What we are building, in one paragraph
 
 A mock ERP (`demo-erp`) and a Commerce integration (`commerce-erp-integration`) that an SC

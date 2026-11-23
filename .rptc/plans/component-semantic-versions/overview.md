@@ -156,6 +156,16 @@ The result is one table, one row per repository: `validation.md`, beside this pl
 
 All before beta.153. Develop keeps PL-88's commits until stage 2 replaces them.
 
+| # | Step | Status |
+|---|---|---|
+| 1 | The trap, the shared reader, the recorded version | done |
+| 2 | Meshes and App Builder components move to releases | done |
+| 3 | Headless and EDS storefronts | done |
+| 4 | Our libraries, inspector, brand assets | done |
+| 5 | The release step and its skill, `component-release` | done |
+| 6 | Validation on every repository | done |
+| 7 | Docs | done |
+
 1. **The trap, the shared reader, the recorded version.** The release lookup stops at what it can apply. Reader built: `core/releases`.
    The installer's mesh rehearsal exposure is closed for new builds; beta.152 still has it.
 2. **Meshes and App Builder components move to releases,** keeping PL-88's one-step deploy, shallow clone and `mesh.json` handling.

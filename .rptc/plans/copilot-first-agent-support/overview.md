@@ -44,18 +44,18 @@ Step 01 is the only one that fixes something that can break a user today; the re
 
 ## Steps
 
-| # | Step | Depends on | Gate |
-|---|---|---|---|
-| 01 | Hooks stop being able to block everything (`step-01-hook-safety.md`) | — | — |
-| 02 | The generated bundle stops naming Claude (`step-02-neutral-bundle.md`) | — | — |
-| 03 | The engine seam (`step-03-engine-seam.md`) | — | — |
-| 04 | Config delivery per engine (`step-04-config-delivery.md`) | 03 | — |
-| 05 | VS Code registers the server itself (`step-05-vscode-registration.md`) — not built: the root `.mcp.json` connects (ADR-025) | 03 | admin: MCP allowlist |
-| 06 | The tool budget (`step-06-tool-budget.md`) — measured 2026-10-06, nothing to build | — | owner: a Copilot seat to measure with |
-| 07 | One consent prompt, not three (`step-07-consent.md`) — measured 2026-10-06, nothing to build | 03 | owner: live run |
-| 08 | Launching a chat without Claude (`step-08-launch.md`) — built 2026-10-06 | 03 | owner: live run |
-| 09 | Readiness and diagnostics read both (`step-09-readiness.md`) | 03, 04 | — |
-| 10 | The record: ADRs, docs, skills (`step-10-docs.md`) — done 2026-10-06 | 01–09 | — |
+| # | Step | Status | Depends on | Gate |
+|---|---|---|---|---|
+| 01 | Hooks stop being able to block everything (`step-01-hook-safety.md`) | done | — | — |
+| 02 | The generated bundle stops naming Claude (`step-02-neutral-bundle.md`) | done | — | — |
+| 03 | The engine seam (`step-03-engine-seam.md`) | done | — | — |
+| 04 | Config delivery per engine (`step-04-config-delivery.md`) | done | 03 | — |
+| 05 | VS Code registers the server itself (`step-05-vscode-registration.md`) — not built: the root `.mcp.json` connects (ADR-025) | parked | 03 | admin: MCP allowlist |
+| 06 | The tool budget (`step-06-tool-budget.md`) — measured 2026-10-06, nothing to build | done | — | owner: a Copilot seat to measure with |
+| 07 | One consent prompt, not three (`step-07-consent.md`) — measured 2026-10-06, nothing to build | done | 03 | owner: live run |
+| 08 | Launching a chat without Claude (`step-08-launch.md`) — built 2026-10-06 | done | 03 | owner: live run |
+| 09 | Readiness and diagnostics read both (`step-09-readiness.md`) | done | 03, 04 | — |
+| 10 | The record: ADRs, docs, skills (`step-10-docs.md`) — done 2026-10-06 | done | 01–09 | — |
 
 ## Owner-gated and admin-gated
 

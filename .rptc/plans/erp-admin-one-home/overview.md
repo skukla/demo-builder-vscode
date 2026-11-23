@@ -10,6 +10,17 @@ Map, a status line in three places. Each was reasonable alone. Together they sai
 several times and did not tell an admin where to look. This plan gives every question an
 admin asks exactly one home, and makes every other place link to that home.
 
+## Steps
+
+| # | Step | Status |
+|---|---|---|
+| 1.1 | Phase 1: Activity's Details carries the plain phrases (built 2026-10-14) | done |
+| 1.2 | Phase 1: Overview health, ERPs table, Needs attention (built 2026-10-14) | done |
+| 1.3 | Phase 1: Side panel, one layout for every record | active |
+| 1.4 | Phase 1: Settings on the shared parts (built 2026-10-14) | done |
+| 2 | Phase 2: Before and after, real links into both systems | not started |
+| 3 | Phase 3: ERP columns on Commerce's own grids | not started |
+
 ## What established integrations do (researched 2026-10-14)
 
 - **Logs are terse.** Celigo, Boomi, Oracle Integration, Workato and Commerce's own Action Log

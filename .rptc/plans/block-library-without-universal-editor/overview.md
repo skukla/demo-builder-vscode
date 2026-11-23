@@ -68,6 +68,23 @@ tools fail.
 
 ## Steps
 
+| # | Step | Status |
+|---|---|---|
+| 1 | Measured: which blocks draw today | done |
+| 2 | Connect Adobe's library | not started |
+| 3 | Add block library blocks from the library | not started |
+| 4 | Examples, best first | not started |
+| 4b | Our own libraries get real examples once | not started |
+| 4c | Draft Examples tile, prompt and agent tool | not started |
+| 5 | Agent tools work on the DA.live library | not started |
+| 5b | Universal Editor stops being offered | not started |
+| 6 | Block library install, update, removal | not started |
+| 7 | The template update takes Adobe's deletion | not started |
+| 8 | Lift the hold | not started |
+| 9 | Live cycle, with the owner's go | not started |
+
+The detail of each step:
+
 1. **Measured** (2026-11-08; research, "Can every block be previewed?"): of 352 blocks, 114 draw today.
    The rest are mostly account, order and checkout blocks (need a signed-in customer; not placed by
    hand), header and footer, Bodea's site missing its Commerce config, BuildRight having no site, and a

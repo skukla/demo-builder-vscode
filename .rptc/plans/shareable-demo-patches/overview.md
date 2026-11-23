@@ -20,14 +20,14 @@ that's possible and the version."
 
 ## Steps
 
-| Step | What | Depends on |
-|---|---|---|
-| 01 | Provenance capture: boilerplate name/version + lineage on card, project and saved package; dialog table and completion card copy (`step-01-provenance.md`) | — |
-| 02 | A saved package stays a Demo Builder storefront: `builtWith`, fit-apply on create and reset, safe re-pin (`step-02-saved-package.md`) | 01 |
-| 03 | Lineage + fit → opt-in fixes for a colleague's storefront, and for a zip from its files (`step-03-opt-in-fixes.md`) | 01 |
-| 04 | Caveat and card wording; the Storefront report and its doors (`step-04-wording.md`) | 01 |
-| 07 | Diagnostics gains the storefront section; the report renders it (`step-07-diagnostics.md`) | 01, 03 |
-| 05 | Version gap policy and the fork-sync door (`step-05-version-gap.md`) | 01, [[EDS-14]] |
-| 06 | Acceptance on Robin's storefront and on a saved package of our own; docs (`step-06-acceptance.md`) | 02–05 |
+| Step | What | Depends on | Status |
+|---|---|---|---|
+| 01 | Provenance capture: boilerplate name/version + lineage on card, project and saved package; dialog table and completion card copy (`step-01-provenance.md`) | — | done |
+| 02 | A saved package stays a Demo Builder storefront: `builtWith`, fit-apply on create and reset, safe re-pin (`step-02-saved-package.md`) | 01 | done |
+| 03 | Lineage + fit → opt-in fixes for a colleague's storefront, and for a zip from its files (`step-03-opt-in-fixes.md`) | 01 | done |
+| 04 | Caveat and card wording; the Storefront report and its doors (`step-04-wording.md`) | 01 | done |
+| 07 | Diagnostics gains the storefront section; the report renders it (`step-07-diagnostics.md`) | 01, 03 | done |
+| 05 | Version gap policy and the fork-sync door (`step-05-version-gap.md`) | 01, [[EDS-14]] | done |
+| 06 | Acceptance on Robin's storefront and on a saved package of our own; docs (`step-06-acceptance.md`) | 02–05 | done |
 
 Plan status: complete 2026-09-14; owner agreed to decisions 1–6 and added 7–8. Build order: 01, 07, 02, 03, 04, 05 (after [[EDS-14]]), 06.

@@ -98,15 +98,15 @@ both; the flyout shows both; every action has an agent tool.
 
 ## Steps
 
-| # | Step | Depends on | Item |
-|---|---|---|---|
-| 01 | Spike the four unknowns live (`step-01-spike.md`) | — | [[AB-9]] |
-| 02 | The ERP repository (`step-02-erp.md`) | 01 | " |
-| 03 | The integration repository (`step-03-integration.md`) | 01, 02 | " |
-| 04 | Catalog entries, provider auto-add, naming, deploy order (`step-04-catalog.md`) | 02, 03 | " |
-| 05 | Tile, flyout and agent tools (`step-05-surface.md`) | 04 | " |
-| 06 | Live acceptance on Bodea, docs, how-to (`step-06-acceptance.md`) | 05 | " |
-| 07 | Updates: App Builder components in the update system, releases on both repos, redeploy after update, bound pair provider first (`step-07-updates.md`) | 04 | " |
+| # | Step | Depends on | Item | Status |
+|---|---|---|---|---|
+| 01 | Spike the four unknowns live (`step-01-spike.md`) | — | [[AB-9]] | done |
+| 02 | The ERP repository (`step-02-erp.md`) | 01 | " | done |
+| 03 | The integration repository (`step-03-integration.md`) | 01, 02 | " | done |
+| 04 | Catalog entries, provider auto-add, naming, deploy order (`step-04-catalog.md`) | 02, 03 | " | done |
+| 05 | Tile, flyout and agent tools (`step-05-surface.md`) | 04 | " | done |
+| 06 | Live acceptance on Bodea, docs, how-to (`step-06-acceptance.md`; owner-gated) | 05 | " | parked |
+| 07 | Updates: App Builder components in the update system, releases on both repos, redeploy after update, bound pair provider first (`step-07-updates.md`; plan built, code next) | 04 | " | not started |
 
 ## Owner-gated actions (cloud writes)
 

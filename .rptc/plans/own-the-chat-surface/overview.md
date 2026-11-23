@@ -6,6 +6,16 @@ executed. **All four unknowns are answered — see
 confirms that our tools must be pre-trusted at the permission card or a producer
 is asked twice.
 
+## Steps
+
+| # | Step | Status |
+|---|---|---|
+| 1 | Does `--permission-prompt-tool stdio` work from an extension host | done |
+| 2 | Can a webview render a stream at speed | done |
+| 3 | What happens to `--continue` | done |
+| 4 | Which consent wins, ours or the card | done |
+| 5 | Owner decision: build it with a scope, or no | not started |
+
 The owner then asked for everything spikeable, and eleven findings came back.
 **Three of the four cost items were overstated and one capability set was
 undercounted:**

@@ -67,11 +67,10 @@ is literally "storefronts", and its value is a storefront definition.
 
 ## Once decided — the slices (all unattended-executable)
 
-1. `Stack.frontend` optional + schema + the 10 tsc sites (ask-the-tool: change the type, fix
-   what tsc names, run the suite).
-2. The app-only stack rows and the Backend-step option; `filterStepsForStack` already hides
-   the storefront area.
-3. The dashboard: no Start/Stop/Open for a frontend-less project; `startDemo` refuses cleanly.
-4. The addresses' display (decision 2).
-5. A creation test with backend + one integration and no frontend; the regenerate path
-   (Regenerate AI Files) must produce the same bundle as creation.
+| # | Step | Status |
+|---|---|---|
+| 01 | `Stack.frontend` optional + schema + the 10 tsc sites (ask-the-tool: change the type, fix what tsc names, run the suite) | parked |
+| 02 | The app-only stack rows and the Backend-step option; `filterStepsForStack` already hides the storefront area | parked |
+| 03 | The dashboard: no Start/Stop/Open for a frontend-less project; `startDemo` refuses cleanly | parked |
+| 04 | The addresses' display (decision 2) | parked |
+| 05 | A creation test with backend + one integration and no frontend; the regenerate path (Regenerate AI Files) must produce the same bundle as creation | parked |

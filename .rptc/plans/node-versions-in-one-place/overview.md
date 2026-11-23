@@ -52,20 +52,20 @@ resolves ONE Node, 24.21.0, for everything.
 | # | Step | Status | Cloud? |
 |---|---|---|---|
 | 0 | Live checks on Node 24 | done | yes (approved) |
-| 1 | One lookup that answers "which Node runs this" (now `core/shell/demoBuilderNode.ts`) | done; step 7 swapped its source | no |
+| 1 | One lookup that answers "which Node runs this" (now `core/shell/demoBuilderNode.ts`; step 7 swapped its source) | done | no |
 | 2 | Demo Builder's own Node folder; one call ensures a Node and the Adobe CLI under it | done | no |
 | 3 | Every caller asks that lookup; "auto", the directory scan and the fallback "20"s gone | done | no |
 | 4 | One runner, one reader of what is installed, start uses the folder | done | no |
-| 5 | Prerequisites use one Node set for the CLI and its plugins | done; step 8 simplified plugins | no |
+| 5 | Prerequisites use one Node set for the CLI and its plugins (step 8 simplified plugins) | done | no |
 | 6 | Update records the Node it installed under; `.node-version` no longer written | done | no |
 | 7 | **The release-time resolver and generated file; catalog `nodeVersion` fields deleted** | done | no (reads GitHub/npm) |
 | 8 | **Custom integrations at runtime; plugins installed once** | done | no |
-| 9 | **A release that moves the Node moves installed components with it, in the background** | done (an activation upkeep sweep) | no |
-| 10 | The AI bundle and terminals use the folder | AI tool launch lines and terminals done; the Demo Builder connection and git-sync hook moved to step 11 | no |
-| 11 | **Cleanup: unused Nodes in the folder, the one-time shared-fnm cleanup, uninstall** | to build | no (local, confirmed where it touches the SC's fnm) |
-| 12 | **What the SC sees: the prerequisites step, the add confirmation and progress, the post-update Node, Diagnostics** | to build | no |
-| 13 | Docs, skills, backlog | to build | no |
-| 14 | Live verification on the owner's machine | to build | yes, with the owner's OK |
+| 9 | **A release that moves the Node moves installed components with it, in the background** (an activation upkeep sweep) | done | no |
+| 10 | The AI bundle and terminals use the folder (AI tool launch lines and terminals done; the Demo Builder connection and git-sync hook moved to step 11) | active | no |
+| 11 | **Cleanup: unused Nodes in the folder, the one-time shared-fnm cleanup, uninstall** | not started | no (local, confirmed where it touches the SC's fnm) |
+| 12 | **What the SC sees: the prerequisites step, the add confirmation and progress, the post-update Node, Diagnostics** | not started | no |
+| 13 | Docs, skills, backlog | not started | no |
+| 14 | Live verification on the owner's machine | not started | yes, with the owner's OK |
 
 Each step is a commit with the gate green.
 

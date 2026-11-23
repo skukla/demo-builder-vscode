@@ -43,6 +43,18 @@ storefront changed, and its reset runs instead when the package changed.
 
 ## Steps
 
+| # | Step | Status |
+|---|---|---|
+| 1 | The changes object, pure | done |
+| 2 | The no-op Finish | done |
+| 3 | Integrations and mesh (built 2026-10-13) | done |
+| 4 | Datapack (built 2026-10-13) | done |
+| 5 | Adobe destination (built 2026-10-13) | done |
+| 6 | Package on an Edge Delivery stack (built 2026-10-13) | done |
+| 7 | One confirmation | done |
+| 8 | Lock backend, stack, org, repository and site (removed 2026-10-13) | done |
+| 9 | Delete what the apply path makes dead (waits on EDS-42, PL-77, PL-78, PL-79) | parked |
+
 1. **The changes object, pure.** `diffEditAgainstProject(existing, config)` →
    `{ integrations: {added, removed}, mesh, datapack, destination, packageChanged, isNoop }`,
    reading what the project records (`componentSelections`, `appBuilderComponents`, `datapack`,

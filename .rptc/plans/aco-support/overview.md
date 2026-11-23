@@ -7,6 +7,20 @@ the unreachable code this item exists to remove.
 Evidence: `.rptc/research/aco-support/research.md` (Adobe's ACO docs and the three local ACO
 repos, each claim labelled), and a re-check of the item against the code on 2026-10-04.
 
+## Steps
+
+The build order below, all waiting on the owner's answers to P1 to P4.
+
+| # | Step | Status |
+|---|---|---|
+| 01 | Delete the dead ACO paths | parked |
+| 02 | The add-on's fields per P2 | parked |
+| 03 | `configGenerator` emits the documented ACO config | parked |
+| 04 | Wizard Catalog step control, Configure renders the ACO group | parked |
+| 05 | Data: datapack import scoped to an ACO site type | parked |
+| 06 | Agent surface: ACO fields in `configure_project` | parked |
+| 07 | Live check on a sandbox ACO tenant (owner) | parked |
+
 ## Staleness check — the item is still accurate
 
 No commit since the item was filed (2026-09-17) changed ACO code in `src/`. Every claim held, and

@@ -76,24 +76,24 @@ what differs is who is looking and why. Build one feature, and measure with it.
 that any of them is optional.** Read the section above first; the table below is
 a build log, not a menu.
 
-| Step | File | Ships |
-|---|---|---|
-| 01 | `step-01-dry-run-gate.md` | ✅ SHIPPED `f40a7a954` — the server-enforced gate; mutation is impossible |
-| 01b | `step-01b-tool-self-description.md` | ✅ SHIPPED `dce810b0d`+`0c4cb2950`+`7de43fdf9`+`219d305c9`+`e9dab5afe` — tools declare read/write, carry an authored phrase, and the consent dialog names its target |
-| 02 | `step-02-trace-recorder.md` | ✅ SHIPPED — What was called — reads included — blocked, and how big the answers were |
-| 03 | `step-03-runner-and-tool.md` | ✅ SHIPPED — one runner, two doors live (`evaluate_prompt` + command); door 3 is the step-04 view |
-| 04 | `step-04-workbench.md` | ✅ SHIPPED — the view, the refine loop, run-for-real, save |
-| 05 | `step-05-scope-the-dry-run.md` | ✅ SHIPPED — an evaluation gets its own dry-run server; it stops pausing the user's other work, and can no longer escape to a window that does not know |
-| 06 | `step-06-consent-where-you-are-looking.md` | ✅ SHIPPED — per-tool session grants, offered only where repeating is recoverable and nobody else is reached |
-| 06b | `step-06b-consent-in-the-chat.md` | Ask in the chat instead of the VS Code window. Decision rule settled; GATED on one observation |
-| 07 | `step-07-evaluation-history.md` | ✅ SHIPPED — "Better" survives a window reload |
-| 08 | `step-08-the-ambient-trace.md` | ✅ SHIPPED — the workbench's second mode plus `demoBuilder.showAgentTrace`; cost is stated as unavailable rather than estimated |
-| — | `prompt-threads/overview.md` | ✅ SHIPPED — history keyed by THREAD, saved prompts load back and resume, the cheapest run survives eviction, anchored threads outlive abandoned ones |
-| — | `measurement/overview.md` | Sub-plan: the held-out set, and proof the surface is improving. **Part-answered 2026-08-25** — 20 of 104 tools are ever reached, measured from real sessions without running a prompt |
-| 10 | `step-10-a-surface-you-can-read.md` | 🔨 **BUILT, NOT DONE** — the transcript, the door, the deleted picker and the `Simulate` vocabulary are all in and green; **nobody has opened the panel.** Four items remain before archiving, listed at the foot of the step file |
-| 11 | `step-11-two-tools.md` | **NEXT** — the trace has TWO jobs, so it gets two surfaces: Activity narrates while you work, the Workbench analyses a prompt. Owner-decided 2026-08-25; step 10's renderer, vocabulary and doors all survive |
-| 09 | `step-09-suggestions-from-claude.md` | The advice is written by a model that read the trace. AFTER step 11 — it lands inside the Workbench, whose shape step 11 settles |
-| — | `opentelemetry/overview.md` | Sub-plan: the durable home for this data |
+| Step | File | Ships | Status |
+|---|---|---|---|
+| 01 | `step-01-dry-run-gate.md` | ✅ SHIPPED `f40a7a954` — the server-enforced gate; mutation is impossible | done |
+| 01b | `step-01b-tool-self-description.md` | ✅ SHIPPED `dce810b0d`+`0c4cb2950`+`7de43fdf9`+`219d305c9`+`e9dab5afe` — tools declare read/write, carry an authored phrase, and the consent dialog names its target | done |
+| 02 | `step-02-trace-recorder.md` | ✅ SHIPPED — What was called — reads included — blocked, and how big the answers were | done |
+| 03 | `step-03-runner-and-tool.md` | ✅ SHIPPED — one runner, two doors live (`evaluate_prompt` + command); door 3 is the step-04 view | done |
+| 04 | `step-04-workbench.md` | ✅ SHIPPED — the view, the refine loop, run-for-real, save | done |
+| 05 | `step-05-scope-the-dry-run.md` | ✅ SHIPPED — an evaluation gets its own dry-run server; it stops pausing the user's other work, and can no longer escape to a window that does not know | done |
+| 06 | `step-06-consent-where-you-are-looking.md` | ✅ SHIPPED — per-tool session grants, offered only where repeating is recoverable and nobody else is reached | done |
+| 06b | `step-06b-consent-in-the-chat.md` | Ask in the chat instead of the VS Code window. Decision rule settled; GATED on one observation | parked |
+| 07 | `step-07-evaluation-history.md` | ✅ SHIPPED — "Better" survives a window reload | done |
+| 08 | `step-08-the-ambient-trace.md` | ✅ SHIPPED — the workbench's second mode plus `demoBuilder.showAgentTrace`; cost is stated as unavailable rather than estimated | done |
+| prompt-threads | `prompt-threads/overview.md` | ✅ SHIPPED — history keyed by THREAD, saved prompts load back and resume, the cheapest run survives eviction, anchored threads outlive abandoned ones | done |
+| measurement | `measurement/overview.md` | Sub-plan: the held-out set, and proof the surface is improving. **Part-answered 2026-08-25** — 20 of 104 tools are ever reached, measured from real sessions without running a prompt | active |
+| 10 | `step-10-a-surface-you-can-read.md` | 🔨 **BUILT, NOT DONE** — the transcript, the door, the deleted picker and the `Simulate` vocabulary are all in and green; **nobody has opened the panel.** Four items remain before archiving, listed at the foot of the step file | active |
+| 11 | `step-11-two-tools.md` | **NEXT** — the trace has TWO jobs, so it gets two surfaces: Activity narrates while you work, the Workbench analyses a prompt. Owner-decided 2026-08-25; step 10's renderer, vocabulary and doors all survive | not started |
+| 09 | `step-09-suggestions-from-claude.md` | The advice is written by a model that read the trace. AFTER step 11 — it lands inside the Workbench, whose shape step 11 settles | not started |
+| opentelemetry | `opentelemetry/overview.md` | Sub-plan: the durable home for this data | not started |
 
 ## Steps 05–09: decided 2026-08-25
 
