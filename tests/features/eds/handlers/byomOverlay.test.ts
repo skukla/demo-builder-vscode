@@ -28,6 +28,8 @@ jest.mock('@/core/logging/debugLogger', () => {
     };
 });
 
+// Own vscode mock: workspace.getConfiguration().get answers the enabled and overlay-url settings
+//   from this suite's variables; the shared one returns 3000 for every key.
 jest.mock('vscode', () => {
     mockSettingValue = '';
     mockEnabledValue = undefined;  // honor the default

@@ -22,6 +22,8 @@ import type { AppBuilderComponentState, Project } from '@/types/base';
 // can quietly empty them.
 export const mockProgressTitles: string[] = [];
 export const mockProgressSteps: unknown[] = [];
+// Own vscode mock: window.withProgress records each title and step into
+//   mockProgressTitles/mockProgressSteps; the shared one discards them.
 jest.mock('vscode', () => {
     const vscode = jest.requireActual('../../../__mocks__/vscode') as {
         window: Record<string, unknown>;

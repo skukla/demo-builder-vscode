@@ -19,6 +19,8 @@ export const mockExecuteCommand = jest.fn();
 export const mockRm = jest.fn();
 export const mockGetSession = jest.fn();
 
+// Own vscode mock: executeCommand, showWarningMessage and authentication.getSession forward to
+//   this suite's own mocks; the shared mock has no authentication API.
 jest.mock('vscode', () => ({
     window: {
         showWarningMessage: (...a: unknown[]) => mockShowWarningMessage(...a),

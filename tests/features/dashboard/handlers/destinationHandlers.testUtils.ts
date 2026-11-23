@@ -13,6 +13,8 @@ export const mockShowWarningMessage = jest.fn();
 export const mockWithProgress = jest.fn(async (_o: unknown, task: (p: unknown) => unknown) =>
     task({ report: mockProgressReport })
 );
+// Own vscode mock: withProgress and showWarningMessage forward to
+//   mockWithProgress/mockShowWarningMessage, which the tests assert on and script.
 jest.mock(
     'vscode',
     () => ({

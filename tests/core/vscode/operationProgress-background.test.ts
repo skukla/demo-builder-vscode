@@ -16,6 +16,9 @@ const mockShowWarning = jest.fn();
 const mockShowInformation = jest.fn();
 const mockStatusBar = jest.fn();
 const mockExecuteCommand = jest.fn();
+// Own vscode mock: window, setStatusBarMessage and executeCommand forward to the suite's mocks,
+//   which the tests assert on and script; the shared jest.fn members could replace them only by
+//   rewriting those assertions.
 jest.mock('vscode', () => ({
     window: {
         withProgress: (...a: [unknown, never]) => mockWithProgress(...a),

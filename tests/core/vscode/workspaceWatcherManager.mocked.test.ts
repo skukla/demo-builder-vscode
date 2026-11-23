@@ -15,6 +15,9 @@ import { WorkspaceWatcherManager } from '@/core/vscode/workspaceWatcherManager';
 // Mock vscode.workspace.createFileSystemWatcher
 const mockWatchers: any[] = [];
 
+// Own vscode mock: createFileSystemWatcher records each watcher in mockWatchers with
+//   _simulateChange; the shared watcher's onDidChange/Create/Delete store no listener, so a test
+//   cannot fire an event.
 jest.mock('vscode', () => {
     const original = jest.requireActual('vscode');
     return {

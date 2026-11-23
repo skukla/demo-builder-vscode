@@ -23,6 +23,9 @@ const mockGetConfiguration = jest.fn();
 const mockGetStateManager = jest.fn();
 const mockOpenExternal = jest.fn();
 
+// Own vscode mock: window, getConfiguration and openExternal forward to the suite's own mocks
+//   (mockWithProgress, mockShowWarningMessage, ...), which the tests assert on; Uri.parse returns
+//   {parsed}.
 jest.mock(
     'vscode',
     () => ({

@@ -26,7 +26,6 @@ export const mockRm = jest.fn();
 export const mockMkdtemp = jest.fn();
 export const mockGetToken = jest.fn();
 
-jest.mock('vscode', () => ({ window: {}, workspace: {} }), { virtual: true });
 jest.mock('fs/promises', () => ({
     readFile: (...a: unknown[]) => mockReadFile(...a),
     writeFile: (...a: unknown[]) => mockWriteFile(...a),

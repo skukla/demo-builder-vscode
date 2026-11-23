@@ -19,6 +19,8 @@ jest.mock('@/core/base/baseWebviewCommand', () => ({
     BaseWebviewCommand: { getActivePanelCount: jest.fn().mockReturnValue(0) },
 }));
 
+// Own vscode mock: commands.executeCommand resolves a promise because the provider chains .then
+//   on it; the shared one returns undefined.
 jest.mock('vscode', () => ({
     Uri: {
         file: jest.fn((p: string) => ({ fsPath: p, path: p, toString: () => p })),

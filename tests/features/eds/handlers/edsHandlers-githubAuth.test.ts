@@ -55,6 +55,8 @@ jest.mock('@/features/eds/handlers/edsHelpers', () => ({
 // Mock vscode authentication
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 
+// Own vscode mock: authentication.getSession must exist as a jest.fn the tests drive; the shared
+//   mock has no authentication API.
 jest.mock('vscode', () => ({
     authentication: {
         getSession: jest.fn(),

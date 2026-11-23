@@ -39,6 +39,8 @@ const mockDiagnosticCollection = {
     dispose: jest.fn(),
 };
 
+// Own vscode mock: createStatusBarItem returns the suite's own item to assert on, and
+//   Diagnostic/Range are constructible fakes; the shared ones are absent or fresh objects.
 jest.mock('vscode', () => {
     const originalModule = jest.requireActual('../../__mocks__/vscode');
     return {

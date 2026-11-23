@@ -11,9 +11,6 @@
  * from config, so it works whether or not a check ran first.
  */
 
-jest.mock('vscode', () => ({ env: { openExternal: jest.fn() }, Uri: { parse: (u: string) => ({ url: u }) } }), {
-    virtual: true,
-});
 
 import { handleInstallPrerequisite } from '@/features/prerequisites/handlers/installHandler';
 import type { HandlerContext, PrerequisiteCheckState } from '@/types/handlers';

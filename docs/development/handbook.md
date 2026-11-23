@@ -1755,6 +1755,16 @@ breaks the code on purpose and reports what nothing noticed.
 > `jest.mock` only hoists above the imports of the module it appears in, which cost 23
 > failing tests to learn.
 
+> **Convention.** A test file that carries its own `jest.mock('vscode', factory)` says, in a
+> `// Own vscode mock:` comment within three lines above it, what the shared mock cannot do
+> for that suite. Enforced by `tests/sop/own-vscode-mocks-say-why.test.ts`.
+> *Why:* a factory REPLACES `tests/__mocks__/vscode.ts`, so each one is a second description
+> of the vscode API that can drift. Of 56 such files, 7 needed nothing the shared mock
+> lacks and lost the factory. The other 49 say why they stay: most name the member the shared
+> one cannot supply (a resolving `executeCommand`, a recording `createFileSystemWatcher`, a
+> `{url}` `Uri.parse`), and a few say their assertions are written against suite-local mocks
+> the factory forwards to, which the shared `jest.fn` members could replace with a rewrite.
+
 A mocked service module turns out to be four different things wearing one shape, and the
 remedy differs for each:
 
@@ -2077,11 +2087,11 @@ it is, and the count of unenforced rules is stated rather than hidden.
 Conventions decay unless something checks them. Four layers do:
 
 - **Hooks** stop a bad action as it happens — 22 rules in `.claude/hooks/rules/`
-- **Enforcer suites** fail the build when code drifts — 73 in `tests/sop/`
+- **Enforcer suites** fail the build when code drifts — 74 in `tests/sop/`
 - **Typecheck and lint** run over the whole repository in CI
 - **Scans** measure at release cuts: duplication, dead code, agent coverage (import cycles moved to an enforcer suite on 2026-10-08)
 
-**This handbook states 148 conventions. 145 of them are enforced; 3 are not.**
+**This handbook states 149 conventions. 146 of them are enforced; 3 are not.**
 
 The last one to get there was "vendor CSS sits in the lowest cascade layer", and it was
 outstanding because it was **not yet true**: `@layer vendor` existed in no bundle, so a

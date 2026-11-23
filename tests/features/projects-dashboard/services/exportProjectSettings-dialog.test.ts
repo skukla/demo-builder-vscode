@@ -12,6 +12,8 @@ const mockShowSaveDialog = jest.fn();
 const mockWriteFile = jest.fn();
 const mockShowInfo = jest.fn();
 const mockExecuteCommand = jest.fn();
+// Own vscode mock: adds extensions.getExtension (version 9.9.9), absent from the shared mock, and
+//   forwards the save dialog, info box, executeCommand and fs.writeFile to the suite's mocks.
 jest.mock(
     'vscode',
     () => ({

@@ -25,6 +25,8 @@ jest.mock('@/features/lifecycle/services/lifecycleService', () => ({
 }));
 
 // Mock VS Code module
+// Own vscode mock: commands.executeCommand resolves a promise because the provider chains .then
+//   on it; the shared one returns undefined.
 jest.mock('vscode', () => ({
     Uri: {
         file: jest.fn((path: string) => ({

@@ -43,6 +43,8 @@ let showInfoMessageIndex = 0;
 let clipboardText = '';
 
 // Mock vscode
+// Own vscode mock: showInputBox and the quick pick record their calls and replay this suite's
+//   queued responses; the shared ones resolve undefined.
 jest.mock(
     'vscode',
     () => {

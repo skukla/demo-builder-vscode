@@ -18,6 +18,8 @@ export const mockFileContents = new Map<string, string>();
 export const commandCallbacks: Record<string, (...args: unknown[]) => unknown> = {};
 
 // Mock vscode API
+// Own vscode mock: createFileSystemWatcher records its watchers in mockWatchers and
+//   executeCommand runs the registered callbacks; the shared ones do neither.
 jest.mock('vscode', () => {
     const actual = jest.requireActual('vscode');
     return {

@@ -9,14 +9,6 @@
 
 import type { AppBuilderComponentState, Project } from '@/types/base';
 
-jest.mock('vscode', () => {
-    const vscode = jest.requireActual('../../../__mocks__/vscode') as { window: Record<string, unknown> };
-    vscode.window.withProgress = async (
-        _options: unknown,
-        task: (p: { report: (value: { message?: string }) => void }) => unknown,
-    ) => task({ report: () => undefined });
-    return vscode;
-});
 
 const mockCheckComponentSource = jest.fn();
 const mockReadAppVersion = jest.fn();

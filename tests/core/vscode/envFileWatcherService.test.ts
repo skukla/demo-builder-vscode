@@ -16,6 +16,8 @@ import { createMockStateManager } from '../../helpers/stateManagerFake';
 import { createMockExtensionContext } from '../../helpers/extensionContextFake';
 import { mockWorkspace } from '../../helpers/vscodeMockViews';
 // Mock vscode API
+// Own vscode mock: RelativePattern must be a jest.fn the test can assert on; the shared one is a
+//   class.
 jest.mock('vscode', () => ({
     workspace: {
         workspaceFolders: [

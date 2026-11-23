@@ -21,6 +21,8 @@ import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
 
 // Mock vscode module
+// Own vscode mock: registerWebviewViewProvider and registerCommand return a disposable, and
+//   executeCommand resolves; the shared ones return undefined.
 jest.mock('vscode', () => ({
     Uri: {
         file: jest.fn((path: string) => ({

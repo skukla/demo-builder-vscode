@@ -18,6 +18,8 @@
 var mockEwCanvasBranchValue: unknown;
 /* eslint-enable no-var */
 
+// Own vscode mock: workspace.getConfiguration().get answers ewCanvasBranch from this suite's
+//   variable; the shared one returns 3000 for every key.
 jest.mock('vscode', () => {
     mockEwCanvasBranchValue = undefined;  // honor the default
     return {

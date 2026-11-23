@@ -29,6 +29,8 @@ jest.mock('@/features/prerequisites/handlers/shared', () => {
 
 jest.mock('@/core/di/serviceLocator');
 
+// Own vscode mock: the shared Uri.parse returns {fsPath, path, toString}; these tests assert on
+//   the {url} shape.
 jest.mock('vscode', () => ({
     env: {
         openExternal: jest.fn(),

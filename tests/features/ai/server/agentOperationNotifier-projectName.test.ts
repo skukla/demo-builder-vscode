@@ -12,6 +12,9 @@ const mockWithProgress = jest.fn(
 const mockSetStatusBarMessage = jest.fn();
 const mockGetStateManager = jest.fn();
 
+// Own vscode mock: withProgress and setStatusBarMessage forward to the suite's
+//   mockWithProgress/mockSetStatusBarMessage, which the tests assert on; Uri.parse returns
+//   {parsed}.
 jest.mock(
     'vscode',
     () => ({

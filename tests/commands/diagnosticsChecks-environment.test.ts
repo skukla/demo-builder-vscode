@@ -29,6 +29,8 @@ jest.mock('fs', () => ({
         unlink: jest.fn(),
     },
 }));
+// Own vscode mock: adds extensions.getExtension, version, and
+//   env.appName/language/machineId/sessionId, none of which the shared mock has.
 jest.mock('vscode', () => ({
     ...jest.requireActual('vscode'),
     version: '1.95.3',

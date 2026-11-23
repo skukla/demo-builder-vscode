@@ -5,6 +5,8 @@
  * There is no include-secrets option and no stamp (D24, PL-56c).
  */
 
+// Own vscode mock: adds extensions.getExtension (version 9.9.9); the shared mock has no
+//   extensions API.
 jest.mock(
     'vscode',
     () => ({

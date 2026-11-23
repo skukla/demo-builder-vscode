@@ -11,6 +11,8 @@
 
 const mockExecuteCommand = jest.fn();
 const mockQuickPick = jest.fn();
+// Own vscode mock: commands.executeCommand forwards to the suite's mockExecuteCommand, which the
+//   tests assert on.
 jest.mock(
     'vscode',
     () => ({

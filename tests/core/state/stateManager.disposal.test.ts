@@ -47,6 +47,8 @@ const createMockEventEmitter = () => {
 };
 
 // Mock vscode module
+// Own vscode mock: EventEmitter must be a jest.fn the test can mockClear and re-implement; the
+//   shared EventEmitter is a plain class.
 jest.mock('vscode', () => ({
     EventEmitter: jest.fn().mockImplementation(() => createMockEventEmitter()),
     ExtensionContext: jest.fn(),

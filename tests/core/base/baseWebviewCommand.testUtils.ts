@@ -11,6 +11,8 @@
  * wrong place still pass.
  */
 
+// Own vscode mock: createWebviewPanel here mints panels the suite can fire disposal on and read
+//   back; the shared one returns undefined.
 jest.mock('vscode', () => {
     const panels: MintedPanel[] = [];
     return {

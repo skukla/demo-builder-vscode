@@ -29,6 +29,9 @@ jest.mock('@/features/dashboard/handlers/meshStatusHelpers', () => ({
 }));
 
 // Mock vscode
+// Own vscode mock: this suite imports vscode and the handlers before dashboardHandlers.testUtils,
+//   whose own factory would otherwise reach only some of them; one factory here gives the suite and
+//   the handlers the same copy (resolving executeCommand, activeColorTheme).
 jest.mock('vscode', () => ({
     commands: {
         executeCommand: jest.fn().mockResolvedValue(undefined),
