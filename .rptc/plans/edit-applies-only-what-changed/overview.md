@@ -51,9 +51,10 @@ storefront changed, and its reset runs instead when the package changed.
 | 4 | Datapack (built 2026-10-13) | done |
 | 5 | Adobe destination (built 2026-10-13) | done |
 | 6 | Package on an Edge Delivery stack (built 2026-10-13) | done |
-| 7 | One confirmation | done |
-| 8 | Lock backend, stack, org, repository and site (removed 2026-10-13) | done |
-| 9 | Delete what the apply path makes dead (waits on EDS-42, PL-77, PL-78, PL-79) | parked |
+| 7 | One confirmation (today: up to four separate questions, all asked before anything runs, `executorEditApply.ts`; the single combined one is not built) | active |
+| 9 | Delete what the apply path makes dead (blocked: EDS-42, PL-77, PL-78 and PL-79 are not built yet) | not started |
+
+Step 8 (lock backend, stack, org, repository and site) was removed by the owner on 2026-10-13.
 
 1. **The changes object, pure.** `diffEditAgainstProject(existing, config)` →
    `{ integrations: {added, removed}, mesh, datapack, destination, packageChanged, isNoop }`,

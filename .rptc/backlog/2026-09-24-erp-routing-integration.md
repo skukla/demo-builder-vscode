@@ -11,7 +11,7 @@ superseded-by: AB-16
 
 # The routing integration — one Commerce order split across ERP pairs
 
-Slice of [[AB-26]] — `.rptc/plans/erp-programme/overview.md` §6. **Lane: 3 — design first (the seam S2/S3 on each pair, the routing app as its own catalog entry), then build.**
+Slice of [[AB-26]] — `.rptc/complete/erp-programme/overview.md` §6. **Lane: 3 — design first (the seam S2/S3 on each pair, the routing app as its own catalog entry), then build.**
 
 ## What
 

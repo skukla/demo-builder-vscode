@@ -10,7 +10,7 @@ status: shipped
 
 # Credit memo and Repeat order — the way back from invoiced and cancelled
 
-Slice of [[AB-26]] — `.rptc/plans/erp-programme/overview.md` §6. **Lane: 2 — cross-repo; new Commerce handler.**
+Slice of [[AB-26]] — `.rptc/complete/erp-programme/overview.md` §6. **Lane: 2 — cross-repo; new Commerce handler.**
 
 ## What
 

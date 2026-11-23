@@ -18,7 +18,7 @@ admin asks exactly one home, and makes every other place link to that home.
 | 1.2 | Phase 1: Overview health, ERPs table, Needs attention (built 2026-10-14) | done |
 | 1.3 | Phase 1: Side panel, one layout for every record | active |
 | 1.4 | Phase 1: Settings on the shared parts (built 2026-10-14) | done |
-| 2 | Phase 2: Before and after, real links into both systems | not started |
+| 2 | Phase 2: Before and after, real links into both systems | active |
 | 3 | Phase 3: ERP columns on Commerce's own grids | not started |
 
 ## What established integrations do (researched 2026-10-14)

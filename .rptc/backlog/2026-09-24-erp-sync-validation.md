@@ -10,7 +10,7 @@ status: shipped
 
 # Sync validation — every entity, both directions, proved (V)
 
-Slice of [[AB-26]] — `.rptc/plans/erp-programme/overview.md` §6. **Lane: 1 for the harness journeys; the live baseline is authorised (owner, 2026-09-24) and runs on the demo instance.**
+Slice of [[AB-26]] — `.rptc/complete/erp-programme/overview.md` §6. **Lane: 1 for the harness journeys; the live baseline is authorised (owner, 2026-09-24) and runs on the demo instance.**
 
 ## What
 

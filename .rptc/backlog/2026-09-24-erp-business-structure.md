@@ -11,7 +11,7 @@ plan: erp-business-structure
 
 # Business structure — sales organisation per website, prefix and ownership per pair, legal identity, warehouse names, the Organisation card
 
-Slice of [[AB-26]] — `.rptc/plans/erp-programme/overview.md` §6. **Lane: 1 for steps 01, 03, 04, 05; step 02 stops at the live store-config fixture unless AB-26b already captured it.**
+Slice of [[AB-26]] — `.rptc/complete/erp-programme/overview.md` §6. **Lane: 1 for steps 01, 03, 04, 05; step 02 stops at the live store-config fixture unless AB-26b already captured it.**
 
 ## What
 

@@ -10,7 +10,7 @@ status: shipped
 
 # Screen redesign 3 — documents
 
-Slice of [[AB-26]] — `.rptc/plans/erp-programme/overview.md` §6. **Lane: 1.**
+Slice of [[AB-26]] — `.rptc/complete/erp-programme/overview.md` §6. **Lane: 1.**
 
 ## What
 

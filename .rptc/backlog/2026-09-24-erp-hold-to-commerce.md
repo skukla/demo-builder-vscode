@@ -10,7 +10,7 @@ status: shipped
 
 # The credit hold reaches Commerce (hold / unhold), undone on reset
 
-Slice of [[AB-26]] — `.rptc/plans/erp-programme/overview.md` §6. **Lane: 2 — code and tests complete; the live proof uses the scratch-workspace deploy (authorised).**
+Slice of [[AB-26]] — `.rptc/complete/erp-programme/overview.md` §6. **Lane: 2 — code and tests complete; the live proof uses the scratch-workspace deploy (authorised).**
 
 ## What
 

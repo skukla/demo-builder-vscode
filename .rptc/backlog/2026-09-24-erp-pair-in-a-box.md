@@ -10,7 +10,7 @@ status: shipped
 
 # Pair-in-a-box: the ERP in-process behind the integration, a fake Commerce in front (T-1)
 
-Slice of [[AB-26]] — `.rptc/plans/erp-programme/overview.md` §6. **Lane: 1.**
+Slice of [[AB-26]] — `.rptc/complete/erp-programme/overview.md` §6. **Lane: 1.**
 
 ## What
 

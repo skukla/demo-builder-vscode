@@ -12,6 +12,7 @@ checks.
 | 2 | A repository list GitHub cut short for single sign-on is logged | done |
 | 3 | An empty repository is adopted | done |
 | 4 | Owner's live checks (adopt an empty org repo; an SSO refusal) | parked |
+| 5 | Owner's four product decisions D1 to D4 (see Design gate) | parked |
 
 ## Staleness check (re-verified against the code before building)
 

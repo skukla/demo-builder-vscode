@@ -52,9 +52,9 @@ Step 2 shipped in beta.153 (`c1d6ec45d`); the work was paused 2026-11-22 (backlo
 
 | # | Step | Status |
 |---|---|---|
-| 1 | Service: ask the store before calling `/products/a/b` a product page | parked |
+| 1 | Service: ask the store before calling `/products/a/b` a product page | active |
 | 2 | Service: publish a category on first visit | done |
-| 3 | Menu block: link the category's own address | parked |
+| 3 | Menu block: link the category's own address | done |
 | 4 | Deploy and prove | parked |
 
 1. **Service: ask the store before calling `/products/a/b` a product page.** Two segments under

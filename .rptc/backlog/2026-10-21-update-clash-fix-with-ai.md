@@ -14,7 +14,7 @@ waiting-on: live runs of release rows 1.19 (the next real clash), 1.20 and 1.21
 Filed 2026-10-20, owner: "how does an end user resolve it with nothing but the builder? Or
 is this an edge case?", then "Should be Fix with AI (and defer to the chosen AI engine)",
 and "no SCs are comfortable with code". Plan:
-`.rptc/plans/update-clash-fix-with-ai/`.
+`.rptc/complete/update-clash-fix-with-ai/`.
 
 ## Why
 

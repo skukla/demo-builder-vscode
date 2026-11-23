@@ -10,7 +10,7 @@ status: shipped
 
 # Composite-entity research: what a buying organization (and seven others) is made of, record by record
 
-Slice of [[AB-26]] — `.rptc/plans/erp-programme/overview.md` §6. **Lane: 3 — research.**
+Slice of [[AB-26]] — `.rptc/complete/erp-programme/overview.md` §6. **Lane: 3 — research.**
 
 ## What
 

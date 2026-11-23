@@ -1,6 +1,6 @@
 # Composite entities: what each business concept is made of, record by record
 
-Written 2026-09-24 for backlog item AB-26a (slice CE of `.rptc/plans/erp-programme/overview.md`).
+Written 2026-09-24 for backlog item AB-26a (slice CE of `.rptc/complete/erp-programme/overview.md`).
 The plan's §5a names nine business concepts that exist in neither system as one record. This
 document writes each one out on three sides: the Adobe Commerce records, the SAP S/4HANA
 records the mock ERP imitates, and what the mock ERP (`demo-erp`) plus the integration

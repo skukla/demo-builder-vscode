@@ -10,7 +10,7 @@ status: shipped
 
 # Changes made in Commerce Admin flow back to the ERP (shipment, invoice, cancel, hold)
 
-Slice of [[AB-26]] — `.rptc/plans/erp-programme/overview.md` §6. **Lane: 2 — needs an event-subscription change (uninstall + install), done in the scratch workspace.**
+Slice of [[AB-26]] — `.rptc/complete/erp-programme/overview.md` §6. **Lane: 2 — needs an event-subscription change (uninstall + install), done in the scratch workspace.**
 
 ## What
 

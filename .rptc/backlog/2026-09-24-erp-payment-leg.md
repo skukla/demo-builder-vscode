@@ -10,7 +10,7 @@ status: shipped
 
 # Order to cash — the payment leg (incoming payment, open items, company balance)
 
-Slice of [[AB-26]] — `.rptc/plans/erp-programme/overview.md` §6. **Lane: 2.**
+Slice of [[AB-26]] — `.rptc/complete/erp-programme/overview.md` §6. **Lane: 2.**
 
 ## What
 

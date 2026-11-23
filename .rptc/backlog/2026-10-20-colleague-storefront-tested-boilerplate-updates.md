@@ -14,7 +14,7 @@ waiting-on: the owner's live Apply onto a throwaway storefront (release row 1.18
 
 Filed 2026-10-20, owner: "Is there any way to ensure that a storefront built from a
 colleague's code could receive the same updates if it met the right requirements?"
-Plan: `.rptc/plans/colleague-storefront-tested-boilerplate-updates/`.
+Plan: `.rptc/complete/colleague-storefront-tested-boilerplate-updates/`.
 
 ## Why
 

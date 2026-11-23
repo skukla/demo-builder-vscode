@@ -12,7 +12,7 @@ plan: erp-mapping-view
 
 # The entity map — the Commerce Admin page where the settings are the mapping
 
-Slice of [[AB-26]] — `.rptc/plans/erp-programme/overview.md` §6. **Lane: 2 — the App Management form rendering needs a person to look; everything else is testable.**
+Slice of [[AB-26]] — `.rptc/complete/erp-programme/overview.md` §6. **Lane: 2 — the App Management form rendering needs a person to look; everything else is testable.**
 
 ## What
 

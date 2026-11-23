@@ -28,6 +28,6 @@ that's possible and the version."
 | 04 | Caveat and card wording; the Storefront report and its doors (`step-04-wording.md`) | 01 | done |
 | 07 | Diagnostics gains the storefront section; the report renders it (`step-07-diagnostics.md`) | 01, 03 | done |
 | 05 | Version gap policy and the fork-sync door (`step-05-version-gap.md`) | 01, [[EDS-14]] | done |
-| 06 | Acceptance on Robin's storefront and on a saved package of our own; docs (`step-06-acceptance.md`) | 02–05 | done |
+| 06 | Acceptance on Robin's storefront and on a saved package of our own; docs (`step-06-acceptance.md`) | 02–05 | active |
 
 Plan status: complete 2026-09-14; owner agreed to decisions 1–6 and added 7–8. Build order: 01, 07, 02, 03, 04, 05 (after [[EDS-14]]), 06.

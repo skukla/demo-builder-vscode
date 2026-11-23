@@ -10,7 +10,7 @@ status: shipped
 
 # The product as a master record — available, open orders, sales status
 
-Slice of [[AB-26]] — `.rptc/plans/erp-programme/overview.md` §6. **Lane: 1.**
+Slice of [[AB-26]] — `.rptc/complete/erp-programme/overview.md` §6. **Lane: 1.**
 
 ## What
 

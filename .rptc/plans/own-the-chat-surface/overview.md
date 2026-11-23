@@ -14,7 +14,7 @@ is asked twice.
 | 2 | Can a webview render a stream at speed | done |
 | 3 | What happens to `--continue` | done |
 | 4 | Which consent wins, ours or the card | done |
-| 5 | Owner decision: build it with a scope, or no | not started |
+| 5 | Owner decision: build it with a scope, or no | parked |
 
 The owner then asked for everything spikeable, and eleven findings came back.
 **Three of the four cost items were overstated and one capability set was

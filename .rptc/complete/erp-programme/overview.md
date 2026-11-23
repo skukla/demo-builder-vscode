@@ -17,29 +17,36 @@ it says what, why, in what order, and what has to be true before each step start
 ## Steps
 
 The programme's slices are the table in §6 (its status is §7); this is the same list in the
-plan format. What is left now is tracked in `../several-erps/overview.md`.
+plan format. What is left now is tracked in `../../plans/several-erps/overview.md`.
+
+**Checked 2026-11-23: every slice is finished.** §7 stopped being updated on 2026-09-26, and nine
+slices it lists as open were done later under their backlog items or the several-erps plan:
+API-1 (several-erps A2, AB-26b), 2 (AB-26f), 3 (AB-26g), 4 (AB-26h; its exit test became the Move
+stock question in PL-111), 10 (AB-19 and AB-20 as one placement webhook), 11 (several-erps B6,
+AB-23), 12 (several-erps B0 to B5), 13 (AB-26r), 14 (AB-26s; card payments not yet proven live),
+T-1 (AB-26c) and V (several-erps A5, AB-26e). Slice 9's entity map became the Data Map tab (AB-16k).
 
 | # | Step | Status |
 |---|---|---|
 | 1 | Order document, customer document, shipments and invoices, credit hold | done |
 | CE | Composite-entity research | done |
-| API-1 | Commerce API inventory and validation (inventory document written; live validation waits on a credential) | active |
-| 2 | Hold to Commerce hold/unhold | not started |
-| 3 | Commerce-side order changes to the ERP | not started |
-| 4 | Per-source stock to the ERP and the small decisions | not started |
+| API-1 | Commerce API inventory and validation (inventory document written; live validation waits on a credential) | done |
+| 2 | Hold to Commerce hold/unhold | done |
+| 3 | Commerce-side order changes to the ERP | done |
+| 4 | Per-source stock to the ERP and the small decisions | done |
 | 5 | Pricing conditions | done |
 | 6 | Business structure | done |
 | 7 | Product master | done |
 | 8 | Home and search | done |
 | 9 | The entity map | done |
-| 10 | Live webhooks AB-19 and AB-20 | not started |
-| 11 | Second pair installs | active |
-| 12 | The routing consumer inside the one ERP integration | not started |
-| 13 | Credit memo and Repeat order | not started |
-| 14 | Order to cash, the payment leg | not started |
-| T-1 | Pair-in-a-box harness | not started |
+| 10 | Live webhooks AB-19 and AB-20 | done |
+| 11 | Second pair installs | done |
+| 12 | The routing consumer inside the one ERP integration | done |
+| 13 | Credit memo and Repeat order | done |
+| 14 | Order to cash, the payment leg | done |
+| T-1 | Pair-in-a-box harness | done |
 | T-2 | Headless screen checks | done |
-| V | Sync validation | not started |
+| V | Sync validation | done |
 | UI-1 | Shell and navigation redesign | done |
 | UI-2 | Lists redesign | done |
 | UI-3 | Documents redesign | done |

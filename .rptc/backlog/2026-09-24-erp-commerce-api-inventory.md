@@ -10,7 +10,7 @@ status: shipped
 
 # Commerce API inventory and validation — every call the programme needs, proven to exist, captured as fixtures
 
-Slice of [[AB-26]] — `.rptc/plans/erp-programme/overview.md` §6. **Lane: 1 — the loop makes the live read-only calls itself (CLI signed in; reads are inside the rails).**
+Slice of [[AB-26]] — `.rptc/complete/erp-programme/overview.md` §6. **Lane: 1 — the loop makes the live read-only calls itself (CLI signed in; reads are inside the rails).**
 
 ## What
 

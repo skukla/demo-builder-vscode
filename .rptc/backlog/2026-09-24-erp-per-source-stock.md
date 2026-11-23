@@ -10,7 +10,7 @@ status: shipped
 
 # Per-source stock changes reach the ERP, plus the small gaps (product delete, credit truth, currency)
 
-Slice of [[AB-26]] — `.rptc/plans/erp-programme/overview.md` §6. **Lane: 1.**
+Slice of [[AB-26]] — `.rptc/complete/erp-programme/overview.md` §6. **Lane: 1.**
 
 ## What
 
