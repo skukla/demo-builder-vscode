@@ -32,3 +32,7 @@ Four documents cite the old name and have to move with it:
 `docs/development/handbook.md`, `docs/architecture/adr/023-error-handling.md`,
 `docs/systems/mcp-server.md`, and `docs/development/conventions.md`, which is
 generated from the handbook by `npm run docs:conventions`.
+
+## Shipped so far
+
+- 2026-11-23  Loop 2026-11-23: renamed to mcpToolResult-failureFlag.test.ts with the four citing docs (66f25db79, on loop/2026-11-23-backlog). Left: measure mcpToolResult.ts with Stryker, an overnight run the loop does not start.
