@@ -13,19 +13,12 @@
  * silently to idle with nothing on screen.
  */
 
+import '../../../../helpers/webviewClientMock';
 import { renderHook, act } from '@testing-library/react';
 import { StrictMode } from 'react';
 import { setupMocks, type TestMocks } from './useDashboardStatus.testUtils';
 import { FRONTEND_TIMEOUTS } from '@/core/ui/utils/frontendTimeouts';
 import { useDashboardStatus } from '@/features/dashboard/ui/hooks/useDashboardStatus';
-
-jest.mock('@/core/ui/utils/WebviewClient', () => ({
-    webviewClient: {
-        postMessage: jest.fn(),
-        onMessage: jest.fn(),
-        request: jest.fn(),
-    },
-}));
 
 let mocks: TestMocks;
 

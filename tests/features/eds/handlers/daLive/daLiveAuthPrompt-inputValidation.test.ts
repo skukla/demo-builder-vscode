@@ -26,6 +26,9 @@ let showInputBoxCalls: Array<{
 let showInputBoxResponses: Array<string | undefined> = [];
 let showInputBoxIndex = 0;
 
+// Own vscode mock: showInputBox records its options (showInputBoxCalls) and replays queued
+//   responses, and showInformationMessage resolves a fixed button; the shared ones resolve
+//   undefined.
 jest.mock('vscode', () => ({
     window: {
         showInputBox: jest.fn().mockImplementation((options) => {

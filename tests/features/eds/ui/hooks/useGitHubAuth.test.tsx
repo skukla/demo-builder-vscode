@@ -12,7 +12,7 @@
 
 import {
     createDefaultState,
-    messageHandlers,
+    webviewClientHandlers,
     mockPostMessage,
 } from './edsAuthHooks.testUtils';
 import { renderHook, act, waitFor } from '@testing-library/react';
@@ -22,7 +22,7 @@ describe('useGitHubAuth Hook', () => {
 
     beforeEach(() => {
         jest.clearAllMocks();
-        messageHandlers.clear();
+        webviewClientHandlers.clear();
         mockUpdateState = jest.fn();
         // ABSORB the expected OAuth failure. This suite has an error-path test,
         // and webviewLogger.error logs unconditionally — deliberately, since an
@@ -73,7 +73,7 @@ describe('useGitHubAuth Hook', () => {
         }));
 
         // Simulate receiving auth status
-        const authHandler = messageHandlers.get('github-auth-status');
+        const authHandler = webviewClientHandlers.get('github-auth-status');
         expect(authHandler).toBeDefined();
 
         act(() => {
@@ -141,7 +141,7 @@ describe('useGitHubAuth Hook', () => {
         }));
 
         // Simulate receiving OAuth error
-        const errorHandler = messageHandlers.get('github-oauth-error');
+        const errorHandler = webviewClientHandlers.get('github-oauth-error');
         expect(errorHandler).toBeDefined();
 
         act(() => {
@@ -355,7 +355,7 @@ describe('useGitHubAuth Hook', () => {
                 useGitHubAuth({ state: createDefaultState(overrides), updateState: mockUpdateState })
             );
             act(() => {
-                messageHandlers.get(type)?.(payload);
+                webviewClientHandlers.get(type)?.(payload);
             });
             return result;
         };
@@ -434,13 +434,13 @@ describe('useGitHubAuth Hook', () => {
             const { unmount } = renderHook(() =>
                 useGitHubAuth({ state: createDefaultState(), updateState: mockUpdateState })
             );
-            expect(messageHandlers.has('github-auth-status')).toBe(true);
+            expect(webviewClientHandlers.has('github-auth-status')).toBe(true);
 
             unmount();
 
-            expect(messageHandlers.has('github-auth-status')).toBe(false);
-            expect(messageHandlers.has('github-auth-complete')).toBe(false);
-            expect(messageHandlers.has('github-oauth-error')).toBe(false);
+            expect(webviewClientHandlers.has('github-auth-status')).toBe(false);
+            expect(webviewClientHandlers.has('github-auth-complete')).toBe(false);
+            expect(webviewClientHandlers.has('github-oauth-error')).toBe(false);
         });
     });
 });

@@ -112,6 +112,30 @@
         "waitForSiteAccess": {
             "tool": "get_site_access",
             "reason": "The handler polls until the admin role lands and says which way it went; an agent reads the same roster with get_site_access when it wants to know."
+        },
+        "get-datapack-setup-step": {
+            "tool": "get_finish_setup",
+            "reason": "Both read the Admin step a pack left (the root category) from its install record, through recordedRootStep; the tool lists it among the project's Finish Setup steps."
+        },
+        "check-datapack-setup-step": {
+            "tool": "check_finish_setup",
+            "reason": "Both run the pack's read-only root check (checkRecordedRootStep) and save what it found on the record; the tool runs it as one of the Finish Setup steps."
+        },
+        "count-datapack-export-items": {
+            "tool": "list_datapack_export_items",
+            "reason": "Both read the project's store through the same pickable-kinds reader; the tool's totalCount is the count for one kind, so an agent counts by listing each kind."
+        },
+        "get-datapack-removal-changes": {
+            "tool": "preview_datapack_changes",
+            "reason": "Both read the user's changes with previewChanges; the handler only condenses them into the Uninstall question's counts, and uninstall_datapack names the same changes when it asks."
+        },
+        "runProjectsBatch": {
+            "tool": "delete_project",
+            "reason": "Each row of the batch runs the same single-project work: runProjectDelete for delete, and for reset the same two paths reset_project uses (the Edge Delivery reset, or the answered reset for a headless project). An agent runs the tool once per project; set_current_project picks the one reset_project resets."
+        },
+        "creation-pause-answer": {
+            "tool": "continue_project_creation",
+            "reason": "The tool calls this same handler (answerPausedCreation hands the answer to handleCreationPauseAnswer); the wizard's paused-creation button is the person's way in."
         }
     },
     "exclusions": {
@@ -150,6 +174,42 @@
         },
         "copy-library-datapack-to-installer": {
             "reason": "Copies a library pack into the Data Installer's shared catalog. Agents cannot write into the Data Installer: the tool was removed on purpose (D7, datapack simplification Phase 8) and the screen hides the button (`INSTALLER_WRITES_SHOWN`)."
+        },
+        "datapack-save-question-answered": {
+            "reason": "Shows a one-time tip about a setting after the SC answers Save Your Changes First. An agent answers that question with changes on the tool, and the file says no agent descriptor names it."
+        },
+        "finishSetup": {
+            "reason": "The creation end screen's button that swaps the wizard for the new project's dashboard, opened on its Finish Setup guide. An agent reads the guide with get_finish_setup."
+        },
+        "fix-datapack-import-with-ai": {
+            "reason": "Opens a Claude chat with a prompt built from the last install's failure record. The agent is already the AI; the failure is in get_datapack_import_status."
+        },
+        "fixUpdateWithAi": {
+            "reason": "Opens a Claude chat with a prompt about one update that failed. The agent is already the AI; apply_updates returns what failed."
+        },
+        "checkUpdateRows": {
+            "reason": "The Updates window's Check Again, telling each row it re-checked done or waiting on the screen. The handler checks every project; an agent checks one project at a time with apply_updates without confirm."
+        },
+        "recheckUpdates": {
+            "reason": "The Updates window's Back to Updates: runs Check for Updates again across every project and hands the rows to the screen. An agent checks one project at a time with apply_updates without confirm."
+        },
+        "takeUpdatesRequest": {
+            "reason": "A freshly opened projects list asking whether it should show the Updates window. Screen hand-off, no outcome."
+        },
+        "get-datapack-line": {
+            "reason": "Builds the Datapacks card's one line of display text, with a failed or newer dot. The facts behind it are in get_project (its datapack) and list_installed_datapacks."
+        },
+        "get-datapack-records": {
+            "reason": "Names the records an install would make, for the install window's Review Records spot check. The file marks it webview-only; an agent gets counts and a few names from preview_datapack_changes and the pack from get_datapack."
+        },
+        "get-datapack-removal-scope": {
+            "reason": "Lists which data kinds the Uninstall question will show, from the install record. An agent's uninstall_datapack takes everything the record lists and list_installed_datapacks gives objectCount."
+        },
+        "prepareProjectsBatch": {
+            "reason": "Reads the rows for the Reset Selected and Delete Selected questions. An agent meets each question as the tool's own refusal: confirm:true on delete_project and reset_project, and CHANGES_NEED_ANSWER for the user's pack changes."
+        },
+        "revealFile": {
+            "reason": "Shows a saved file in the operating system's file browser after Share Demo's Save File. An agent already has the path in export_demo_bundle's answer."
         }
     },
     "gaps": {
@@ -161,6 +221,12 @@
         },
         "github-change-account": {
             "reason": "No tool switches the GitHub account (clear the token, force a fresh sign-in). sign_in covers signing in, not changing who."
+        },
+        "check-recorded-datapack": {
+            "reason": "No tool runs this check on its own. create_project_from_file runs the same checkRecordedPack and shows its verdict (datapackNote) before confirm:true, the same shape as check-store-view-products."
+        },
+        "getShareDatapackCheck": {
+            "reason": "No tool answers this for a project without Edge Delivery, which is the only kind the screen asks it for: get_demo_package_preview refuses those, and export_demo_bundle's packNote covers only a private library pack, not a pack colleagues cannot get or a custom integration in a private repository."
         }
     }
 }

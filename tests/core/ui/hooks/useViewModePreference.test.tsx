@@ -4,13 +4,10 @@
  * the extension announced (echoing that back would record a choice nobody made).
  */
 
+import '../../../helpers/webviewClientMock';
 import { act, renderHook } from '@testing-library/react';
 import { useViewModePreference } from '@/core/ui/hooks/useViewModePreference';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
-
-jest.mock('@/core/ui/utils/WebviewClient', () => ({
-    webviewClient: { postMessage: jest.fn() },
-}));
 
 const postMessage = webviewClient.postMessage as jest.Mock;
 

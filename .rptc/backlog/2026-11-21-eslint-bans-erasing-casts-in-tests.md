@@ -5,7 +5,7 @@ area: platform
 parent: PL-32
 needs: []
 value: low
-status: backlog
+status: built
 ---
 
 # Tests ban `as any` and `as never` through eslint, and the zero-count ceiling test is deleted
@@ -20,3 +20,7 @@ PL-32 took the type-erasing casts in tests to zero. What it said comes next is n
 
 Done when eslint fails a new `as any` or `as never` in tests, and the ceiling test and its ledger are
 deleted in the same change.
+
+## Shipped so far
+
+- 2026-11-23  Loop 2026-11-23: built (bf99e972e, on loop/2026-11-23-backlog). no-restricted-syntax fails as any / as never and their arrays in tests/ (0 hits across tests/ today); ceiling suite and ledger deleted; enforcer counts 74 to 73; convention proof PROVEN against eslint. Reviewed (opus, 3 findings fixed).

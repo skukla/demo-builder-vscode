@@ -13,6 +13,9 @@ const mockOpenExternal = jest.fn().mockResolvedValue(true);
 const mockWithProgress = jest.fn(
     (_options: unknown, run: () => Promise<unknown>) => run(),
 );
+// Own vscode mock: Uri.parse returns {value}, which the tests assert openExternal received (the
+//   shared one returns {fsPath, path, toString}); openExternal and withProgress forward to the
+//   suite's mocks.
 jest.mock('vscode', () => ({
     env: { openExternal: (...args: unknown[]) => mockOpenExternal(...args) },
     window: {

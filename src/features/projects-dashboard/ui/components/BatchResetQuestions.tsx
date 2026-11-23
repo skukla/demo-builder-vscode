@@ -20,6 +20,7 @@ import { Checkbox } from '@adobe/react-spectrum';
 import React from 'react';
 import { removable, removeColumnState } from '../batchChoices';
 import type { BatchChoices } from '../hooks/useBatchChoices';
+import { BatchQuestionTable } from './BatchQuestionTable';
 import { CheckboxRow } from '@/core/ui/components/selection/CheckboxRow';
 import { LeadText } from '@/core/ui/components/ui/LeadText';
 import { UNINSTALL_DATAPACK } from '@/features/data-installer/datapackWords';
@@ -70,48 +71,40 @@ export function BatchResetQuestions({ rows, choices }: Props): React.ReactElemen
     if (rows.length === 1) return <OneResetQuestion row={rows[0]} choices={choices} />;
     const column = removeColumnState(rows, choices.removeTicks);
     return (
-        <div className="batch-confirm">
-            <LeadText>Each project returns to how it was set up. Code changes are lost.</LeadText>
-            <div className="batch-delete scroll-fade scroll-fade--capped">
-                <table className="batch-delete-table">
+        <BatchQuestionTable
+            lead="Each project returns to how it was set up. Code changes are lost."
+            columns={
+                column.offered ? (
+                    <th scope="col">
+                        <CheckboxRow
+                            label={UNINSTALL_DATAPACK}
+                            isSelected={column.all}
+                            isIndeterminate={column.some && !column.all}
+                            onChange={() => choices.toggleRemoveColumn(rows)}
+                        />
+                    </th>
+                ) : undefined
+            }
+        >
+            {rows.map((row) => (
+                <tr key={row.path}>
+                    <ProjectCell row={row} />
                     {column.offered && (
-                        <thead>
-                            <tr>
-                                <td className="batch-changes-head batch-project-head">Project</td>
-                                <th scope="col">
-                                    <CheckboxRow
-                                        label={UNINSTALL_DATAPACK}
-                                        isSelected={column.all}
-                                        isIndeterminate={column.some && !column.all}
-                                        onChange={() => choices.toggleRemoveColumn(rows)}
-                                    />
-                                </th>
-                            </tr>
-                        </thead>
+                        <td>
+                            {removable(row) && (
+                                <Checkbox
+                                    aria-label={`${UNINSTALL_DATAPACK}, ${row.name}`}
+                                    isSelected={choices.removeTicks[row.path] === true}
+                                    onChange={() => choices.toggleRemove(row.path)}
+                                >
+                                    <span className="batch-delete-option-label">{UNINSTALL_DATAPACK}</span>
+                                    <span className="batch-option-what">{row.datapack?.name}</span>
+                                </Checkbox>
+                            )}
+                        </td>
                     )}
-                    <tbody>
-                        {rows.map((row) => (
-                            <tr key={row.path}>
-                                <ProjectCell row={row} />
-                                {column.offered && (
-                                    <td>
-                                        {removable(row) && (
-                                            <Checkbox
-                                                aria-label={`${UNINSTALL_DATAPACK}, ${row.name}`}
-                                                isSelected={choices.removeTicks[row.path] === true}
-                                                onChange={() => choices.toggleRemove(row.path)}
-                                            >
-                                                <span className="batch-delete-option-label">{UNINSTALL_DATAPACK}</span>
-                                                <span className="batch-option-what">{row.datapack?.name}</span>
-                                            </Checkbox>
-                                        )}
-                                    </td>
-                                )}
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
-            </div>
-        </div>
+                </tr>
+            ))}
+        </BatchQuestionTable>
     );
 }

@@ -5,6 +5,8 @@
  */
 const mockShowWarningMessage = jest.fn();
 const mockExecuteCommand = jest.fn();
+// Own vscode mock: showWarningMessage and executeCommand forward to the suite's
+//   mockShowWarningMessage/mockExecuteCommand, which the tests assert on.
 jest.mock(
     'vscode',
     () => ({

@@ -7,6 +7,8 @@
 const mockSetStatusBarMessage = jest.fn();
 // Default: no silently-readable VS Code GitHub session (tests override per case).
 const mockGetSession = jest.fn(async (..._args: unknown[]): Promise<unknown> => undefined);
+// Own vscode mock: authentication.getSession forwards to mockGetSession (the shared mock has no
+//   authentication API) and setStatusBarMessage forwards to the suite's mock.
 jest.mock(
     'vscode',
     () => ({

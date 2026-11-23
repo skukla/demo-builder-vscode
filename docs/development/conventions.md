@@ -12,7 +12,7 @@ were wrong within an hour of being written. This one is derived from the
 handbook's own callouts and checked against the enforcers on disk in both
 directions, so it cannot.
 
-- **148** conventions, **145** enforced
+- **149** conventions, **146** enforced
 - **31** name the decision record behind them
 - **6** name a procedure — an SOP or a skill
 - **1** have all three layers
@@ -165,7 +165,7 @@ it means the rule rests on somebody noticing.
 | A capability that CREATES something names the capability that undoes it, or states why none can exist. Both go in `tests/sop/reversibility.ledger.json`. |  |  | `reversibility-ledger.test.ts` |
 | Every cloud resource the extension creates has its removal, and a path an SC can use to reach it. `tests/templates/cloud-reversals.ledger.json` lists each kind of resource (a GitHub repository, DA.live content, a Configuration Service site, a mesh, an App Builder app, a Console project or workspace, datapack data, and more) with its create call, its remove call, the reversal paths that reach the remove, and what Delete Project does with it: removes it, keeps it on purpose because it has its own reversal, or leaves it as an exemption naming a backlog item. Enforced by `tests/templates/cloud-reversals.test.ts`: every file whose code makes a cloud write (an HTTP write verb, an `aio` deploy or delete, a Console SDK create, a `git push`) must be claimed with its exact count, so a new create fails until it has a row; a row whose create is gone fails; a named path must reach its removal through imports; and the exemption count only falls. |  |  | `cloud-reversals.test.ts` |
 | A tool removes work; it does not add vocabulary the agent has to guess. Every closed list a tool's input accepts (`z.enum`, `z.literal`, `z.nativeEnum`) is recorded with why the set is the agent's own words — our screens, our states, an HTTP verb — and not a name for something it knows by another. |  |  | `tool-input-constraints.test.ts` |
-| A tool that fails says so — the result carries `isError: true`. Never a successful result whose text happens to report a failure. | [ADR](../architecture/adr/023-error-handling.md) |  | `toolFailureEnvelope.test.ts`<br>`toolDescriptors-failureFlag.test.ts` |
+| A tool that fails says so — the result carries `isError: true`. Never a successful result whose text happens to report a failure. | [ADR](../architecture/adr/023-error-handling.md) |  | `mcpToolResult-failureFlag.test.ts`<br>`toolDescriptors-failureFlag.test.ts` |
 | A tool requires an explicit `confirm: true` when its effect is hard to walk back: it DELETES something, or it PUSHES to a live site. Merely mutating is deliberately not the bar — deploys, lifecycle and config writes stay ungated, because they are reversible and gating them would make the agent surface useless for routine work. Three irreversible tools go further and require the resource's name echoed back. |  |  | `tool-catalog-gating.test.ts` |
 | A tool needing credentials pre-flights and returns a structured `needsAuth` handoff rather than erroring, so the agent can drive sign-in and retry. Every tool DECLARES which sign-ins it needs, or `false` for none. |  |  | *named in prose* |
 
@@ -186,6 +186,7 @@ it means the rule rests on somebody noticing.
 | A split test family shares one `.testUtils` file, which owns the mocks and the subject import. enforced by `tests/sop/test-family-setup.test.ts`. |  | [procedure](../../.claude/skills/webview-test-authoring/SKILL.md) | `test-family-setup.test.ts` |
 | A suite imports its shared mock wall BEFORE it imports the code under test. Enforced by `tests/sop/mock-wall-import-order.test.ts` (shrink-only ledger). |  |  | `mock-wall-import-order.test.ts` |
 | Before designing a way to hand a mocked collaborator in — or to share one between suites — delete the mock and run the suite. If it still passes, the mock was the whole problem. |  |  | `redundant-automocks.test.ts` |
+| A test file that carries its own `jest.mock('vscode', factory)` says, in a `// Own vscode mock:` comment within three lines above it, what the shared mock cannot do for that suite. Enforced by `tests/sop/own-vscode-mocks-say-why.test.ts`. |  |  | `own-vscode-mocks-say-why.test.ts` |
 | No test file over 750 lines. enforced by `npm run validate:test-file-sizes`. |  |  | *named in prose* |
 | No test file repeats another file's tests wholesale. |  |  | `duplicate-test-files.test.ts` |
 | A fake standing in for a real type comes from the builder for that type. `{...} as unknown as Project` is a fake with the type check switched off. Enforced by the `castCeilings` pins in `tests/sop/canonical-fakes.ledger.json` — nine types that already have a builder, and the count for each may only fall. |  |  | *named in prose* |
@@ -197,7 +198,7 @@ it means the rule rests on somebody noticing.
 | A value handed to a hook that DEPENDS on it must be stable across renders. |  |  | `stable-hook-arguments.test.ts` |
 | A component is declared ONE way: `function Name(props: NameProps)`. `React.FC` is banned. |  |  | `one-component-form.test.ts` |
 | PRODUCTION erases no types. `as any` and `as never` are banned in `src/` outright. |  |  | `src-erases-no-types.test.ts` |
-| No test erases a type. `as any` and `as never` are banned anywhere in `tests/`. A builder is declared as the REAL type it stands for; where the structural fake cannot satisfy that type honestly, cast the object literal INTO it at the builder's boundary as `as unknown as X` — once, where it is visible. | [ADR](../architecture/adr/016-test-strategy.md) |  | `type-erasing-casts.test.ts`<br>`eslint.config.mjs` |
+| No test erases a type. `as any` and `as never` are banned anywhere in `tests/`. A builder is declared as the REAL type it stands for; where the structural fake cannot satisfy that type honestly, cast the object literal INTO it at the builder's boundary as `as unknown as X` — once, where it is visible. | [ADR](../architecture/adr/016-test-strategy.md) |  | `eslint.config.mjs` |
 | Do not mock a configuration leaf. |  |  | `no-config-leaf-mocks.test.ts` |
 | A stylesheet change is not pushed until a RESTING visual baseline has been captured while it was in the tree. |  |  | `.githooks/` |
 | Never assign a `jest.fn()` onto a Node builtin's namespace (`fs`, `fs.promises`, `os`, …). Use `jest.spyOn`, and restore in `afterEach`. |  |  | `no-builtin-namespace-mock-assignment.test.ts` |

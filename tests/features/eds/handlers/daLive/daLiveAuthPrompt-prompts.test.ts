@@ -20,6 +20,8 @@ let showInfoMessageResponses: Array<string | undefined> = [];
 let showInfoMessageIndex = 0;
 let withProgressOptions: Array<{ location?: number; title?: string; cancellable?: boolean }> = [];
 
+// Own vscode mock: showInputBox, showInformationMessage and withProgress record their calls and
+//   replay queued responses; Uri.parse returns {url}.
 jest.mock('vscode', () => ({
     window: {
         showInputBox: jest.fn().mockResolvedValue(undefined),

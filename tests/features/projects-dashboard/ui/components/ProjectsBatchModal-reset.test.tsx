@@ -267,6 +267,8 @@ describe('ProjectsBatchModal: Reset Selected', () => {
         await screen.findByRole('dialog', { name: /^Reset \d+ Projects?\?$/ });
 
         expect(screen.queryByRole('checkbox', { name: /Uninstall Datapack/ })).toBeNull();
+        // No column to head, so no head row: the "Project" cell is drawn only above a column.
+        expect(screen.queryByText('Project')).toBeNull();
         expect(runButton()).toBeEnabled();
     });
 });

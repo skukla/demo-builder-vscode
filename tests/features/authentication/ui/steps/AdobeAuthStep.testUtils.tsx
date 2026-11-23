@@ -17,20 +17,11 @@
  * same 24 lines. The duplication was the documented procedure, which is why no
  * amount of tidying had removed it.
  *
- * The factories reference `mockPostMessage` / `mockRequestAuth` / `mockOnMessage`
- * directly rather than `require()`-ing this module back into itself. That is legal
- * because the `mock` name prefix is on jest-hoist's allow-list, and safe because
- * each reference sits inside an arrow function that does not run until the mocked
- * method is actually called.
+ * The WebviewClient wall is the shared double in tests/helpers/webviewClientMock;
+ * this file imports it first and re-exports its handles for the specs.
  */
 
-jest.mock('@/core/ui/utils/WebviewClient', () => ({
-    webviewClient: {
-        postMessage: (...args: any[]) => mockPostMessage(...args),
-        requestAuth: (...args: any[]) => mockRequestAuth(...args),
-        onMessage: (...args: any[]) => mockOnMessage(...args),
-    },
-}));
+import { mockPostMessage, mockRequestAuth, mockOnMessage } from '../../../../helpers/webviewClientMock';
 
 jest.mock('@/core/ui/components/feedback/LoadingDisplay', () => {
     const ReactInFactory = require('react');
@@ -58,11 +49,9 @@ export function cleanupTests() {
     jest.useRealTimers(); // Ensure real timers are restored
 }
 
-// The shared mock functions the factories above delegate to. Specs import these to
-// assert against; they must NOT re-declare the jest.mock calls that use them.
-export const mockPostMessage = jest.fn();
-export const mockRequestAuth = jest.fn();
-export const mockOnMessage = jest.fn().mockReturnValue(jest.fn()); // Return unsubscribe function
+// The shared double's handles. Specs import these to assert against; they must NOT
+// re-declare the jest.mock call for WebviewClient.
+export { mockPostMessage, mockRequestAuth, mockOnMessage };
 
 // Base state for tests
 export const baseState: Partial<WizardState> = {

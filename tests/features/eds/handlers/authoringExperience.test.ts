@@ -19,6 +19,8 @@
 var mockAuthoringExperienceValue: unknown;
 /* eslint-enable no-var */
 
+// Own vscode mock: getConfiguration().get must return a set value for authoringExperience; the
+//   shared one returns 3000 for every key.
 jest.mock('vscode', () => {
     mockAuthoringExperienceValue = undefined;  // honor the default
     return {

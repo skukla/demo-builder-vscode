@@ -33,6 +33,8 @@ let showInfoMessageResponse: string | undefined;
 let showWarningMessageResponse: string | undefined;
 
 // Mock vscode
+// Own vscode mock: showInputBox, showInformationMessage and showWarningMessage replay this
+//   suite's queued responses; the shared ones resolve undefined.
 jest.mock(
     'vscode',
     () => ({

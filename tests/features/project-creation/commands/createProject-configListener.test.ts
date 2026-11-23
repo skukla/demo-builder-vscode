@@ -85,6 +85,9 @@ jest.mock('@/core/utils/loadingHTML', () => ({
 let mockPanel: Record<string, unknown>;
 let mockDisposeCallback: (() => void) | undefined;
 
+// Own vscode mock: onDidChangeConfiguration stores its listener (configChangeCallback) so tests
+//   can fire a change, and getConfiguration().get answers the blockLibraries keys; the shared one
+//   stores nothing and returns 3000.
 jest.mock('vscode', () => {
     // Store the configuration mock so we can update it between tests
     let customLibraries: string[] = ['https://github.com/owner/repo'];

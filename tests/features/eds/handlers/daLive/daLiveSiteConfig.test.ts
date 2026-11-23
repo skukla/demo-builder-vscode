@@ -30,6 +30,8 @@ var mockAemAuthorUrl: string | undefined;
 var mockImsOrgId: string | undefined;
 /* eslint-enable no-var */
 
+// Own vscode mock: workspace.getConfiguration().get answers aemAuthorUrl and IMSOrgId from this
+//   suite's variables; the shared one returns 3000 for every key.
 jest.mock('vscode', () => {
     return {
         workspace: {

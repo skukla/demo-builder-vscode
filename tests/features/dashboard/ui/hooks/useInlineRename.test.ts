@@ -8,14 +8,8 @@
  *
  */
 
+import { mockRequest } from '../../../../helpers/webviewClientMock';
 import { renderHook } from '@testing-library/react';
-
-const mockRequest = jest.fn();
-jest.mock('@/core/ui/utils/WebviewClient', () => ({
-    webviewClient: {
-        request: (...args: unknown[]) => mockRequest(...args),
-    },
-}));
 
 import { useInlineRename } from '@/features/dashboard/ui/hooks/useInlineRename';
 

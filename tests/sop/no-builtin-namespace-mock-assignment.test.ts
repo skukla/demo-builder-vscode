@@ -43,10 +43,9 @@ const TESTS = join(ROOT, 'tests');
  * `.promises`, being assigned a jest mock.
  *
  * A cast around the receiver is NOT matched, deliberately. Type-erasing casts are
- * already banned outright in tests by `tests/sop/type-erasing-casts.test.ts`, so a
- * cast form cannot reach the tree for this suite to catch — and writing one into a
- * control string here would raise that suite's shrink-only ledger for something
- * that is not a cast at all. Zero cast-form instances have ever been measured.
+ * already banned outright in tests by `no-restricted-syntax` in `eslint.config.mjs`,
+ * so a cast form cannot reach the tree for this suite to catch. Zero cast-form
+ * instances have ever been measured.
  */
 const ASSIGNMENT =
     /\b(?:fs|fsp|fsPromises|os|path|crypto|net|http|https|childProcess|child_process)\b(?:\.promises)?\.[A-Za-z_$][\w$]*\s*=\s*jest\.fn\b/;

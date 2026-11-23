@@ -19,6 +19,8 @@ const mockStatusBarItem = {
     dispose: jest.fn(),
 };
 
+// Own vscode mock: createStatusBarItem returns the suite's mockStatusBarItem, whose .text the
+//   tests read; the shared one returns a fresh item per call.
 jest.mock(
     'vscode',
     () => ({

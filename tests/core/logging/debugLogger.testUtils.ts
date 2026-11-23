@@ -49,6 +49,8 @@ export const mockDebugChannel = {
 };
 
 // Override the vscode mock for createOutputChannel to return appropriate channel
+// Own vscode mock: createOutputChannel returns the suite's own LogOutputChannel fakes (with
+//   .info); the shared one has no log-level methods.
 jest.mock('vscode', () => {
     const originalModule = jest.requireActual('../../__mocks__/vscode');
     return {

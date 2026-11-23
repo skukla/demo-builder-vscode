@@ -1,3 +1,4 @@
+import '../../../../helpers/webviewClientMock';
 import { render, screen, waitFor, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import React from 'react';
@@ -12,20 +13,6 @@ import {
     resetAllMocks,
 } from './PrerequisitesStep.testUtils';
 import { WizardState } from '@/types/webview';
-
-// Mock WebviewClient
-jest.mock('@/core/ui/utils/WebviewClient', () => ({
-    webviewClient: {
-        postMessage: (...args: any[]) => {
-            const { mockPostMessage } = require('./PrerequisitesStep.testUtils');
-            return mockPostMessage(...args);
-        },
-        onMessage: (...args: any[]) => {
-            const { mockOnMessage } = require('./PrerequisitesStep.testUtils');
-            return mockOnMessage(...args);
-        },
-    },
-}));
 
 /**
  * PrerequisitesStep - Recheck Functionality Tests

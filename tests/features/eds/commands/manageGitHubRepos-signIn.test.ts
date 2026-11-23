@@ -11,6 +11,8 @@ const mockGetSession = jest.fn();
 const mockShowWarningMessage = jest.fn();
 const mockShowErrorMessage = jest.fn();
 
+// Own vscode mock: authentication.getSession and the message boxes forward to this suite's own
+//   mocks; the shared mock has no authentication API.
 jest.mock('vscode', () => ({
     authentication: { getSession: (...a: unknown[]) => mockGetSession(...a) },
     window: {

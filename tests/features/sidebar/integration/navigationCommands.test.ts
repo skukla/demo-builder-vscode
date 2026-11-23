@@ -14,6 +14,8 @@
 import * as vscode from 'vscode';
 
 // Mock vscode module
+// Own vscode mock: registerCommand returns a disposable and executeCommand resolves a promise
+//   (the tests use .resolves); the shared ones return undefined.
 jest.mock('vscode', () => ({
     Uri: {
         file: jest.fn((path: string) => ({

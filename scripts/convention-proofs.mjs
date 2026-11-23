@@ -1580,15 +1580,19 @@ const PROOFS = [
     {
         id: 'type-erasing-cast',
         convention: 'A test never erases a type',
-        enforcer: 'tests/sop/type-erasing-casts.test.ts',
-        expects: /the count only ever falls/,
+        // An eslint ban since the ceiling suite emptied and was deleted (PL-112). The
+        // command lints only the folder the plant goes into, which is clean without it.
+        enforcer: 'eslint.config.mjs',
+        command: ['npx', 'eslint', 'tests/core/utils'],
+        expects: /Do not erase a type in a test/,
         plant: {
             path: 'tests/core/utils/zzProofCast.test.ts',
             content: [
                 '/** Planted by convention-proofs.mjs — a cast that erases its target. */',
                 "it('zz proof cast', () => {",
                 '    const widget = {} as any;',
-                '    expect(widget).toBeDefined();',
+                '    const rows = [] as never[];',
+                '    expect([widget, rows]).toBeDefined();',
                 '});',
                 '',
             ].join('\n'),

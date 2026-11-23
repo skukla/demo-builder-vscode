@@ -20,6 +20,7 @@ import { Checkbox } from '@adobe/react-spectrum';
 import React from 'react';
 import { columnState, DELETE_OPTION_KEYS, offers, type DeleteOptionKey } from '../batchChoices';
 import type { BatchChoices } from '../hooks/useBatchChoices';
+import { BatchQuestionTable } from './BatchQuestionTable';
 import { UNCHECKED_NOTE } from './BatchResetQuestions';
 import { CheckboxRow } from '@/core/ui/components/selection/CheckboxRow';
 import { LeadText } from '@/core/ui/components/ui/LeadText';
@@ -102,40 +103,31 @@ export function BatchDeleteQuestions({ rows, choices }: Props): React.ReactEleme
         state: columnState(rows, choices.ticks, key),
     }));
     return (
-        <div className="batch-confirm">
-            <LeadText>{deleteSentence(rows.some((row) => row.datapack !== undefined))}</LeadText>
-            <div className="batch-delete scroll-fade scroll-fade--capped">
-                <table className="batch-delete-table batch-delete-spread">
-                    <thead>
-                        <tr>
-                            <td className="batch-changes-head batch-project-head">Project</td>
-                            {columns.map(({ key, state }) => (
-                                <th key={key} scope="col">
-                                    <CheckboxRow
-                                        label={optionLabel(key)}
-                                        isSelected={state.all}
-                                        isIndeterminate={state.some && !state.all}
-                                        isDisabled={!state.offered}
-                                        onChange={() => choices.toggleColumn(rows, key)}
-                                    />
-                                </th>
-                            ))}
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {rows.map((row) => (
-                            <tr key={row.path}>
-                                <th scope="row">
-                                    <span className="checkbox-row-label">{row.name}</span>
-                                </th>
-                                {columns.map(({ key }) => (
-                                    <OptionCell key={key} row={row} optionKey={key} choices={choices} />
-                                ))}
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
-            </div>
-        </div>
+        <BatchQuestionTable
+            lead={deleteSentence(rows.some((row) => row.datapack !== undefined))}
+            className="batch-delete-spread"
+            columns={columns.map(({ key, state }) => (
+                <th key={key} scope="col">
+                    <CheckboxRow
+                        label={optionLabel(key)}
+                        isSelected={state.all}
+                        isIndeterminate={state.some && !state.all}
+                        isDisabled={!state.offered}
+                        onChange={() => choices.toggleColumn(rows, key)}
+                    />
+                </th>
+            ))}
+        >
+            {rows.map((row) => (
+                <tr key={row.path}>
+                    <th scope="row">
+                        <span className="checkbox-row-label">{row.name}</span>
+                    </th>
+                    {columns.map(({ key }) => (
+                        <OptionCell key={key} row={row} optionKey={key} choices={choices} />
+                    ))}
+                </tr>
+            ))}
+        </BatchQuestionTable>
     );
 }

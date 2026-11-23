@@ -93,26 +93,25 @@ pair-in-a-box harness, and is proven live on Bodea before the next starts. The i
 Returns come after B8 (owner, 2026-09-27). Contract prices in shared catalogs ([[AB-26z]]) stay
 Phase A's last feature; B3 makes them per ERP when they land.
 
-## 5b. The integration's Admin page, simplified (owner, 2026-09-26)
+## 5b. The integration's Admin page, as built
 
-Settings and mapping are separate. The owner judged one screen with tabs would not scale
-(2026-09-26), so the page is a header (the ERP, whether it is reachable) and a side list of
-sections, each with its own address: **Overview** (the mapping below), **Credit** (this ERP's
-limit, exposure and available credit per company, with an edit that writes to the ERP),
-**Activity** (what crossed and what failed, with Retry) and **Settings**. A clickable preview
-with stand-in data is in commerce-erp-integration at `preview/next.html` (`npm run preview`).
+The 2026-09-26 design was a side list of sections, prototyped in `preview/next.html`. What
+shipped is one page with tabs (commerce-erp-integration `ec40ca5` and `f08f72c`, 2026-09-27 and
+-28; the prototype was deleted in `a3111fc`). The page, per
+`src/commerce-backend-ui-2/web-src/src/components/integration-page.jsx` on main:
 
-- **Settings** is a short form in Commerce Admin's own style: the scope picker (Default Config
-  and each website), then three groups (Orders, Prices, Products and organisation), each field a
-  label, the value, one line of help, and Commerce's own "Use Default" checkbox for inheritance.
-  One Save.
-- **Overview (the mapping)** is read-only and fits on one screen: a header with the two systems, then one row
-  per connection (Companies, Products, Prices, Stock, Orders, Shipments and invoices, Credit,
-  Warehouses) showing Commerce's record, a direction arrow, the ERP's record, what joins them,
-  and a status badge with a count. A row opens to its fields and a look-up. Unbuilt connections
-  are not shown.
+- **A band** across the top with each ERP, whether it is reachable, and when it was last checked.
+- **Four tabs**: **Overview** (the mapping: one row per connection, Commerce's record, the
+  direction, the ERP's record, and a status with a count), **Activity** (what crossed and what
+  failed, in the Admin's log layout with its filters, and Retry), **Settings** (in the Admin's
+  own form layout, each ERP's settings under its name, `cccb5b7`) and **Data Map**
+  (`d2011e1`).
+- **A side panel** that slides in for a row's fields, a look-up or an order's trace.
+- **No polling.** The page reads again on Refresh, after a Retry, and when it comes back on
+  screen (owner, 2026-10-13), and the band's "Checked" time says how old it is.
 
-Built after Phase B's model is settled, as a preview first; replaces the card layout.
+Credit did not become its own section: each ERP's credit lives in that ERP's company
+attributes, as §8 records.
 
 ## 5a. Phase C: circle back on readability (owner, 2026-09-26)
 
@@ -159,11 +158,13 @@ Also answered 2026-09-26: Commerce's company credit limit is the total across th
 each ERP's own figures live in prefixed company custom attributes, edited from each
 integration's Credit section (B4).
 
-Still open:
+Settled by what shipped (recorded 2026-11-23):
 
-0. **Per-ERP settings inside the one integration** (2026-09-27). Recommendation: each ERP stays its own system (workspace, screen, look, data); the one integration holds the routing action and a settings section per ERP on its one Admin page, with a picker between ERPs.
-
-1. **The integration page design in §5b**, now that a preview exists.
+0. **Per-ERP settings inside the one integration** (2026-09-27): built as recommended. Each ERP
+   stays its own system, and the one integration's Settings tab holds each ERP's settings under
+   its name (B3b in §7; commerce-erp-integration `cccb5b7`).
+1. **The integration page design in §5b**: built as one page with four tabs rather than the
+   side list the preview showed (§5b; `ec40ca5`, `f08f72c`).
 
 ## 9. How this plan stays true
 

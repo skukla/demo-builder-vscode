@@ -18,6 +18,8 @@
 var mockDiscoveryServices: unknown;
 /* eslint-enable no-var */
 
+// Own vscode mock: getConfiguration().get returns the suite's mockDiscoveryServices array; the
+//   shared one returns 3000 ('services.find is not a function').
 jest.mock(
     'vscode',
     () => {

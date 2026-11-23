@@ -17,7 +17,6 @@ import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake'
 import { createMockProject } from '../../../helpers/projectFake';
 const executeMock = jest.fn();
 
-jest.mock('vscode', () => ({ workspace: { getConfiguration: jest.fn() } }), { virtual: true });
 /**
  * CONVERTED 2026-08-28 (ADR-015): the executor arrives in the context, so this
  * suite no longer mocks the service registry.

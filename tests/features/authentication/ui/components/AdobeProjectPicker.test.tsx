@@ -1,3 +1,4 @@
+import { mockPostMessage } from '../../../../helpers/webviewClientMock';
 import { render, screen } from '@testing-library/react';
 import React from 'react';
 import { Provider, defaultTheme } from '@adobe/react-spectrum';
@@ -9,15 +10,6 @@ import {
     baseState,
     createMockSelectionStep,
 } from './AdobeProjectPicker.testUtils';
-
-// Mock WebviewClient
-const mockPostMessage = jest.fn();
-jest.mock('@/core/ui/utils/WebviewClient', () => ({
-    webviewClient: {
-        postMessage: (...args: unknown[]) => mockPostMessage(...args),
-        onMessage: jest.fn(),
-    },
-}));
 
 // Mock useSelectionStep hook
 jest.mock('@/core/ui/hooks/useSelectionStep', () => ({

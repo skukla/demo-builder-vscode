@@ -9,10 +9,13 @@ Read this once per batch. It does not change between batches.
 
 ## Why suites named for a FUNCTION are renamed before measuring
 
-`suitesFor` in `scripts/focusModule.mjs` finds a module's suites by convention: inside
-`tests/<the module's directory>`, any file whose name starts with the module's stem. A
-suite named after the function or scenario it exercises is invisible to it, so its kills
-count towards nothing — the tests run and pass on every build and no measurement sees them.
+`mirroringSuites` in `scripts/moduleSuites.mjs` finds a module's suites by name: inside
+`tests/<the module's directory>`, any file whose name starts with the module's stem, plus
+a file of that name in another folder that has no module of its own by the name. A suite
+named after the function or scenario it exercises is invisible to it, so its kills count
+towards nothing — the tests run and pass on every build and no measurement sees them.
+(`suitesFor` in `scripts/focusModule.mjs` falls back to jest's import graph only for a
+module with no suite of its own name at all.)
 
 Measured on 2026-09-05, rename alone, before any test was written:
 

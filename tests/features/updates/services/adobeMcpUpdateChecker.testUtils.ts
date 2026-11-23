@@ -8,7 +8,6 @@
  * runs, which must happen before the subject binds to the real modules.
  */
 
-jest.mock('vscode', () => ({}), { virtual: true });
 
 jest.mock('fs/promises', () => ({
     readFile: jest.fn(),

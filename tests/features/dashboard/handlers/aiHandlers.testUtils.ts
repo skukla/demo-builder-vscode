@@ -83,6 +83,8 @@ jest.mock('@/features/project-creation/services/aiBundle/aiDefaultsInstaller', (
 // exports (aiDefaultsEntryApplies, gatedSkillReasons).
 
 // Mock vscode
+// Own vscode mock: the tests read vscode through jest.requireMock('vscode'); with no factory that
+//   returns an automock copy, not the module the code under test calls, so no calls are seen.
 jest.mock('vscode', () => ({
     env: {
         openExternal: jest.fn().mockResolvedValue(undefined),

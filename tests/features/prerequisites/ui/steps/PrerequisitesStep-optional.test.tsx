@@ -1,3 +1,4 @@
+import '../../../../helpers/webviewClientMock';
 import { render, screen, waitFor } from '@testing-library/react';
 import React from 'react';
 import { Provider, defaultTheme } from '@adobe/react-spectrum';
@@ -10,20 +11,6 @@ import {
     setupScrollMock,
 } from './PrerequisitesStep.testUtils';
 import { WizardState } from '@/types/webview';
-
-// Mock WebviewClient
-jest.mock('@/core/ui/utils/WebviewClient', () => ({
-    webviewClient: {
-        postMessage: (...args: any[]) => {
-            const { mockPostMessage } = require('./PrerequisitesStep.testUtils');
-            return mockPostMessage(...args);
-        },
-        onMessage: (...args: any[]) => {
-            const { mockOnMessage } = require('./PrerequisitesStep.testUtils');
-            return mockOnMessage(...args);
-        },
-    },
-}));
 
 /**
  * PrerequisitesStep - Optional Prerequisites Tests

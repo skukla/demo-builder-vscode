@@ -36,6 +36,9 @@ jest.mock('@/core/validation/validators/AdobeResourceValidator', () => ({
     validateProjectId: jest.fn(),
     validateWorkspaceId: jest.fn(),
 }));
+// Own vscode mock: getConfiguration().get returns 3000 for every key in the shared mock, and
+//   resolveAdminPanelUrl calls .trim() on the IMSOrgId value; the handlers under test bind to
+//   this factory.
 jest.mock(
     'vscode',
     () => ({

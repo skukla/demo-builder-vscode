@@ -6,6 +6,7 @@
  * and what Recheck actually posts — none of which any suite in this family constrained.
  */
 
+import '../../../../helpers/webviewClientMock';
 import { render, screen, waitFor } from '@testing-library/react';
 import { Provider, defaultTheme } from '@adobe/react-spectrum';
 import { PrerequisitesStep } from '@/features/prerequisites/ui/steps/PrerequisitesStep';
@@ -19,19 +20,6 @@ import {
     resetAllMocks,
     setupScrollMock,
 } from './PrerequisitesStep.testUtils';
-
-jest.mock('@/core/ui/utils/WebviewClient', () => ({
-    webviewClient: {
-        postMessage: (...args: unknown[]) => {
-            const { mockPostMessage } = require('./PrerequisitesStep.testUtils');
-            return mockPostMessage(...args);
-        },
-        onMessage: (...args: unknown[]) => {
-            const { mockOnMessage } = require('./PrerequisitesStep.testUtils');
-            return mockOnMessage(...args);
-        },
-    },
-}));
 
 const THREE = [
     { id: 0, name: 'Node.js', description: 'JavaScript runtime', optional: false },

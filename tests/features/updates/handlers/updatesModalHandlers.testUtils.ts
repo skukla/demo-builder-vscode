@@ -35,6 +35,8 @@ jest.mock('@/core/di/serviceLocator', () => ({ ServiceLocator: { getCommandExecu
 // The handler loads in its own module sandbox (handlers() below), with its own vscode; the
 // Chat command it runs is recorded here, outside the sandbox.
 export const mockExecuteCommand = jest.fn();
+// Own vscode mock: commands.executeCommand forwards to mockExecuteCommand so tests can read the
+//   calls; the shared one is a different instance.
 jest.mock('vscode', () => {
     const actual = jest.requireActual('vscode');
     return { ...actual, commands: { ...actual.commands, executeCommand: (...args: unknown[]) => mockExecuteCommand(...args) } };

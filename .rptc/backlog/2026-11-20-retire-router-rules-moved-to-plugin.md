@@ -23,3 +23,4 @@ old rules in comments and may probe them; update them in the same change.
 ## Shipped so far
 
 - 2026-11-20  docs(backlog): file the pipeline review's Demo Builder items (`2d3fa91a7`)
+- 2026-11-23  Loop 2026-11-23: checked true (rules 12, 13, 14, 16 are gone; no remaining rule needs their tokens: rule 10 is admitted by *jest*, rule 11 excludes git commit). Not changed: the permission check refused editing the hook router while the owner is away, so the change waits for the owner. Ready to apply: drop the `git commit`, glob-flag, `=$(`/`; do`, `| head|tail|wc` and `grep -c` entries from router.sh's pre-filter, then update the two comments in tests/hooks/router.test.ts and rule-proofs.test.ts.

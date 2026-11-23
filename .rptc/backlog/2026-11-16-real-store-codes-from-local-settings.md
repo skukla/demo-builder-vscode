@@ -27,3 +27,7 @@ now names no website an agent can act on.
   where a run needs a real code.
 - The repo never needs the client's name to run either.
 - The local note is deleted once the setting carries the codes.
+
+## Shipped so far
+
+- 2026-11-23  Loop 2026-11-23: not started. The real store codes are the client's and live only in the owner's local note, and the user-scoped setting that should carry them is a new setting (its name and shape are a product choice). Owner: confirm the setting's name, then the battery and release-test substitution can be built unattended.

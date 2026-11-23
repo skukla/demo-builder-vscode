@@ -19,9 +19,6 @@
  * producer's shape should be right whichever endpoint consumes it.
  */
 
-jest.mock('vscode', () => ({ window: {}, workspace: { getConfiguration: () => ({ get: () => undefined }) } }), {
-    virtual: true,
-});
 
 import {
     publishLibraryPaths,

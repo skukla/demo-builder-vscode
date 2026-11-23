@@ -38,7 +38,7 @@ import { execFileSync } from 'child_process';
 import { existsSync, readFileSync, realpathSync } from 'fs';
 import { fileURLToPath } from 'url';
 
-import { mirroringSuites } from './focusModule.mjs';
+import { mirroringSuites } from './moduleSuites.mjs';
 
 export const BASELINE = 'reports/mutation/baseline.json';
 const NO_BLOB = /^0+$/;

@@ -1,18 +1,27 @@
 #!/usr/bin/env bash
 #
 # scan.sh — find rot in the RPTC record itself: the backlog index, where plans live,
-# and citations that name a file:line. Four labelled sections:
+# and citations that name a file:line. Seven labelled sections:
 #
 #   1. Backlog index → disk    — links that do not resolve.
 #   2. Disk → backlog index    — items with no `####` entry (the direction a
 #                                dead-link check structurally cannot see).
 #   3. Shipped plans still in plans/ — an overview claiming SHIPPED/COMPLETE while
-#                                sitting in the active directory.
+#                                sitting in the active directory, and backlog items
+#                                whose banner says they are done.
 #   4. Citations                — `path/file.ts:NN` where the file is gone or NN is
 #                                past its end. LIVE surfaces only: research/, dream/
 #                                and complete/ are dated records of what was true when
 #                                written, and rewriting them would falsify the record
 #                                rather than fix a link.
+#   5. Done work still live     — a live item whose body says it is done, or whose twin
+#                                is already in complete/.
+#   6. Code moved               — items citing a file:line whose code changed after the
+#                                item was last updated.
+#   7. Leftovers                — finished items whose own body still names work.
+#
+# Each section reads its files in one process (PL-109): the scan took 18 s when it
+# started a process per file, and the pipeline's turn-end check stops it at 45.
 #
 # Signal only, not a verdict. §3 in particular needs a human: "claims shipped" and
 # "is shipped" are different, and only a person should move a plan. Triage per SKILL.md.
@@ -75,25 +84,33 @@ echo
 
 # ── 3. Plans that say they shipped but still sit in plans/ ───────────────────
 echo "== 3. Plans claiming SHIPPED/COMPLETE while still in plans/ =="
-found=0
-for ov in "$RPTC"/plans/*/overview.md "$RPTC"/plans/*/HANDOFF.md; do
-    [ -f "$ov" ] || continue
-    if grep -qiE '^\s*(\*\*)?(status|state)(\*\*)?:?.{0,40}(shipped|complete)|^\*\*shipped' "$ov"; then
-        echo "  CLAIMS SHIPPED  $(dirname "$ov")"
-        # Print the line that ACTUALLY triggered it, not a looser re-grep. The
-        # evidence used to be `grep -m1 -iE 'shipped|complete'`, which finds the
-        # first loose match anywhere in the file — so a plan flagged on a
-        # `**SHIPPED**` heading at line 251 was reported with prose from line 18
-        # that merely contained the word "completely". The finding was right and
-        # the evidence pointed somewhere else, which costs more time than no
-        # evidence would.
-        grep -n -m1 -iE '^\s*(\*\*)?(status|state)(\*\*)?:?.{0,40}(shipped|complete)|^\*\*shipped' \
-            "$ov" | cut -c1-96 | sed 's/^/      /'
-        found=$((found + 1))
-    fi
-done
-[ "$found" -eq 0 ] && echo "  (none)"
-echo "  control: $(ls -d "$RPTC"/plans/*/ 2>/dev/null | wc -l | tr -d ' ') plan dirs scanned"
+# One python pass over every file (PL-109): the loop it replaced started a head and a
+# grep per backlog file, about 900 processes, which is most of why the scan took 18 s and
+# the pipeline's turn-end check (45 s limit) could stop it whole.
+python3 - "$RPTC" <<'PY'
+import glob, os, re, sys
+
+rptc = sys.argv[1]
+
+# Print the line that ACTUALLY triggered it, not a looser re-search. The evidence used
+# to be the first loose `shipped|complete` match anywhere in the file, so a plan flagged
+# on a `**SHIPPED**` heading at line 251 was reported with prose from line 18 that merely
+# contained the word "completely". The finding was right and the evidence pointed
+# somewhere else, which costs more time than no evidence would.
+PLAN = re.compile(r'^\s*(\*\*)?(status|state)(\*\*)?:?.{0,40}(shipped|complete)|^\*\*shipped', re.I)
+found = 0
+for name in ('overview.md', 'HANDOFF.md'):
+    for ov in sorted(glob.glob(os.path.join(rptc, 'plans', '*', name))):
+        lines = open(ov, encoding='utf-8', errors='ignore').read().split('\n')
+        hit = next((i for i, line in enumerate(lines) if PLAN.search(line)), None)
+        if hit is None:
+            continue
+        print(f"  CLAIMS SHIPPED  {os.path.dirname(ov)}")
+        print(f"      {f'{hit + 1}:{lines[hit]}'[:96]}")
+        found += 1
+if not found:
+    print("  (none)")
+print(f"  control: {len(glob.glob(os.path.join(rptc, 'plans', '*', '')))} plan dirs scanned")
 
 # Same question aimed at backlog/, which nothing asked until 2026-08-13. Five items there
 # declared themselves SHIPPED / LANDED / IMPLEMENTED / RETIRED — one for over a month —
@@ -103,19 +120,30 @@ echo "  control: $(ls -d "$RPTC"/plans/*/ 2>/dev/null | wc -l | tr -d ' ') plan 
 # Deliberately stricter than the plans pass above: it anchors on a marker in the first 12
 # lines (a status banner), NOT anywhere in the body. Items routinely say "Layer 1 ✅" about
 # a sub-part while remaining live, and reporting those would bury the real hits.
-echo "  -- backlog items declaring themselves finished --"
-bfound=0
-for it in "$RPTC"/backlog/*.md "$RPTC"/backlog/*/overview.md; do
-    [ -f "$it" ] || continue
-    case "$it" in */README.md) continue;; esac
-    if head -12 "$it" | grep -qiE '(✅|❌).{0,40}(shipped|landed|implemented|retired|complete|discharged)|^\s*>?\s*\*\*(status|state)\*\*:?\s*(✅|shipped|complete|retired)'; then
-        echo "  DECLARES DONE  ${it#"$RPTC"/backlog/}"
-        head -12 "$it" | grep -m1 -iE '✅|❌|shipped|landed|implemented|retired' | cut -c1-92 | sed 's/^/      /'
-        bfound=$((bfound + 1))
-    fi
-done
-[ "$bfound" -eq 0 ] && echo "  (none)"
-echo "  control: $(ls "$RPTC"/backlog/*.md 2>/dev/null | grep -vc README) backlog files scanned"
+print("  -- backlog items declaring themselves finished --")
+DONE = re.compile(r'(✅|❌).{0,40}(shipped|landed|implemented|retired|complete|discharged)'
+                  r'|^\s*>?\s*\*\*(status|state)\*\*:?\s*(✅|shipped|complete|retired)', re.I)
+EVIDENCE = re.compile(r'✅|❌|shipped|landed|implemented|retired', re.I)
+backlog = os.path.join(rptc, 'backlog')
+files = sorted(glob.glob(os.path.join(backlog, '*.md'))) + sorted(glob.glob(os.path.join(backlog, '*', 'overview.md')))
+bfound = 0
+for it in files:
+    if it.endswith('/README.md'):
+        continue
+    head = open(it, encoding='utf-8', errors='ignore').read().split('\n')[:12]
+    if not any(DONE.search(line) for line in head):
+        continue
+    print(f"  DECLARES DONE  {os.path.relpath(it, backlog)}")
+    # A banner that says only "complete" matches DONE and not EVIDENCE: no evidence line
+    # then, as the grep it replaced printed none, rather than stopping the section.
+    evidence = next((line for line in head if EVIDENCE.search(line)), None)
+    if evidence is not None:
+        print(f"      {evidence[:92]}")
+    bfound += 1
+if not bfound:
+    print("  (none)")
+print(f"  control: {len([f for f in glob.glob(os.path.join(backlog, '*.md')) if 'README' not in f])} backlog files scanned")
+PY
 echo
 
 # ── 4. file:line citations ───────────────────────────────────────────────────
@@ -250,6 +278,7 @@ PY
 echo "== 6. Items citing a file:line whose CODE moved after the item was last updated =="
 python3 - "$RPTC" <<'PY'
 import os, re, subprocess, sys
+from concurrent.futures import ThreadPoolExecutor
 
 rptc = sys.argv[1]
 backlog = os.path.join(rptc, 'backlog')
@@ -291,21 +320,58 @@ items = sorted(f for f in os.listdir(backlog) if f.endswith('.md') and f != 'REA
 scanned = cited_total = flagged = 0
 findings = []
 
-for name in items:
-    item = os.path.join(backlog, name)
-    last_touched = git('log', '-1', '--format=%cI', '--', item)
-    if not last_touched:
+# Every item's last commit from ONE git call, not one per item (PL-109: about 440
+# processes, most of the scan's 18 s). `--cc` lists a merge's files when it differs from
+# every parent, which is when a one-path `git log` shows the merge too; without it a merge
+# that last touched an item was missed. The output matched the old per-item calls line for
+# line on 2026-11-23's tree. A folder log simplifies history over the whole folder, so a
+# merge where an item matches both parents but the folder matches only one could give a
+# different last-touched time; none was found, and the old calls are one git log each.
+def commit_times(folder):
+    """Each file's commit times, newest first, keyed by its path under the folder."""
+    times = {}
+    # The folder, not each file by name: git takes 2.5 s to match 440 names and 0.1 s
+    # to walk the folder. Run from inside it, and key by the path under the folder (git
+    # prints repo-root paths, and the folder's own prefix comes off), so RPTC_DIR can be
+    # given in any form. Unquoted, so an unusual name still matches. Not --relative: with
+    # --cc it stopped listing the merge that last touched one item.
+    prefix = git('-C', folder, 'rev-parse', '--show-prefix')
+    out = git('-C', folder, '-c', 'core.quotePath=false', 'log', '--cc',
+              '--format=%x00%ct', '--name-only', '--', '.')
+    stamp = None
+    for line in out.split('\n'):
+        if line.startswith('\x00'):
+            stamp = int(line[1:])
+        elif line.strip().startswith(prefix) and stamp is not None:
+            times.setdefault(line.strip()[len(prefix):], []).append(stamp)
+    return times
+
+item_paths = {os.path.join(backlog, name): name for name in items}
+item_times = commit_times(backlog)
+cited = {}
+for path, name in item_paths.items():
+    if not item_times.get(name):
+        continue
+    text = open(path, encoding='utf-8', errors='ignore').read()
+    cited[name] = sorted({r for r in (resolve(c) for c in CITE_RE.findall(text)) if r})
+# Cited files get one call EACH, as before: a log over many paths at once simplifies
+# history across all of them, and it counted three more commits on src/extension.ts than
+# the one-path log does. They run side by side, since each waits on its own git process.
+def ref_commit_times(ref):
+    return ref, [int(t) for t in git('log', '--format=%ct', '--', ref).split('\n') if t.strip()]
+
+with ThreadPoolExecutor(max_workers=8) as pool:
+    ref_times = dict(pool.map(ref_commit_times, sorted({ref for refs in cited.values() for ref in refs})))
+
+for path, name in item_paths.items():
+    if name not in cited:
         continue
     scanned += 1
-    text = open(item, encoding='utf-8', errors='ignore').read()
-    refs = sorted({r for r in (resolve(c) for c in CITE_RE.findall(text)) if r})
+    last_touched = max(item_times[name])
+    refs = cited[name]
     cited_total += len(refs)
-    moved = []
-    for ref in refs:
-        out = git('log', '--oneline', f'--since={last_touched}', '--', ref)
-        n = len([l for l in out.split('\n') if l.strip()])
-        if n:
-            moved.append((n, ref))
+    # `git log --since=<the item's last commit>` counts commits at or after that moment.
+    moved = [(n, ref) for ref in refs if (n := sum(1 for t in ref_times.get(ref, []) if t >= last_touched))]
     if moved:
         findings.append((sum(n for n, _ in moved), name, sorted(moved)))
 

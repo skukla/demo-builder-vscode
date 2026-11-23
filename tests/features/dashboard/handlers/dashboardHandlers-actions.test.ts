@@ -28,6 +28,8 @@ import { createMockHandlerContext } from '../../../helpers/handlerContextTestHel
 
 import { mockWindow } from '../../../helpers/vscodeMockViews';
 // Mock vscode
+// Own vscode mock: getConfiguration().get returns undefined here; the shared one returns 3000,
+//   and resolveAdminPanelUrl calls .trim() on the IMSOrgId value (TypeError).
 jest.mock(
     'vscode',
     () => ({

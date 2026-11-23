@@ -4,7 +4,7 @@ kind: chore
 area: platform
 needs: []
 value: low
-status: backlog
+status: built
 ---
 
 # Batch question table shell
@@ -25,3 +25,7 @@ from the caller.
 Three sites, so the Rule of Three is met. Not blocking beta.153: the three render correctly today;
 the cost is that a change to one (as the one-project reset wording was, live run 6) has to be made
 three times.
+
+## Shipped so far
+
+- 2026-11-23  Loop 2026-11-23: built (ef0ca5ae7, on loop/2026-11-23-backlog). BatchQuestionTable in projects-dashboard owns the wrapper, lead, capped scroll and Project head; the three windows pass columns and rows. 978 tests pass unchanged plus one new assertion (Reset draws no head with no datapack column; proven to fail when the head is forced). core BatchSaveTable considered and left (a different question, two features). Reviewed (opus, 2 low fixed); the stylesheet check's dynamic-class ceiling caught a template-string class and it is now cn().

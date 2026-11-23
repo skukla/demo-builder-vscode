@@ -193,8 +193,8 @@ export function expectFloor(ledger: Ledger, check: string, count: number): void 
  *
  * The arc every ledger here is on: seed at the measured count, shrink only, and
  * when it empties, delete it. `featureBarrels`, `reExportIndex` and the
- * `needsAuth` review ledger all completed it; the type-erasing-cast ceilings are
- * still on it.
+ * `needsAuth` review ledger all completed it, and the type-erasing-cast ceiling did
+ * on 2026-11-23, when it became an eslint ban (PL-112).
  */
 export function expectBanned(ledger: Ledger, check: string, violations: string[]): void {
     expect({

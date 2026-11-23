@@ -1416,7 +1416,7 @@ promising an agent that every response parses.
 > *How it is set:* `asText` reads the answer's own top-level `success`, because handlers
 > already answer `{ success, … }` (Pattern B) — so this restates a fact rather than making
 > a judgement. `asRawText` takes a string and must be TOLD.
-> Enforced by `tests/features/ai/server/toolFailureEnvelope.test.ts` (the builders) and
+> Enforced by `tests/features/ai/server/mcpToolResult-failureFlag.test.ts` (the builders) and
 > `tests/features/ai/server/toolDescriptors-failureFlag.test.ts` (descriptor rows) — not the
 > shape suite next to them: a response can be perfectly shaped and still lie about whether
 > it worked.
@@ -1454,7 +1454,8 @@ promising an agent that every response parses.
 > So all 114 tools were reviewed one at a time against a shrink-only ledger, each row
 > carrying a verdict and a reason. When it reached zero unreviewed (2026-09-01) every
 > verdict moved into the code as a `needsAuth` declaration and the ledger was deleted —
-> the arc `featureBarrels` took, and the one the type-erasing-cast ceiling is on.
+> the arc `featureBarrels` took, and the one the type-erasing-cast ceiling finished
+> on 2026-11-23 (PL-112).
 >
 > The declarations were transcribed mechanically and then VERIFIED against the ledger
 > row by row: 114 found in code, zero mismatches, zero missing. The field is an ARRAY
@@ -1754,6 +1755,16 @@ breaks the code on purpose and reports what nothing noticed.
 > `jest.mock` only hoists above the imports of the module it appears in, which cost 23
 > failing tests to learn.
 
+> **Convention.** A test file that carries its own `jest.mock('vscode', factory)` says, in a
+> `// Own vscode mock:` comment within three lines above it, what the shared mock cannot do
+> for that suite. Enforced by `tests/sop/own-vscode-mocks-say-why.test.ts`.
+> *Why:* a factory REPLACES `tests/__mocks__/vscode.ts`, so each one is a second description
+> of the vscode API that can drift. Of 56 such files, 7 needed nothing the shared mock
+> lacks and lost the factory. The other 49 say why they stay: most name the member the shared
+> one cannot supply (a resolving `executeCommand`, a recording `createFileSystemWatcher`, a
+> `{url}` `Uri.parse`), and a few say their assertions are written against suite-local mocks
+> the factory forwards to, which the shared `jest.fn` members could replace with a rewrite.
+
 A mocked service module turns out to be four different things wearing one shape, and the
 remedy differs for each:
 
@@ -2002,12 +2013,14 @@ check says so and names the file.
 > way was already in use; it had just never been written down, while
 > `@typescript-eslint/no-explicit-any` sat switched OFF for `tests/`.
 >
-> Enforced by `tests/sop/type-erasing-casts.test.ts` — a shrink-only ceiling, because
-> there were 1,916 across 341 files when the rule was adopted and a ban that emits 1,916
-> errors gets switched off within a week. `npm run typecheck:tests` catches the builder
-> half the moment a builder is honestly typed. When both counts reach zero, that suite is
-> deleted and replaced by a `no-restricted-syntax` ban, exactly as the feature-barrel
-> ledger became a ban when it emptied.
+> Enforced by `no-restricted-syntax` in `eslint.config.mjs`, which fails `as any`,
+> `as never` and their arrays in `tests/` (not `tests/fixtures/`, which lint ignores; its
+> one TypeScript file is a hook probe). It began as a shrink-only ceiling suite, because there were
+> 1,916 across 341 files when the rule was adopted and a ban that emits 1,916 errors gets
+> switched off within a week. Both counts reached zero (PL-32), and the ceiling suite and
+> its ledger were deleted for the ban (PL-112), exactly as the feature-barrel ledger
+> became a ban when it emptied. `npm run typecheck:tests` catches the builder half the
+> moment a builder is honestly typed.
 > [ADR-016](../architecture/adr/016-test-strategy.md)
 
 > **Convention.** Do not mock a configuration leaf.
@@ -2078,7 +2091,7 @@ Conventions decay unless something checks them. Four layers do:
 - **Typecheck and lint** run over the whole repository in CI
 - **Scans** measure at release cuts: duplication, dead code, agent coverage (import cycles moved to an enforcer suite on 2026-10-08)
 
-**This handbook states 148 conventions. 145 of them are enforced; 3 are not.**
+**This handbook states 149 conventions. 146 of them are enforced; 3 are not.**
 
 The last one to get there was "vendor CSS sits in the lowest cascade layer", and it was
 outstanding because it was **not yet true**: `@layer vendor` existed in no bundle, so a

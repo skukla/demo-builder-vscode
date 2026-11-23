@@ -12,7 +12,7 @@
  * must be imported before the hook.
  */
 
-import { createDefaultState, messageHandlers, mockPostMessage } from './edsAuthHooks.testUtils';
+import { createDefaultState, webviewClientHandlers, mockPostMessage } from './edsAuthHooks.testUtils';
 import { renderHook, act } from '@testing-library/react';
 import type { WizardState, EDSConfig } from '@/types/webview';
 
@@ -48,12 +48,12 @@ describe('useDaLiveAuth - state it answers with', () => {
 
     const push = (type: string, data: unknown) =>
         act(() => {
-            messageHandlers.get(type)?.(data);
+            webviewClientHandlers.get(type)?.(data);
         });
 
     beforeEach(() => {
         jest.clearAllMocks();
-        messageHandlers.clear();
+        webviewClientHandlers.clear();
         updateState = jest.fn();
     });
 

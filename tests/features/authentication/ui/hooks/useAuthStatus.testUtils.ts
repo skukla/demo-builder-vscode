@@ -2,24 +2,18 @@
  * Shared test utilities for useAuthStatus hook tests
  */
 
+import {
+    mockPostMessage,
+    mockOnMessage,
+    mockRequestAuth,
+    mockReady,
+} from '../../../../helpers/webviewClientMock';
 import { WizardState } from '@/types/webview';
 import { ErrorCode } from '@/types/errorCodes';
 import '@testing-library/jest-dom';
 
-// Mock WebviewClient
-export const mockPostMessage = jest.fn();
-export const mockOnMessage = jest.fn().mockReturnValue(jest.fn());
-export const mockRequestAuth = jest.fn();
-export const mockReady = jest.fn().mockResolvedValue(undefined);
-
-jest.mock('@/core/ui/utils/WebviewClient', () => ({
-    webviewClient: {
-        postMessage: (...args: any[]) => mockPostMessage(...args),
-        onMessage: (...args: any[]) => mockOnMessage(...args),
-        requestAuth: (...args: any[]) => mockRequestAuth(...args),
-        ready: (...args: any[]) => mockReady(...args),
-    },
-}));
+// The WebviewClient wall is the shared double's; these are its handles, re-exported.
+export { mockPostMessage, mockOnMessage, mockRequestAuth, mockReady };
 
 // Base state for tests
 export const baseAdobeAuth = {
