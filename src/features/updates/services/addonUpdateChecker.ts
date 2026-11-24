@@ -37,10 +37,8 @@ export interface BlockLibraryUpdateResult {
 // What an install copies
 // ---------------------------------------------------------------------------
 
-/** The root files a library install merges (`installBlockCollections`); blocks come from `blocks/`. */
-const LIBRARY_ROOT_FILES = new Set(['component-definition.json', 'component-filters.json', 'component-models.json']);
-
-const libraryInstalls = (path: string): boolean => path.startsWith('blocks/') || LIBRARY_ROOT_FILES.has(path);
+/** An install copies only the library's `blocks/` folders (`installBlockCollections`, EDS-71). */
+const libraryInstalls = (path: string): boolean => path.startsWith('blocks/');
 
 /** GitHub lists at most this many changed files; a list this long may have left one out. */
 const COMPARE_FILE_CAP = 300;

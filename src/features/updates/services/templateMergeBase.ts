@@ -18,6 +18,7 @@
 import type { CommandResult } from '@/core/shell/types';
 import { knownPlain } from '@/core/utils/plainText';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { onlyRecordedEntriesDiffer, type RecordedEntriesReader } from '@/features/updates/services/authoringFileDeletion';
 import { TemplateSyncStepError } from '@/features/updates/services/templateSyncStepError';
 import type { Logger } from '@/types/logger';
 
@@ -43,25 +44,11 @@ type TemplateChangeOutcome =
 const NEVER_APPLIED = ['.github'];
 
 /**
- * Universal Editor files Adobe deleted from its Commerce templates (EDS-71: B2B template
- * 677106e0). Demo Builder still builds the DA.live block library from
- * `component-definition.json` and adds its own entries (Catalog Menu, block libraries) to
- * all three, so when the template deletes one the storefront's copy is kept. Applying the
- * deletion would empty the block library on the next reset or refresh, and when the
- * storefront had changed the file it failed the whole update with git's "patch failed"
- * (a colleague's storefront, 2026-11-23). Leaves this list when EDS-71 moves the library
- * to DA.live content.
- */
-const KEPT_WHEN_THE_TEMPLATE_DELETES = [
-    'component-definition.json',
-    'component-models.json',
-    'component-filters.json',
-];
-
-/**
- * How the template's deletions meet the storefront. `skip` are left out of the change: a
- * kept Universal Editor file, or one the storefront no longer has. `clashes` are files the
- * storefront changed that the template deletes: git cannot apply that deletion and marks
+ * How the template's deletions meet the storefront. `skip` are left out of the change: files
+ * the storefront no longer has. `toBase` are Universal Editor files that differ from the
+ * template's only by Demo Builder's recorded entries (`authoringFileDeletion.ts`, EDS-71):
+ * they are put back as the template had them, so its deletion applies. `clashes` are files
+ * the storefront changed that the template deletes: git cannot apply that deletion and marks
  * no conflict, and no fix can be applied in the storefront's copy either, so the update
  * stops before anything is applied and says so by name. `unsafe` are names that cannot be
  * put inside double quotes safely in both shells a step may run in (bash, and cmd.exe on
@@ -69,6 +56,7 @@ const KEPT_WHEN_THE_TEMPLATE_DELETES = [
  */
 interface DeletionPlan {
     skip: string[];
+    toBase: string[];
     clashes: string[];
     unsafe: string[];
 }
@@ -96,7 +84,7 @@ function pathspecFor(request: Pick<TemplateChangeRequest, 'preserveFiles'>, skip
 async function planDeletions(
     git: GitStep,
     range: { base: string; target: string },
-    request: Pick<TemplateChangeRequest, 'preserveFiles'>,
+    request: Pick<TemplateChangeRequest, 'preserveFiles' | 'recordedEntries'>,
 ): Promise<DeletionPlan> {
     // The same files the patch leaves out are never asked about. `-z` names each file
     // exactly as stored, never C-quoted.
@@ -108,7 +96,7 @@ async function planDeletions(
         throw new TemplateSyncStepError("Could not compare the template's versions.", listed.stderr);
     }
     const deleted = listed.stdout.split('\0').filter(Boolean);
-    const plan: DeletionPlan = { skip: [], clashes: [], unsafe: [] };
+    const plan: DeletionPlan = { skip: [], toBase: [], clashes: [], unsafe: [] };
     if (deleted.length === 0) return plan;
     const tracked = await git(`git ls-files -z`, TIMEOUTS.QUICK);
     if (tracked.code !== 0) {
@@ -118,13 +106,25 @@ async function planDeletions(
     for (const file of deleted) {
         if (!safeInQuotes(file)) {
             plan.unsafe.push(file);
-        } else if (KEPT_WHEN_THE_TEMPLATE_DELETES.includes(file) || !has.has(file)) {
+        } else if (!has.has(file)) {
             plan.skip.push(file);
         } else if (await storefrontChanged(git, range.base, file)) {
-            plan.clashes.push(file);
+            const read = request.recordedEntries;
+            const ours = read !== undefined && (await onlyRecordedEntriesDiffer(git, range.base, file, read));
+            (ours ? plan.toBase : plan.clashes).push(file);
         }
     }
     return plan;
+}
+
+/** Put the `toBase` files back as the template had them at `base`, so its deletion applies. */
+async function putBackAsTemplateHad(git: GitStep, base: string, plan: DeletionPlan): Promise<void> {
+    if (plan.toBase.length === 0) return;
+    const files = plan.toBase.map((file) => `"${file}"`).join(' ');
+    const put = await git(`git checkout ${base} -- ${files}`, TIMEOUTS.QUICK);
+    if (put.code !== 0) {
+        throw new TemplateSyncStepError(`Could not put back the template's ${plan.toBase.join(', ')}.`, put.stderr);
+    }
 }
 
 /** Whether the storefront's `file` differs from the template's at `base`. git's 1 is "yes". */
@@ -175,6 +175,11 @@ interface TemplateChangeRequest {
     preserveFiles: string[];
     /** Where the patch is written — outside the clone's working tree. */
     patchFile: string;
+    /**
+     * Demo Builder's recorded entries in the Universal Editor files, read only when the
+     * template deletes one the storefront changed. Absent: such a file stops the update.
+     */
+    recordedEntries?: RecordedEntriesReader;
     /**
      * The template version to bring the storefront up to. Absent: the template's
      * latest commit. A thin-layer storefront passes its patches repo's tested
@@ -311,6 +316,7 @@ export async function applyTemplateChangeSince(
     if (mustStop(deletions)) {
         return { kind: 'failed', reason: deletionReason(deletions) };
     }
+    await putBackAsTemplateHad(git, base, deletions);
     if (!(await writePatch(git, `${base} ${templateHead}`, request, deletions.skip))) {
         return { kind: 'unchanged', templateHead };
     }
@@ -346,6 +352,7 @@ export async function applyChangeKeepingConflicts(
     if (mustStop(deletions)) {
         return { kind: 'failed', reason: deletionReason(deletions) };
     }
+    await putBackAsTemplateHad(git, request.base, deletions);
     if (!(await writePatch(git, `${request.base} ${request.target}`, request, deletions.skip))) {
         return { kind: 'unchanged' };
     }

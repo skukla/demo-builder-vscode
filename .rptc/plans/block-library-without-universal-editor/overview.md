@@ -132,10 +132,15 @@ The detail of each step:
    description stops naming the Universal Editor.
 6. **Block library install, update, removal.** Stop merging into the storefront's three UE files; the
    `addedEntries` record keeps working for storefronts that still have them until their next update.
-7. **The template update takes Adobe's deletion.** Nothing reads the storefront's
+7. **The template update takes Adobe's deletion** (built 2026-11-23). Nothing reads the storefront's
    `component-definition.json` after steps 2 to 6, so before applying Adobe's change the update removes
    Demo Builder's recorded entries (or the files, when only Demo Builder's entries differ), and the
-   deletion applies. Existing storefronts get the content library on that update.
+   deletion applies. Existing storefronts get the content library on that update. As built
+   (`authoringFileDeletion.ts`, `src/features/updates/README.md` "A file the template deletes"): a file
+   that is the template's plus recorded entries still as the library added them is put back as the
+   template had it and deleted; anything else stops the update by name; the GitHub update and the Fix
+   with AI copy behave the same; a successful update or reset (or finished kept clash) forgets the record of
+   files the storefront no longer has. The keep list from the 2026-11-23 bridge fix is removed.
 8. **Lift the hold.** In `eds-demo-patches`: delete `b2b/last-known-good.hold`, re-apply the SKU patch
    rewrite (63c7d0f), release; the patch canary updates the canary storefront to Adobe's current
    template and must stay green.

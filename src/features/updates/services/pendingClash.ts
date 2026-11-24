@@ -34,6 +34,7 @@ import { getGitHubServices } from '@/features/eds/handlers/edsServiceCache';
 import { injectTokenIntoUrl } from '@/features/eds/services/github/githubHelpers';
 import { markKeptClash } from '@/features/eds/services/storefront/keptClashMark';
 import { prepareForAdobeChange } from '@/features/updates/services/adobeChangePrep';
+import { recordedEntriesReader, type RecordedEntriesReader } from '@/features/updates/services/authoringFileDeletion';
 import { openLocalCopy, refreshLocalStorefront, type LocalCopy } from '@/features/updates/services/localStorefrontRefresh';
 import { filesSetAside, NOTHING_ASIDE, putBackOwnPieces, type SetAside } from '@/features/updates/services/setAsidePieces';
 import { applyChangeKeepingConflicts } from '@/features/updates/services/templateMergeBase';
@@ -152,8 +153,16 @@ async function putBackAroundClash(copy: LocalCopy, aside: SetAside, conflicts: s
     return { patches: aside.patches.map((patch) => patch.id), quickEdit: aside.quickEdit };
 }
 
-/** Apply the change in the refreshed copy; the reason when it is not the clone's clash. */
-async function applyInCopy(copy: LocalCopy, request: KeepClashRequest, token: string): Promise<string | undefined> {
+/**
+ * Apply the change in the refreshed copy; the reason when it is not the clone's clash.
+ * `recordedEntries` lets a deleted Universal Editor file go as it does on GitHub (EDS-71).
+ */
+async function applyInCopy(
+    copy: LocalCopy,
+    request: KeepClashRequest,
+    token: string,
+    recordedEntries: RecordedEntriesReader,
+): Promise<string | undefined> {
     const { source, base, target, preserveFiles } = request.clash;
     const sourceUrl = injectTokenIntoUrl(`https://github.com/${source.owner}/${source.repo}.git`, token);
     const fetched = await copy.git(`git fetch --quiet "${sourceUrl}" ${base} ${target}`, TIMEOUTS.LONG);
@@ -163,7 +172,7 @@ async function applyInCopy(copy: LocalCopy, request: KeepClashRequest, token: st
     const patchDir = await fsPromises.mkdtemp(path.join(os.tmpdir(), 'kept-clash-'));
     try {
         const patchFile = path.join(patchDir, 'change.patch');
-        const outcome = await applyChangeKeepingConflicts(copy.git, { base, target, preserveFiles, patchFile });
+        const outcome = await applyChangeKeepingConflicts(copy.git, { base, target, preserveFiles, patchFile, recordedEntries });
         if (outcome.kind === 'kept' && sameFiles(outcome.conflicts, request.conflicts)) return undefined;
         // The copy holds only what was just applied (it refreshed clean), so this loses nothing.
         await copy.git('git reset --hard --quiet HEAD', TIMEOUTS.QUICK);
@@ -207,7 +216,8 @@ export function parseRawDiff(output: string): Record<string, string | null> {
  */
 export async function keepClash(project: Project, request: KeepClashRequest, ctx: UpdateContext): Promise<KeepClashOutcome> {
     const notKept = (reason: string): KeepClashOutcome => ({ kind: 'not-kept', reason });
-    const token = (await getGitHubServices(ctx.secrets).tokenService.getToken())?.token;
+    const github = getGitHubServices(ctx.secrets);
+    const token = (await github.tokenService.getToken())?.token;
     if (!token) return notKept('GitHub is not signed in');
     const copy = await openLocalCopy(project, ctx, token);
     if (!copy) return notKept('this project has no local copy of its storefront');
@@ -221,7 +231,7 @@ export async function keepClash(project: Project, request: KeepClashRequest, ctx
         await copy.git('git reset --hard --quiet HEAD', TIMEOUTS.QUICK);
         return notKept('its local copy could not be prepared for the update');
     }
-    const problem = await applyInCopy(copy, request, token);
+    const problem = await applyInCopy(copy, request, token, recordedEntriesReader(project, github.fileOperations, ctx.logger));
     if (problem) {
         // The copy refreshed clean, so this drops only what was just prepared and applied.
         await copy.git('git reset --hard --quiet HEAD', TIMEOUTS.QUICK);

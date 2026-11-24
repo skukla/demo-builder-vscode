@@ -22,8 +22,13 @@ import { createMockSecretStorage } from '../../../helpers/secretStorageFake';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
 
 export const mockGetToken = jest.fn();
+/** GitHub's file read: a block library's files at its recorded commit (EDS-71). None by default. */
+export const mockGetFileContent = jest.fn();
 jest.mock('@/features/eds/handlers/edsServiceCache', () => ({
-    getGitHubServices: () => ({ tokenService: { getToken: () => mockGetToken() } }),
+    getGitHubServices: () => ({
+        tokenService: { getToken: () => mockGetToken() },
+        fileOperations: { getFileContent: (...args: unknown[]) => mockGetFileContent(...args) },
+    }),
 }));
 
 export const REAL_GIT_TIMEOUT_MS = 60_000;
@@ -144,6 +149,7 @@ beforeEach(() => {
     fx.scBare = buildStorefront();
     git(root, 'clone', '-q', fx.scBare, 'local');
     mockGetToken.mockResolvedValue({ token: 'gh-token' });
+    mockGetFileContent.mockReset().mockResolvedValue(null);
 });
 
 afterEach(() => {

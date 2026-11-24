@@ -109,6 +109,25 @@ workflow deletes them, so an edit to one stops the update on a file the storefro
 not have. Measured 2026-10-20: Adobe's change from 71a67e0 to the tested 48bed04 edits 14
 of them, and our own storefront repositories keep only `sync-from-upstream.yml`.
 
+## A file the template deletes (EDS-71)
+
+Adobe deleted its Universal Editor files (`component-definition.json`,
+`component-models.json`, `component-filters.json`) from its Commerce templates, and nothing in
+Demo Builder reads them any more. Before applying anything, the update sorts each file the
+template deletes (`planDeletions` in `templateMergeBase.ts`):
+
+| The storefront's copy | What happens |
+|---|---|
+| Already gone | Left out of the change |
+| As the template had it | Deleted |
+| A Universal Editor file that differs only by entries an older block library install recorded (`installedBlockLibraries[].addedEntries`), each still as the library added it, or only in its formatting | Put back as the template had it, then deleted (`authoringFileDeletion.ts`). The comparison is by JSON content, since an install rewrote the file in its own indentation (also when nothing is recorded any more) |
+| Anything else changed: the SC's edit, an entry nothing recorded, a library that cannot be read | The update stops before anything is applied, names the file and says to delete it on GitHub or put it back. Nothing is pushed (rule 2) |
+
+The local copy used by Fix with AI (`pendingClash.ts`) sorts them the same way. After a
+successful update or reset, and when a kept clash is finished, the record forgets the entries of every
+Universal Editor file the storefront no longer has, so a later uninstall has nothing left to
+edit there.
+
 ## An update never clashes with Demo Builder's own additions (2026-10-30)
 
 Tailspin's two updates both stopped. Of the five clashing files, four were Demo Builder's

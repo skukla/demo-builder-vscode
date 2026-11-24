@@ -38,6 +38,7 @@ import {
     readKeptClash,
     type KeptClashRecord,
 } from '@/features/eds/services/storefront/keptClashMark';
+import { forgetEntriesOfFilesGone } from '@/features/updates/services/authoringFileDeletion';
 import { readBoilerplateBase, writeBoilerplateBase } from '@/features/updates/services/boilerplateBase';
 import { checkoutLabelAccess, labelsPutBack, repairStubbedLabelFiles } from '@/features/updates/services/labelStubRepair';
 import { openLocalCopy, type LocalCopy } from '@/features/updates/services/localStorefrontRefresh';
@@ -240,6 +241,7 @@ export async function finishClash(project: Project, deps: FinishDeps): Promise<F
 
     await clearKeptClash(copy.storefrontPath);
     writePendingClash(project, undefined);
+    await forgetEntriesOfFilesGone(project, copy.git); // as the clean path does (EDS-71)
     const pieces = await recordVersion(project, clash, deps);
     await ctx.stateManager.saveProject(project);
     ctx.logger.info(`[Updates] Finished the ${clash.track} update for ${project.name} (${pushed.commit.slice(0, 7)})`);

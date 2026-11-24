@@ -33,6 +33,7 @@ import { DEFAULT_SHELL } from '@/core/shell/defaultShell';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { readLkgSha } from '@/features/eds/services/patches/lkgReader';
 import { prepareForAdobeChange, repairInCheckout, type AdobeChangePrep } from '@/features/updates/services/adobeChangePrep';
+import { forgetEntriesOfFilesGone, recordedEntriesReader } from '@/features/updates/services/authoringFileDeletion';
 import type { BoilerplateBase } from '@/features/updates/services/boilerplateBase';
 import { copiedDemoOf, stoppedOnClash, type CopiedDemoAt } from '@/features/updates/services/clashAttribution';
 import { checkoutLabelAccess, labelsPutBack, repairStubbedLabelFiles } from '@/features/updates/services/labelStubRepair';
@@ -161,7 +162,7 @@ export class TemplateSyncService {
             const refusal = templateResetRefusal(project); // one rule with the clash question (F249)
             if (refusal) return failure('reset', refusal);
             // Installed block libraries stay, as a merge leaves them (owner walk, 2026-11-19).
-            return this.resetRepository(target, [...preserveFiles, ...blockLibraryFolders(project)]);
+            return this.resetRepository(target, [...preserveFiles, ...blockLibraryFolders(project)], undefined, project);
         }
 
         // The base of the merge: the template version the storefront last matched.
@@ -221,17 +222,18 @@ export class TemplateSyncService {
      * Replace a repository's content with its template's, keeping `preserveFiles`,
      * and force-push. Needs no project: storefront setup calls it for an existing
      * repository the SC chose to reset, a new repository started from an added demo,
-     * and `syncWithTemplate` for a project's reset.
+     * and `syncWithTemplate` for a project's reset, whose record forgets files gone.
      */
     async resetRepository(
         target: TemplateSyncTarget,
         preserveFiles: string[] = [],
         commitMessage = 'chore: sync with template (reset)',
+        project?: Project,
     ): Promise<TemplateSyncResult> {
         // Only the label files this reset was asked to preserve are kept absent.
         const keptAbsent = LABEL_SHEET_FILES.filter((file) => preserveFiles.includes(file));
         return withCheckout(this.deps, 'reset', target, preserveFiles, (checkout) =>
-            this.performReset(checkout, commitMessage, keptAbsent),
+            this.performReset(checkout, commitMessage, keptAbsent, project),
         );
     }
 
@@ -272,6 +274,7 @@ export class TemplateSyncService {
             base,
             preserveFiles: leftOut,
             patchFile: path.join(tempDir, 'template.patch'),
+            recordedEntries: recordedEntriesReader(project, this.github.fileOperations, this.logger),
             ...(mergeTarget ? { target: mergeTarget } : {}),
         });
 
@@ -313,7 +316,7 @@ export class TemplateSyncService {
         const patched = fixes ? await reapplyPatchesInCheckout(repoDir, project, this.logger) : [];
         const pieces = fixes ? await repairInCheckout(repoDir, project, this.logger, this.resolveOverlay) : (prep?.lines ?? []);
         await commitAndPush(this.deps, repoDir, versions.message ?? TEMPLATE_COMMIT, `git push origin ${checkout.branch}`);
-
+        await forgetEntriesOfFilesGone(project, git); // saved with the version the caller records
         this.logger.info(`[TemplateSync] Merge completed successfully`);
         const notes = [...labelsPutBack(labels), ...putBack, ...patchesNotPutBack(patched), ...pieces];
         return {
@@ -355,15 +358,14 @@ export class TemplateSyncService {
         checkout: Checkout,
         commitMessage: string,
         keptAbsent: readonly string[],
+        project?: Project,
     ): Promise<TemplateSyncResult> {
         const { repoDir, backups, branch } = checkout;
         const git: GitStep = (command, timeout) => this.git(repoDir, command, timeout);
         const templateHead = await readTemplateHead(git);
 
         this.logger.debug(`[TemplateSync] Resetting to template content`);
-        const readTreeResult = await this.git(
-            repoDir, `git read-tree --reset -u template/main`, TIMEOUTS.NORMAL,
-        );
+        const readTreeResult = await git(`git read-tree --reset -u template/main`, TIMEOUTS.NORMAL);
         if (readTreeResult.code !== 0) {
             throw new TemplateSyncStepError("Could not read the template's files.", readTreeResult.stderr);
         }
@@ -372,7 +374,7 @@ export class TemplateSyncService {
         await removeFilesNotBackedUp(repoDir, keptAbsent, backups, this.logger);
         // Force: a reset may rewrite history.
         await commitAndPush(this.deps, repoDir, commitMessage, `git push origin ${branch} --force`);
-
+        if (project) await forgetEntriesOfFilesGone(project, git); // saved with the recorded version
         this.logger.info(`[TemplateSync] Reset completed successfully`);
         return { success: true, strategy: 'reset', syncedCommit: templateHead };
     }
@@ -388,11 +390,9 @@ export class TemplateSyncService {
             this.logger.warn('[TemplateSync] Cannot update lastSyncedCommit - no EDS metadata');
             return;
         }
-
         const metadata = edsInstance.metadata as Record<string, unknown>;
         metadata.lastSyncedCommit = commitSha;
         await recordPatchesReleaseOn(metadata, this.logger);
-
         await stateManager.saveProject(project);
         this.logger.info(`[TemplateSync] Updated lastSyncedCommit to ${commitSha.substring(0, 7)}`);
     }

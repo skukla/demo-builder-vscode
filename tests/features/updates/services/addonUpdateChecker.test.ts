@@ -214,12 +214,20 @@ describe('AddonUpdateChecker', () => {
             expect(await checker.checkBlockLibraries(libraryProject())).toStrictEqual([]);
         });
 
-        it.each(['blocks/hero/hero.js', 'component-definition.json', 'component-filters.json', 'component-models.json'])(
-            'is a library update when %s changed',
+        it('is a library update when a block file changed', async () => {
+            mockCompareFiles([{ filename: 'package.json' }, { filename: 'blocks/hero/hero.js' }]);
+
+            expect(await checker.checkBlockLibraries(libraryProject())).toHaveLength(1);
+        });
+
+        // An install copies only `blocks/` since EDS-71 step 6; nothing reads the library's
+        // Universal Editor files any more, so a change to them updates nothing.
+        it.each(['component-definition.json', 'component-filters.json', 'component-models.json'])(
+            'is not a library update when only %s changed',
             async (filename) => {
                 mockCompareFiles([{ filename: 'package.json' }, { filename }]);
 
-                expect(await checker.checkBlockLibraries(libraryProject())).toHaveLength(1);
+                expect(await checker.checkBlockLibraries(libraryProject())).toStrictEqual([]);
             },
         );
 

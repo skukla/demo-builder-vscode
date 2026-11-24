@@ -20,6 +20,7 @@ import {
     git,
     hasKeptClash,
     keepClash,
+    mockGetFileContent,
     mockGetToken,
     read,
     readPendingClash,
@@ -29,7 +30,10 @@ import {
     write,
     writePendingClash,
 } from './keptClash.testUtils';
+import * as fs from 'fs';
+import * as path from 'path';
 import type { PendingClash } from '@/features/updates/services/pendingClash';
+import type { InstalledBlockLibrary } from '@/types/blockLibraries';
 import { createMockProject } from '../../../helpers/projectFake';
 
 describe('keepClash', () => {
@@ -57,6 +61,49 @@ describe('keepClash', () => {
         // Sync Storefront refuses while this mark is there; nothing git tracks shows it.
         await expect(hasKeptClash(fx.local)).resolves.toBe(true);
         expect(git(fx.local, 'status', '--porcelain')).not.toContain('kept-clash');
+    }, REAL_GIT_TIMEOUT_MS);
+
+    // EDS-71: the copy takes Adobe's deletion of a Universal Editor file exactly as the GitHub
+    // update did, which needs the project's recorded entries and the library's own files.
+    it('deletes a Universal Editor file that holds only recorded entries, as the GitHub update does', async () => {
+        const DEFINITION = 'component-definition.json';
+        const TABS = { id: 'tabs', title: 'Tabs' };
+        const work = path.join(fx.root, 'template-work');
+        git(work, 'checkout', '-q', '-b', 'with-ue', fx.t1);
+        write(work, DEFINITION, '{"groups":[{"components":[{"id":"cards"}]}]}\n');
+        git(work, 'add', '-A');
+        git(work, 'commit', '-q', '-m', 'T1 with the Universal Editor file');
+        const base = git(work, 'rev-parse', 'HEAD');
+        git(work, 'checkout', '-q', fx.t2, '--', '.');
+        git(work, 'rm', '-q', DEFINITION);
+        git(work, 'commit', '-q', '-m', 'T2, the file deleted');
+        const target = git(work, 'rev-parse', 'HEAD');
+        git(work, 'push', '-q', path.join(fx.root, 'github', `${TEMPLATE.owner}/${TEMPLATE.repo}.git`), 'with-ue');
+        // The storefront: the template's file plus the entry an older library install recorded.
+        write(fx.local, DEFINITION, `${JSON.stringify({ groups: [{ components: [{ id: 'cards' }, TABS] }] }, null, 2)}\n`);
+        git(fx.local, 'add', '-A');
+        git(fx.local, 'commit', '-q', '-m', 'library install');
+        git(fx.local, 'push', '-q', fx.scBare, 'HEAD:main');
+        mockGetFileContent.mockImplementation(async (owner: string, repo: string, file: string, ref: string) =>
+            (owner === 'acme' && file === DEFINITION && ref === 'abc1234'
+                ? { content: JSON.stringify({ groups: [{ components: [TABS] }] }), sha: 'x', path: file, encoding: 'base64' }
+                : null));
+        const library: InstalledBlockLibrary = {
+            name: 'Acme Blocks',
+            source: { owner: 'acme', repo: 'blocks', branch: 'main' },
+            commitSha: 'abc1234',
+            blockIds: ['tabs'],
+            installedAt: '2026-10-01T00:00:00.000Z',
+            addedEntries: { definition: ['tabs'], sectionFilter: [], filters: [], models: [] },
+        };
+        const project = { ...storefrontProject(), installedBlockLibraries: [library] };
+        const stopped = request();
+
+        const kept = await keepClash(project, { ...stopped, clash: { ...stopped.clash, base, target } }, updateContext());
+
+        expect(kept).toMatchObject({ kind: 'kept', files: ['blocks/header/header.js'] });
+        expect(fs.existsSync(path.join(fx.local, DEFINITION))).toBe(false);
+        expect(git(fx.local, 'diff', '--cached', '--name-status', '--', DEFINITION)).toBe(`D\t${DEFINITION}`);
     }, REAL_GIT_TIMEOUT_MS);
 
     it('records the clash on the project, with the change it belongs to', async () => {

@@ -95,6 +95,27 @@ describe('finishClash', () => {
         expect(deps.ctx.stateManager.saveProject).toHaveBeenCalledWith(project);
     }, REAL_GIT_TIMEOUT_MS);
 
+    // EDS-71: the update can delete a Universal Editor file; the record of what an older
+    // block library install added to it goes with it, as on the clean path.
+    it("forgets a library's recorded entries in a file the finished storefront does not have", async () => {
+        const { project, deps } = await keptProject();
+        const none = { sectionFilter: [], filters: [], models: [] };
+        project.installedBlockLibraries = [{
+            name: 'Acme Blocks',
+            source: { owner: 'acme', repo: 'blocks', branch: 'main' },
+            commitSha: 'abc1234',
+            blockIds: ['tabs'],
+            installedAt: '2026-10-01T00:00:00.000Z',
+            addedEntries: { definition: ['tabs'], htmlExamples: ['cards'], ...none },
+        }];
+        write(fx.local, 'blocks/header/header.js', FIXED_HEADER);
+
+        await expect(finishClash(project, deps)).resolves.toMatchObject({ kind: 'finished' });
+
+        expect(project.installedBlockLibraries[0].addedEntries).toBeUndefined();
+        expect(deps.ctx.stateManager.saveProject).toHaveBeenCalledWith(project);
+    }, REAL_GIT_TIMEOUT_MS);
+
     // The git-sync hook committed and pushed Tailspin's whole update at the AI's first
     // edit (2026-10-21); finishing then refused it as changing files beyond the clash.
     it('finishes an update the git-sync hook already committed and pushed, with no second commit', async () => {
