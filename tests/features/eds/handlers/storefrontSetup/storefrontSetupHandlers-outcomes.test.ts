@@ -502,6 +502,21 @@ describe('handleStartStorefrontSetup — the two outcomes', () => {
         ]);
     });
 
+    // EDS-71 step 4c: creation records them for the Draft Examples tile; an empty list clears it.
+    it('hands back the blocks the block list left on a placeholder, an empty list included', async () => {
+        mockExecutePhases.mockResolvedValue({
+            success: true,
+            repoUrl: 'https://github.com/demo-org/demo-repo',
+            blocksNeedingExamples: [],
+        });
+        const context = createContext();
+
+        await handleStartStorefrontSetup(context, payload());
+
+        expect(messagePayload(context, 'storefront-setup-complete')?.blocksNeedingExamples)
+            .toStrictEqual([]);
+    });
+
     // EDS-72: creation records the import's commit on the project, for Reset to restore.
     it('hands back what it made from an imported bundle, and nothing for any other project', async () => {
         const bundleImport = { commit: 'import-commit', contentSource: { org: 'sender', site: 'kukla-bodea', indexPath: '/query-index.json' } };

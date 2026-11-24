@@ -15,6 +15,7 @@
 import * as fsPromises from 'fs/promises';
 import * as path from 'path';
 import sanitizeHtml from 'sanitize-html';
+import type { ManifestWithInstances } from '@/features/eds/services/blockLibrary/examplesNeededRecord';
 
 // Rows in a get_block_authoring_shape INDEX. An index of 300 registry entries
 // measured 21,992 bytes before this cap. The index/detail split bounds the
@@ -32,6 +33,17 @@ export interface InstalledBlockLibraryEntry {
     blockIds: string[];
 }
 
+/** The manifest fields the block tools read, as JSON on disk (nothing here is trusted). */
+export interface BlockToolManifest extends ManifestWithInstances {
+    installedBlockLibraries?: unknown;
+}
+
+/** The project's manifest as it is on disk (`.demo-builder.json`). Read only, never written here. */
+export async function readManifest(projectPath: string): Promise<BlockToolManifest> {
+    const raw = await fsPromises.readFile(path.join(projectPath, '.demo-builder.json'), 'utf-8');
+    return JSON.parse(raw);
+}
+
 /**
  * Read the project manifest and return the installed block libraries (or an
  * empty list if none).
@@ -39,9 +51,7 @@ export interface InstalledBlockLibraryEntry {
 export async function readInstalledBlockLibraries(
     projectPath: string,
 ): Promise<InstalledBlockLibraryEntry[]> {
-    const raw = await fsPromises.readFile(path.join(projectPath, '.demo-builder.json'), 'utf-8');
-    const manifest = JSON.parse(raw);
-    const libs = manifest?.installedBlockLibraries;
+    const libs = (await readManifest(projectPath))?.installedBlockLibraries;
     return Array.isArray(libs) ? (libs as InstalledBlockLibraryEntry[]) : [];
 }
 

@@ -16,6 +16,7 @@
  */
 
 import { GLOBAL_AI_PROMPTS_KEY } from '../handlers/aiHandlers';
+import { DRAFT_BLOCK_EXAMPLES_PROMPT } from './draftBlockExamplesPrompt';
 import type { AiPrompt } from '@/types/base';
 
 /** globalState key holding the ids of defaults already seeded (the dedup ledger). */
@@ -44,6 +45,8 @@ export const DEFAULT_AI_PROMPTS: readonly AiPrompt[] = [
             'ask before opening it in the IDE.',
         pinned: true,
     },
+    // Pairs with the draft-block-examples skill; the dashboard's Draft Examples tile sends it.
+    DRAFT_BLOCK_EXAMPLES_PROMPT,
 ];
 
 /** Minimal structural view of `vscode.Memento` — keeps the seeder vscode-free and unit-testable. */

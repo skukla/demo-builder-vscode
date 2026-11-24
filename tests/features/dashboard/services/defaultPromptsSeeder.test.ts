@@ -10,6 +10,7 @@ import {
     seedDefaultAiPrompts,
 } from '@/features/dashboard/services/defaultPromptsSeeder';
 import { GLOBAL_AI_PROMPTS_KEY } from '@/features/dashboard/handlers/aiHandlers';
+import { DRAFT_BLOCK_EXAMPLES_PROMPT } from '@/features/dashboard/services/draftBlockExamplesPrompt';
 import type { AiPrompt } from '@/types/base';
 
 /** In-memory Memento double matching the structural GlobalStateLike shape. */
@@ -27,6 +28,24 @@ function makeGlobalState(seed: Record<string, unknown> = {}) {
 }
 
 const DEFAULT_IDS = DEFAULT_AI_PROMPTS.map(p => p.id);
+/** The user's own copy of every default, under the defaults' ids. */
+const USER_COPIES: AiPrompt[] = DEFAULT_IDS.map(id => ({ id, title: 'User copy', prompt: 'edited', pinned: true }));
+
+// EDS-71 step 4c: the prompt the dashboard's Draft Examples tile sends, in the prompts list too.
+describe('the Draft Block Examples starter prompt', () => {
+    it('is seeded with the words the tile sends', () => {
+        const draft = DEFAULT_AI_PROMPTS.find(p => p.id === DRAFT_BLOCK_EXAMPLES_PROMPT.id);
+
+        expect(draft).toStrictEqual({
+            id: 'demo-builder-draft-block-examples',
+            title: 'Draft Block Examples',
+            prompt:
+                'Write an example page for each block in this storefront that has none. Read each '
+                + "block's code and description, and show me each page before you save it.",
+            pinned: true,
+        });
+    });
+});
 
 describe('seedDefaultAiPrompts', () => {
     it('adds every default to an empty global store and records the ledger', async () => {
@@ -86,9 +105,7 @@ describe('seedDefaultAiPrompts', () => {
         // and one that would clobber a concurrent edit. Asserting the ARGUMENTS
         // the Memento receives is the only way to see it; the resulting store
         // contents are identical either way.
-        const id = DEFAULT_IDS[0];
-        const userCopy: AiPrompt[] = [{ id, title: 'User copy', prompt: 'edited', pinned: true }];
-        const gs = makeGlobalState({ [GLOBAL_AI_PROMPTS_KEY]: userCopy });
+        const gs = makeGlobalState({ [GLOBAL_AI_PROMPTS_KEY]: USER_COPIES });
 
         await seedDefaultAiPrompts(gs);
 
@@ -98,14 +115,12 @@ describe('seedDefaultAiPrompts', () => {
     });
 
     it('ledgers a default without duplicating it when the id already exists in the store', async () => {
-        const id = DEFAULT_IDS[0];
-        const userCopy: AiPrompt[] = [{ id, title: 'User copy', prompt: 'edited', pinned: true }];
-        const gs = makeGlobalState({ [GLOBAL_AI_PROMPTS_KEY]: userCopy });
+        const gs = makeGlobalState({ [GLOBAL_AI_PROMPTS_KEY]: USER_COPIES });
 
         await seedDefaultAiPrompts(gs);
 
-        // No duplicate id, user's copy preserved, and the id is ledgered as seeded.
-        expect(gs._store.get(GLOBAL_AI_PROMPTS_KEY)).toEqual(userCopy);
+        // No duplicate id, user's copies preserved, and every id is ledgered as seeded.
+        expect(gs._store.get(GLOBAL_AI_PROMPTS_KEY)).toEqual(USER_COPIES);
         expect(gs._store.get(SEEDED_DEFAULT_PROMPT_IDS_KEY)).toEqual(DEFAULT_IDS);
     });
 });

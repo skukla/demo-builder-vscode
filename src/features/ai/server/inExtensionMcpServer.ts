@@ -36,7 +36,7 @@ import {
 import { currentCallTag, nextCallTag, runWithCallTag } from '@/core/logging/callTagContext';
 import { withPhaseSinks, type PhaseSink } from '@/core/utils/agentPhaseChannel';
 import { mcpSocketDir } from '@/core/utils/mcpSocketPath';
-import { registerProjectTools, type McpCredentialProvider } from '@/mcp-server';
+import { registerProjectTools, type McpCredentialProvider, type ProjectFileHooks } from '@/mcp-server';
 import type { Logger } from '@/types/logger';
 
 const SERVER_NAME = 'demo-builder';
@@ -510,6 +510,12 @@ export interface InExtensionMcpServerOptions {
      */
     credentials?: McpCredentialProvider;
     /**
+     * Told when a project tool wrote a project's `.demo-builder.json` itself rather than through
+     * the state manager (the Draft Examples record promote and remove keep, EDS-71 step 4c), so
+     * the extension can re-post an open dashboard's status, and when that write failed.
+     */
+    projectFileHooks?: ProjectFileHooks;
+    /**
      * Build identity reported as `serverInfo.version` on every `initialize`.
      *
      * The socket name is sha256(projects root), identical in every window, and
@@ -690,7 +696,12 @@ export class InExtensionMcpServer {
             this.options.projectShape,
             this.options.consentNotRequired,
         );
-        registerProjectTools(logged, this.projectsDir, this.options.credentials);
+        registerProjectTools(
+            logged,
+            this.projectsDir,
+            this.options.credentials,
+            this.options.projectFileHooks,
+        );
         this.options.registerExtraTools?.(logged, scopedProjectDir);
 
         const transport = new StdioServerTransport(socket, socket);

@@ -41,6 +41,8 @@ export interface StorefrontSetupResult {
     storefrontBuildComplete?: boolean;
     /** See {@link RepoInfo.codeNotServed} — spread in from the threaded repoInfo. */
     codeNotServed?: string[];
+    /** See {@link RepoInfo.blocksNeedingExamples} — spread in from the threaded repoInfo. */
+    blocksNeedingExamples?: string[];
     /** See {@link RepoInfo.bundleImport} — spread in from the threaded repoInfo. */
     bundleImport?: BundleImportResult;
     /** See {@link RepoInfo.siteWritten} — spread in from the threaded repoInfo. */
@@ -127,6 +129,12 @@ export interface RepoInfo {
      * step (PL-101). Absent when the site serves them all.
      */
     codeNotServed?: string[];
+    /**
+     * The blocks whose DA.live example the block list left on a placeholder
+     * (`EdsPipelineResult.blocksNeedingExamples`), for creation to record on the project
+     * (`examplesNeededRecord.ts`, the Draft Examples tile). Absent when the list was not written.
+     */
+    blocksNeedingExamples?: string[];
     /**
      * Set when phase 1 made the repository from an imported bundle (EDS-72): the commit
      * pushed and the content site the bundle names, for creation to record on the project.

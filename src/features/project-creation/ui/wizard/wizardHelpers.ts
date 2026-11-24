@@ -524,6 +524,8 @@ function buildProjectEdsConfig(wizardState: ProjectConfigSource) {
             ? { storefrontBuildComplete: eds.storefrontBuildComplete }
             : {}),
         ...(eds.codeNotServed?.length ? { codeNotServed: eds.codeNotServed } : {}),
+        // An empty list is kept: on an edit it clears the last record (EDS-71 step 4c).
+        ...(eds.blocksNeedingExamples ? { blocksNeedingExamples: eds.blocksNeedingExamples } : {}),
         // An imported project's commit: creation records it for Reset (EDS-72).
         ...(eds.bundleImport ? { bundleImport: eds.bundleImport } : {}),
     };

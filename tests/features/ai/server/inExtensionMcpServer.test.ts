@@ -152,6 +152,7 @@ describe('InExtensionMcpServer', () => {
                 'get_component_config',
                 'get_project',
                 'list_blocks',
+                'list_blocks_needing_examples',
                 'list_projects',
                 'promote_block_to_library',
                 'remove_block_from_library',

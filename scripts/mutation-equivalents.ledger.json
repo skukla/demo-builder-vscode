@@ -3987,7 +3987,7 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 165,
+            "line": 171,
             "mutants": 1,
             "category": "block",
             "reason": "The catch body is one logger.debug call. Emptying it still swallows the probe failure and still returns false, so the copy runs anyway \u2014 pinned by 'copies content anyway when the probe itself fails'. Only the debug line differs. Re-anchored 2026-09-10 (142 -> 128): the probe moved into contentExistsInDaLive when ensureEdsContent was decomposed. Same code, new line. Re-anchored 2026-10-16 (135 -> 137): unchanged code; the progress lines above it now import the vocabulary (progress vocabulary slice 4). Re-anchored 2026-10-19 (137 -> 154): unchanged code; the copy now reads the storefront's code paths first (EDS-40). Re-anchored 2026-10-19 (154 -> 157): unchanged code, moved when an expired sign-in stopped the access grant (EDS-54). Re-anchored 2026-10-22 (157 -> 162): unchanged code; the beforeContentPublish dep was added or changed above it (EDS-61).",
@@ -4012,7 +4012,7 @@
             "anchors": [
                 "} else {"
             ],
-            "line": 260,
+            "line": 266,
             "mutants": 1,
             "category": "block",
             "reason": "The else body is one logger.info reporting the copied file count. Emptying it removes that line and changes nothing else \u2014 same reasoning as the condition above. Re-anchored 2026-09-10 (177 -> 207): unchanged code, shifted by the decomposition of ensureEdsContent. Re-anchored 2026-10-16 (218 -> 225): unchanged code; the copy now reports in the vocabulary (progress vocabulary slice 4). Re-anchored 2026-10-19 (225 -> 249): unchanged code; the copy now reads the storefront's code paths first (EDS-40). Re-anchored 2026-10-19 (249 -> 252): unchanged code, moved when an expired sign-in stopped the access grant (EDS-54). Re-anchored 2026-10-22 (252 -> 257): unchanged code; the beforeContentPublish dep was added or changed above it (EDS-61).",
@@ -4822,7 +4822,7 @@
             "anchors": [
                 "if (!result.success) {"
             ],
-            "line": 249,
+            "line": 255,
             "mutants": 4,
             "category": "branch",
             "reason": "publishBrandAssets never throws \u2014 fetch and write failures come back as a partly-successful result \u2014 and this guard's whole body is a logger.warn naming the targets that did not land. Nothing downstream reads result: the pipeline proceeds to the next step either way, deliberately, because an incomplete brand set degrades to an unbranded storefront rather than a failed run (proceed-and-warn, ADR-006 D1). Forcing the guard either way, or emptying it, changes only whether that warn prints. Re-anchored 2026-10-19 (235 -> 237): unchanged code, moved when the pipeline's warnings became one list (EDS-55). Re-anchored 2026-10-22 (237 -> 246): unchanged code; the beforeContentPublish hook's parameter and call were added above it (EDS-61).",
@@ -7269,7 +7269,7 @@
             "anchors": [
                 "} catch (err) {"
             ],
-            "line": 859,
+            "line": 865,
             "mutants": 1,
             "category": "block",
             "reason": "The catch body is a single logger call. That the catch EXISTS is tested \u2014 activation must survive this step failing, and a test drives the failure and asserts activation still completes \u2014 so emptying the body changes only which line reaches a log channel. Here the step is starting the in-extension MCP server, whose failure must never abort activation. Re-anchored 2026-10-19 (840 -> 841): unchanged code, moved when screens kept their own project (AI-15). Re-anchored 2026-10-19 (841 -> 846): unchanged code, moved when agents got their own working project (AI-15). Re-anchored 2026-10-20 (846 -> 848): unchanged code; the auto-updater wiring above it became the four-hourly quiet check (PL-80). Re-anchored 2026-10-22 (850 -> 832): unchanged code; the new-category watcher and the category page tools above it were removed (EDS-61). Re-anchored 2026-10-28 (832 -> 837): unchanged code, moved when the forced-sign-in watch was wired (PL-84). Re-anchored 2026-10-30 (837 -> 835): unchanged code, moved when the agent-consent setting got one shared reader (EDS-56).",
@@ -7307,7 +7307,7 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 963,
+            "line": 969,
             "mutants": 1,
             "category": "block",
             "reason": "The catch body is a single logger call. That the catch EXISTS is tested \u2014 activation must survive this step failing, and a test drives the failure and asserts activation still completes \u2014 so emptying the body changes only which line reaches a log channel. Here it is the manifest-format sweep. Re-anchored 2026-10-19 (947 -> 948): unchanged code, moved when screens kept their own project (AI-15). Re-anchored 2026-10-19 (948 -> 953): unchanged code, moved when agents got their own working project (AI-15). Re-anchored 2026-10-20 (953 -> 955): unchanged code; the auto-updater wiring above it became the four-hourly quiet check (PL-80). Re-anchored 2026-10-22 (957 -> 939): unchanged code; the new-category watcher and the category page tools above it were removed (EDS-61). Re-anchored 2026-10-28 (939 -> 944): unchanged code, moved when the forced-sign-in watch was wired (PL-84). Re-anchored 2026-10-30 (944 -> 942): unchanged code, moved when the agent-consent setting got one shared reader (EDS-56).",
@@ -9302,7 +9302,7 @@
             "anchors": [
                 "}, []);"
             ],
-            "line": 129,
+            "line": 135,
             "mutants": 9,
             "category": "other",
             "reason": "Twelve handlers in this hook are memoised with an EMPTY dependency list (handleSyncStorefront, handleRefreshBlockLibrary, handleOpenAdminPanel, handleConfigure, handleEditProject, handleOpenDevConsole, handleDeleteProject, handleRepublishContent, handleResetProject, handleNavigateBack, handleReAuthenticate, handleSwitchOrg), and their closing lines are textually identical so they cannot be anchored apart \u2014 this row covers the one mutant on each. Stryker does not empty these lists; it replaces the empty array with a one-element array holding a constant string. React compares dependency lists element by element with Object.is, and that constant is identical on every render, so the callback is created once and never recreated \u2014 exactly as with the empty list. Each of these handlers also closes over nothing but the imported webviewClient, so there is no captured value that could go stale even if the memo did invalidate. No sequence of renders, messages or payloads can distinguish the two. (2026-09-24, develop merged: three of the twelve \u2014 delete, republish, reset \u2014 left this hook for the Export dialog and the reset flow; nine remain. 2026-09-30, EDS-21: handleOpenAemAssets joins them, same shape; ten. 2026-10-06: handleOpenDevConsole left with the dashboard's Dev Console tile; nine. 2026-10-10, PL-70 MUT-07: the count had drifted \u2014 handleOpenSiteAccess, handleOpenStorefrontReport and handleVerifyOrg were added uncovered, so their lists read as uncovered rather than surviving; with each now driven by a test the hook has ten such lists (open admin panel, configure, edit project, AEM assets, site access, storefront report, navigate back, re-authenticate, verify org, switch org). Re-verified by planting ['Stryker was here'] on all ten at once: 32 tests green, against a control that emptied the live-site handler's real dependency list, which the suite fails 2026-10-23, EDS-64: handleOpenStorefrontReport left with the report's move to a window the dashboard opens itself; nine. 2026-10-31: handleOpenAdminPanel now depends on the tile that is opening, and openFromTile joins with an empty list, closing over only the stable state setter and webviewClient; nine still, the first now openFromTile's.)",
@@ -14114,7 +14114,7 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 904,
+            "line": 910,
             "mutants": 1,
             "category": "block",
             "reason": "The catch body is a single logger call (logger.debug that the secret sweep was skipped). That the catch EXISTS is tested: extension-activationSweeps 'does not let a failed secret sweep stop the sweeps after it' drives the failure and asserts activation carries on. Emptying the body changes only whether a line reaches a log channel, and a test may not pin a logger call's arguments. Verified by planting on 2026-10-10: this body and the six other log-only catch bodies in the file were emptied together and all 106 tests in the nine extension suites still passed. Re-anchored 2026-10-19 (886 -> 887): unchanged code, moved when screens kept their own project (AI-15). Re-anchored 2026-10-19 (887 -> 892): unchanged code, moved when agents got their own working project (AI-15). Re-anchored 2026-10-20 (892 -> 894): unchanged code; the auto-updater wiring above it became the four-hourly quiet check (PL-80). Re-anchored 2026-10-22 (896 -> 878): unchanged code; the new-category watcher and the category page tools above it were removed (EDS-61). Re-anchored 2026-10-28 (878 -> 883): unchanged code, moved when the forced-sign-in watch was wired (PL-84). Re-anchored 2026-10-30 (883 -> 881): unchanged code, moved when the agent-consent setting got one shared reader (EDS-56).",
@@ -14127,7 +14127,7 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 919,
+            "line": 925,
             "mutants": 1,
             "category": "block",
             "reason": "The catch body is a single logger call (logger.debug that the DA.live token move was skipped). That the catch EXISTS is tested: extension-activationSweeps 'does not let a failed DA.live token move take activation down' drives the failure and asserts activation carries on. Emptying the body changes only whether a line reaches a log channel, and a test may not pin a logger call's arguments. Verified by planting on 2026-10-10: this body and the six other log-only catch bodies in the file were emptied together and all 106 tests in the nine extension suites still passed. Re-anchored 2026-10-19 (901 -> 902): unchanged code, moved when screens kept their own project (AI-15). Re-anchored 2026-10-19 (902 -> 907): unchanged code, moved when agents got their own working project (AI-15). Re-anchored 2026-10-20 (907 -> 909): unchanged code; the auto-updater wiring above it became the four-hourly quiet check (PL-80). Re-anchored 2026-10-22 (911 -> 893): unchanged code; the new-category watcher and the category page tools above it were removed (EDS-61). Re-anchored 2026-10-28 (893 -> 898): unchanged code, moved when the forced-sign-in watch was wired (PL-84). Re-anchored 2026-10-30 (898 -> 896): unchanged code, moved when the agent-consent setting got one shared reader (EDS-56).",
@@ -14140,7 +14140,7 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 941,
+            "line": 947,
             "mutants": 1,
             "category": "block",
             "reason": "The catch body is a single logger call (logger.debug that the publish-key renewal sweep was skipped). That the catch EXISTS is tested: extension-activationSweeps 'does not let a failing sweep take activation down with it' drives the failure and asserts activation carries on. Emptying the body changes only whether a line reaches a log channel, and a test may not pin a logger call's arguments. Verified by planting on 2026-10-10: this body and the six other log-only catch bodies in the file were emptied together and all 106 tests in the nine extension suites still passed. Re-anchored 2026-10-19 (923 -> 924): unchanged code, moved when screens kept their own project (AI-15). Re-anchored 2026-10-19 (924 -> 929): unchanged code, moved when agents got their own working project (AI-15). Re-anchored 2026-10-20 (929 -> 931): unchanged code; the auto-updater wiring above it became the four-hourly quiet check (PL-80). Re-anchored 2026-10-22 (933 -> 915): unchanged code; the new-category watcher and the category page tools above it were removed (EDS-61). Re-anchored 2026-10-28 (915 -> 920): unchanged code, moved when the forced-sign-in watch was wired (PL-84). Re-anchored 2026-10-30 (920 -> 918): unchanged code, moved when the agent-consent setting got one shared reader (EDS-56).",
@@ -14153,7 +14153,7 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 1013,
+            "line": 1019,
             "mutants": 1,
             "category": "block",
             "reason": "The catch body is a single logger call (logger.debug that the Node sweep was skipped). That the catch EXISTS is tested: extension-nodeSweep 'shows nothing, and does not fail activation, when the sweep throws' drives the failure and asserts activation carries on. Emptying the body changes only whether a line reaches a log channel, and a test may not pin a logger call's arguments. Verified by planting on 2026-10-10: this body and the six other log-only catch bodies in the file were emptied together and all 106 tests in the nine extension suites still passed. Re-anchored 2026-10-19 (997 -> 998): unchanged code, moved when screens kept their own project (AI-15). Re-anchored 2026-10-19 (998 -> 1003): unchanged code, moved when agents got their own working project (AI-15). Re-anchored 2026-10-20 (1003 -> 1005): unchanged code; the auto-updater wiring above it became the four-hourly quiet check (PL-80). Re-anchored 2026-10-22 (1007 -> 989): unchanged code; the new-category watcher and the category page tools above it were removed (EDS-61). Re-anchored 2026-10-28 (989 -> 994): unchanged code, moved when the forced-sign-in watch was wired (PL-84). Re-anchored 2026-10-30 (994 -> 992): unchanged code, moved when the agent-consent setting got one shared reader (EDS-56).",

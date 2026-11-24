@@ -86,6 +86,12 @@ interface EdsContentDeps {
      */
     onBrokenLinks?: (links: StorefrontBrokenLink[]) => void;
     /**
+     * Receives the blocks the built DA.live block list left on a placeholder, so the caller
+     * can record them (EDS-71 step 4c, the Draft Examples tile). Not called when the list
+     * was not written.
+     */
+    onBlocksNeedingExamples?: (blockIds: string[]) => void;
+    /**
      * Helix seam. Defaults to a service built from this call's logger and the
      * GitHub/DA.live credentials it derives; production never passes it.
      *
@@ -325,6 +331,7 @@ export async function ensureEdsContent(
             logger.info(`[EDS Content] Block library: ${libResult.blocksCount} blocks configured`);
             libraryPaths = libResult.paths;
         }
+        if (libResult.needsExample) deps.onBlocksNeedingExamples?.(libResult.needsExample);
         if (!libResult.success && libResult.error) logger.warn(`[EDS Content] ${libResult.error}`);
     });
 

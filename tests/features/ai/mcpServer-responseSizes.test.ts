@@ -171,6 +171,7 @@ describe('the ceiling table itself', () => {
             'sync_storefront',
             'list_blocks',
             'get_block_authoring_shape',
+            'list_blocks_needing_examples',
             'promote_block_to_library',
             'remove_block_from_library',
         ]) {

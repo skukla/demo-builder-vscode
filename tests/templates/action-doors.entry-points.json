@@ -105,6 +105,7 @@
                 "tool:get_storefront_report",
                 "tool:list_adobe_projects",
                 "tool:list_blocks",
+                "tool:list_blocks_needing_examples",
                 "tool:list_components",
                 "tool:list_content",
                 "tool:list_dalive_sites",

@@ -592,6 +592,8 @@ export interface EDSConfig {
     storefrontBuildComplete?: boolean;
     /** The code files the live site did not serve after preflight; creation saves them as a Finish Setup step (PL-101). */
     codeNotServed?: string[];
+    /** The blocks preflight's DA.live block list left on a placeholder; creation records them (EDS-71 4c). */
+    blocksNeedingExamples?: string[];
     /** What preflight made from an imported bundle; creation records it on the project (EDS-72). */
     bundleImport?: BundleImportResult;
     // Note: previewUrl and liveUrl are NOT stored - they are derived from githubRepo

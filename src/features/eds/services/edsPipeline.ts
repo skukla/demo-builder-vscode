@@ -173,6 +173,12 @@ export interface EdsPipelineResult {
     success: boolean;
     contentFilesCopied: number;
     libraryPaths: string[];
+    /**
+     * The blocks whose DA.live example is still a placeholder after the block-library step
+     * (EDS-71 step 4c); callers record them (`writeBlocksNeedingExamples`). Absent when the
+     * step did not run or did not write the list.
+     */
+    blocksNeedingExamples?: string[];
     error?: string;
     /** Aggregated patch report (content + code). Callers pass it to
      *  `reportUnapplied(report, logger, vscode.window.showWarningMessage)`
@@ -475,7 +481,7 @@ async function pipelineConfigureBlockLibrary(
     services: EdsPipelineServices,
     params: EdsPipelineParams,
     onProgress?: EdsPipelineProgressCallback,
-): Promise<{ paths: string[]; emptyPalette?: string }> {
+): Promise<{ paths: string[]; emptyPalette?: string; needsExample?: string[] }> {
     const { daLiveContentOps, githubFileOps, logger } = services;
     const { daLiveOrg, daLiveSite } = params;
 
@@ -507,13 +513,14 @@ async function pipelineConfigureBlockLibrary(
             message: jobLine(STOREFRONT_JOBS.buildingBlockLibrary, itemCount(libResult.blocksCount, 'block')),
         });
     }
+    const { paths, needsExample } = libResult;
     // The palette will be empty (EDS-38): the step warns the SC with it.
     if (!libResult.success && libResult.error) {
         logger.warn(`[EdsPipeline] ${libResult.error}`);
-        return { paths: libResult.paths, emptyPalette: libResult.error };
+        return { paths, emptyPalette: libResult.error, needsExample };
     }
 
-    return { paths: libResult.paths };
+    return { paths, needsExample };
 }
 
 // ==========================================================
@@ -538,6 +545,8 @@ interface PipelineContext {
     /** The sentences for the SC so far (EDS-55); see {@link EdsPipelineResult.warnings}. */
     warnings: string[];
     libraryPaths: string[];
+    /** See {@link EdsPipelineResult.blocksNeedingExamples}; step 2 sets it. */
+    blocksNeedingExamples?: string[];
     patchReport: PatchReport;
     /** What step 5 published; undefined when it did not run or did not say. */
     republishedPages?: string[];
@@ -643,6 +652,7 @@ const PIPELINE_STEPS: PipelineStep[] = [
         run: async (env) => {
             const library = await pipelineConfigureBlockLibrary(env.services, env.params, env.onProgress);
             env.ctx.libraryPaths = library.paths;
+            env.ctx.blocksNeedingExamples = library.needsExample;
             if (library.emptyPalette) warnTheSc(env, 'block-library', library.emptyPalette);
         },
     },
@@ -1074,6 +1084,9 @@ export async function executeEdsPipeline(
             success: true,
             contentFilesCopied: ctx.contentFilesCopied,
             libraryPaths: ctx.libraryPaths,
+            ...(ctx.blocksNeedingExamples
+                ? { blocksNeedingExamples: ctx.blocksNeedingExamples }
+                : {}),
             patchReport: ctx.patchReport,
             ...(ctx.leftoverPages ? { leftoverPages: ctx.leftoverPages } : {}),
             warnings: ctx.warnings,

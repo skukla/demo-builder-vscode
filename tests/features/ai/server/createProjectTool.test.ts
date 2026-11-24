@@ -500,4 +500,20 @@ describe('create_project — the block libraries storefront setup installed', ()
 
         expect(capturedWizardState().edsConfig?.installedBlockLibraries).toStrictEqual(installed);
     });
+
+    // EDS-71 step 4c: an agent's project gets the Draft Examples count as the wizard's does.
+    it('threads the blocks the block list left on a placeholder into creation', async () => {
+        storefrontSetup.mockImplementationOnce(async (ctx: { sendMessage: (t: string, d?: unknown) => Promise<void> }) => {
+            await ctx.sendMessage('storefront-setup-complete', {
+                message: 'Done',
+                githubRepo: 'https://github.com/o/r',
+                blocksNeedingExamples: ['tabs'],
+            } satisfies StorefrontSetupCompletePayload);
+            return { success: true };
+        });
+
+        await toolServer().call(EDS);
+
+        expect(capturedWizardState().edsConfig?.blocksNeedingExamples).toStrictEqual(['tabs']);
+    });
 });

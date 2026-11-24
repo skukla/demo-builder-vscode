@@ -109,14 +109,15 @@ describe('skillsWriter — playwright-skill gating on tool availability', () => 
     });
 
     describe('EDS project (playwright entry applies)', () => {
-        it('writes all fourteen skills when @playwright/mcp is installed (pins hold)', async () => {
+        it('writes all sixteen skills when @playwright/mcp is installed (pins hold)', async () => {
             mockDisk(playwrightInstalled());
 
             await writeSkillFiles(PROJECT_PATH, makeEdsProject({ path: PROJECT_PATH }), makeTestWriter(PROJECT_PATH));
 
             // 15 → 14 (AI-1o): extend-app-builder-app follows App Builder work,
-            // and a storefront alone is not doing any.
-            expect(writtenFiles()).toHaveLength(15);
+            // and a storefront alone is not doing any. 15 → 16 (EDS-71 4c): a storefront
+            // project also gets draft-block-examples.
+            expect(writtenFiles()).toHaveLength(16);
             for (const filename of PLAYWRIGHT_SKILLS) {
                 expect(writtenFiles().some((p) => p.endsWith(`${filename}/SKILL.md`))).toBe(true);
             }
@@ -127,7 +128,7 @@ describe('skillsWriter — playwright-skill gating on tool availability', () => 
 
             await writeSkillFiles(PROJECT_PATH, makeEdsProject({ path: PROJECT_PATH }), makeTestWriter(PROJECT_PATH));
 
-            expect(writtenFiles()).toHaveLength(12);
+            expect(writtenFiles()).toHaveLength(13);
             for (const filename of PLAYWRIGHT_SKILLS) {
                 expect(writtenFiles().some((p) => p.endsWith(`${filename}/SKILL.md`))).toBe(false);
             }
@@ -138,7 +139,7 @@ describe('skillsWriter — playwright-skill gating on tool availability', () => 
 
             await writeSkillFiles(PROJECT_PATH, makeEdsProject({ path: PROJECT_PATH }), makeTestWriter(PROJECT_PATH));
 
-            expect(writtenFiles()).toHaveLength(12);
+            expect(writtenFiles()).toHaveLength(13);
         });
 
         it('excludes gated-out skills from summary.written', async () => {
@@ -150,7 +151,7 @@ describe('skillsWriter — playwright-skill gating on tool availability', () => 
                 makeTestWriter(PROJECT_PATH)
             );
 
-            expect(summary.written).toHaveLength(12);
+            expect(summary.written).toHaveLength(13);
             for (const filename of PLAYWRIGHT_SKILLS) {
                 expect(summary.written).not.toContain(filename);
             }
@@ -242,7 +243,7 @@ describe('skillsWriter — playwright-skill gating on tool availability', () => 
             );
             // Fourteen always-written skills; no extend-app-builder-app for a
             // storefront that builds no App Builder app (AI-1o).
-            expect(summary.written).toHaveLength(15);
+            expect(summary.written).toHaveLength(16);
             expect(summary.written).not.toContain('extend-app-builder-app');
         });
 

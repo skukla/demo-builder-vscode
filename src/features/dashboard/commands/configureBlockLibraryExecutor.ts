@@ -69,7 +69,7 @@ async function daLiveBlockList(
  */
 async function refreshDaLiveBlockList(
     project: Project,
-    { context, logger }: BlockLibraryWorkParts,
+    { context, logger, stateManager }: BlockLibraryWorkParts,
     report: ReportStage,
     addedBlockIds: string[],
 ): Promise<BlockLibraryWorkLine | undefined> {
@@ -81,6 +81,7 @@ async function refreshDaLiveBlockList(
             project,
             context,
             logger,
+            stateManager,
             onProgress: (message) => report(stage, message),
             // The other doc pages are live already; publishing them all again was
             // the slow half of the refresh (2026-10-15, 37s for 49 pages).

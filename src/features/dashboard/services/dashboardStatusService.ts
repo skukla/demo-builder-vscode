@@ -10,9 +10,13 @@
  * - Extracting mesh endpoint from configurations
  */
 
+import * as fs from 'fs';
+import * as path from 'path';
+import { COMPONENT_IDS } from '@/core/constants';
 import { hasMeshDeploymentRecord } from '@/core/state/appBuilderComponentState';
 import { getProjectDisplayName } from '@/core/utils/projectDisplayName';
 import { finishSetupStatus } from '@/features/dashboard/services/finishSetup';
+import { readBlocksNeedingExamplesRecord } from '@/features/eds/services/blockLibrary/examplesNeededRecord';
 import { storefrontNeedsReset } from '@/features/eds/services/storefront/storefrontChanges';
 import type { SetupChecklistItem } from '@/types/appBuilderComponents';
 import { Project } from '@/types/base';
@@ -25,6 +29,21 @@ import type {
     MeshStatus,
     MeshStatusInfo,
 } from '@/types/webviewPayloads';
+
+/**
+ * How many recorded blocks still need an example: those the storefront checkout still has a
+ * `blocks/<id>/` folder for, the same rule `list_blocks_needing_examples` lists by (a block whose
+ * code is gone is nothing an example can fix). When the checkout's `blocks/` folder cannot be
+ * seen, the record answers as it is. Undefined when the project has no record.
+ */
+function blocksStillNeedingExamples(project: Project): number | undefined {
+    const ids = readBlocksNeedingExamplesRecord(project);
+    if (ids === undefined) return undefined;
+    const storefrontPath = project.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT]?.path;
+    const blocksDir = storefrontPath ? path.join(storefrontPath, 'blocks') : undefined;
+    if (!blocksDir || !fs.existsSync(blocksDir)) return ids.length;
+    return ids.filter((id) => fs.existsSync(path.join(blocksDir, id))).length;
+}
 
 /**
  * Build the standard status payload for dashboard updates
@@ -47,6 +66,7 @@ export function buildStatusPayload(
     finishSetup?: SetupChecklistItem[],
 ): DashboardStatusUpdatePayload {
     const steps = finishSetupStatus(finishSetup ?? []);
+    const noExample = blocksStillNeedingExamples(project);
     return {
         // The dashboard heading AND its inline rename field read this. Both
         // want the title: the heading is what the user reads, and renaming
@@ -61,6 +81,9 @@ export function buildStatusPayload(
         mesh,
         edsStorefrontStatus: project.edsStorefrontStatusSummary,
         ...(storefrontNeedsReset(project) ? { storefrontNeedsReset: true as const } : {}),
+        // The Draft Examples tile's dot (EDS-71 step 4c); 0 is "every block has one", absent
+        // is "never checked" (a project made before the record).
+        ...(noExample !== undefined ? { blocksNeedingExamples: noExample } : {}),
         ...(steps ? { finishSetup: steps } : {}),
     };
 }

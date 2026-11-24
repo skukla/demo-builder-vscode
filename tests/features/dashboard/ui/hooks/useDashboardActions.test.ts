@@ -32,6 +32,7 @@ import {
     UseDashboardActionsProps,
 } from '@/features/dashboard/ui/hooks/useDashboardActions';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
+import { DRAFT_BLOCK_EXAMPLES_PROMPT } from '@/features/dashboard/services/draftBlockExamplesPrompt';
 
 describe('useDashboardActions', () => {
     let mockSetIsTransitioning: jest.Mock;
@@ -267,6 +268,20 @@ describe('useDashboardActions', () => {
             });
 
             expect(mockPostMessage.mock.calls).toStrictEqual([['openSiteAccess']]);
+        });
+
+        // EDS-71 step 4c: the Draft Examples tile opens the SC's AI through the door the
+        // prompts list uses, with the seeded Draft Block Examples prompt.
+        it('opens the AI with the Draft Block Examples prompt', () => {
+            const { result } = renderActionsHook();
+
+            act(() => {
+                result.current.handleDraftExamples();
+            });
+
+            expect(mockPostMessage.mock.calls).toStrictEqual([
+                ['openInClaude', { prompt: DRAFT_BLOCK_EXAMPLES_PROMPT.prompt }],
+            ]);
         });
 
         // Verifying the org is a status request and nothing else: it must not

@@ -1693,5 +1693,14 @@
       "report_demo_builder_issue"
     ],
     "why": "Report to Demo Builder (owner, 2026-11-19): the AI drafts a GitHub issue with the demo's details taken out, for the user to submit, instead of changing Demo Builder's own code."
+  },
+  {
+    "id": "blocks-needing-examples",
+    "tier": 1,
+    "prompt": "Which blocks in my storefront still have no example in the DA.live block library?",
+    "expect": [
+      "list_blocks_needing_examples"
+    ],
+    "why": "Added 2026-11-23 with the tool (EDS-71 step 4c): the first call of the Draft Examples flow. Judges that the agent asks the tool instead of reading every block's page or code by hand."
   }
 ]

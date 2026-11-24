@@ -643,6 +643,8 @@ export interface ProjectCreationConfig {
         storefrontBuildComplete?: boolean;
         /** The code files the live site did not serve after setup: saved as the Republish the Code step (PL-101). */
         codeNotServed?: string[];
+        /** The blocks setup's DA.live block list left on a placeholder: recorded on the project (EDS-71 4c). */
+        blocksNeedingExamples?: string[];
         /** What setup made from an imported bundle: creation records it on the project (EDS-72). */
         bundleImport?: BundleImportResult;
         // Note: previewUrl/liveUrl not stored - derived from githubRepo by typeGuards

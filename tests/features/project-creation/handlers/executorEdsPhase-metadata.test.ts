@@ -5,6 +5,7 @@
  */
 
 import { getGitHubServices } from '@/features/eds/handlers/edsServiceCache';
+import { writeBlocksNeedingExamples } from '@/features/eds/services/blockLibrary/examplesNeededRecord';
 import { STOREFRONT_CHANGES, storefrontNeedsReset } from '@/features/eds/services/storefront/storefrontChanges';
 import { readPatchesRelease } from '@/features/eds/services/patches/lkgReader';
 import { resolveTemplateCommitSha } from '@/features/eds/services/templateCommitResolver';
@@ -259,6 +260,39 @@ describe('populateEdsMetadata — the steps setup left to finish', () => {
         await populateEdsMetadata(context(), target, CONFIG, true);
 
         expect(target.finishSetup).toStrictEqual({ 'republish-code': { files: ['scripts/old.js'] } });
+    });
+});
+
+// EDS-71 step 4c: the blocks setup's block list left on a placeholder, for the Draft Examples tile.
+describe('populateEdsMetadata — the blocks still needing an example', () => {
+    beforeEach(() => getFileContent.mockRejectedValue(new Error('not needed here')));
+
+    const withList = (blocksNeedingExamples: string[]): ProjectCreationConfig => ({
+        ...CONFIG,
+        edsConfig: { ...CONFIG.edsConfig!, blocksNeedingExamples },
+    });
+    const neededOf = (target: Project): unknown =>
+        target.componentInstances?.['eds-storefront']?.metadata?.blocksNeedingExamples;
+
+    it('records the blocks setup left on a placeholder', async () => {
+        const target = project();
+
+        await populateEdsMetadata(context(), target, withList(['carousel']), true);
+
+        expect(neededOf(target)).toStrictEqual(['carousel']);
+    });
+
+    it('records none when setup left none, and keeps the record when setup did not say', async () => {
+        const cleared = project();
+        writeBlocksNeedingExamples(cleared, ['tabs']);
+        const kept = project();
+        writeBlocksNeedingExamples(kept, ['tabs']);
+
+        await populateEdsMetadata(context(), cleared, withList([]), true);
+        await populateEdsMetadata(context(), kept, CONFIG, true);
+
+        expect(neededOf(cleared)).toStrictEqual([]);
+        expect(neededOf(kept)).toStrictEqual(['tabs']);
     });
 });
 

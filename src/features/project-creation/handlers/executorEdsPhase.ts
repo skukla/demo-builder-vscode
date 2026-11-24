@@ -21,6 +21,7 @@ import { catalogMenuSiteFor } from '@/features/ai/server/storefrontPages';
 import { withAlwaysIncludedBlockLibraries } from '@/features/components/services/blockLibraryLoader';
 import { getGitHubServices } from '@/features/eds/handlers/edsServiceCache';
 import { detectB2bReadiness } from '@/features/eds/services/b2bReadinessDetection';
+import { writeBlocksNeedingExamples } from '@/features/eds/services/blockLibrary/examplesNeededRecord';
 import { authoredSheetRefresh } from '@/features/eds/services/catalogMenu/authoredSheetRefresh';
 import { syncConfigToRemote } from '@/features/eds/services/configSyncService';
 import { readPatchesRelease } from '@/features/eds/services/patches/lkgReader';
@@ -81,6 +82,8 @@ function recordWhatSetupFound(
 ): void {
     // Links to pages the source lacks too, kept on the project.
     if (edsConfig.brokenLinks?.length) writeBrokenLinks(project, edsConfig.brokenLinks);
+    // The blocks the DA.live block list left on a placeholder: the Draft Examples tile's count.
+    writeBlocksNeedingExamples(project, edsConfig.blocksNeedingExamples);
     // Built the way Demo Builder builds storefronts now: the "Needs reset" status reads it.
     if (typeof edsConfig.storefrontBuildComplete === 'boolean') {
         recordStorefrontBuilt(project, edsConfig.storefrontBuildComplete);
@@ -415,6 +418,9 @@ export async function setupEdsContent(
                 extensionContext: context.context,
                 onBrokenLinks: (links) => {
                     if (project) writeBrokenLinks(project, links);
+                },
+                onBlocksNeedingExamples: (ids) => {
+                    if (project) writeBlocksNeedingExamples(project, ids);
                 },
                 ...authoredSheetHookFor(context, project),
             },

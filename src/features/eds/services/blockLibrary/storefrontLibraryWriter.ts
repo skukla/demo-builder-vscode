@@ -63,6 +63,11 @@ export interface BlockLibraryResult {
     blocksCount: number;
     paths: string[];
     error?: string;
+    /**
+     * The listed blocks whose page is still the placeholder shaped by their code: no example
+     * yet (EDS-71 step 4c). Present only when the list was written; absent, nothing is known.
+     */
+    needsExample?: string[];
 }
 
 const BLOCK_PAGES = '.da/library/blocks';
@@ -82,11 +87,14 @@ export async function writeStorefrontBlockLibrary(
     const existing = await readExistingRows(deps, org, site);
     if (!existing) return { success: false, blocksCount: 0, paths: [], error: UNREADABLE };
     const dest = { org, site, token: await deps.apiClient.getImsToken() };
-    const listed = await writeBlockPages(deps, dest, input);
+    const pages = await writeBlockPages(deps, dest, input);
+    const listed = pages.map(({ block }) => block);
+    const needsExample = pages.filter(({ page }) => page === 'placeholder')
+        .map(({ block }) => block.id);
     if (listed.length === 0) {
         deps.logger.info(`[DA.live] No block pages to list in ${org}/${site}`);
         const asked = input.blocks.length;
-        if (asked === 0) return { success: true, blocksCount: 0, paths: [] };
+        if (asked === 0) return { success: true, blocksCount: 0, paths: [], needsExample };
         return { success: false, blocksCount: 0, paths: [], error: noPageWarning(asked) };
     }
     const templatePaths = input.templates
@@ -103,8 +111,9 @@ export async function writeStorefrontBlockLibrary(
     deps.logger.info(
         `[DA.live] Block library written: ${listed.length}/${input.blocks.length} blocks`,
     );
-    if (warning) return { success: false, blocksCount: listed.length, paths, error: warning };
-    return { success: true, blocksCount: listed.length, paths };
+    const written = { blocksCount: listed.length, paths, needsExample };
+    if (warning) return { success: false, ...written, error: warning };
+    return { success: true, ...written };
 }
 
 /**
@@ -125,22 +134,30 @@ async function readExistingRows(
     }
 }
 
+/** What a block's page is once written: an example, or the placeholder shaped by its code. */
+type BlockPage = 'example' | 'placeholder';
+
+/** The blocks that got a page, each with what the page is. */
 async function writeBlockPages(
     deps: StorefrontLibraryDeps,
     dest: Destination,
     input: StorefrontLibraryInput,
-): Promise<StorefrontBlock[]> {
+): Promise<Array<{ block: StorefrontBlock; page: BlockPage }>> {
     const written = await inBatches(input.blocks, (block) =>
         writeBlockPage(deps, dest, block, input));
     const failed = input.blocks.filter((_, n) => !written[n]).map((block) => block.id);
     if (failed.length > 0) {
         deps.logger.warn(`[DA.live] Left out of the block list, no page: ${failed.join(', ')}`);
     }
-    return input.blocks.filter((_, n) => written[n]);
+    return input.blocks.flatMap((block, n) => {
+        const page = written[n];
+        return page ? [{ block, page }] : [];
+    });
 }
 
 /**
- * True when the block has a page: kept, copied, or written as a block doc. Throws only an
+ * What the block's page is (kept, copied or a real use: an example; else the placeholder),
+ * or undefined when it got none. Throws only an
  * expired DA.live sign-in. The only page bodies written are a copied page and `blockDoc`'s
  * (pinned in `blockExampleConvention.test.ts`). DA.live writes over any page at the path
  * whatever `overwrite` says (`createSource`), so what keeps a page someone wrote is that a
@@ -152,30 +169,33 @@ async function writeBlockPage(
     dest: Destination,
     block: StorefrontBlock,
     { placeholderFor, replacePageIds, replacedPages }: StorefrontLibraryInput,
-): Promise<boolean> {
+): Promise<BlockPage | undefined> {
     const { example } = block;
     try {
-        if (example.kind === 'existing') return true;
+        if (example.kind === 'existing') return 'example';
         if (example.kind === 'adobe' || example.kind === 'library') {
             const page = `/${BLOCK_PAGES}/${block.id}`;
-            if (await copyPreviewPage(deps.copyOps, dest, example.source, page)) return true;
+            if (await copyPreviewPage(deps.copyOps, dest, example.source, page)) return 'example';
         }
-        const sources = example.kind === 'real-use'
+        // A real use is an example; a placeholder, or a copy that failed, gets the code's shape.
+        const isRealUse = example.kind === 'real-use';
+        const kind: BlockPage = isRealUse ? 'example' : 'placeholder';
+        const sources = isRealUse
             ? { examples: example.examples }
             : { analysis: await placeholderFor(block.id) };
         const docPath = `${BLOCK_PAGES}/${block.id}.html`;
         const html = blockDoc(block.id, sources);
         // Same body as the generated page already there: DA.live would only add a version.
         const current = replacedPages?.get(block.id);
-        if (current !== undefined && samePage(current, html)) return true;
+        if (current !== undefined && samePage(current, html)) return kind;
         const result = replacePageIds?.has(block.id)
             ? await deps.sourceOps.createSource(dest.org, dest.site, docPath, html, { overwrite: true })
             : await deps.sourceOps.createSource(dest.org, dest.site, docPath, html);
-        return result.success;
+        return result.success ? kind : undefined;
     } catch (error) {
         if (error instanceof DaLiveAuthError) throw error;
         deps.logger.warn(`[DA.live] No page for block ${block.id}: ${(error as Error).message}`);
-        return false;
+        return undefined;
     }
 }
 

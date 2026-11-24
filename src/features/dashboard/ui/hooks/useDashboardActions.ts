@@ -10,6 +10,7 @@
 import { useCallback, useState, Dispatch, SetStateAction } from 'react';
 import { FRONTEND_TIMEOUTS } from '@/core/ui/utils/frontendTimeouts';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
+import { DRAFT_BLOCK_EXAMPLES_PROMPT } from '@/features/dashboard/services/draftBlockExamplesPrompt';
 
 /**
  * Props for the useDashboardActions hook
@@ -59,6 +60,11 @@ export interface UseDashboardActionsReturn {
     handleOpenAemAssets: () => void;
     /** Opens the Site access webview (EDS storefronts). */
     handleOpenSiteAccess: () => void;
+    /**
+     * Opens the SC's AI with the Draft Block Examples prompt (EDS storefronts, EDS-71 step 4c),
+     * through `openInClaude`, the door the prompts list's cards use.
+     */
+    handleDraftExamples: () => void;
     /** Delete the project */
     /** Republish DA.live content to CDN (EDS projects only) */
     /** Navigate back to projects list */
@@ -165,6 +171,10 @@ export function useDashboardActions({
         webviewClient.postMessage('openSiteAccess');
     }, []);
 
+    const handleDraftExamples = useCallback(() => {
+        webviewClient.postMessage('openInClaude', { prompt: DRAFT_BLOCK_EXAMPLES_PROMPT.prompt });
+    }, []);
+
     const handleNavigateBack = useCallback(() => {
         webviewClient.postMessage('navigateBack');
     }, []);
@@ -204,6 +214,7 @@ export function useDashboardActions({
         handleEditProject,
         handleOpenAemAssets,
         handleOpenSiteAccess,
+        handleDraftExamples,
         handleNavigateBack,
         handleReAuthenticate,
         handleVerifyOrg,

@@ -36,6 +36,7 @@ export const handleRefreshBlockLibraryHeadless: MessageHandler = async (context)
         project,
         context: context.context,
         logger: context.logger,
+        stateManager: context.stateManager,
         // Each step by its table name, for an agent's notification and chat
         // (a no-op outside an agent call), as every other flow names it.
         onStep: stepPhaseReporter(),

@@ -9,6 +9,7 @@
  * @module features/eds/services/reset/edsResetContentStep
  */
 
+import { writeBlocksNeedingExamples } from '../blockLibrary/examplesNeededRecord';
 import { authoredSheetRefresh } from '../catalogMenu/authoredSheetRefresh';
 import { createCatalogMenuSite } from '../catalogMenu/catalogMenuSiteDeps';
 import { withDaLiveAuthRetry } from '../daLive/daLiveAuthRetry';
@@ -163,6 +164,9 @@ export async function runContentPipeline(
             // the project by finalizeReset.
             const copiedAfresh = !params.keepContent && Boolean(contentSourceConfig);
             if (copiedAfresh) writeBrokenLinks(project, patchReport.brokenLinks);
+            // The blocks the rebuilt list left on a placeholder (the Draft Examples tile);
+            // absent when the list was not rebuilt, and the last record stands.
+            writeBlocksNeedingExamples(project, pipelineResult.blocksNeedingExamples);
 
             context.logger.info('[EdsReset] Content pipeline completed successfully');
             return {

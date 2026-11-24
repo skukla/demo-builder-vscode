@@ -134,6 +134,7 @@ const EDS_FIELDS: Record<keyof EDSConfig, Kind> = {
     installedBlockLibraries: 'screen',
     storefrontBuildComplete: 'screen',
     codeNotServed: 'screen',
+    blocksNeedingExamples: 'screen',
     bundleImport: 'screen',
 };
 

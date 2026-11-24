@@ -755,6 +755,12 @@ async function startInExtensionMcpServer(context: vscode.ExtensionContext): Prom
         const mcpServerOptions: InExtensionMcpServerOptions = {
             buildLabel: buildInfo ? describeBuildInfo(buildInfo) : undefined,
             credentials,
+            // Promote and remove take a block off the Draft Examples count by writing the project
+            // file themselves; the open dashboard re-reads it (a state-manager save already does).
+            projectFileHooks: {
+                written: () => void ProjectDashboardWebviewCommand.pushStatus(),
+                warn: (message) => logger.warn(message),
+            },
             // Agent-triggered mutations get the same visible progress their
             // dashboard buttons show, plus a landed outcome — the agent's own
             // report may never reach the user. First slice of the

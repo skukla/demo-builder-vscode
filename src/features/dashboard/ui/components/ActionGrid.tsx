@@ -96,7 +96,7 @@ import { BuildZone } from './BuildZone';
 import { IntegrationsSummaryTile } from './IntegrationsSummaryTile';
 import { OpenZone } from './OpenZone';
 import { ShareZone } from './ShareZone';
-import { StorefrontZone } from './StorefrontZone';
+import { StorefrontZone, type DraftExamplesTile } from './StorefrontZone';
 import type { AppBuilderComponentState } from '@/types/base';
 import type { FinishSetupStatus } from '@/types/webviewPayloads';
 
@@ -154,6 +154,8 @@ export interface ActionGridProps {
     needsReset?: boolean;
     /** Handler for the Refresh Block Library tile (EDS projects only) */
     handleRefreshBlockLibrary?: () => void;
+    /** The Draft Examples tile (EDS projects only, EDS-71 step 4c) */
+    draftExamples?: DraftExamplesTile;
     /** Handler for the Republish tile (EDS projects only) */
     handleRepublishContent?: () => void;
     /** Handler for Configure button */
@@ -254,6 +256,7 @@ export function ActionGrid({
     handleOpenAdminPanel,
     handleSyncStorefront,
     handleRefreshBlockLibrary,
+    draftExamples,
     handleRepublishContent,
     handleConfigure,
     handleOpenAemAssets,
@@ -321,6 +324,7 @@ export function ActionGrid({
                     handleSyncStorefront={handleSyncStorefront}
                     handleRefreshBlockLibrary={handleRefreshBlockLibrary}
                     handleOpenSiteAccess={handleOpenSiteAccess}
+                    draftExamples={draftExamples}
                 />
             )}
             <BuildZone

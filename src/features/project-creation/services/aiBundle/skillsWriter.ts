@@ -46,6 +46,7 @@ import createEdsProjectContent from '../../templates/skills/create-eds-project.m
 import datapacksContent from '../../templates/skills/datapacks.md';
 import demoDataInjectorContent from '../../templates/skills/demo-data-injector.md';
 import diagnoseDemoContent from '../../templates/skills/diagnose-demo.md';
+import draftBlockExamplesContent from '../../templates/skills/draft-block-examples.md';
 import extendAppBuilderAppContent from '../../templates/skills/extend-app-builder-app.md';
 import headerNavFooterContent from '../../templates/skills/header-nav-footer.md';
 import refineVisualMatchContent from '../../templates/skills/refine-visual-match.md';
@@ -240,6 +241,15 @@ export async function writeSkillFiles(
         // written them: they are instructions, and they are wrong.
         await removeAdobeSkillBundle('appbuilder', writer);
         await removeSkill('extend-app-builder-app', extendAppBuilderAppContent);
+    }
+
+    // Drafting examples for the DA.live block list is storefront work (EDS-71 step 4c);
+    // a project without a storefront has its copy reconciled away with proof.
+    if (projectHasEdsStorefront(project)) {
+        await writeSkill('draft-block-examples', draftBlockExamplesContent);
+        written.push('draft-block-examples');
+    } else {
+        await removeSkill('draft-block-examples', draftBlockExamplesContent);
     }
 
     // Summary for the handler boundary to log (Adobe bundle skills are copied

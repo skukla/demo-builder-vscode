@@ -9,13 +9,14 @@
  * @module features/dashboard/ui/ProjectDashboardScreen
  */
 
-import React, { useState, useRef } from 'react';
+import React, { useMemo, useState, useRef } from 'react';
 import { ActionGrid } from './components/ActionGrid';
 import { DashboardDialogs } from './components/DashboardDialogs';
 import { DashboardStatusHeader } from './components/DashboardStatusHeader';
 import { DemoSourceNotice } from './components/DemoSourceNotice';
 import { FinishSetupLine } from './components/FinishSetupLine';
 import { OrgContextNotice } from './components/OrgContextNotice';
+import type { DraftExamplesTile } from './components/StorefrontZone';
 import { isStartActionDisabled } from './dashboardPredicates';
 import { useDashboardActions } from './hooks/useDashboardActions';
 import { useDashboardOperations } from './hooks/useDashboardOperations';
@@ -31,7 +32,7 @@ import { ControlPanelLayout } from '@/core/ui/components/layout/ControlPanelLayo
 import { PageHeader } from '@/core/ui/components/layout/PageHeader';
 import { PageLayout } from '@/core/ui/components/layout/PageLayout';
 import { useFocusTrap } from '@/core/ui/hooks/useFocusTrap';
-import type { DashboardInitialData } from '@/types/webviewPayloads';
+import type { DashboardInitialData, DashboardStatusUpdatePayload } from '@/types/webviewPayloads';
 
 /**
  * Props for the ProjectDashboardScreen component
@@ -41,6 +42,19 @@ import type { DashboardInitialData } from '@/types/webviewPayloads';
  * carries the required fields, but tests render the screen without them.
  */
 export type ProjectDashboardScreenProps = Partial<DashboardInitialData>;
+
+/**
+ * The Draft Examples tile for an EDS storefront: its press, and how many blocks lack an example
+ * (undefined until a block list build has recorded it).
+ */
+function draftExamplesTile(
+    isEds: boolean,
+    status: DashboardStatusUpdatePayload | null | undefined,
+    onPress: () => void,
+): DraftExamplesTile | undefined {
+    if (!isEds) return undefined;
+    return { count: status?.blocksNeedingExamples, onPress };
+}
 
 /**
  * Project dashboard screen component
@@ -135,6 +149,7 @@ export function ProjectDashboardScreen({
         handleEditProject,
         handleOpenAemAssets,
         handleOpenSiteAccess,
+        handleDraftExamples,
         handleRestartDemo,
         handleNavigateBack,
         handleReAuthenticate,
@@ -182,6 +197,11 @@ export function ProjectDashboardScreen({
 
     // Republish is a storefront's (EDS only): the tile, and Apply on the Finish Setup code step.
     const republish = isEdsStable ? handleRepublishContent : undefined;
+    // Draft Examples (EDS-71 step 4c): the dot counts the blocks with no example yet.
+    const draftExamples = useMemo(
+        () => draftExamplesTile(isEdsStable, projectStatus, handleDraftExamples),
+        [isEdsStable, projectStatus, handleDraftExamples],
+    );
     // What a run left to finish (PL-101): the line, its guide, and Apply's Republish.
     const finishSetup = useFinishSetup(projectStatus?.finishSetup, openFinishSetup, republish);
 
@@ -287,6 +307,7 @@ export function ProjectDashboardScreen({
                                     handleRefreshBlockLibrary={
                                         isEdsStable ? handleRefreshBlockLibrary : undefined
                                     }
+                                    draftExamples={draftExamples}
                                     handleRepublishContent={republish}
                                     handleConfigure={handleConfigure}
                                     handleOpenAemAssets={handleOpenAemAssets}

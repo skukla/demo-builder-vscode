@@ -411,6 +411,13 @@ describe('buildProjectConfig', () => {
             expect(withEds({ codeNotServed: [] })).not.toHaveProperty('codeNotServed');
         });
 
+        // EDS-71 step 4c: an empty list is handed over too, so an edit clears the last record.
+        it('should hand over the blocks left on a placeholder, an empty list included', () => {
+            expect(withEds({ blocksNeedingExamples: ['tabs'] })?.blocksNeedingExamples).toStrictEqual(['tabs']);
+            expect(withEds({ blocksNeedingExamples: [] })?.blocksNeedingExamples).toStrictEqual([]);
+            expect(withEds({})).not.toHaveProperty('blocksNeedingExamples');
+        });
+
         // EDS-72: creation records an imported project's commit, for Reset to restore.
         it('should hand over what setup made from an imported bundle, and no key for any other project', () => {
             const bundleImport = { commit: 'import-commit' };

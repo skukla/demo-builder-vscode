@@ -672,6 +672,8 @@ async function createEds(
             installedBlockLibraries: complete.installedBlockLibraries,
             // Stamped on THIS project by creation, as the wizard does ("Needs reset").
             storefrontBuildComplete: complete.storefrontBuildComplete,
+            // The Draft Examples tile's count, recorded as the wizard does (EDS-71 step 4c).
+            blocksNeedingExamples: complete.blocksNeedingExamples,
             // An imported project's commit, recorded for Reset as the wizard does (EDS-72).
             ...bundleImportOf(complete.bundleImport),
         },

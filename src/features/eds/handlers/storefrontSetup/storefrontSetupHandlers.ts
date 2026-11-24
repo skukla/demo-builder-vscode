@@ -131,6 +131,10 @@ function recordedByCreation(result: StorefrontSetupResult): Partial<StorefrontSe
         storefrontBuildComplete: result.storefrontBuildComplete,
         // Saved as the project's Republish the Code step (PL-101).
         ...(result.codeNotServed?.length ? { codeNotServed: result.codeNotServed } : {}),
+        // The Draft Examples tile's count (EDS-71 step 4c); an empty list clears an edit's record.
+        ...(result.blocksNeedingExamples
+            ? { blocksNeedingExamples: result.blocksNeedingExamples }
+            : {}),
         // An imported project's commit, for Reset to restore (EDS-72).
         ...(result.bundleImport ? { bundleImport: result.bundleImport } : {}),
     };

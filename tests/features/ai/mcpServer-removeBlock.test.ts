@@ -394,3 +394,37 @@ describe('remove_block_from_library — confirm gate (registerProjectTools)', ()
         await expect(tokenProvider.getAccessToken()).resolves.toBe('live-da');
     });
 });
+
+// ─── The Draft Examples record (EDS-71 step 4c, review F1) ──────────────────
+// A removed block has no code left to give an example to, so it must not stay in the count.
+
+describe('remove_block_from_library — the blocks still needing an example', () => {
+    const MANIFEST = path.join(PROJECTS_DIR, PROJECT_NAME, '.demo-builder.json');
+
+    beforeEach(() => {
+        resetMocks();
+        mockFilesystem();
+        const manifest = manifestWith();
+        Object.assign(manifest.componentInstances['eds-storefront']?.metadata ?? {}, {
+            blocksNeedingExamples: [BLOCK_ID, 'tabs'],
+        });
+        (fsProm.readFile as jest.Mock).mockImplementation(async (p: string) => {
+            if (String(p).endsWith('.demo-builder.json')) return JSON.stringify(manifest);
+            throw ENOENT();
+        });
+    });
+
+    it('takes the removed block off the record and tells the caller the file changed', async () => {
+        const written = jest.fn();
+
+        const result = JSON.parse(await toolHandlers.removeBlockFromLibrary(
+            PROJECTS_DIR, PROJECT_NAME, BLOCK_ID, TOKENS, { written },
+        ));
+
+        const write = (fsProm.writeFile as jest.Mock).mock.calls.find(([p]) => String(p) === `${MANIFEST}.tmp`);
+        expect(JSON.parse(write?.[1]).componentInstances['eds-storefront'].metadata.blocksNeedingExamples)
+            .toStrictEqual(['tabs']);
+        expect(result.examplesRecord).toBe('recorded');
+        expect(written).toHaveBeenCalledTimes(1);
+    });
+});

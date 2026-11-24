@@ -424,6 +424,180 @@ describe('toolHandlers.promoteBlockToLibrary', () => {
     });
 });
 
+// ─── A whole example page (EDS-71 step 4c) ──────────────────────────────────
+// DA.live's library lists each example on a block's page as its own item, named by the heading
+// above it, and shows a `library-metadata` table's description behind an info button for the
+// block it directly follows (adobe/da-live blocks/edit/da-library/helpers/index.js,
+// groupBlocks/transformBlock, read 2026-11-23).
+
+const CAROUSEL_THREE = '<div class="carousel">'
+    + '<div><div><p>image</p></div><div><h3>New season, new arrivals</h3></div></div>'
+    + '<div><div><p>image</p></div><div><h3>Free shipping over $50</h3></div></div>'
+    + '</div>';
+const CAROUSEL_ONE = '<div class="carousel"><div><div><p>image</p></div>'
+    + '<div><h3>Your heading here</h3></div></div></div>';
+const CAROUSEL_PAGE = `<h2>Carousel, three slides</h2>${CAROUSEL_THREE}`
+    + `<h2>Carousel, single slide</h2>${CAROUSEL_ONE}`;
+const DESCRIPTION = 'A full-width rotating banner. Each row is one slide.';
+const METADATA = '<div class="library-metadata"><div><div>description</div>'
+    + `<div>${DESCRIPTION}</div></div></div>`;
+
+describe('promote_block_to_library — a whole example page', () => {
+    const promotePage = (unsafeHTML: string, description?: string): Promise<string> =>
+        toolHandlers.promoteBlockToLibrary(
+            PROJECTS_DIR, PROJECT_NAME, BLOCK_ID, BLOCK_TITLE, unsafeHTML, TOKENS, description,
+        );
+    const writtenHtml = (): string => mockUpsertBlockDocPage.mock.calls[0][2].exampleHtml;
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+        mockAppendBlockToLibrary.mockResolvedValue({ status: 'created', siteConfigRegistered: true });
+        mockUpsertBlockDocPage.mockResolvedValue('written');
+        mockSyncAndPublish.mockResolvedValue({ committed: true, pushed: true, helixPublished: true });
+        mockPreviewAndPublishPage.mockResolvedValue(undefined);
+        mockHappyPathFilesystem();
+    });
+
+    it('keeps several named examples, each heading over its table, in order', async () => {
+        await promotePage(CAROUSEL_PAGE);
+
+        expect(writtenHtml()).toBe(CAROUSEL_PAGE);
+    });
+
+    it('writes the description as a library-metadata table after each example', async () => {
+        await promotePage(CAROUSEL_PAGE, DESCRIPTION);
+
+        expect(writtenHtml()).toBe(`<h2>Carousel, three slides</h2>${CAROUSEL_THREE}${METADATA}`
+            + `<h2>Carousel, single slide</h2>${CAROUSEL_ONE}${METADATA}`);
+    });
+
+    // Review F9: a DA page's examples usually sit in section divs; the table goes inside each
+    // section, right after its block, where DA.live reads it.
+    it('writes the description after each block inside its section, on a sectioned page', async () => {
+        const sectioned = `<div><h2>Carousel, three slides</h2>${CAROUSEL_THREE}</div>`
+            + `<div><h2>Carousel, single slide</h2>${CAROUSEL_ONE}</div>`;
+
+        await promotePage(sectioned, DESCRIPTION);
+
+        expect(writtenHtml()).toBe(`<div><h2>Carousel, three slides</h2>${CAROUSEL_THREE}${METADATA}</div>`
+            + `<div><h2>Carousel, single slide</h2>${CAROUSEL_ONE}${METADATA}</div>`);
+    });
+
+    it('leaves an example that already has its own library-metadata table as it is', async () => {
+        const own = '<div class="library-metadata"><div><div>description</div><div>Mine</div></div></div>';
+
+        await promotePage(`${CAROUSEL_ONE}${own}`, DESCRIPTION);
+
+        expect(writtenHtml()).toBe(`${CAROUSEL_ONE}${own}`);
+    });
+
+    it('writes the description as text, never as markup', async () => {
+        await promotePage(CAROUSEL_ONE, 'Rows <b>&</b> "slides"');
+
+        expect(writtenHtml()).toContain('<div>Rows &lt;b&gt;&amp;&lt;/b&gt; "slides"</div>');
+        expect(writtenHtml()).not.toContain('<b>');
+    });
+
+    it('adds no library-metadata table without a description', async () => {
+        await promotePage(CAROUSEL_PAGE);
+
+        expect(writtenHtml()).not.toContain('library-metadata');
+    });
+});
+
+// ─── The Draft Examples record (EDS-71 step 4c) ─────────────────────────────
+
+describe('promote_block_to_library — the blocks still needing an example', () => {
+    const MANIFEST = '/projects/my-project/.demo-builder.json';
+
+    function mockRecorded(ids: string[]): void {
+        const manifest = manifestWith();
+        const metadata = manifest.componentInstances['eds-storefront']?.metadata;
+        Object.assign(metadata ?? {}, { blocksNeedingExamples: ids });
+        (fsProm.readFile as jest.Mock).mockImplementation(async (p: string) => {
+            if (String(p).endsWith('.demo-builder.json')) return JSON.stringify(manifest);
+            throw Object.assign(new Error(`ENOENT: ${p}`), { code: 'ENOENT' });
+        });
+    }
+
+    /** The manifest written through writeFileAtomic (its temp file), parsed. */
+    function writtenManifest(): { componentInstances: Record<string, { metadata: Record<string, unknown> }> } | undefined {
+        const write = (fsProm.writeFile as jest.Mock).mock.calls
+            .find(([p]) => String(p) === `${MANIFEST}.tmp`);
+        return write ? JSON.parse(write[1]) : undefined;
+    }
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+        mockHappyPathFilesystem();
+        mockAppendBlockToLibrary.mockResolvedValue({ status: 'created', siteConfigRegistered: true });
+        mockUpsertBlockDocPage.mockResolvedValue('written');
+        mockSyncAndPublish.mockResolvedValue({ committed: true, pushed: true, helixPublished: true });
+        mockPreviewAndPublishPage.mockResolvedValue(undefined);
+    });
+
+    it('takes the block off the record once its example page is written', async () => {
+        mockRecorded([BLOCK_ID, 'tabs']);
+
+        const result = JSON.parse(await promote(PROJECTS_DIR, PROJECT_NAME, BLOCK_ID, BLOCK_TITLE, BLOCK_HTML));
+
+        expect(writtenManifest()?.componentInstances['eds-storefront'].metadata.blocksNeedingExamples)
+            .toStrictEqual(['tabs']);
+        expect(fsProm.rename).toHaveBeenCalledWith(`${MANIFEST}.tmp`, MANIFEST);
+        expect(result.examplesRecord).toBe('recorded');
+    });
+
+    it('tells the caller the project file changed, so an open dashboard re-reads the count', async () => {
+        const written = jest.fn();
+        mockRecorded([BLOCK_ID]);
+        await toolHandlers.promoteBlockToLibrary(
+            PROJECTS_DIR, PROJECT_NAME, BLOCK_ID, BLOCK_TITLE, BLOCK_HTML, TOKENS, undefined, { written },
+        );
+        mockRecorded(['tabs']);
+        await toolHandlers.promoteBlockToLibrary(
+            PROJECTS_DIR, PROJECT_NAME, BLOCK_ID, BLOCK_TITLE, BLOCK_HTML, TOKENS, undefined, { written },
+        );
+
+        // Once: the second block was not on the record, so no file was written.
+        expect(written).toHaveBeenCalledTimes(1);
+    });
+
+    // Review F8: the page is written either way; the SC learns why the count may lag, the log why.
+    it('logs a record it could not write and says what that means, without failing the promote', async () => {
+        const warn = jest.fn();
+        mockRecorded([BLOCK_ID]);
+        (fsProm.writeFile as jest.Mock).mockRejectedValueOnce(new Error('EACCES: permission denied'));
+
+        const result = JSON.parse(await toolHandlers.promoteBlockToLibrary(
+            PROJECTS_DIR, PROJECT_NAME, BLOCK_ID, BLOCK_TITLE, BLOCK_HTML, TOKENS, undefined, { warn },
+        ));
+
+        expect(result.docPage).toBe('written');
+        expect(result.examplesRecord).toBe('failed');
+        expect(result.examplesRecordNote).toMatch(/Draft Examples count.*next Refresh Blocks/);
+        expect(warn).toHaveBeenCalledWith(expect.stringContaining('EACCES'));
+    });
+
+    it('leaves the record alone when the example page was not written', async () => {
+        mockRecorded([BLOCK_ID]);
+        mockUpsertBlockDocPage.mockResolvedValue('failed');
+
+        const result = JSON.parse(await promote(PROJECTS_DIR, PROJECT_NAME, BLOCK_ID, BLOCK_TITLE, BLOCK_HTML));
+
+        expect(writtenManifest()).toBeUndefined();
+        expect(result).not.toHaveProperty('examplesRecord');
+    });
+
+    it('writes no project file for a block that was not on the record', async () => {
+        mockRecorded(['tabs']);
+
+        const result = JSON.parse(await promote(PROJECTS_DIR, PROJECT_NAME, BLOCK_ID, BLOCK_TITLE, BLOCK_HTML));
+
+        expect(writtenManifest()).toBeUndefined();
+        expect(result).not.toHaveProperty('examplesRecord');
+    });
+});
+
 // ─── Credential source ───────────────────────────────────────────────────────
 // Regression coverage for the token seam: promote no longer reads
 // DA_LIVE_IMS_TOKEN from env (nothing populates it now the standalone process
@@ -538,6 +712,14 @@ describe('promote_block_to_library — credential source', () => {
         expect(mockSyncAndPublish).toHaveBeenCalledWith(
             expect.objectContaining({ githubToken: 'live-gh', daLiveToken: 'live-da' })
         );
+    });
+
+    it('threads the description input to the example page (EDS-71 step 4c)', async () => {
+        const { promote } = registerPromoteTool();
+
+        await promote({ ...PROMOTE_ARGS, description: DESCRIPTION, confirm: true });
+
+        expect(mockUpsertBlockDocPage.mock.calls[0][2].exampleHtml).toBe(`${BLOCK_HTML}${METADATA}`);
     });
 
     // The gate matches remove_block_from_library's. Promote commits, pushes and

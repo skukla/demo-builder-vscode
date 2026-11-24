@@ -390,7 +390,10 @@ export const LAST_UPDATE_CHECK = 'lastUpdateCheck';
 // and undo is restoring it, and sync-changes, header-nav-footer and commerce-block-mapper send a new
 // block through refresh_block_library. Existing projects would keep telling the agent a block can be
 // unregistered while its code stays, and to edit a file Adobe's template no longer has.
-export const AI_CONTEXT_VERSION = 67;
+// v68 (2026-11-23, EDS-71 step 4c): storefront projects gain the draft-block-examples skill (the
+// Draft Examples loop: list_blocks_needing_examples, show each draft, then promote_block_to_library
+// with a whole example page and a description). Existing storefronts would never get the skill.
+export const AI_CONTEXT_VERSION = 68;
 
 /**
  * Component IDs for standardized component instance access

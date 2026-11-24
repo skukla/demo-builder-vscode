@@ -53,6 +53,7 @@ export class RefreshBlockLibraryCommand extends BaseCommand {
                 project,
                 context: this.context,
                 logger: this.logger,
+                stateManager: this.stateManager,
                 helixService: this.helixService,
                 onStep: (stage, message) => {
                     if (!reportStep(stage, message)) progress.report({ message: stage });

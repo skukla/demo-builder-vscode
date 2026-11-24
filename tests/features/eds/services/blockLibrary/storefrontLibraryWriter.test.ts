@@ -138,6 +138,41 @@ describe('writeStorefrontBlockLibrary', () => {
         });
     });
 
+    describe('which blocks still need an example (EDS-71 step 4c)', () => {
+        it('names the listed blocks whose page is a code-shaped placeholder, a failed copy included', async () => {
+            h.copySingleFile.mockImplementation(async (_t, _s, path: string) => !path.endsWith('/tabs'));
+
+            const result = await run();
+
+            // hero copied, cards kept, carousel a real use: each has an example.
+            expect(result.needsExample).toEqual(['tabs', 'widget']);
+        });
+
+        it('still names a placeholder left as it was, and not one whose page failed to write', async () => {
+            const same = doc('<div><div class="widget"><div><div><p>Column 1 content</p></div>'
+                + '<div><p>Column 2 content</p></div></div></div></div>');
+            const failing: StorefrontBlock = { id: 'modal', title: 'Modal', example: { kind: 'placeholder' } };
+            h.createSource.mockImplementation(async (_o: string, _s: string, path: string) =>
+                path.includes('modal') ? { success: false, error: '500' } : { success: true });
+
+            const result = await run({
+                blocks: [widget, failing],
+                replacePageIds: new Set(['widget']),
+                replacedPages: new Map([['widget', same]]),
+            });
+
+            expect(result.needsExample).toEqual(['widget']);
+        });
+
+        it('says nothing about examples when the list could not be written', async () => {
+            sheetAnswers([], 500);
+
+            const result = await run();
+
+            expect(result.needsExample).toBeUndefined();
+        });
+    });
+
     describe('the blocks sheet', () => {
         it('lists every block in the list order with its content.da.live path', async () => {
             await run();
@@ -250,6 +285,7 @@ describe('writeStorefrontBlockLibrary', () => {
                 blocksCount: 1,
                 paths: ['/.da/library/blocks.json', '/.da/library/blocks/cards',
                     '/.da/library/templates.json', '/.da/library/templates/landing'],
+                needsExample: [],
             });
         });
 
@@ -277,6 +313,7 @@ describe('writeStorefrontBlockLibrary', () => {
                 success: false,
                 blocksCount: 1,
                 paths: ['/.da/library/blocks.json', '/.da/library/blocks/cards'],
+                needsExample: [],
                 error: 'The block palette in DA.live will be empty: the site configuration did not take the Blocks list (config 403).',
             });
         });

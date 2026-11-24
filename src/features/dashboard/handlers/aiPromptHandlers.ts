@@ -13,9 +13,24 @@
 
 import * as vscode from 'vscode';
 import { showSuccessInStatusBar } from '@/core/vscode/statusBarSuccess';
+import { DRAFT_BLOCK_EXAMPLES_PROMPT } from '@/features/dashboard/services/draftBlockExamplesPrompt';
 import type { AiPrompt, Project } from '@/types/base';
 import { ErrorCode } from '@/types/errorCodes';
 import type { HandlerContext, HandlerResponse } from '@/types/handlers';
+import { isEdsProject } from '@/types/typeGuards';
+
+/**
+ * Seeded prompts that mean something only on an EDS storefront project (EDS-71 step 4c). They
+ * live in the global store like every seeded prompt, the one seeding route there is, and are
+ * left out of the list a project without a storefront reads.
+ */
+const STOREFRONT_ONLY_PROMPT_IDS: ReadonlySet<string> = new Set([DRAFT_BLOCK_EXAMPLES_PROMPT.id]);
+
+/** The prompts a project lists: storefront-only ones left out unless it is an EDS project. */
+function visibleFor(prompts: AiPrompt[], project: Project | undefined): AiPrompt[] {
+    if (isEdsProject(project)) return prompts;
+    return prompts.filter((p) => !STOREFRONT_ONLY_PROMPT_IDS.has(p.id));
+}
 
 /**
  * globalState key holding `AiPrompt[]` for pinned prompts that travel with the
@@ -59,10 +74,12 @@ function removeById(list: AiPrompt[], id: string): AiPrompt[] {
 export function mergePromptsForRead(
     globalPrompts: AiPrompt[],
     projectPrompts: AiPrompt[],
+    // The project the list is for: a storefront-only seeded prompt shows only for an EDS one.
+    project?: Project,
 ): AiPrompt[] {
     const globalIds = new Set(globalPrompts.map((p) => p.id));
     const projectFiltered = projectPrompts.filter((p) => !globalIds.has(p.id));
-    return [...globalPrompts, ...projectFiltered];
+    return visibleFor([...globalPrompts, ...projectFiltered], project);
 }
 
 /**
@@ -80,7 +97,7 @@ export function readMergedAiPrompts(
 ): AiPrompt[] {
     const globalPrompts = readGlobalPrompts(context);
     const projectPrompts = project?.aiPrompts ?? [];
-    return mergePromptsForRead(globalPrompts, projectPrompts);
+    return mergePromptsForRead(globalPrompts, projectPrompts, project);
 }
 
 /**
@@ -112,7 +129,7 @@ export async function deleteAiPromptById(
         await context.stateManager.saveProject({ ...project, aiPrompts: nextProject });
     }
 
-    return mergePromptsForRead(nextGlobal, nextProject);
+    return mergePromptsForRead(nextGlobal, nextProject, project);
 }
 
 /**
@@ -208,7 +225,7 @@ export async function handleSaveAiPrompt(
 
     return {
         success: true,
-        aiPrompts: mergePromptsForRead(nextGlobal, nextProject),
+        aiPrompts: mergePromptsForRead(nextGlobal, nextProject, project),
         // The returned list ALREADY contains the saved prompt, but the tier-2
         // battery run measured an agent shell-hunting for a prompt FILE after
         // a successful save — the store is the manifest / extension storage,
@@ -252,7 +269,7 @@ export async function handleListAiPrompts(context: HandlerContext): Promise<Hand
     }
     const globalPrompts = readGlobalPrompts(context);
     const projectPrompts = project.aiPrompts ?? [];
-    return { success: true, aiPrompts: mergePromptsForRead(globalPrompts, projectPrompts) };
+    return { success: true, aiPrompts: mergePromptsForRead(globalPrompts, projectPrompts, project) };
 }
 
 /**

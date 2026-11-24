@@ -264,4 +264,15 @@ describe('StorefrontSetupStep — completion keeps what creation must record', (
             edsConfig: expect.objectContaining({ codeNotServed: ['scripts/commerce.js'] }),
         });
     });
+
+    // EDS-71 step 4c: creation records them for the Draft Examples tile.
+    it('holds the blocks the DA.live block list left on a placeholder', () => {
+        const { updateState } = renderStep();
+
+        pushComplete({ message: 'Done', githubRepo: 'https://github.com/o/r', blocksNeedingExamples: ['tabs'] });
+
+        expect(updateState).toHaveBeenCalledWith({
+            edsConfig: expect.objectContaining({ blocksNeedingExamples: ['tabs'] }),
+        });
+    });
 });

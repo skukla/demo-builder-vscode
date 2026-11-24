@@ -149,6 +149,12 @@ export const RESPONSE_CEILINGS: Record<string, Ceiling> = {
         bytes: 10_000,
         why: 'index bounded by MAX_AUTHORING_INDEX_ROWS (100 block folders); one block bounded by MAX_EXAMPLES (4) tables of MAX_EXAMPLE_HTML_CHARS (1,500) plus a MAX_README_CHARS (1,200) README — a 300-entry index was 21,992 before the cap',
     },
+    list_blocks_needing_examples: {
+        bytes: 16_000,
+        why: 'BOUNDED: at most MAX_NEEDS_EXAMPLE_LIMIT (25) rows, each an id, title, code shape and a '
+            + 'NEEDS_EXAMPLE_README_CHARS (400) README excerpt; a 200-block storefront with 20,000-'
+            + 'character READMEs measured about 13KB at the 25-row maximum (fixture, 2026-11-23)',
+    },
     promote_block_to_library: { bytes: 2_000, why: 'per-step status of one promotion' },
     remove_block_from_library: { bytes: 2_000, why: 'per-step status of one removal' },
 

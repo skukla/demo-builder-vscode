@@ -58,7 +58,12 @@ export const DEMO_BUILDER_ALWAYS_ON_SKILLS = [
  * Demo Builder skills written only for some projects. Conditional delivery does
  * not make them third-party — they classify as `'demo-builder'` wherever found.
  */
-export const DEMO_BUILDER_CONDITIONAL_SKILLS = ['extend-app-builder-app'] as const;
+export const DEMO_BUILDER_CONDITIONAL_SKILLS = [
+    // Projects that build an App Builder app.
+    'extend-app-builder-app',
+    // EDS storefront projects (EDS-71 step 4c).
+    'draft-block-examples',
+] as const;
 
 /**
  * Which ai-defaults MCP tool a generated skill DRIVES — the machine-readable

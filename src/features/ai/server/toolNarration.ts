@@ -102,6 +102,7 @@ export const TOOL_NARRATION: Record<string, string> = {
     get_content_access: "Checking the content readers",
     list_ai_prompts: 'Listing your saved prompts',
     list_blocks: 'Listing the storefront blocks',
+    list_blocks_needing_examples: 'Listing blocks with no example',
     list_components: 'Listing the available components',
     list_console_apis: 'Listing the Adobe APIs',
     list_content: 'Listing the storefront content',

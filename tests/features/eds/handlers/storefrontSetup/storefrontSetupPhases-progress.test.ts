@@ -414,4 +414,14 @@ describe('the result of a finished run', () => {
         expect(result).not.toHaveProperty('pipelineWarnings');
         expect(result).not.toHaveProperty('codeNotServed');
     });
+
+    // EDS-71 step 4c: for creation to record on the project (the Draft Examples tile).
+    it('carries the blocks the block list left on a placeholder, an empty list included', async () => {
+        const run = () => executeStorefrontSetupPhases(createSetupContext(), createEdsConfig(), new AbortController().signal, undefined, SERVICES);
+        mockExecuteEdsPipeline.mockResolvedValue(createMockPipelineResult({ blocksNeedingExamples: ['tabs'] }));
+        expect((await run()).blocksNeedingExamples).toEqual(['tabs']);
+
+        mockExecuteEdsPipeline.mockResolvedValue(createMockPipelineResult({ blocksNeedingExamples: [] }));
+        expect((await run()).blocksNeedingExamples).toStrictEqual([]);
+    });
 });

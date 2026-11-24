@@ -117,7 +117,9 @@ async function readExamples(
 }
 
 /** A storefront file's text, or undefined when it cannot be read. */
-function storefrontReader(storefrontPath: string): (file: string) => Promise<string | undefined> {
+export function storefrontReader(
+    storefrontPath: string,
+): (file: string) => Promise<string | undefined> {
     return async (file) => {
         try {
             return await fsPromises.readFile(path.join(storefrontPath, file), 'utf-8');
@@ -127,18 +129,22 @@ function storefrontReader(storefrontPath: string): (file: string) => Promise<str
     };
 }
 
-/** The block's README.md, trimmed and clipped; undefined when it has none. */
-async function readmeExcerpt(read: (file: string) => Promise<string | undefined>, blockId: string) {
+/** The block's README.md, trimmed and clipped at `max`; undefined when it has none. */
+export async function readmeExcerpt(
+    read: (file: string) => Promise<string | undefined>,
+    blockId: string,
+    max: number = MAX_README_CHARS,
+): Promise<string | undefined> {
     const text = (await read(`blocks/${blockId}/README.md`))?.trim();
     if (!text) return undefined;
-    return text.length > MAX_README_CHARS ? `${text.slice(0, MAX_README_CHARS)} [truncated]` : text;
+    return text.length > max ? `${text.slice(0, max)} [truncated]` : text;
 }
 
 /**
  * The storefront's block folders the DA.live block list takes (`listableBlockIds`: block names
  * only), A to Z; none when it has no `blocks/` folder.
  */
-async function blockFolders(storefrontPath: string): Promise<string[]> {
+export async function blockFolders(storefrontPath: string): Promise<string[]> {
     try {
         const entries = await fsPromises.readdir(path.join(storefrontPath, 'blocks'), {
             withFileTypes: true,

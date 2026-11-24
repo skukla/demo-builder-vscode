@@ -124,6 +124,8 @@ export function useStorefrontSetup(
                     storefrontBuildComplete: data.storefrontBuildComplete,
                     // Saved by creation as the project's Republish the Code step (PL-101).
                     codeNotServed: data.codeNotServed,
+                    // Recorded by creation for the Draft Examples tile (EDS-71 step 4c).
+                    blocksNeedingExamples: data.blocksNeedingExamples,
                     // Recorded on an imported project by creation, for Reset (EDS-72).
                     bundleImport: data.bundleImport,
                 },

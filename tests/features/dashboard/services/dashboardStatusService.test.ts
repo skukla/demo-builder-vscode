@@ -5,6 +5,9 @@
  * These functions handle status payload building and mesh deployment checks.
  */
 
+import * as fs from 'fs';
+import * as os from 'os';
+import * as path from 'path';
 import type { ComponentStatus, Project } from '@/types/base';
 
 import type { MeshStatusInfo } from '@/types/webviewPayloads';
@@ -163,6 +166,43 @@ describe('dashboardStatusService', () => {
                 const project = createMockProject({ created: new Date('2026-01-01T00:00:00Z') });
 
                 expect(buildStatusPayload(project, false)).not.toHaveProperty('storefrontNeedsReset');
+            });
+        });
+
+        // EDS-71 step 4c: the Draft Examples tile's dot and its "N blocks have no example".
+        describe('blocksNeedingExamples', () => {
+            const withRecord = (ids: unknown, storefrontPath?: string): Project => createMockProject({
+                componentInstances: {
+                    'eds-storefront': {
+                        ...edsStorefrontInstance(),
+                        ...(storefrontPath ? { path: storefrontPath } : {}),
+                        metadata: { blocksNeedingExamples: ids },
+                    },
+                },
+            });
+
+            it('counts the blocks the last block list build left with no example', () => {
+                expect(buildStatusPayload(withRecord(['carousel', 'tabs']), false).blocksNeedingExamples).toBe(2);
+            });
+
+            // Review F3: zero ("every block has an example") is told apart from no record at all.
+            it('is 0 when every block has an example, and absent when the project has no record', () => {
+                expect(buildStatusPayload(withRecord([]), false).blocksNeedingExamples).toBe(0);
+                expect(buildStatusPayload(createMockProject(), false)).not.toHaveProperty('blocksNeedingExamples');
+            });
+
+            // Review F1: a block whose code is gone, or a core content block, is nothing an example can fix.
+            it('counts only recorded blocks the storefront checkout still has a folder for', () => {
+                const storefront = fs.mkdtempSync(path.join(os.tmpdir(), 'draft-examples-'));
+                try {
+                    fs.mkdirSync(path.join(storefront, 'blocks', 'carousel'), { recursive: true });
+
+                    const payload = buildStatusPayload(withRecord(['carousel', 'gone', 'metadata'], storefront), false);
+
+                    expect(payload.blocksNeedingExamples).toBe(1);
+                } finally {
+                    fs.rmSync(storefront, { recursive: true, force: true });
+                }
             });
         });
 

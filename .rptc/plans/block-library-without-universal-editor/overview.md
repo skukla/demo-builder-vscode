@@ -64,15 +64,16 @@ tools fail.
   `step-02.md`.)
 - **Dashboard, Storefront zone**: a **Draft Examples** tile, with an amber dot while any block has no
   example (hover: "13 blocks have no example"). It opens the SC's AI with the starter prompt; the AI
-  writes each example into the storefront's block list, marked as a draft for the SC to check. The dot
+  shows the SC each drafted example, then writes it into the storefront's block list. The dot
   clears when every block has an example. **Refresh Blocks** is the one button that rebuilds the
   block list, doing what DA.live's Import Blocks does with nothing to type; its hover text says so
   ("Rebuild the DA.live block list from the storefront's code and pages"). No second button for
   Import Blocks (owner, 2026-11-23).
 - **Configure, Block Libraries**: adding or removing a library updates the block list.
 - **Prompts list**: a seeded starter prompt, **Draft Block Examples** ("Write an example page for each
-  block in this storefront that has none. Read each block's code and description, and mark each page as
-  a draft for me to check."), the same one the tile sends. An agent tool lists the blocks without an
+  block in this storefront that has none. Read each block's code and description, and show me each page
+  before you save it."), the same one the tile sends. (DA.live has no draft marker, so the SC checks
+  each page before it is written; 2026-11-23.) An agent tool lists the blocks without an
   example.
 - **Later**: Adobe's template updates go through; written examples and pages stay.
 
@@ -85,11 +86,11 @@ tools fail.
 | 3 | Add block library blocks from the library (with step 2) | done |
 | 4 | Examples, best first (with step 2: the convention in `step-02.md`) | done |
 | 4b | Our own libraries get real examples once | not started |
-| 4c | Draft Examples tile, prompt and agent tool | not started |
+| 4c | Draft Examples tile, prompt and agent tool | done |
 | 5 | Agent tools work on the DA.live library | done |
 | 5b | Universal Editor stops being offered | done |
 | 6 | Block library install, update, removal | done |
-| 7 | The template update takes Adobe's deletion | not started |
+| 7 | The template update takes Adobe's deletion | done |
 | 8 | Lift the hold | not started |
 | 9 | Live cycle, with the owner's go | not started |
 
@@ -108,11 +109,39 @@ The detail of each step:
 4. **Examples, best first** (built with step 2): the convention in `step-02.md` and the handbook:
    Adobe's page, the library's page, a real use (per style), else a placeholder shaped by the block's
    code. A page someone wrote is kept; an old Demo Builder placeholder is replaced.
-4b. **Our own libraries get real examples once**: fix Bodea's site Commerce config and re-check its pages
-   in a real storefront; draft (step 4c's tool), check and save the missing example pages into each
-   library's own DA site (Demo Team, Bodea; BuildRight once it has a site).
-4c. **Draft Examples**: the dashboard tile with its dot, the seeded prompt, and an agent tool listing the
-   blocks without an example; drafts are written into the storefront's block list, marked as drafts.
+   **What a good example is** (owner, 2026-11-23, after reading what Adobe intends): authors are
+   visual; they want to see what they will insert, then know how to fill it in. DA.live's panel opens
+   each block's example page rendered with the storefront's styles (the eye button), lists every
+   example on the page as its own item named by the heading above it, inserts that example's table,
+   and shows a `library-metadata` description behind an info button (`adobe/da-live`
+   `blocks/edit/da-library/da-library.js`; aem.live "Set up library"). Adobe's own examples use
+   neutral sample content in the block's real structure ("Your heading here", "Column 1 / This and
+   that"; Cards as two named examples, "Cards w/ images" and "Cards w/o images"). So the target for
+   every block without an Adobe example: neutral sample text and images, one named example per way of
+   using the block, and a one-line description. A real use from another brand's site is a poor
+   example; the shaped "Column N content" placeholder is the last fallback only.
+4b. **Our own libraries get real examples once**: draft examples to that target (step 4c's tool),
+   check them with the owner, and save them into each library's own DA site (Demo Team, Bodea, Isle5;
+   BuildRight once it has a site), where every storefront using the library picks them up. Bodea's
+   site lacking `config.json` only stops its pages rendering on its own site; copied tables render
+   with each storefront's config, so it does not block this (corrected 2026-11-23).
+4c. **Draft Examples**: the drafting itself, to the target above (one named example per variant,
+   neutral content, a description), plus the dashboard tile with its dot, the seeded prompt, and an
+   agent tool listing the blocks without an example; each draft is shown to the SC, then written into
+   the storefront's block list (DA.live has no draft marker). A sample draft (Carousel) goes to the owner before the tool is built.
+   **Approved 2026-11-23** (owner: "Yes" to the Carousel draft): two named examples ("Carousel, three
+   slides", "Carousel, single slide"), each row image | heading + line + link, generic retail wording,
+   images from the storefront's own media (neutral stock when it has none), and a `Library Metadata`
+   description. That draft is the worked example the drafting skill carries.
+   **Built 2026-11-23**: each library build records the blocks it left on a placeholder on the
+   project (`metadata.blocksNeedingExamples`, `examplesNeededRecord.ts`; creation, reset, Refresh
+   Blocks, Configure and the import path); the agent tool `list_blocks_needing_examples`; promote takes
+   a whole example page and a `description` (a `library-metadata` table after each example, since
+   DA.live reads one only for the example it directly follows) and takes the block off the record;
+   the storefront-only skill `draft-block-examples` (AI_CONTEXT_VERSION 68); the seeded prompt; the
+   Storefront zone's Draft Examples tile. No draft marker exists in DA.live, so the skill shows the SC
+   each page before writing it, and the prompt ends "show me each page before you save it" instead
+   of "mark each page as a draft for me to check".
 5. **Agent tools.** `promote_block_to_library`, `remove_block_from_library` and
    `get_block_authoring_shape` work on the DA.live library (row and page) instead of
    `component-definition.json`; the generated skills that describe that file change with them (an AI

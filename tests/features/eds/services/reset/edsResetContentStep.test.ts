@@ -16,6 +16,7 @@ import {
     runReset,
 } from './edsResetService.orchestrationHarness';
 import { brokenLinksSentence } from '@/features/eds/services/storefront/brokenLinksRecord';
+import { writeBlocksNeedingExamples } from '@/features/eds/services/blockLibrary/examplesNeededRecord';
 
 const mockPublishAuthoredListStep = jest.fn().mockResolvedValue(undefined);
 jest.mock('@/features/eds/services/catalogMenu/catalogMenuStep', () => ({
@@ -82,6 +83,33 @@ describe('runContentPipeline - the broken-links record', () => {
         await runReset({ project });
 
         expect(brokenLinks(project)).toStrictEqual(OLD_LINKS);
+    });
+});
+
+// EDS-71 step 4c: the Draft Examples tile counts the blocks the rebuilt list left on a placeholder.
+describe('runContentPipeline - the blocks still needing an example', () => {
+    const neededOf = (project: Project): unknown =>
+        project.componentInstances?.['eds-storefront']?.metadata?.blocksNeedingExamples;
+
+    it('records what the rebuilt list left on a placeholder', async () => {
+        mockExecuteEdsPipeline.mockResolvedValue(
+            createMockPipelineResult({ blocksNeedingExamples: ['carousel', 'tabs'] }),
+        );
+        const project = storefrontProject();
+
+        await runReset({ project, contentSource: CONTENT_SOURCE });
+
+        expect(neededOf(project)).toStrictEqual(['carousel', 'tabs']);
+    });
+
+    it('keeps the last record when the list was not rebuilt', async () => {
+        mockExecuteEdsPipeline.mockResolvedValue(createMockPipelineResult({}));
+        const project = storefrontProject();
+        writeBlocksNeedingExamples(project, ['tabs']);
+
+        await runReset({ project, contentSource: CONTENT_SOURCE });
+
+        expect(neededOf(project)).toStrictEqual(['tabs']);
     });
 });
 

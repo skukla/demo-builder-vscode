@@ -90,6 +90,7 @@ function deps(overrides: Record<string, unknown> = {}) {
         context: createMockExtensionContext(),
         logger: makeLogger(),
         helixService: fakeHelix,
+        stateManager: { saveProject: jest.fn().mockResolvedValue(undefined) },
         ...overrides,
     };
 }
@@ -137,6 +138,41 @@ describe('refreshBlockLibraryHeadless', () => {
             success: true,
             libraryPaths: ['/.da/library/blocks/hero'],
         });
+    });
+
+    // EDS-71 step 4c: the Draft Examples tile counts what the rebuilt list left on a placeholder.
+    it('records and saves the blocks the rebuilt list left on a placeholder', async () => {
+        const project = createMockProject({
+            name: 'Demo', path: '/p',
+            componentInstances: {
+                'eds-storefront': { id: 'eds-storefront', name: 'Storefront', status: 'ready', metadata: {} },
+            },
+        });
+        const saveProject = jest.fn().mockResolvedValue(undefined);
+        pipelineMock.mockResolvedValue(createMockPipelineResult({ blocksNeedingExamples: ['tabs'] }));
+
+        await refreshBlockLibraryHeadless(deps({ project, stateManager: { saveProject } }));
+
+        expect(project.componentInstances?.['eds-storefront']?.metadata?.blocksNeedingExamples)
+            .toStrictEqual(['tabs']);
+        expect(saveProject).toHaveBeenCalledWith(project);
+    });
+
+    it('saves nothing when the pipeline did not say which blocks need an example', async () => {
+        const saveProject = jest.fn().mockResolvedValue(undefined);
+
+        await refreshBlockLibraryHeadless(deps({ stateManager: { saveProject } }));
+
+        expect(saveProject).not.toHaveBeenCalled();
+    });
+
+    it('still answers success when the record cannot be saved', async () => {
+        pipelineMock.mockResolvedValue(createMockPipelineResult({ blocksNeedingExamples: ['tabs'] }));
+        const saveProject = jest.fn().mockRejectedValue(new Error('disk full'));
+
+        const result = await refreshBlockLibraryHeadless(deps({ stateManager: { saveProject } }));
+
+        expect(result.success).toBe(true);
     });
 
     it("hands the library the project's content sources, its libraries and its demo's site", async () => {

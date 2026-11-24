@@ -217,8 +217,9 @@ Wiring lives in `src/extension.ts`:
 
 Tool registration on each connection happens in two layers:
 
-1. `registerProjectTools(server, projectsDir)` — the ten shared file-based
-   tools from `src/mcp-server.ts`.
+1. `registerProjectTools(server, projectsDir)` — the shared file-based
+   tools from `src/mcp-server.ts` (ten as of EDS-71 step 4c; the name-by-name pin
+   is `inExtensionMcpServer.test.ts`).
 2. A `registerExtraTools` callback (injected by `extension.ts` so the server
    module stays free of `vscode`/handler imports) that calls every other
    `register…` function: descriptor tools, discovery, auth, Adobe, create/open/
@@ -1444,6 +1445,18 @@ The agent surface is powerful, so it's deliberately constrained:
   the block's code (`blocks/<id>/`) and pushes the deletion; a failure from then on
   is reported per step, never thrown. Restoring the code and running Refresh Blocks
   undoes a removal.
+
+  Drafting examples (EDS-71 step 4c): `list_blocks_needing_examples` lists the blocks
+  whose example page is Demo Builder's placeholder or old stub, or missing, each with
+  its title, code shape and a README excerpt clipped at 400 characters, 10 per call by
+  default and 25 at most. Signed in to DA.live it reads each page; signed out it
+  answers the list the last block list build recorded on the project
+  (`metadata.blocksNeedingExamples`, the dashboard's Draft Examples count) and says
+  so in `note`. `promote_block_to_library` takes a whole example page (several named
+  examples, each a heading over the block's table) and an optional `description`,
+  written after each example as the `library-metadata` table DA.live shows behind an
+  info button; a written page takes the block off that record. The generated
+  `draft-block-examples` skill carries the loop.
 - **No secret leakage to child processes.** Where the extension spawns other MCP
   servers to introspect them, it uses an env allowlist.
 

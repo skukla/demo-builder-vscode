@@ -28,6 +28,7 @@ import {
     getDaLiveAuthService,
     getGitHubServices,
 } from '@/features/eds/handlers/edsHelpers';
+import { writeBlocksNeedingExamples } from '@/features/eds/services/blockLibrary/examplesNeededRecord';
 import { DaLiveContentOperations } from '@/features/eds/services/daLive/daLiveContentOperations';
 import { createDaLiveServiceTokenProvider } from '@/features/eds/services/daLive/daLiveTokenProviders';
 import { executeEdsPipeline } from '@/features/eds/services/edsPipeline';
@@ -36,6 +37,7 @@ import { extractResetParams } from '@/features/eds/services/reset/edsResetParams
 import { DaLiveAuthError } from '@/features/eds/services/types';
 import type { Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
+import type { StateManager } from '@/types/state';
 
 const LOG_PREFIX = '[RefreshBlockLibrary]';
 const MAX_RETRIES = 1;
@@ -68,6 +70,11 @@ export interface RefreshBlockLibraryHeadlessDeps {
     /** Extension context — needed to resolve DA.live/GitHub services. */
     context: vscode.ExtensionContext;
     logger: Logger;
+    /**
+     * Saves the project once the rebuilt list says which blocks still need an example
+     * (EDS-71 step 4c, `examplesNeededRecord.ts`): the dashboard's Draft Examples tile reads it.
+     */
+    stateManager: Pick<StateManager, 'saveProject'>;
     /** Progress messages, plain (Configure's Republish shows them under its own step). */
     onProgress?: (message: string) => void;
     /**
@@ -173,6 +180,7 @@ export async function refreshBlockLibraryHeadless(
             if (!result.success) {
                 return { success: false, error: result.error || 'Block library refresh failed' };
             }
+            await recordBlocksNeedingExamples(deps, result.blocksNeedingExamples);
             return { success: true, libraryPaths: result.libraryPaths };
         } catch (error) {
             if (error instanceof DaLiveAuthError && attempt < MAX_RETRIES) {
@@ -205,5 +213,22 @@ export async function refreshBlockLibraryHeadless(
                 error: error instanceof Error ? error.message : 'Unknown error',
             };
         }
+    }
+}
+
+/**
+ * Keep the blocks the rebuilt list left on a placeholder on the project, and save it. The list
+ * is already rebuilt, so a save that fails is logged and the refresh still succeeds.
+ */
+async function recordBlocksNeedingExamples(
+    { project, stateManager, logger }: RefreshBlockLibraryHeadlessDeps,
+    ids: string[] | undefined,
+): Promise<void> {
+    if (ids === undefined) return;
+    writeBlocksNeedingExamples(project, ids);
+    try {
+        await stateManager.saveProject(project);
+    } catch (error) {
+        logger.warn(`${LOG_PREFIX} blocks needing an example not saved: ${(error as Error).message}`);
     }
 }

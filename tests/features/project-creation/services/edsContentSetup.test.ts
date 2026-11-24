@@ -5,173 +5,32 @@
  * content copy, permissions, block library, EDS settings, cache purge, CDN publish.
  */
 
+// The harness owns the mocks and the SUT import, so it is imported first (see its header).
+import {
+    ensureEdsContent,
+    helixSeam,
+    makeConfig,
+    makeDeps,
+    mockApplyDaLiveOrgConfigSettings,
+    mockConfigureDaLivePermissions,
+    mockCopyContentFromSource,
+    mockFetch,
+    mockGetAccessToken,
+    mockGetUserEmail,
+    mockOverlayAccountChrome,
+    mockPublishAllSiteContent,
+    mockPublishLibraryPaths,
+    mockPublishSheetPaths,
+    mockPurgeCacheAll,
+    mockReadCodePaths,
+    mockWriteStorefrontBlockLibrary,
+    setupDefaultMocks,
+} from './edsContentSetup.testUtils';
 import * as vscode from 'vscode';
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { STOREFRONT_JOBS } from '@/core/utils/storefrontJobs';
-import { ensureEdsContent } from '@/features/project-creation/services/edsContentSetup';
-import type { EdsContentHelix } from '@/features/project-creation/services/edsContentSetup';
-import type { StorefrontLibraryInput } from '@/features/eds/services/blockLibrary/storefrontLibraryWriter';
 import type { PatchReport } from '@/features/eds/services/patches/patchReportHelper';
 import { DaLiveAuthError } from '@/features/eds/services/types';
-import { createMockLogger } from '../../../helpers/loggerFake';
-import { createMockSecretStorage } from '../../../helpers/secretStorageFake';
-import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
-
-const mockCopyContentFromSource = jest.fn();
-const mockWriteStorefrontBlockLibrary = jest.fn();
-const mockGetBlocksWithDocs = jest.fn();
-const mockOverlayAccountChrome = jest.fn();
-
-jest.mock('@/features/eds/services/daLive/daLiveContentOperations', () => ({
-    DaLiveContentOperations: jest.fn().mockImplementation(() => ({
-        copyOps: {
-            copyContentFromSource: mockCopyContentFromSource,
-            overlayAccountChrome: mockOverlayAccountChrome,
-        },
-        blockLibOps: {
-            getBlocksWithDocs: mockGetBlocksWithDocs,
-            readBlockDocPage: jest.fn().mockResolvedValue(undefined),
-            readBlocksSheetRows: jest.fn().mockResolvedValue(null),
-            writeStorefrontBlockLibrary: mockWriteStorefrontBlockLibrary,
-        },
-    })),
-}));
-jest.mock('@/features/eds/services/daLive/daLiveTokenProviders', () => ({
-    createDaLiveServiceTokenProvider: jest
-        .fn()
-        .mockImplementation((service: { getAccessToken: () => Promise<string> }) => ({
-            getAccessToken: () => service.getAccessToken(),
-        })),
-}));
-
-const mockPublishAllSiteContent = jest.fn();
-const mockPurgeCacheAll = jest.fn();
-
-const mockPreviewAndPublishPage = jest.fn();
-const mockGetResourceStatus = jest.fn();
-
-// HelixService is NOT module-mocked. It arrives through the `makeHelix` seam on
-// EdsContentDeps, typed to the four calls this function makes — two of its own and
-// two it forwards to the block-library helpers.
-const helixSeam: EdsContentHelix = {
-    publishAllSiteContent: mockPublishAllSiteContent,
-    purgeCacheAll: mockPurgeCacheAll,
-    previewAndPublishPage: mockPreviewAndPublishPage,
-    getResourceStatus: mockGetResourceStatus,
-};
-
-jest.mock('@/features/eds/services/github/githubTokenService', () => ({
-    GitHubTokenService: jest.fn().mockImplementation(() => ({})),
-}));
-
-// The subject now asks the service cache instead of constructing its own token
-// service. This delegates to the SAME mocked class above, so the suite's
-// behaviour is unchanged — only the route to it is.
-jest.mock('@/features/eds/handlers/edsServiceCache', () => ({
-    getGitHubServices: jest.fn(() => {
-        const { GitHubTokenService } = jest.requireMock(
-            '@/features/eds/services/github/githubTokenService'
-        );
-        return { tokenService: new GitHubTokenService() };
-    }),
-}));
-
-const mockGetUserEmail = jest.fn();
-const mockGetAccessToken = jest.fn();
-
-jest.mock('@/features/eds/services/daLive/daLiveAuthService', () => ({
-    DaLiveAuthService: jest.fn().mockImplementation(() => ({
-        getUserEmail: mockGetUserEmail,
-        getAccessToken: mockGetAccessToken,
-    })),
-}));
-
-const mockGetFileContent = jest.fn();
-const mockListRepoFiles = jest.fn();
-
-jest.mock('@/features/eds/services/github/githubFileOperations', () => ({
-    GitHubFileOperations: jest.fn().mockImplementation(() => ({
-        getFileContent: mockGetFileContent,
-        listRepoFiles: mockListRepoFiles,
-    })),
-}));
-
-const mockConfigureDaLivePermissions = jest.fn();
-const mockApplyDaLiveOrgConfigSettings = jest.fn();
-const mockPublishLibraryPaths = jest.fn();
-const mockPublishSheetPaths = jest.fn();
-
-jest.mock('@/features/eds/handlers/edsHelpers', () => ({
-    configureDaLivePermissions: (...args: unknown[]) => mockConfigureDaLivePermissions(...args),
-    applyDaLiveOrgConfigSettings: (...args: unknown[]) => mockApplyDaLiveOrgConfigSettings(...args),
-    publishLibraryPaths: (...args: unknown[]) => mockPublishLibraryPaths(...args),
-    publishSheetPaths: (...args: unknown[]) => mockPublishSheetPaths(...args),
-    getDaLiveAuthService: jest.fn().mockReturnValue({
-        getAccessToken: mockGetAccessToken,
-        getUserEmail: mockGetUserEmail,
-    }),
-}));
-
-jest.mock('@/core/utils/githubUrlParser', () => ({
-    parseGitHubUrl: jest.fn((url: string) => {
-        if (url === 'https://github.com/test-owner/test-repo') {
-            return { owner: 'test-owner', repo: 'test-repo' };
-        }
-        return null;
-    }),
-}));
-
-jest.mock('@/core/utils/timeoutConfig', () => ({
-    TIMEOUTS: { QUICK: 3000 },
-}));
-
-// Mock global fetch
-const mockFetch = jest.fn();
-global.fetch = mockFetch;
-
-function makeConfig(overrides = {}) {
-    return {
-        repoUrl: 'https://github.com/test-owner/test-repo',
-        daLiveOrg: 'test-org',
-        daLiveSite: 'test-site',
-        contentSource: { org: 'source-org', site: 'source-site', indexPath: '/full-index.json' },
-        blockLibraries: [] as string[],
-        ...overrides,
-    };
-}
-
-function makeDeps() {
-    return {
-        logger: createMockLogger(),
-        secrets: createMockSecretStorage().secrets,
-        extensionContext: createMockExtensionContext(),
-        makeHelix: () => helixSeam,
-        readCodePaths: mockReadCodePaths,
-    };
-}
-
-const mockReadCodePaths = jest.fn();
-
-function setupDefaultMocks() {
-    mockFetch.mockResolvedValue({ ok: false, status: 404 });
-    mockCopyContentFromSource.mockResolvedValue({ success: true, totalFiles: 10, failedFiles: [], sheetPaths: [] });
-    mockGetUserEmail.mockResolvedValue('user@example.com');
-    mockConfigureDaLivePermissions.mockResolvedValue({ success: true });
-    mockWriteStorefrontBlockLibrary.mockResolvedValue({ success: true, blocksCount: 3, paths: ['/library'] });
-    mockGetBlocksWithDocs.mockResolvedValue([]);
-    mockListRepoFiles.mockResolvedValue([{ path: 'blocks/hero/hero.js', type: 'blob', sha: 'h' }]);
-    mockGetFileContent.mockResolvedValue(null);
-    mockApplyDaLiveOrgConfigSettings.mockResolvedValue(undefined);
-    mockPurgeCacheAll.mockResolvedValue(undefined);
-    mockPreviewAndPublishPage.mockResolvedValue(undefined);
-    mockGetResourceStatus.mockResolvedValue({ httpStatus: 200 });
-    mockPublishAllSiteContent.mockResolvedValue(undefined);
-    mockPublishLibraryPaths.mockResolvedValue(undefined);
-    mockPublishSheetPaths.mockResolvedValue({ published: 0, failed: 0 });
-    mockGetAccessToken.mockResolvedValue('da-live-token');
-    mockReadCodePaths.mockResolvedValue(undefined);
-    mockOverlayAccountChrome.mockResolvedValue({ success: true, totalFiles: 4, failedFiles: [] });
-}
 
 describe('ensureEdsContent', () => {
     beforeEach(() => {
@@ -583,49 +442,6 @@ describe('ensureEdsContent — the calls it makes', () => {
         });
     });
 
-    describe('the block library', () => {
-        it("builds from the storefront's own repository and writes to its DA.live site", async () => {
-            await ensureEdsContent(makeConfig(), makeDeps());
-
-            expect(mockListRepoFiles).toHaveBeenCalledWith('test-owner', 'test-repo', 'main');
-            const [org, site, input] = mockWriteStorefrontBlockLibrary.mock.calls[0];
-            expect([org, site]).toEqual(['test-org', 'test-site']);
-            expect((input as StorefrontLibraryInput).blocks.map((block) => block.id)).toEqual(['hero']);
-        });
-
-        it("reads the package's content sources, the libraries and the demo's site", async () => {
-            const config = makeConfig({
-                accountContentSource: { org: 'b2b-org', site: 'b2b-site' },
-                blockLibraries: ['isle5'],
-                demoContentSource: { org: 'demo-org', site: 'demo-site' },
-            });
-
-            await ensureEdsContent(config, makeDeps());
-
-            const asked = mockFetch.mock.calls.map(([url]) => url as string);
-            expect(asked).toEqual(expect.arrayContaining([
-                'https://main--source-site--source-org.aem.page/docs/library/blocks.json',
-                'https://main--b2b-site--b2b-org.aem.page/docs/library/blocks.json',
-                'https://main--demo-site--demo-org.aem.page/docs/library/blocks/hero.plain.html',
-            ]));
-            expect(mockListRepoFiles).toHaveBeenCalledWith('stephen-garner-adobe', 'isle5', 'main');
-        });
-
-        it('hands the writer a code reader that fetches from the storefront on GitHub', async () => {
-            await ensureEdsContent(makeConfig(), makeDeps());
-
-            const input = mockWriteStorefrontBlockLibrary.mock.calls[0][2] as StorefrontLibraryInput;
-            await input.placeholderFor('hero');
-
-            // A reader that resolves to undefined shapes every placeholder as one cell.
-            expect(mockGetFileContent).toHaveBeenCalledWith(
-                'test-owner',
-                'test-repo',
-                'blocks/hero/hero.js',
-                'main'
-            );
-        });
-    });
 
     it('publishes to the CDN even when the content copy reported failures', async () => {
         // A partial copy still has to reach the CDN — otherwise the pages that DID

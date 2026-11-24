@@ -278,6 +278,24 @@ describe('executeEdsPipeline - operations', () => {
 
             expect(result.libraryPaths).toEqual(['/.da/library/blocks.json', '/.da/library/blocks/hero']);
         });
+
+        // EDS-71 step 4c: the callers record these on the project for the Draft Examples tile.
+        it('carries the blocks the build left on a placeholder, only when the library was built', async () => {
+            jest.mocked(services.daLiveContentOps.blockLibOps.writeStorefrontBlockLibrary)
+                .mockResolvedValue({ success: true, blocksCount: 2, paths: [], needsExample: ['carousel'] });
+
+            const built = await executeEdsPipeline(
+                { ...baseParams, skipContent: true, includeBlockLibrary: true },
+                services,
+            );
+            const notBuilt = await executeEdsPipeline(
+                { ...baseParams, skipContent: true, includeBlockLibrary: false },
+                services,
+            );
+
+            expect(built.blocksNeedingExamples).toEqual(['carousel']);
+            expect(notBuilt.blocksNeedingExamples).toBeUndefined();
+        });
     });
 
     describe('brand assets', () => {

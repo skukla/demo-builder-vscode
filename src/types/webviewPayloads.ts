@@ -378,6 +378,12 @@ export interface DashboardStatusUpdatePayload {
      * the Reset tile says "Needs reset". Present only when true.
      */
     storefrontNeedsReset?: true;
+    /**
+     * How many blocks the last DA.live block list build left with no example that the code still
+     * has (`examplesNeededRecord.ts`): the Draft Examples tile's dot. 0 when every block has one;
+     * absent when no build has recorded it (a project made before the record).
+     */
+    blocksNeedingExamples?: number;
     /** What a run left the SC to finish (PL-101). Present only when a run left a step. */
     finishSetup?: FinishSetupStatus;
 }
@@ -940,6 +946,8 @@ export interface StorefrontSetupCompletePayload {
     storefrontBuildComplete?: boolean;
     /** The code files the live site did not serve yet; creation saves them as the Republish the Code step (PL-101). */
     codeNotServed?: string[];
+    /** The blocks the DA.live block list left on a placeholder; creation records them (EDS-71 4c). */
+    blocksNeedingExamples?: string[];
     /** What setup made from an imported bundle; creation records it on the project (EDS-72). */
     bundleImport?: BundleImportResult;
 }

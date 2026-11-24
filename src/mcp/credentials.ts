@@ -31,3 +31,15 @@ export interface McpCredentialProvider {
     getDaLiveToken(): Promise<string | null>;
     getGitHubToken(): Promise<string | null>;
 }
+
+/**
+ * What the extension wants to hear from a project tool that wrote a project's
+ * `.demo-builder.json` itself rather than through the state manager (EDS-71 step 4c:
+ * the Draft Examples record promote and remove keep). Both optional; vscode-free.
+ */
+export interface ProjectFileHooks {
+    /** The project file changed: an open dashboard re-reads its status. */
+    written?(): void;
+    /** A write that failed, for the extension's log. */
+    warn?(message: string): void;
+}

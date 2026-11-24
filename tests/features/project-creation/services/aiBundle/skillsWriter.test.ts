@@ -161,14 +161,15 @@ describe('skillsWriter', () => {
             expect(writtenFiles().some((p) => p.endsWith('create-eds-project/SKILL.md'))).toBe(true);
         });
 
-        it('writes exactly fourteen skill files for EDS projects when the Adobe skill bundle is not present', async () => {
+        it('writes exactly sixteen skill files for EDS projects when the Adobe skill bundle is not present', async () => {
             mockMissingAdobeBundle();
             await writeSkills('/projects/test', makeEdsProject());
 
             // 15 always-written Demo-Builder skills (author-commerce-data, 2026-10-04). 15 → 14 on 2026-08-26
             // (AI-1o): extend-app-builder-app is App Builder work, and a
             // storefront with no mesh and no attached component is not doing it.
-            expect(writtenFiles()).toHaveLength(15);
+            // 15 → 16 on 2026-11-23: draft-block-examples, storefront projects only (EDS-71 4c).
+            expect(writtenFiles()).toHaveLength(16);
         });
 
         it('writes scrape-reference-site for EDS projects', async () => {
@@ -221,13 +222,28 @@ describe('skillsWriter', () => {
             expect(writtenFiles().some((p) => p.endsWith('remove-custom-block/SKILL.md'))).toBe(true);
         });
 
+        // EDS-71 step 4c: drafting examples for the DA.live block list is storefront work only.
+        it('writes draft-block-examples for EDS projects and names it in the written list', async () => {
+            const { written } = await writeSkills('/projects/test', makeEdsProject());
+
+            expect(writtenFiles().some((p) => p.endsWith('draft-block-examples/SKILL.md'))).toBe(true);
+            expect(written).toContain('draft-block-examples');
+        });
+
+        it('does not write draft-block-examples for headless projects', async () => {
+            const { written } = await writeSkills('/projects/test', makeHeadlessProject());
+
+            expect(writtenFiles().some((p) => p.includes('draft-block-examples'))).toBe(false);
+            expect(written).not.toContain('draft-block-examples');
+        });
+
         it('each written skill file is non-empty and starts with YAML frontmatter or an H1', async () => {
             await writeSkills('/projects/test', makeEdsProject());
 
             const writeFileMock = fsPromises.writeFile as jest.Mock;
             const calls = writeFileMock.mock.calls;
 
-            expect(calls).toHaveLength(15);
+            expect(calls).toHaveLength(16);
             for (const [, content] of calls) {
                 expect(typeof content).toBe('string');
                 expect((content as string).length).toBeGreaterThan(0);
@@ -259,6 +275,25 @@ describe('skillsWriter', () => {
 
             const content = writtenContent('sync-changes');
             expect(content).toContain('sync_storefront');
+        });
+    });
+
+    // Review F2 and F8 of EDS-71 step 4c.
+    describe('draft-block-examples content', () => {
+        it('treats Commerce blocks as blocks an author places, with their settings rows', async () => {
+            await writeSkills('/projects/test', makeEdsProject());
+
+            const content = writtenContent('draft-block-examples');
+            expect(content).not.toMatch(/leave account, cart, checkout and order blocks alone/i);
+            expect(content).toMatch(/Commerce blocks are real blocks/);
+            expect(content).toMatch(/settings rows with their defaults/);
+        });
+
+        it("says in one line what examplesRecord 'failed' means for the user", async () => {
+            await writeSkills('/projects/test', makeEdsProject());
+
+            expect(writtenContent('draft-block-examples'))
+                .toMatch(/examplesRecord: 'failed'.*page was written.*next Refresh Blocks/);
         });
     });
 
@@ -502,7 +537,7 @@ describe('skillsWriter', () => {
             // storefront alone is not App Builder work (AI-1o).
             expect(
                 files.filter((p) => p.startsWith('/projects/test/.claude/skills/'))
-            ).toHaveLength(15);
+            ).toHaveLength(16);
         });
 
         it('still writes the three Demo-Builder lifecycle skills when copying the Adobe bundle', async () => {

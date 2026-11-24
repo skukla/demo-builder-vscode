@@ -20,6 +20,7 @@ import * as path from 'path';
 import {
     DEFAULT_LIST_LIMIT,
     readInstalledBlockLibraries,
+    readManifest,
     readPromoteBlockContext,
     sanitizeBlockHtml,
     verifyBlockSourceExists,
@@ -36,9 +37,15 @@ import {
     unpublishStorefrontAndDaLive,
 } from './blockLibraryPublish';
 import { assertBlockName, deleteBlockCode } from './blockRemoval';
-import type { McpToolCredentials } from './credentials';
+import { DEFAULT_NEEDS_EXAMPLE_LIMIT, listBlocksNeedingExamples } from './blocksNeedingExamples';
+import type { McpToolCredentials, ProjectFileHooks } from './credentials';
+import { withLibraryDescription } from './exampleDescription';
 import { assertInsideProject, resolveProjectPath, resolveStorefrontPath } from './projectSecurity';
-import { paginate } from './projectToolHandlers';
+import { paginate, projectToolHandlers } from './projectToolHandlers';
+import {
+    dropBlockNeedingExample,
+    readBlocksNeedingExamples,
+} from '@/features/eds/services/blockLibrary/examplesNeededRecord';
 
 /**
  * The answer a block tool gives when DA.live is not signed in.
@@ -112,6 +119,43 @@ async function deleteCodeReported(
         };
     }
 }
+
+/**
+ * Take a block off the project's "needs an example" record once it has one (EDS-71 step 4c),
+ * writing the manifest only when the record changed, through the MCP manifest door
+ * (`update_project_config`'s handler: atomic, refuses malformed JSON). A failure is reported,
+ * never thrown: the example is already in DA.live.
+ *
+ * Used by promote (the block has an example now) and remove (the block has no code left to give
+ * one to). A written record is announced through `hooks.written` so an open dashboard re-reads
+ * the count; a failure goes to `hooks.warn` and comes back as a sentence for the SC.
+ *
+ * @returns the fields the tool's answer carries: none when the block was not on the record
+ */
+async function takeOffExamplesRecord(
+    projectsDir: string,
+    projectName: string,
+    blockId: string,
+    hooks: ProjectFileHooks | undefined,
+): Promise<{ examplesRecord?: 'recorded' | 'failed'; examplesRecordNote?: string }> {
+    try {
+        const manifest = await readManifest(resolveProjectPath(projectsDir, projectName));
+        if (!dropBlockNeedingExample(manifest, blockId)) return {};
+        await projectToolHandlers.updateProjectConfig(
+            projectsDir, projectName, '.demo-builder.json', JSON.stringify(manifest, null, 2),
+        );
+        hooks?.written?.();
+        return { examplesRecord: 'recorded' };
+    } catch (error) {
+        const reason = error instanceof Error ? error.message : String(error);
+        hooks?.warn?.(`[BlockTools] Draft Examples record not updated for ${blockId}: ${reason}`);
+        return { examplesRecord: 'failed', examplesRecordNote: RECORD_NOT_UPDATED };
+    }
+}
+
+/** What `examplesRecord: 'failed'` means for the SC. */
+const RECORD_NOT_UPDATED = 'DA.live has the change, but the project file could not be updated, '
+    + "so the dashboard's Draft Examples count may be one off until the next Refresh Blocks.";
 
 export const blockToolHandlers = {
     async listBlocks(
@@ -190,13 +234,38 @@ export const blockToolHandlers = {
     },
 
     /**
+     * The blocks with no example an author can use in DA.live (`blocksNeedingExamples`):
+     * read from the storefront's DA.live pages when signed in, else the list the last block
+     * list build recorded on the project. Read-only.
+     */
+    async listBlocksNeedingExamples(
+        projectsDir: string,
+        projectName: string,
+        offset?: number,
+        limit: number = DEFAULT_NEEDS_EXAMPLE_LIMIT,
+        tokens?: McpToolCredentials,
+    ): Promise<string> {
+        const projectPath = resolveProjectPath(projectsDir, projectName);
+        const storefrontPath = await resolveStorefrontPath(projectPath);
+        await assertInsideProject(projectPath, storefrontPath);
+        const recorded = readBlocksNeedingExamples(await readManifest(projectPath));
+        const pages = await examplePageSource(projectPath, tokens?.daLiveToken);
+        return JSON.stringify(
+            await listBlocksNeedingExamples(storefrontPath, recorded, pages, offset, limit),
+        );
+    },
+
+    /**
      * Give a block in the storefront's code its example and title in the
      * storefront's DA.live block list.
      *
      * Writes the doc page in `.da/library/blocks/<blockId>` (always, so iterating
      * refreshes the preview), adds or renames the block's row in
      * `.da/library/blocks.json`, commits/pushes the storefront, and
-     * previews/publishes the doc page.
+     * previews/publishes the doc page. The page may hold several named examples
+     * (a heading over each block table); `description` is written after each as a
+     * `library-metadata` table (`exampleDescription.ts`). Once the page is written,
+     * the block comes off the project's "needs an example" record (EDS-71 step 4c).
      *
      * Partial-success: a publish failure does NOT throw — the returned status
      * fields surface the real state of each step. Validation and "block source
@@ -209,6 +278,8 @@ export const blockToolHandlers = {
         title: string,
         unsafeHTML: string,
         tokens?: McpToolCredentials,
+        description?: string,
+        hooks?: ProjectFileHooks,
     ): Promise<string> {
         assertBlockName(blockId);
         const ctx = await storefrontContext(projectsDir, projectName);
@@ -224,7 +295,8 @@ export const blockToolHandlers = {
 
         // Defense-in-depth: sanitize AI-supplied HTML before it lands on the
         // published doc page. See sanitizeBlockHtml() for the allowlist rationale.
-        const safeHtml = sanitizeBlockHtml(unsafeHTML);
+        // The description is added after sanitising, as text (escaped), never as markup.
+        const safeHtml = withLibraryDescription(sanitizeBlockHtml(unsafeHTML), description);
         const ops = daLiveOpsFor(daLiveToken).blockLibOps;
         const { daLiveOrg, daLiveSite } = ctx;
 
@@ -237,11 +309,16 @@ export const blockToolHandlers = {
         });
         const sheet = await ops.appendBlockToLibrary(daLiveOrg, daLiveSite, { blockId, title });
         const publish = await publishStorefrontAndDaLive(ctx, blockId, githubToken, daLiveToken);
+        // The block has an example now: the Draft Examples count drops by one.
+        const record = docPage === 'written'
+            ? await takeOffExamplesRecord(projectsDir, projectName, blockId, hooks)
+            : {};
 
         return JSON.stringify({
             docPage,
             sheet: sheet.status,
             publish,
+            ...record,
             details: `Block "${title}" (${blockId}) promoted to ${daLiveOrg}/${daLiveSite}`,
         });
     },
@@ -268,6 +345,7 @@ export const blockToolHandlers = {
         projectName: string,
         blockId: string,
         tokens?: McpToolCredentials,
+        hooks?: ProjectFileHooks,
     ): Promise<string> {
         assertBlockName(blockId);
         const ctx = await storefrontContext(projectsDir, projectName);
@@ -288,6 +366,8 @@ export const blockToolHandlers = {
             githubToken,
             daLiveToken,
         );
+        // A removed block has no code left to give an example to: off the Draft Examples count.
+        const record = await takeOffExamplesRecord(projectsDir, projectName, blockId, hooks);
 
         return JSON.stringify({
             codeFolder: code.status,
@@ -295,6 +375,7 @@ export const blockToolHandlers = {
             sheet: removed.sheet,
             unpublish,
             ...(code.note ? { note: code.note } : {}),
+            ...record,
             details: `Block "${blockId}" removed from the storefront and `
                 + `${daLiveOrg}/${daLiveSite}`,
         });

@@ -19,7 +19,9 @@
  * ├── mcp/blockAuthoringShape    — get_block_authoring_shape's index and detail
  * ├── mcp/blockRemoval           — deleting a block's code folder
  * ├── mcp/blockLibraryPublish    — the promote/remove publish tails
- * ├── mcp/blockToolHandlers      — the five block tools
+ * ├── mcp/blocksNeedingExamples  — list_blocks_needing_examples (EDS-71 step 4c)
+ * ├── mcp/exampleDescription     — promote's library-metadata description
+ * ├── mcp/blockToolHandlers      — the block tools
  * └── mcp/credentials            — the credential provider types
  *
  * This module is NOT a server process. The in-extension MCP server
@@ -38,8 +40,13 @@
 
 import { z } from 'zod';
 import { DEFAULT_LIST_LIMIT } from './mcp/blockAuthoring';
+import { DEFAULT_NEEDS_EXAMPLE_LIMIT, MAX_NEEDS_EXAMPLE_LIMIT } from './mcp/blocksNeedingExamples';
 import { blockToolHandlers } from './mcp/blockToolHandlers';
-import type { McpCredentialProvider, McpToolCredentials } from './mcp/credentials';
+import type {
+    McpCredentialProvider,
+    McpToolCredentials,
+    ProjectFileHooks,
+} from './mcp/credentials';
 import { projectToolHandlers } from './mcp/projectToolHandlers';
 import { storefrontSyncHandler } from './mcp/storefrontSyncHandler';
 import { asRawText, asText } from '@/features/ai/server/mcpToolResult';
@@ -47,7 +54,7 @@ import type { McpToolServer } from '@/features/ai/server/mcpToolServer';
 import { BLOCK_NAME_PATTERN as BLOCK_NAME } from '@/features/eds/services/blockLibrary/blockTable';
 
 // Re-exported so the public identity of this module is unchanged by the split.
-export type { McpCredentialProvider, McpToolCredentials } from './mcp/credentials';
+export type { McpCredentialProvider, McpToolCredentials, ProjectFileHooks } from './mcp/credentials';
 export { resolveProjectPath, validateEnvContent } from './mcp/projectSecurity';
 
 // ─── Tool handlers (exported for unit tests) ─────────────────────────────────
@@ -62,7 +69,7 @@ export const toolHandlers = {
 // ─── Tool registration (shared) ──────────────────────────────────────────────
 
 /**
- * Register the nine project tools on an MCP server instance. Consumed by the
+ * Register the project tools on an MCP server instance. Consumed by the
  * in-extension server (`@/features/ai/server/inExtensionMcpServer`) — the only
  * live path now that the standalone `dist/mcp-server.js` stdio process is
  * retired (see this file's header).
@@ -78,16 +85,19 @@ export const toolHandlers = {
  *   the in-extension server so the credential-needing tools use the live sign-in
  *   session rather than env vars. Omitted in vscode-free/file-only contexts.
  *
- *   There are THREE, not the two this line used to name: `sync_storefront`,
- *   `promote_block_to_library` and `remove_block_from_library`. The third was
- *   missing until the 2026-08-31 tool-auth review read every tool for whether it
- *   calls `resolveCredentials`.
+ *   `sync_storefront`, `promote_block_to_library` and `remove_block_from_library`
+ *   need them; `get_block_authoring_shape` and `list_blocks_needing_examples`
+ *   read DA.live with them when there are any, and answer from local files when not.
+ * @param projectFileHooks Told when a tool changed a project's `.demo-builder.json` itself
+ *   (promote and remove keep the "needs an example" record), so an open dashboard re-reads
+ *   it, and when that write failed, for the log; a state-manager save already does the first.
  */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 export function registerProjectTools(
     server: McpToolServer,
     projectsDir: string,
     credentials?: McpCredentialProvider,
+    projectFileHooks?: ProjectFileHooks,
 ): void {
     // Resolve credentials fresh per call (token expiry); undefined when no
     // provider, so the handlers fall back to their env-var path.
@@ -290,6 +300,39 @@ export function registerProjectTools(
     );
 
     server.registerTool(
+        'list_blocks_needing_examples',
+        {
+            // Works signed out (the recorded list); DA.live only makes the answer fresh.
+            needsAuth: false,
+            annotations: { readOnlyHint: true, destructiveHint: false },
+            title: 'List Blocks Needing Examples',
+            description:
+                "List the storefront's blocks that have no example authors can use in DA.live's block library: their example page is still Demo Builder's placeholder or missing. Each comes with its title, the table shape its code reads (rows, columns, style variants) and a README excerpt, which is what drafting an example needs; write one with promote_block_to_library. Signed in to DA.live it reads each page; otherwise it answers the list the last block list build recorded (the dashboard's Draft Examples count) and says so in `note`.",
+            inputSchema: {
+                projectName: projectNameSchema,
+                offset: offsetSchema,
+                limit: z
+                    .number()
+                    .int()
+                    .min(1)
+                    .max(MAX_NEEDS_EXAMPLE_LIMIT)
+                    .default(DEFAULT_NEEDS_EXAMPLE_LIMIT)
+                    .describe(`Blocks per call (default ${DEFAULT_NEEDS_EXAMPLE_LIMIT}, at most ${MAX_NEEDS_EXAMPLE_LIMIT})`),
+            },
+        },
+        async (args: any) =>
+            asRawText(
+                await toolHandlers.listBlocksNeedingExamples(
+                    projectsDir,
+                    args.projectName,
+                    args.offset,
+                    args.limit,
+                    await resolveCredentials(),
+                ),
+            ),
+    );
+
+    server.registerTool(
         'promote_block_to_library',
         {
             needsAuth: ['dalive'],
@@ -300,7 +343,7 @@ export function registerProjectTools(
             // source library" until 2026-10-13, which read as saving the block for
             // reuse across demos; it never did.
             description:
-                "Give a block in blocks/ its example and title in this site's own DA.live block library (the Insert Block list authors use): writes the block's example page, adds or renames its row, and commits/pushes/publishes the storefront. Every block in the code is listed after Refresh Blocks; this sets what authors see for it. It does not save the block for other projects, and a reset removes it with the rest of the code. Requires confirm:true.",
+                "Give a block in blocks/ its example and title in this site's own DA.live block library (the Insert Block list authors use): writes the block's example page, adds or renames its row, and commits/pushes/publishes the storefront. The page may hold several named examples, one per way of using the block, each a heading over the block's table (DA.live lists each as its own item, named by the heading); `description` adds the one-line text DA.live shows behind each example's info button. Every block in the code is listed after Refresh Blocks; this sets what authors see for it, and takes the block off the dashboard's Draft Examples count. It does not save the block for other projects, and a reset removes it with the rest of the code. Requires confirm:true.",
             inputSchema: {
                 projectName: projectNameSchema,
                 blockId: z
@@ -317,7 +360,16 @@ export function registerProjectTools(
                 unsafeHTML: z
                     .string()
                     .max(100_000)
-                    .describe("Example HTML for the block, written as the block's example page"),
+                    .describe(
+                        "The block's example page: one or more examples, each an <h2> naming it over the block's table (<div class=\"<blockId> [variant]\"> with one <div> per row, one <div> per cell)",
+                    ),
+                description: z
+                    .string()
+                    .max(500)
+                    .optional()
+                    .describe(
+                        "One line saying what the block is for and how to fill it in; written after each example as a library-metadata table, which DA.live shows behind an info button",
+                    ),
                 confirm: z
                     .boolean()
                     .optional()
@@ -345,6 +397,8 @@ export function registerProjectTools(
                     args.title as string,
                     args.unsafeHTML as string,
                     await resolveCredentials(),
+                    args.description as string | undefined,
+                    projectFileHooks,
                 ),
             );
         },
@@ -387,6 +441,7 @@ export function registerProjectTools(
                     args.projectName,
                     args.blockId as string,
                     await resolveCredentials(),
+                    projectFileHooks,
                 ),
             );
         },

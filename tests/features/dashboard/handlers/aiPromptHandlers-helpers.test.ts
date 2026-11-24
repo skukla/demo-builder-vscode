@@ -26,6 +26,7 @@ import {
     deleteAiPromptById,
     readMergedAiPrompts,
 } from '@/features/dashboard/handlers/aiPromptHandlers';
+import { DRAFT_BLOCK_EXAMPLES_PROMPT } from '@/features/dashboard/services/draftBlockExamplesPrompt';
 import { ErrorCode } from '@/types/errorCodes';
 
 describe('aiHandlers — copy & module helpers', () => {
@@ -147,6 +148,20 @@ describe('aiHandlers — copy & module helpers', () => {
     });
 
     describe('readMergedAiPrompts', () => {
+        // Review F4: Draft Block Examples is seeded into the global store, but drafting block
+        // examples only means something on an EDS storefront, so only those projects list it.
+        it('lists the Draft Block Examples prompt only for an EDS storefront project', () => {
+            const { context, project } = makeScopedContext({
+                globalPrompts: [DRAFT_BLOCK_EXAMPLES_PROMPT, { id: 'g1', title: 'G1', prompt: 'g1', pinned: true }],
+            });
+            const eds = { ...project, selectedStack: 'eds-paas' };
+
+            expect(readMergedAiPrompts(context, project).map((p) => p.id)).toStrictEqual(['g1']);
+            expect(readMergedAiPrompts(context, eds).map((p) => p.id))
+                .toStrictEqual([DRAFT_BLOCK_EXAMPLES_PROMPT.id, 'g1']);
+            expect(readMergedAiPrompts(context, undefined).map((p) => p.id)).toStrictEqual(['g1']);
+        });
+
         it('returns the merged pinned-first list for a project', () => {
             const { context, project } = makeScopedContext({
                 projectPrompts: [{ id: 'p1', title: 'P1', prompt: 'p1' }],

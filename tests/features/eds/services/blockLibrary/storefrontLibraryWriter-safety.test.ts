@@ -97,7 +97,7 @@ describe('writeStorefrontBlockLibrary: what it must not do', () => {
         it('succeeds with nothing to do when no block was asked for', async () => {
             const result = await run({ blocks: [] });
 
-            expect(result).toEqual({ success: true, blocksCount: 0, paths: [] });
+            expect(result).toEqual({ success: true, blocksCount: 0, paths: [], needsExample: [] });
         });
     });
 
