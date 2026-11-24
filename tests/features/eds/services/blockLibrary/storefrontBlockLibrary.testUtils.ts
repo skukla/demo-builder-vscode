@@ -10,6 +10,7 @@ import { readFileSync } from 'fs';
 import { resolve } from 'path';
 import { createMockLogger } from '../../../../helpers/loggerFake';
 import { installSiteFetch } from '../../../../helpers/siteFetchFake';
+import type { ShippedExamples } from '@/features/eds/services/blockLibrary/shippedBlockExamples';
 import type { StorefrontBlockLibraryParams } from '@/features/eds/services/blockLibrary/storefrontBlockLibrary';
 import type { StorefrontBlock } from '@/features/eds/services/blockLibrary/storefrontBlockList';
 import type { StorefrontLibraryInput } from '@/features/eds/services/blockLibrary/storefrontLibraryWriter';
@@ -75,8 +76,15 @@ export const oldStub = (id: string, cell: string): string => '<body>\n  <header>
 
 export const WRITTEN = { success: true, blocksCount: 11, paths: ['/.da/library/blocks.json'] };
 
-/** The build's deps over the site fake, and readers for what the writer was handed. */
-export function harness(served: Record<string, unknown> = SERVED, unreachable: string[] = []) {
+/**
+ * The build's deps over the site fake, and readers for what the writer was handed. No shipped
+ * examples unless a suite hands some in, so the bundled data never moves these assertions.
+ */
+export function harness(
+    served: Record<string, unknown> = SERVED,
+    unreachable: string[] = [],
+    shipped: ShippedExamples = new Map(),
+) {
     const site = installSiteFetch(served, unreachable);
     const listRepoFiles = jest.fn(async (owner: string) =>
         (owner === 'sc' ? STOREFRONT_TREE : ISLE5_TREE));
@@ -94,6 +102,7 @@ export function harness(served: Record<string, unknown> = SERVED, unreachable: s
         files: { listRepoFiles, getFileContent },
         fetchImpl: site.fetchMock as unknown as typeof fetch,
         logger,
+        shippedExamples: shipped,
     };
     const written = (): StorefrontLibraryInput => blockLibOps.writeStorefrontBlockLibrary.mock.calls[0][2];
     const exampleOf = (id: string): StorefrontBlock['example'] | undefined =>

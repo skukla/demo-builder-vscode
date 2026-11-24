@@ -1,15 +1,16 @@
 /**
  * The block-example convention, as the handbook states it (§4, "A block's example in the
  * DA.live block list is the first that exists"): Adobe's example page, its block library's
- * example page, a real use copied from a page (library site first, then the storefront's
- * content source), else a placeholder shaped by the block's code. Never an invented sample,
- * and a page someone wrote is never replaced.
+ * example page, a real use on the storefront's own content source pages, the example Demo
+ * Builder ships for the block, a real use on the library's site, else a placeholder shaped by
+ * the block's code. A page someone wrote is never replaced.
  * Design: `.rptc/plans/block-library-without-universal-editor/step-02.md`.
  *
  * Three things are pinned: the order of {@link EXAMPLE_KINDS}; that each kind wins over every
- * later one when both exist; and that every page body the writer sends is either a copy of a
- * real page or `blockDoc`'s output, with only a generated page written over: the old Demo
- * Builder stub holding the block's title, or an untouched "Column N content" placeholder.
+ * later one when both exist; and that every page body the writer sends is a copy of a real
+ * page, `blockDoc`'s output or `shippedExamplePage`'s, with only a generated page written over:
+ * the old Demo Builder stub holding the block's title, or an untouched "Column N content"
+ * placeholder.
  */
 
 import {
@@ -23,6 +24,10 @@ import {
     isOldStubPage,
 } from '@/features/eds/services/blockLibrary/oldStubPages';
 import {
+    shippedExamplePage,
+    type ShippedBlockExample,
+} from '@/features/eds/services/blockLibrary/shippedBlockExamples';
+import {
     EXAMPLE_KINDS,
     buildStorefrontBlockList,
     type StorefrontBlock,
@@ -33,6 +38,10 @@ const ADOBE_SITE = { org: 'adobe-commerce', site: 'boilerplate-b2b' };
 const LIB_SITE = { org: 'skukla', site: 'isle5-library' };
 const CONTENT_USE: BlockUse = { path: '/about', examples: [{ variant: '', html: '<div>c</div>' }] };
 const LIBRARY_USE: BlockUse = { path: '/home', examples: [{ variant: '', html: '<div>l</div>' }] };
+const SHIPPED: ShippedBlockExample = {
+    description: 'Tabs that switch panels.',
+    html: '<h2>Tabs</h2><div class="tabs"><div><div>One</div><div>First panel</div></div></div>',
+};
 
 /** Every source exists for `tabs`, an Adobe block in an installed library. */
 function everySource(): StorefrontBlockListInput {
@@ -40,11 +49,12 @@ function everySource(): StorefrontBlockListInput {
         adobeBlocks: [{ id: 'tabs', title: 'Tabs' }],
         adobeSite: ADOBE_SITE,
         repoBlockIds: ['tabs'],
-        libraries: [{ site: LIB_SITE, blockIds: ['tabs'] }],
+        libraries: [{ id: 'isle5', site: LIB_SITE, blockIds: ['tabs'] }],
         existingPageIds: new Set(['tabs']),
         librarySitePages: new Map([['skukla/isle5-library/tabs', '/docs/library/blocks/tabs']]),
         librarySiteUses: new Map([['skukla/isle5-library/tabs', LIBRARY_USE]]),
         contentSourceUses: new Map([['tabs', CONTENT_USE]]),
+        shipped: new Map([['isle5', new Map([['tabs', SHIPPED]])]]),
     };
 }
 
@@ -55,11 +65,10 @@ const REMOVE_SOURCE: Partial<Record<
 >> = {
     existing: (input) => { input.existingPageIds = new Set(); },
     adobe: (input) => { input.adobeSite = undefined; },
+    'real-use': (input) => { input.contentSourceUses = new Map(); },
+    shipped: (input) => { input.shipped = new Map(); },
     library: (input) => { input.librarySitePages = new Map(); },
-    'real-use': (input) => {
-        input.librarySiteUses = new Map();
-        input.contentSourceUses = new Map();
-    },
+    'library-use': (input) => { input.librarySiteUses = new Map(); },
 };
 
 const kindOf = (input: StorefrontBlockListInput): string =>
@@ -67,7 +76,9 @@ const kindOf = (input: StorefrontBlockListInput): string =>
 
 describe('the block-example convention', () => {
     it('tries the example sources in the stated order', () => {
-        expect(EXAMPLE_KINDS).toEqual(['existing', 'adobe', 'library', 'real-use', 'placeholder']);
+        expect(EXAMPLE_KINDS).toEqual([
+            'existing', 'adobe', 'library', 'real-use', 'shipped', 'library-use', 'placeholder',
+        ]);
     });
 
     it('chooses each kind over every later one while its source exists', () => {
@@ -81,13 +92,14 @@ describe('the block-example convention', () => {
         expect(chosen).toEqual([...EXAMPLE_KINDS]);
     });
 
-    it('takes a real use from the library site before the content source', () => {
+    it('takes a real use on the storefront\'s own pages before a use on the library\'s site', () => {
         const input = { ...everySource(), existingPageIds: new Set<string>(), adobeSite: undefined };
         input.librarySitePages = new Map();
 
-        expect(buildStorefrontBlockList(input)[0].example).toMatchObject({ from: '/home' });
-        input.librarySiteUses = new Map();
         expect(buildStorefrontBlockList(input)[0].example).toMatchObject({ from: '/about' });
+        input.contentSourceUses = new Map();
+        input.shipped = new Map();
+        expect(buildStorefrontBlockList(input)[0].example).toMatchObject({ from: '/home' });
     });
 });
 
@@ -109,6 +121,14 @@ describe('the pages the writer sends', () => {
             id: 'carousel', title: 'Carousel',
             example: { kind: 'real-use', from: '/home', examples: LIBRARY_USE.examples },
         },
+        {
+            id: 'quote', title: 'Quote',
+            example: { kind: 'library-use', from: '/home', examples: LIBRARY_USE.examples },
+        },
+        {
+            id: 'tabs-v2', title: 'Tabs V2',
+            example: { kind: 'shipped', source: 'isle5', example: SHIPPED },
+        },
         { id: 'widget', title: 'Widget', example: { kind: 'placeholder' } },
     ];
 
@@ -126,7 +146,7 @@ describe('the pages the writer sends', () => {
         return { h, pageWrites };
     }
 
-    it('copies Adobe and library pages, and writes every other page with blockDoc', async () => {
+    it('copies Adobe and library pages, writes a shipped example whole, the rest with blockDoc', async () => {
         const { h, pageWrites } = await write();
 
         expect(h.copySingleFile.mock.calls.map((call) => call[4])).toEqual([
@@ -134,6 +154,8 @@ describe('the pages the writer sends', () => {
         ]);
         expect(pageWrites.map((call) => [call[2], call[3]])).toEqual([
             ['.da/library/blocks/carousel.html', blockDoc('carousel', { examples: LIBRARY_USE.examples })],
+            ['.da/library/blocks/quote.html', blockDoc('quote', { examples: LIBRARY_USE.examples })],
+            ['.da/library/blocks/tabs-v2.html', shippedExamplePage(SHIPPED, []).page],
             ['.da/library/blocks/widget.html', blockDoc('widget', { analysis: ANALYSIS })],
         ]);
     });
@@ -145,6 +167,8 @@ describe('the pages the writer sends', () => {
         const replacing = await write(new Set(['widget']));
         expect(replacing.pageWrites.map((call) => [call[2], call[4]])).toEqual([
             ['.da/library/blocks/carousel.html', undefined],
+            ['.da/library/blocks/quote.html', undefined],
+            ['.da/library/blocks/tabs-v2.html', undefined],
             ['.da/library/blocks/widget.html', { overwrite: true }],
         ]);
     });

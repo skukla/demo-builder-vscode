@@ -1,6 +1,7 @@
 /**
- * The one-line description `promote_block_to_library` adds to a block's example page (EDS-71
- * step 4c), as the `library-metadata` table DA.live's block library reads.
+ * The one-line description added to a block's example page, as the `library-metadata` table
+ * DA.live's block library reads: by `promote_block_to_library` (EDS-71 step 4c) and by the
+ * library build for an example Demo Builder ships (`shippedBlockExamples.ts`).
  *
  * DA.live attaches a `library-metadata` table to the example it DIRECTLY follows, and shows its
  * `description` row behind that example's info button (adobe/da-live
@@ -14,12 +15,21 @@
  * section (an unclassed top-level div, the usual DA page shape, where DA.live reads each
  * section's children as siblings). The table goes right after the block, inside its section.
  *
- * @module mcp/exampleDescription
+ * A group (`library-container-start` … `library-container-end`) is one example: DA.live inserts
+ * everything between the markers with one click and reads its description from the table after
+ * the END marker (`groupBlocks`). So nothing inside a group gets a table, and the end marker
+ * does; a table inside would be inserted into the author's page.
+ *
+ * @module features/eds/services/blockLibrary/exampleDescription
  */
 
 const DIV_TAG = /<div\b[^>]*>|<\/div>/g;
 const CLASS_ATTR = /\sclass="([^"]*)"/;
 const METADATA_CLASS = 'library-metadata';
+const GROUP_START = 'library-container-start';
+const GROUP_END = 'library-container-end';
+/** Classed divs that are never an example of their own. */
+const NOT_EXAMPLES = new Set(['', METADATA_CLASS, GROUP_START]);
 
 /** One div of the page: where it starts and ends, its first class, and its parent div. */
 interface PageDiv {
@@ -63,9 +73,25 @@ function pageDivs(html: string): PageDiv[] {
     return divs;
 }
 
-/** True when the div is an example: a block at the top, or directly inside a section. */
-function isExample(divs: PageDiv[], div: PageDiv): boolean {
-    if (div.name === '' || div.name === METADATA_CLASS) return false;
+/** Indexes of the divs between a group's start and end markers. */
+function insideGroups(divs: PageDiv[]): Set<number> {
+    const inside = new Set<number>();
+    let open = false;
+    divs.forEach((div, n) => {
+        if (div.name === GROUP_START) open = true;
+        else if (div.name === GROUP_END) open = false;
+        else if (open) inside.add(n);
+    });
+    return inside;
+}
+
+/**
+ * True when the div ends an example: a block at the top or directly inside a section, outside
+ * any group, or a group's end marker.
+ */
+function isExample(divs: PageDiv[], n: number, inGroup: Set<number>): boolean {
+    const div = divs[n];
+    if (NOT_EXAMPLES.has(div.name) || inGroup.has(n)) return false;
     if (div.depth === 0) return true;
     return div.depth === 1 && divs[div.parent].name === '';
 }
@@ -89,12 +115,12 @@ export function withLibraryDescription(html: string, description: string | undef
     if (!text) return html;
     const table = libraryMetadataTable(text);
     const divs = pageDivs(html);
-    const ends = divs
-        .map((div, n) => ({ div, n }))
-        .filter(({ div, n }) => isExample(divs, div) && !followedByMetadata(html, divs, n))
-        .map(({ div }) => div.end);
-    const hasExample = divs.some((div) => isExample(divs, div));
-    if (!hasExample) return `${html}${table}`;
+    const inGroup = insideGroups(divs);
+    const examples = divs.map((_, n) => n).filter((n) => isExample(divs, n, inGroup));
+    if (examples.length === 0) return `${html}${table}`;
+    const ends = examples
+        .filter((n) => !followedByMetadata(html, divs, n))
+        .map((n) => divs[n].end);
     let out = '';
     let from = 0;
     for (const end of ends) {

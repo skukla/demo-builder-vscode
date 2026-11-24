@@ -25,4 +25,12 @@ What each one shows:
 and its `horizontal` variant once, with a script in a cell (holding `</div>` in its text) to
 prove scripts are dropped before blocks are cut out.
 
+`shipped-block-code.json` is generated, not captured by hand: for every block example Demo
+Builder ships (`src/features/eds/config/block-examples/`), what the block's code reads, as
+`analyzeBlockCode` computes it from the block's JS and CSS at the ref Demo Builder installs
+(rows, columns, style variants), plus whether the JS reads settings rows (`readBlockConfig`),
+with the repository, ref and commit it was read at and the date. Written by
+`npm run block-examples:render -- --update-fixture`; every run of the render check fails when a
+block's code no longer matches it. Read by `shippedExampleStructure.test.ts`.
+
 Used by `tests/features/eds/services/blockLibrary/`.

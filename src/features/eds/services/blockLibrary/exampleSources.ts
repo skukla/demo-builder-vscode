@@ -6,7 +6,12 @@
  * Design: `.rptc/plans/block-library-without-universal-editor/step-02.md`.
  */
 
-import { buildBlockUseIndex, PAGE_FETCH_CONCURRENCY, type BlockUse } from './blockUseIndex';
+import {
+    buildBlockUseIndex,
+    PAGE_FETCH_CONCURRENCY,
+    photosInUses,
+    type BlockUse,
+} from './blockUseIndex';
 import { inBatches } from './libraryPages';
 import { siteReader, sitePagePaths, type SiteReader } from './siteReads';
 import { previewOrigin, type SiteRef } from './siteRef';
@@ -41,8 +46,9 @@ export function blockFolders(entries: Array<{ path: string }>): string[] {
 }
 
 /**
- * The installed libraries that have a content site, each with the storefront blocks it provides,
- * then an added demo's content site, which shows every block the storefront has.
+ * The installed libraries, each with its id, its content site when it has one, and the
+ * storefront blocks it provides (a library with no site still has shipped examples), then an
+ * added demo's content site, which shows every block the storefront has.
  */
 export async function readInstalledLibraries(
     deps: LibraryRepoDeps,
@@ -54,9 +60,9 @@ export async function readInstalledLibraries(
     const read = await Promise.all(libraryIds.map(async (id) => {
         const site = getBlockLibraryContentSource(id);
         const source = getBlockLibrarySource(id);
-        if (!site || !source) return [];
+        if (!source) return [];
         const blockIds = (await libraryBlockIds(deps, id, source)).filter((b) => storefront.has(b));
-        return [{ site, blockIds }];
+        return [{ id, ...(site ? { site } : {}), blockIds }];
     }));
     const libraries: InstalledLibrary[] = read.flat();
     return demoSite ? [...libraries, { site: demoSite, blockIds: repoBlockIds }] : libraries;
@@ -112,13 +118,17 @@ async function firstLibraryPage(
     return undefined;
 }
 
-/** The real uses on the sites, read in order: the first site that uses a block wins. */
+/**
+ * The real uses on the sites, read in order (the first site that uses a block wins), and the
+ * photos in them (`photosInUses`).
+ */
 export async function readUseIndex(
     sites: UnresolvedContentSource[],
     fetchImpl: typeof fetch,
     logger: Logger,
-): Promise<Map<string, BlockUse>> {
+): Promise<{ uses: Map<string, BlockUse>; photos: string[] }> {
     const uses = new Map<string, BlockUse>();
+    const photos = new Set<string>();
     const read = siteReader(fetchImpl);
     for (const site of uniqueSites(sites)) {
         const paths = await sitePagePaths(site, fetchImpl, logger);
@@ -126,8 +136,9 @@ export async function readUseIndex(
         index.forEach((use, id) => {
             if (!uses.has(id)) uses.set(id, use);
         });
+        photosInUses(site, index).forEach((photo) => photos.add(photo));
     }
-    return uses;
+    return { uses, photos: [...photos] };
 }
 
 /**
@@ -141,7 +152,7 @@ export async function readLibrarySiteUses(
 ): Promise<Map<string, BlockUse>> {
     const uses = new Map<string, BlockUse>();
     for (const site of uniqueSites(sites)) {
-        const index = await readUseIndex([site], fetchImpl, logger);
+        const { uses: index } = await readUseIndex([site], fetchImpl, logger);
         index.forEach((use, id) => uses.set(`${site.org}/${site.site}/${id}`, use));
     }
     return uses;

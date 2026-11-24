@@ -1,0 +1,42 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Demo Builder Shipped Block Examples Schema",
+  "description": "The examples Demo Builder ships for one source's blocks (template.json for the B2B template, one file per block library id). Each key is a block id; its value is the example page body and a one-line description. Read by src/features/eds/services/blockLibrary/shippedBlockExamples.ts; checked on every test run by tests/features/eds/services/blockLibrary/shippedExampleStructure.test.ts.",
+  "type": "object",
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "description": "JSON Schema reference"
+    }
+  },
+  "patternProperties": {
+    "^[a-z0-9]+(-[a-z0-9]+)*$": {
+      "$ref": "#/definitions/shippedExample"
+    }
+  },
+  "additionalProperties": false,
+  "definitions": {
+    "shippedExample": {
+      "type": "object",
+      "required": ["description", "html"],
+      "additionalProperties": false,
+      "properties": {
+        "description": {
+          "type": "string",
+          "minLength": 1,
+          "description": "One line: what the block is for and how to fill it in. Written as a library-metadata table after each example."
+        },
+        "html": {
+          "type": "string",
+          "minLength": 1,
+          "description": "The example page's section content: one or more <h2>name</h2> followed by the block's table (<div class=\"<id>[ <variant>]\">, a <div> per row, a <div> per cell). Image cells are <img alt=\"...\"> with no src; the library build gives each a photo from the storefront's own pages. A link meant as a button is bold (<strong><a>), as the template's decorateButtons requires."
+        },
+        "structureOnly": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Set only for a block that cannot show outside a real storefront; says why (for example, it needs a live store). The render check then reports the example STRUCTURE ONLY with this reason instead of rendering it to PASS or FAIL. Never written to the storefront."
+        }
+      }
+    }
+  }
+}

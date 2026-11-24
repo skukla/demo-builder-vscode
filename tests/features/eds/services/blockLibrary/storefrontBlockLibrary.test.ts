@@ -9,6 +9,7 @@
  * `storefrontBlockLibrary-pages.test.ts`.
  */
 
+import * as vscode from 'vscode';
 import { restoreFetch } from '../../../../helpers/siteFetchFake';
 import {
     B2B,
@@ -23,7 +24,13 @@ import {
     WRITTEN,
     harness,
 } from './storefrontBlockLibrary.testUtils';
+import {
+    TEMPLATE_SOURCE,
+    type ShippedBlockExample,
+} from '@/features/eds/services/blockLibrary/shippedBlockExamples';
 import { buildStorefrontBlockLibrary } from '@/features/eds/services/blockLibrary/storefrontBlockLibrary';
+
+const SHIPPED: ShippedBlockExample = { description: 'A sample.', html: '<h2>A</h2><div class="widget"></div>' };
 
 describe('buildStorefrontBlockLibrary', () => {
     afterEach(() => restoreFetch());
@@ -50,9 +57,45 @@ describe('buildStorefrontBlockLibrary', () => {
         expect(h.exampleOf('tabs')).toEqual({
             kind: 'library', source: { ...ISLE5_SITE, path: '/.da/library/blocks/tabs' },
         });
-        expect(h.exampleOf('carousel')).toMatchObject({ kind: 'real-use', from: '/home' });
+        expect(h.exampleOf('carousel')).toMatchObject({ kind: 'library-use', from: '/home' });
         expect(h.exampleOf('commerce-cart')).toMatchObject({ kind: 'real-use', from: '/cart' });
         expect(h.exampleOf('widget')).toEqual({ kind: 'placeholder' });
+    });
+
+    it('uses a shipped example where the storefront\'s own pages have no use, with their photos', async () => {
+        const photoPage = '<div><div class="hero"><div><div><picture>'
+            + '<img src="./media_1.jpeg?width=750" alt=""></picture></div></div></div></div>';
+        const h = harness({ ...SERVED, [`${BRAND}/about.plain.html`]: photoPage }, [], new Map([
+            [TEMPLATE_SOURCE, new Map([['widget', SHIPPED], ['commerce-cart', SHIPPED]])],
+        ]));
+
+        await buildStorefrontBlockLibrary(h.deps, PARAMS);
+
+        expect(h.exampleOf('widget')).toEqual({ kind: 'shipped', source: TEMPLATE_SOURCE, example: SHIPPED });
+        expect(h.exampleOf('commerce-cart')).toMatchObject({ kind: 'real-use', from: '/cart' });
+        expect(h.written().photos).toEqual([`${BRAND}/media_1.jpeg`]);
+    });
+
+    it('takes a library\'s shipped example over the template\'s, a library with no site too', async () => {
+        const own: ShippedBlockExample = { description: 'Ours.', html: '<div class="carousel"></div>' };
+        // Demo Builder Blocks has no content site and is read at its newest release.
+        const releases = 'https://api.github.com/repos/skukla/demo-builder-block-library/releases?per_page=20';
+        const served = { ...SERVED, [releases]: [{ tag_name: 'v1.0.0-beta.1', prerelease: true, draft: false }] };
+        // An SC on the default update channel, which reads a component's betas.
+        (vscode.workspace.getConfiguration as jest.Mock).mockImplementationOnce(() => ({
+            get: (key: string, fallback?: unknown) => (key === 'updateChannel' ? 'stable' : fallback),
+        }));
+        const h = harness(served, [], new Map([
+            [TEMPLATE_SOURCE, new Map([['carousel', SHIPPED]])],
+            ['demo-builder-blocks', new Map([['carousel', own]])],
+        ]));
+
+        await buildStorefrontBlockLibrary(h.deps, PARAMS);
+
+        expect(h.exampleOf('carousel')).toEqual({
+            kind: 'shipped', source: 'demo-builder-blocks', example: own,
+        });
+        expect(h.listRepoFiles).toHaveBeenCalledWith('skukla', 'demo-builder-block-library', 'v1.0.0-beta.1');
     });
 
     it('reads the storefront\'s folders at main and asks for pages it already has', async () => {

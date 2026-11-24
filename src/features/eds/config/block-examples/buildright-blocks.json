@@ -1,0 +1,112 @@
+{
+  "$schema": "./block-examples.schema.json",
+  "breadcrumbs": {
+    "description": "The trail of pages above this one. Each row is one step, top level first: a link for each page above, and plain text for the current page in the last row.",
+    "html": "<h2>Breadcrumbs</h2><div class=\"breadcrumbs\"><div><div><a href=\"/\">Home</a></div></div><div><div><a href=\"/products\">Products</a></div></div><div><div>Garden Tools</div></div></div><h2>Breadcrumbs, on a product page</h2><div class=\"breadcrumbs\"><div><div><a href=\"/\">Home</a></div></div><div><div><a href=\"/products\">Products</a></div></div><div><div><a href=\"/products\">Garden Tools</a></div></div><div><div>Steel Hand Trowel</div></div></div>"
+  },
+  "cart-summary": {
+    "description": "The order totals beside the cart: item count, subtotal, savings and total. It fills itself from the shopper's cart, so its table stays empty.",
+    "html": "<h2>Cart Summary</h2><div class=\"cart-summary\"><div><div></div></div></div>",
+    "structureOnly": "it reads the shopper's cart from the browser and prices it with the storefront's own scripts/data-mock.js, and it fills page markup with fixed class names (subtotal, savings, total) that a document table cannot hold."
+  },
+  "featured-products": {
+    "description": "A row of four products on the home page, chosen by the storefront's catalog. It fills itself, so its table stays empty.",
+    "html": "<h2>Featured Products</h2><div class=\"featured-products\"><div><div></div></div></div>",
+    "structureOnly": "it loads its products from the live catalog through the storefront's own scripts/services/catalog-service.js and scripts/auth.js, and it draws them into a products-container element a document table cannot hold."
+  },
+  "filters-sidebar": {
+    "description": "The filter list beside the product list: categories, price and the catalog's own facets. It fills itself from the catalog, so its table stays empty.",
+    "html": "<h2>Filters Sidebar</h2><div class=\"filters-sidebar\"><div><div></div></div></div>",
+    "structureOnly": "it draws the facets the live catalog search returns into a dynamic-facets-container element, which a document table cannot hold; without it the block does nothing."
+  },
+  "footer": {
+    "description": "The site footer: link columns, contact details and the legal line. The storefront adds it to every page itself, so it is not placed on pages.",
+    "html": "<h2>Footer</h2><div class=\"footer\"><div><div></div></div></div>",
+    "structureOnly": "the storefront's scripts load it on every page from the block's own built-in markup (footer.html); its code only fixes link paths and reads nothing from a table."
+  },
+  "fragment": {
+    "description": "Shows the content of another page in place, so one piece of content can be reused on many pages. Put a link to that page, or its path, in the single cell.",
+    "html": "<h2>Fragment</h2><div class=\"fragment\"><div><div><a href=\"/fragments/free-shipping\">/fragments/free-shipping</a></div></div></div>",
+    "structureOnly": "it fetches the linked page from the storefront and shows that page's content, and it imports the storefront's own scripts/utils.js and scripts/scripts.js, which only its own storefront has."
+  },
+  "header": {
+    "description": "The site header: logo, search, navigation, account and cart. The storefront adds it to every page itself, so it is not placed on pages.",
+    "html": "<h2>Header</h2><div class=\"header\"><div><div></div></div></div>",
+    "structureOnly": "the storefront's scripts load it on every page from the block's own built-in markup (header.html), and it needs the signed-in shopper, the cart and live search from the storefront's own scripts."
+  },
+  "inventory-status": {
+    "description": "Stock for one product at each warehouse, nearest first. The product page fills it, so its table stays empty.",
+    "html": "<h2>Inventory Status</h2><div class=\"inventory-status\"><div><div></div></div></div>",
+    "structureOnly": "it reads the product from a data-sku attribute the product page sets and loads its stock from the live store through the storefront's own scripts; an author cannot set that attribute in a document."
+  },
+  "mini-cart": {
+    "description": "The cart drop-down that opens from the header cart icon, listing what the shopper has added. It fills itself from the cart, so its table stays empty.",
+    "html": "<h2>Mini Cart</h2><div class=\"mini-cart\"><div><div></div></div></div>",
+    "structureOnly": "it is part of the header, fills built-in markup (mini-cart-items, mini-cart-total) from the shopper's cart in the browser, and imports the storefront's own scripts/cart-manager.js."
+  },
+  "pricing-display": {
+    "description": "A product's price for the shopper's pricing tier, with the volume price table. The product page fills it, so its table stays empty.",
+    "html": "<h2>Pricing Display</h2><div class=\"pricing-display\"><div><div></div></div></div>",
+    "structureOnly": "it reads the product from a data-sku attribute and price data the product page hands it in code, and returns at once without them; an author cannot set either in a document."
+  },
+  "product-detail": {
+    "description": "The styles for the product page layout. It has no code of its own; the product page builds its markup.",
+    "html": "<h2>Product Detail</h2><div class=\"product-detail\"><div><div></div></div></div>",
+    "structureOnly": "it has no JavaScript at all, only styles for markup (product-cookware-layout and its parts) that the product page's own script builds, so a table placed on a page shows nothing of it."
+  },
+  "product-gallery": {
+    "description": "A product's main image, thumbnails and zoom. The product page fills it, so its table stays empty.",
+    "html": "<h2>Product Gallery</h2><div class=\"product-gallery\"><div><div></div></div></div>",
+    "structureOnly": "it reads the product from a data-sku attribute and image data the product page hands it in code, and returns at once without them; an author cannot set either in a document."
+  },
+  "product-grid": {
+    "description": "The searchable, sortable product list with infinite scroll. It fills itself from the catalog, so its table stays empty.",
+    "html": "<h2>Product Grid</h2><div class=\"product-grid\"><div><div></div></div></div>",
+    "structureOnly": "it loads products from the live catalog through the storefront's own scripts/services/catalog-service.js and scripts/auth.js, and draws them into a products-container element a document table cannot hold."
+  },
+  "product-tile": {
+    "description": "One selectable product card, used inside the project builder. Code fills it, so it is not placed on pages by hand.",
+    "html": "<h2>Product Tile</h2><div class=\"product-tile\"><div><div></div></div></div>",
+    "structureOnly": "its own code says it is controlled by JavaScript with live catalog data rather than author content: it builds an empty card and waits for another script to give it a product."
+  },
+  "project-builder": {
+    "description": "The step-by-step project builder form that turns a few answers into a kit of materials. Its form is built in, so its table stays empty.",
+    "html": "<h2>Project Builder</h2><div class=\"project-builder\"><div><div></div></div></div>",
+    "structureOnly": "it decorates a built-in form of radio buttons, inputs and steps (project-builder.html) that a document table cannot hold, and a separate wizard script runs it."
+  },
+  "project-bundle": {
+    "description": "One generated kit of materials, with its items, quantities and total. The project builder fills it, so its table stays empty.",
+    "html": "<h2>Project Bundle</h2><div class=\"project-bundle\"><div><div></div></div></div>",
+    "structureOnly": "it reads the kit from a data-bundle attribute the project builder sets, and returns at once without it; an author cannot set that attribute in a document."
+  },
+  "project-filter": {
+    "description": "A drop-down that narrows the catalog to one kind of project. Its list is built in, so its table stays empty.",
+    "html": "<h2>Project Filter</h2><div class=\"project-filter\"><div><div></div></div></div>",
+    "structureOnly": "it works on a select list with fixed choices (project-filter.html), which a document table cannot hold, and keeps the choice in the browser."
+  },
+  "tier-badge": {
+    "description": "A badge naming the signed-in shopper's pricing tier. It fills itself from the account, so its table stays empty.",
+    "html": "<h2>Tier Badge</h2><div class=\"tier-badge\"><div><div></div></div></div>",
+    "structureOnly": "it needs the signed-in shopper from the storefront's own scripts/auth.js, fills tier-label and savings-indicator elements a document table cannot hold, and resets its own classes."
+  },
+  "user-menu": {
+    "description": "The account drop-down that opens from the header: sign in, or the shopper's name, company and account links. It fills itself, so its table stays empty.",
+    "html": "<h2>User Menu</h2><div class=\"user-menu\"><div><div></div></div></div>",
+    "structureOnly": "it is part of the header, switches between built-in signed-in and signed-out markup (user-menu.html), and imports the storefront's own scripts/auth.js and scripts/data-mock.js."
+  },
+  "wizard-progress": {
+    "description": "The numbered step bar across the top of the project builder. Its steps are built in, so its table stays empty.",
+    "html": "<h2>Wizard Progress</h2><div class=\"wizard-progress\"><div><div></div></div></div>",
+    "structureOnly": "it marks up built-in step markup (wizard-progress.html) that a document table cannot hold, and the project builder's script moves it from step to step."
+  },
+  "wizard-sidebar": {
+    "description": "The project summary card beside the project builder, listing the choices made so far. It fills itself, so its table stays empty.",
+    "html": "<h2>Wizard Sidebar</h2><div class=\"wizard-sidebar\"><div><div></div></div></div>",
+    "structureOnly": "its code does nothing; the project builder's script fills built-in markup (wizard-sidebar.html) that a document table cannot hold."
+  },
+  "wizard-vertical-progress": {
+    "description": "A vertical list of steps with done, current and to-do marks. Code fills it, so its table stays empty.",
+    "html": "<h2>Wizard Vertical Progress</h2><div class=\"wizard-vertical-progress\"><div><div></div></div></div>",
+    "structureOnly": "its own code says it is controlled by JavaScript, not author content: it clears its table and waits for another script to hand it the steps, and it imports the storefront's own scripts/icon-helper.js."
+  }
+}

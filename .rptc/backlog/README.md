@@ -249,7 +249,7 @@ each item's own file; what has already landed against an item is in its
 | `EDS-33` | fix | [A storefront teardown leaves its pages live when the DA.live content is already gone](2026-10-09-teardown-unpublish-lists-from-deleted-content.md) | — | high | shipped |
 | `EDS-63` | fix | [The agent's `republish` does what the dashboard's Republish does](2026-10-23-agent-republish-matches-the-button.md) | — | med | shipped |
 
-### eds  (82)
+### eds  (88)
 
 | ID | Kind | Item | Needs | Value | Status |
 |---|---|---|---|---|---|
@@ -334,6 +334,12 @@ each item's own file; what has already landed against an item is in its
 | `EDS-74` | fix | [Deleting a storefront leaves its publish key registered with the shared PDP action](2026-11-18-delete-leaves-publish-key-registration.md) | — | low | backlog |
 | `EDS-75` | fix | [A created storefront's sitemap is the template's, unchanged](2026-11-18-created-site-keeps-template-sitemap.md) | — | med | backlog |
 | `EDS-76` | fix | [Reset and creation record the storefront's state from what they published](2026-11-22-storefront-state-from-the-published-snapshot.md) | — | low | backlog |
+| `EDS-78` | fix | [Bodea's Form block fails to load on every Bodea storefront](2026-11-24-bodea-form-block-fails-to-load.md) | — | high | backlog |
+| `EDS-80` | fix | [Bodea's Circle Carousel hides its images](2026-11-24-bodea-circle-carousel-hides-images.md) | — | low | backlog |
+| `EDS-81` | fix | [Four Bodea blocks carry wording authors cannot change](2026-11-24-bodea-blocks-with-fixed-wording.md) | — | low | backlog |
+| `EDS-82` | fix | [Demo Team's Tabs shows inactive tab labels white on white](2026-11-24-demo-team-tabs-labels-white-on-white.md) | — | med | backlog |
+| `EDS-83` | fix | [Demo Team's Table uses a colour the template never defines](2026-11-24-demo-team-table-undefined-colour.md) | — | low | backlog |
+| `EDS-84` | fix | [Isle5's pop-up links throw an error](2026-11-24-isle5-modal-links-throw.md) | — | low | backlog |
 | `PL-35` | fix | [The extractResetParams stand-in has drifted from the real function](2026-09-02-eds-reset-params-fake-drift.md) | — | med | shipped |
 
 ### app-builder  (138)
@@ -789,7 +795,7 @@ the table cannot hold: why the layers are ordered this way.*
 - `PL-4` [Claude Code's storage grows ~4 GB a year, and nothing reports it](2026-08-25-claude-code-disk-footprint.md) — shipped
 - `PL-58` [The never-compromise property with no convention — and a writer that may already bypass it](2026-09-11-user-edits-never-overwritten-no-convention.md) — shipped
 
-*389 item(s) sit outside the A–G chain.*
+*395 item(s) sit outside the A–G chain.*
 
 <!-- END GENERATED layers -->
 

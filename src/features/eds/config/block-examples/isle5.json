@@ -1,0 +1,239 @@
+{
+  "$schema": "./block-examples.schema.json",
+  "accordion": {
+    "description": "Questions and answers that open and close. Each row is one item: the question in the first column, the answer in the second.",
+    "html": "<h2>Accordion</h2><div class=\"accordion\"><div><div><p>How long does delivery take?</p></div><div><p>Most orders arrive within three to five working days.</p></div></div><div><div><p>Can I return an item?</p></div><div><p>Yes. Return any unused item within 30 days for a full refund.</p></div></div><div><div><p>Do you offer gift wrapping?</p></div><div><p>Add gift wrapping at checkout for any order.</p></div></div></div>"
+  },
+  "blog-post": {
+    "description": "The body of a blog article. The title, summary, author and hero image come from the page's metadata; each row of the block holds a part of the article, and its H2, H3 and H4 headings build the table of contents beside it.",
+    "html": "<h2>Blog Post</h2><div class=\"blog-post\"><div><div><h2>Getting started</h2><p>A good routine starts with a few simple pieces you will use every day.</p><h3>Choose the basics</h3><p>Pick items that work together, so every new piece adds more options.</p></div></div><div><div><h2>Caring for what you own</h2><p>A little care keeps everything looking new for longer.</p><h3>Wash less, wash cool</h3><p>Cooler washes protect colour and fit.</p></div></div></div>"
+  },
+  "blog-tiles": {
+    "description": "A grid of the site's blog posts, newest first in a large tile, for the blog landing page. The tiles come from the posts published under /blog/; the one optional row is an introduction shown above them.",
+    "html": "<h2>Blog Tiles</h2><div class=\"blog-tiles\"><div><div><h3>From the journal</h3><p>Stories, guides and news from our team.</p></div></div></div>",
+    "structureOnly": "its tiles are the site's own posts under /blog/, read from the published index; on its own only the intro shows."
+  },
+  "cards": {
+    "description": "A grid of cards. Each row is one card: an image in the first column and its text in the second (a heading, a short line and a link). The campaign style lays the text over the image as a large category tile.",
+    "html": "<h2>Cards</h2><div class=\"cards\"><div><div><picture><img alt=\"Home and living\"></picture></div><div><h3>Home and living</h3><p>Soft textures and warm tones for every room.</p><p><a href=\"/\">Shop home</a></p></div></div><div><div><picture><img alt=\"Outdoor gear\"></picture></div><div><h3>Outdoor gear</h3><p>Ready for weekends away and everyday trails.</p><p><a href=\"/\">Shop outdoor</a></p></div></div><div><div><picture><img alt=\"Gifts\"></picture></div><div><h3>Gifts for everyone</h3><p>Thoughtful ideas at every price.</p><p><a href=\"/\">Shop gifts</a></p></div></div></div><h2>Cards, campaign</h2><div class=\"cards campaign\"><div><div><picture><img alt=\"Home and living\"></picture></div><div><h3>Home and living</h3><p>Soft textures and warm tones for every room.</p><p><a href=\"/\">Shop home</a></p></div></div><div><div><picture><img alt=\"Outdoor gear\"></picture></div><div><h3>Outdoor gear</h3><p>Ready for weekends away and everyday trails.</p><p><a href=\"/\">Shop outdoor</a></p></div></div><div><div><picture><img alt=\"Gifts\"></picture></div><div><h3>Gifts for everyone</h3><p>Thoughtful ideas at every price.</p><p><a href=\"/\">Shop gifts</a></p></div></div></div>"
+  },
+  "cards-list": {
+    "description": "A stacked list of large image cards. Each row is one card: an image in the first column, then a heading, a short line and a link, which shows as a button.",
+    "html": "<h2>Cards List</h2><div class=\"cards-list\"><div><div><picture><img alt=\"Seasonal collection\"></picture></div><div><h3>The new season</h3><p>Fresh colours and easy layers for every day.</p><p><a href=\"/\">Shop the collection</a></p></div></div><div><div><picture><img alt=\"Everyday essentials\"></picture></div><div><h3>Everyday essentials</h3><p>The pieces you reach for again and again.</p><p><a href=\"/\">Shop essentials</a></p></div></div></div>"
+  },
+  "carousel": {
+    "description": "A full-width rotating banner. Each row is one slide: an image in the first column, then a heading, a short line and a link; make the link bold to show it as a button. The slides are shown in a random order on each visit; with two or more rows it turns every 6 seconds, and one row stays still.",
+    "html": "<h2>Carousel, three slides</h2><div class=\"carousel\"><div><div><picture><img alt=\"New season\"></picture></div><div><h3>New season, new arrivals</h3><p>Discover the latest pieces in our collection.</p><p><strong><a href=\"/\">Shop now</a></strong></p></div></div><div><div><picture><img alt=\"Free shipping\"></picture></div><div><h3>Free shipping over $50</h3><p>On every order, every day.</p><p><strong><a href=\"/\">Learn more</a></strong></p></div></div><div><div><picture><img alt=\"Our stores\"></picture></div><div><h3>Find a store near you</h3><p>Visit us and see the collection in person.</p><p><strong><a href=\"/\">Find a store</a></strong></p></div></div></div><h2>Carousel, single slide</h2><div class=\"carousel\"><div><div><picture><img alt=\"Banner\"></picture></div><div><h3>Your heading here</h3><p>A short line about what this banner is for.</p><p><strong><a href=\"/\">Call to action</a></strong></p></div></div></div>"
+  },
+  "circle-carousel": {
+    "description": "A row of round images with a link under each, such as shop-by-category. Each row is one item: a square image in the first column, the linked text in the second. Six show at once on a desktop; with more, arrows and dots appear and it slides on its own.",
+    "html": "<h2>Circle Carousel, shop by category</h2><div class=\"circle-carousel\"><div><div><picture><img alt=\"Fresh produce\"></picture></div><div><p><a href=\"/\">Fresh produce</a></p></div></div><div><div><picture><img alt=\"Bakery\"></picture></div><div><p><a href=\"/\">Bakery</a></p></div></div><div><div><picture><img alt=\"Dairy and eggs\"></picture></div><div><p><a href=\"/\">Dairy and eggs</a></p></div></div><div><div><picture><img alt=\"Pantry\"></picture></div><div><p><a href=\"/\">Pantry</a></p></div></div><div><div><picture><img alt=\"Frozen\"></picture></div><div><p><a href=\"/\">Frozen</a></p></div></div><div><div><picture><img alt=\"Snacks\"></picture></div><div><p><a href=\"/\">Snacks</a></p></div></div><div><div><picture><img alt=\"Drinks\"></picture></div><div><p><a href=\"/\">Drinks</a></p></div></div><div><div><picture><img alt=\"Household\"></picture></div><div><p><a href=\"/\">Household</a></p></div></div></div>"
+  },
+  "columns": {
+    "description": "Content side by side. Each row is a line of columns and each cell is one column; the number of cells in the first row sets how many columns there are. A cell holding only an image fills its column.",
+    "html": "<h2>Columns, image and text</h2><div class=\"columns\"><div><div><picture><img alt=\"Our workshop\"></picture></div><div><h3>Made to last</h3><p>Every piece is chosen for quality and built for everyday use.</p><p><strong><a href=\"/\">Our story</a></strong></p></div></div></div><h2>Columns, three columns</h2><div class=\"columns\"><div><div><h3>Free delivery</h3><p>On every order over $50.</p></div><div><h3>Easy returns</h3><p>Send it back within 30 days.</p></div><div><h3>Here to help</h3><p>Talk to us seven days a week.</p></div></div></div>"
+  },
+  "commerce-account-header": {
+    "description": "The title bar of the customer account pages. One row: Title, the heading shown (default My account).",
+    "html": "<h2>Commerce Account Header</h2><div class=\"commerce-account-header\"><div><div>Title</div><div>My account</div></div></div>",
+    "structureOnly": "on its own it shows only its title: the rest is the order, return or account of a signed-in shopper, read from the live store."
+  },
+  "commerce-account-sidebar": {
+    "description": "The customer account menu. Takes no rows; the menu items come from the customer sidebar fragment document.",
+    "html": "<h2>Commerce Account Sidebar</h2><div class=\"commerce-account-sidebar\"><div><div></div></div></div>",
+    "structureOnly": "it loads the customer sidebar fragment document and needs a signed-in storefront."
+  },
+  "commerce-addresses": {
+    "description": "The customer address book. One row: Minified View, true for the compact version (default false).",
+    "html": "<h2>Commerce Addresses</h2><div class=\"commerce-addresses\"><div><div>Minified View</div><div>false</div></div></div>",
+    "structureOnly": "it is a Commerce drop-in and needs a live store."
+  },
+  "commerce-cart": {
+    "description": "The shopping cart: the shopper's items, the order summary and the way to checkout. Each row is a setting and its value; the values shown are the block's defaults, with its two links pointing at the home and checkout pages.",
+    "html": "<h2>Commerce Cart</h2><div class=\"commerce-cart\"><div><div>Hide Heading</div><div>false</div></div><div><div>Max Items</div><div></div></div><div><div>Hide Attributes</div><div></div></div><div><div>Enable Item Quantity Update</div><div>false</div></div><div><div>Enable Item Remove</div><div>true</div></div><div><div>Enable Estimate Shipping</div><div>false</div></div><div><div>Start Shopping URL</div><div>/</div></div><div><div>Checkout URL</div><div>/checkout</div></div><div><div>Enable Updating Product</div><div>false</div></div><div><div>Undo Remove Item</div><div>false</div></div></div>"
+  },
+  "commerce-checkout": {
+    "description": "The commerce checkout Commerce drop-in. Takes no settings; add the block and it fills from the live store.",
+    "html": "<h2>Commerce Checkout</h2><div class=\"commerce-checkout\"><div><div></div></div></div>",
+    "structureOnly": "it is a Commerce drop-in and needs a live store."
+  },
+  "commerce-checkout-success": {
+    "description": "The commerce checkout success Commerce drop-in. Takes no settings; add the block and it fills from the live store.",
+    "html": "<h2>Commerce Checkout Success</h2><div class=\"commerce-checkout-success\"><div><div></div></div></div>",
+    "structureOnly": "on its own it shows only a loading placeholder: its content is a signed-in shopper's order, account or shipment, read from the live store."
+  },
+  "commerce-confirm-account": {
+    "description": "The commerce confirm account Commerce drop-in. Takes no settings; add the block and it fills from the live store.",
+    "html": "<h2>Commerce Confirm Account</h2><div class=\"commerce-confirm-account\"><div><div></div></div></div>"
+  },
+  "commerce-create-account": {
+    "description": "The commerce create account Commerce drop-in. Takes no settings; add the block and it fills from the live store.",
+    "html": "<h2>Commerce Create Account</h2><div class=\"commerce-create-account\"><div><div></div></div></div>"
+  },
+  "commerce-create-password": {
+    "description": "The commerce create password Commerce drop-in. Takes no settings; add the block and it fills from the live store.",
+    "html": "<h2>Commerce Create Password</h2><div class=\"commerce-create-password\"><div><div></div></div></div>",
+    "structureOnly": "it is a Commerce drop-in and needs a live store."
+  },
+  "commerce-create-return": {
+    "description": "The commerce create return Commerce drop-in. Takes no settings; add the block and it fills from the live store.",
+    "html": "<h2>Commerce Create Return</h2><div class=\"commerce-create-return\"><div><div></div></div></div>",
+    "structureOnly": "on its own it shows only a title and a disabled Continue button: the items come from a signed-in shopper's order."
+  },
+  "commerce-customer-details": {
+    "description": "The commerce customer details Commerce drop-in. Takes no settings; add the block and it fills from the live store.",
+    "html": "<h2>Commerce Customer Details</h2><div class=\"commerce-customer-details\"><div><div></div></div></div>",
+    "structureOnly": "on its own it shows only a loading placeholder: its content is a signed-in shopper's order, account or shipment, read from the live store."
+  },
+  "commerce-customer-information": {
+    "description": "The commerce customer information Commerce drop-in. Takes no settings; add the block and it fills from the live store.",
+    "html": "<h2>Commerce Customer Information</h2><div class=\"commerce-customer-information\"><div><div></div></div></div>",
+    "structureOnly": "it is a Commerce drop-in and needs a live store."
+  },
+  "commerce-forgot-password": {
+    "description": "The commerce forgot password Commerce drop-in. Takes no settings; add the block and it fills from the live store.",
+    "html": "<h2>Commerce Forgot Password</h2><div class=\"commerce-forgot-password\"><div><div></div></div></div>"
+  },
+  "commerce-gift-options": {
+    "description": "The commerce gift options Commerce drop-in. Takes no settings; add the block and it fills from the live store.",
+    "html": "<h2>Commerce Gift Options</h2><div class=\"commerce-gift-options\"><div><div></div></div></div>",
+    "structureOnly": "it is a Commerce drop-in and needs a live store."
+  },
+  "commerce-login": {
+    "description": "The commerce login Commerce drop-in. Takes no settings; add the block and it fills from the live store.",
+    "html": "<h2>Commerce Login</h2><div class=\"commerce-login\"><div><div></div></div></div>"
+  },
+  "commerce-mini-cart": {
+    "description": "The slide-out mini cart. Each row is a setting and its value; the three links point at the home, cart and checkout pages.",
+    "html": "<h2>Commerce Mini Cart</h2><div class=\"commerce-mini-cart\"><div><div>Start Shopping URL</div><div>/</div></div><div><div>Cart URL</div><div>/cart</div></div><div><div>Checkout URL</div><div>/checkout</div></div><div><div>Enable Updating Product</div><div>false</div></div><div><div>Undo Remove Item</div><div>false</div></div></div>"
+  },
+  "commerce-order-cost-summary": {
+    "description": "The commerce order cost summary Commerce drop-in. Takes no settings; add the block and it fills from the live store.",
+    "html": "<h2>Commerce Order Cost Summary</h2><div class=\"commerce-order-cost-summary\"><div><div></div></div></div>",
+    "structureOnly": "on its own it shows only a loading placeholder: its content is a signed-in shopper's order, account or shipment, read from the live store."
+  },
+  "commerce-order-header": {
+    "description": "The commerce order header Commerce drop-in. Takes no settings; add the block and it fills from the live store.",
+    "html": "<h2>Commerce Order Header</h2><div class=\"commerce-order-header\"><div><div></div></div></div>",
+    "structureOnly": "on its own it shows only its title: the rest is the order, return or account of a signed-in shopper, read from the live store."
+  },
+  "commerce-order-product-list": {
+    "description": "The commerce order product list Commerce drop-in. Takes no settings; add the block and it fills from the live store.",
+    "html": "<h2>Commerce Order Product List</h2><div class=\"commerce-order-product-list\"><div><div></div></div></div>",
+    "structureOnly": "on its own it shows only a loading placeholder: its content is a signed-in shopper's order, account or shipment, read from the live store."
+  },
+  "commerce-order-returns": {
+    "description": "The commerce order returns Commerce drop-in. Takes no settings; add the block and it fills from the live store.",
+    "html": "<h2>Commerce Order Returns</h2><div class=\"commerce-order-returns\"><div><div></div></div></div>",
+    "structureOnly": "it is a Commerce drop-in and needs a live store."
+  },
+  "commerce-order-status": {
+    "description": "The commerce order status Commerce drop-in. Takes no settings; add the block and it fills from the live store.",
+    "html": "<h2>Commerce Order Status</h2><div class=\"commerce-order-status\"><div><div></div></div></div>",
+    "structureOnly": "on its own it shows only a loading placeholder: its content is a signed-in shopper's order, account or shipment, read from the live store."
+  },
+  "commerce-orders-list": {
+    "description": "The customer's order history. One row: Minified View, true for the compact version (default false).",
+    "html": "<h2>Commerce Orders List</h2><div class=\"commerce-orders-list\"><div><div>Minified View</div><div>false</div></div></div>",
+    "structureOnly": "it is a Commerce drop-in and needs a live store."
+  },
+  "commerce-return-header": {
+    "description": "The commerce return header Commerce drop-in. Takes no settings; add the block and it fills from the live store.",
+    "html": "<h2>Commerce Return Header</h2><div class=\"commerce-return-header\"><div><div></div></div></div>",
+    "structureOnly": "on its own it shows only its title: the rest is the order, return or account of a signed-in shopper, read from the live store."
+  },
+  "commerce-returns-list": {
+    "description": "The customer's returns history. One row: Minified View, true for the compact version (default false).",
+    "html": "<h2>Commerce Returns List</h2><div class=\"commerce-returns-list\"><div><div>Minified View</div><div>false</div></div></div>",
+    "structureOnly": "it is a Commerce drop-in and needs a live store."
+  },
+  "commerce-search-order": {
+    "description": "The commerce search order Commerce drop-in. Takes no settings; add the block and it fills from the live store.",
+    "html": "<h2>Commerce Search Order</h2><div class=\"commerce-search-order\"><div><div></div></div></div>"
+  },
+  "commerce-shipping-status": {
+    "description": "The commerce shipping status Commerce drop-in. Takes no settings; add the block and it fills from the live store.",
+    "html": "<h2>Commerce Shipping Status</h2><div class=\"commerce-shipping-status\"><div><div></div></div></div>",
+    "structureOnly": "on its own it shows only a loading placeholder: its content is a signed-in shopper's order, account or shipment, read from the live store."
+  },
+  "commerce-wishlist": {
+    "description": "The customer's wishlist. One row: Start Shopping URL, where the empty-wishlist button leads.",
+    "html": "<h2>Commerce Wishlist</h2><div class=\"commerce-wishlist\"><div><div>Start Shopping URL</div><div>/</div></div></div>"
+  },
+  "enrichment": {
+    "description": "A slot on a product or category page that pulls in the extra content written for that product or category. Each row is a setting and its value: Type (product or category) and an optional Position to match.",
+    "html": "<h2>Enrichment, on a product page</h2><div class=\"enrichment\"><div><div>Type</div><div>product</div></div><div><div>Position</div><div>after-gallery</div></div></div><h2>Enrichment, on a category page</h2><div class=\"enrichment\"><div><div>Type</div><div>category</div></div><div><div>Position</div><div>top</div></div></div>",
+    "structureOnly": "it reads the product from the page address or the category from the page's product list, loads the matching fragments from the storefront's enrichment index, and then removes itself, so it only shows on a real storefront page."
+  },
+  "footer": {
+    "description": "The site footer. It has no rows: it loads the footer document (/footer, or the page's footer metadata) and shows it at the bottom of every page.",
+    "html": "<h2>Footer</h2><div class=\"footer\"><div><div></div></div></div>",
+    "structureOnly": "it loads the storefront's footer document, which exists only on a real storefront."
+  },
+  "fragment": {
+    "description": "Shows another page of the site in place, so shared content is written once. The one cell holds the path of the page to show.",
+    "html": "<h2>Fragment</h2><div class=\"fragment\"><div><div><p><a href=\"/fragments/shipping-banner\">/fragments/shipping-banner</a></p></div></div></div>",
+    "structureOnly": "it shows another page of the site; on its own there is no page to show."
+  },
+  "header": {
+    "description": "The site header and navigation. It has no rows: it loads the navigation document (/nav, or the page's nav metadata) and adds the search, account and cart controls.",
+    "html": "<h2>Header</h2><div class=\"header\"><div><div></div></div></div>",
+    "structureOnly": "it loads the storefront's navigation document and its sign-in, cart and search connect to the live store."
+  },
+  "hero": {
+    "description": "A large image with the page heading over it. The first row holds the image and the H1; an optional second row holds a short line and links.",
+    "html": "<h2>Hero</h2><div class=\"hero\"><div><div><picture><img alt=\"Seasonal collection\"></picture><h1>New season, new arrivals</h1></div></div></div><h2>Hero, with text and buttons</h2><div class=\"hero\"><div><div><picture><img alt=\"Store front\"></picture><h1>Everything for the season ahead</h1></div></div><div><div><p>Fresh styles and everyday essentials, delivered free over $50.</p><p><strong><a href=\"/\">Shop now</a></strong></p></div></div></div>"
+  },
+  "hero-cta": {
+    "description": "A large image with buttons laid over it. Each row has four columns and its first says what the row is: a slide row holds an image, the button labels and their links (one per line, paired in order); an interval row sets the time between slides in milliseconds; nav rows add a side menu when the section turns it on.",
+    "html": "<h2>Hero Cta, two slides</h2><div class=\"hero-cta\"><div><div>slide</div><div><picture><img alt=\"New arrivals\"></picture></div><div><p>Shop women</p><p>Shop men</p></div><div><p><a href=\"/women\">/women</a></p><p><a href=\"/men\">/men</a></p></div></div><div><div>slide</div><div><picture><img alt=\"Outdoor collection\"></picture></div><div><p>Shop outdoor</p></div><div><p><a href=\"/outdoor\">/outdoor</a></p></div></div><div><div>interval</div><div>5000</div><div></div><div></div></div></div><h2>Hero Cta, single slide</h2><div class=\"hero-cta\"><div><div>slide</div><div><picture><img alt=\"Seasonal sale\"></picture></div><div><p>Shop the sale</p></div><div><p><a href=\"/sale\">/sale</a></p></div></div></div>"
+  },
+  "modal": {
+    "description": "A dialog other blocks open from code, for example for sign-in. It is not a block to place on a page.",
+    "html": "<h2>Modal</h2><div class=\"modal\"><div><div></div></div></div>",
+    "structureOnly": "it is a helper other blocks call from code to open a dialog; its code expects a list of content to show, not an authored table, so placed on a page it fails."
+  },
+  "newsletter": {
+    "description": "An email signup form. One column, one row per line in this order: heading, subheading, email placeholder, button label, small print, then the thank-you heading, thank-you line and thank-you small print shown after signing up.",
+    "html": "<h2>Newsletter</h2><div class=\"newsletter\"><div><div>Our newest products, straight to your inbox.</div></div><div><div>Be first to hear about new arrivals, offers and events.</div></div><div><div>Enter your email address</div></div><div><div>Sign up</div></div><div><div>We only send relevant updates. Unsubscribe any time.</div></div><div><div>Thank you.</div></div><div><div>You are now subscribed.</div></div><div><div>See our privacy policy for more information.</div></div></div>"
+  },
+  "product-details": {
+    "description": "The product page: gallery, name, price, options, quantity, add to cart and description. It has no rows; the product comes from the page address.",
+    "html": "<h2>Product Details</h2><div class=\"product-details\"><div><div></div></div></div>",
+    "structureOnly": "it needs a live store: the product it shows is read from the page address and loaded from the store."
+  },
+  "product-list-page": {
+    "description": "A product grid with filters, sorting and pages, for category and search pages. Each row is a setting and its value, keys written as one word: urlpath is the category path (leave it out for search results), pagesize the number of products per page.",
+    "html": "<h2>Product List Page, for a category</h2><div class=\"product-list-page\"><div><div>urlpath</div><div>apparel</div></div><div><div>pagesize</div><div>9</div></div></div><h2>Product List Page, for search results</h2><div class=\"product-list-page\"><div><div>pagesize</div><div>9</div></div></div>"
+  },
+  "product-rail": {
+    "description": "A row of products from one category with a heading and a link to the full collection. Each row is a setting and its value: Title, URL Path (a catalog category path, or empty for the whole catalog), Page Size (1 to 12), Collection Link and Collection Label.",
+    "html": "<h2>Product Rail</h2><div class=\"product-rail\"><div><div>Title</div><div>Best sellers</div></div><div><div>URL Path</div><div></div></div><div><div>Page Size</div><div>4</div></div><div><div>Collection Link</div><div><a href=\"/\">/apparel</a></div></div><div><div>Collection Label</div><div>Shop all</div></div></div>"
+  },
+  "product-recommendations": {
+    "description": "A row of recommended products. Each row is a setting and its value, keys written as one word: recid names the recommendation unit to show, currentsku the product to base it on (on a product page it is read from the page).",
+    "html": "<h2>Product Recommendations</h2><div class=\"product-recommendations\"><div><div>recid</div><div>1</div></div><div><div>currentsku</div><div>SKU-001</div></div></div>",
+    "structureOnly": "it needs a live store: the recommendations come from the store's recommendation service."
+  },
+  "promotional-hero": {
+    "description": "A grid of promotion cards. Each row is one card in three columns: an image, a short description, and a link shown as the card's button.",
+    "html": "<h2>Promotional Hero</h2><div class=\"promotional-hero\"><div><div><picture><img alt=\"Summer collection\"></picture></div><div><p>Light layers for long days.</p></div><div><p><a href=\"/\">Shop summer</a></p></div></div><div><div><picture><img alt=\"Home refresh\"></picture></div><div><p>New textures for every room.</p></div><div><p><a href=\"/\">Shop home</a></p></div></div></div>"
+  },
+  "search-bar": {
+    "description": "A product search box that shows matching products as the shopper types. The one cell is the placeholder text in the box.",
+    "html": "<h2>Search Bar</h2><div class=\"search-bar\"><div><div>Search products</div></div></div>"
+  },
+  "store-locator": {
+    "description": "A store finder with search, filters and a list of stores. Setting rows come first (Location Mode local needs no map key), then a header row Name, Address, Coordinates, Phone, Hours, Services, Photo, Details, then one row per store; addresses read street, city, state, postcode.",
+    "html": "<h2>Store Locator, local list</h2><div class=\"store-locator\"><div><div>Location Mode</div><div>local</div><div></div><div></div><div></div><div></div><div></div><div></div></div><div><div>Auto Detect Location</div><div>false</div><div></div><div></div><div></div><div></div><div></div><div></div></div><div><div>Enable Photos</div><div>false</div><div></div><div></div><div></div><div></div><div></div><div></div></div><div><div>Primary CTA Label</div><div>Directions</div><div></div><div></div><div></div><div></div><div></div><div></div></div><div><div>Name</div><div>Address</div><div>Coordinates</div><div>Phone</div><div>Hours</div><div>Services</div><div>Photo</div><div>Details</div></div><div><div>Downtown</div><div>100 Main Street, Portland, OR, 97201</div><div>45.5231, -122.6765</div><div>(555) 010-0100</div><div>Mon-Sat: 9AM-8PM</div><div>pickup, delivery</div><div></div><div>Free parking</div></div><div><div>Riverside</div><div>250 River Road, Portland, OR, 97214</div><div>45.5122, -122.6587</div><div>(555) 010-0200</div><div>24 hours</div><div>pickup</div><div></div><div>Wheelchair accessible</div></div></div>"
+  },
+  "targeted-block": {
+    "description": "Content shown only to the shoppers it names. Each row is a setting and its value (Customer Groups, Customer Segments or Cart Rules, as Commerce ids separated by commas), and the last row holds the content; a Fragment row shows that fragment instead.",
+    "html": "<h2>Targeted Block, for a customer group</h2><div class=\"targeted-block\"><div><div>Customer Groups</div><div>1</div></div><div><div><h3>Welcome back</h3><p>Members get free shipping on every order.</p><p><strong><a href=\"/\">Shop now</a></strong></p></div></div></div><h2>Targeted Block, for a customer segment</h2><div class=\"targeted-block\"><div><div>Customer Segments</div><div>1</div></div><div><div><h3>Picked for you</h3><p>New arrivals in the styles you shop most.</p><p><strong><a href=\"/\">See what is new</a></strong></p></div></div></div><h2>Targeted Block, for a cart rule</h2><div class=\"targeted-block\"><div><div>Cart Rules</div><div>1</div></div><div><div><h3>You unlocked a discount</h3><p>Your savings are applied at checkout.</p><p><strong><a href=\"/\">Keep shopping</a></strong></p></div></div></div><h2>Targeted Block, from a fragment</h2><div class=\"targeted-block\"><div><div>Customer Groups</div><div>1</div></div><div><div>Fragment</div><div>/fragments/member-offer</div></div></div>",
+    "structureOnly": "it needs a live store: it shows its content only to the shoppers the store's personalization data names."
+  },
+  "top-banner": {
+    "description": "A thin announcement strip that sits above the site header. Each row has four columns: the row type (message, utility or ticker-item), then the left, centre and right content; the message row fills the left and a utility row adds links on the right (the centre shows only in the section's multi layout).",
+    "html": "<h2>Top Banner</h2><div class=\"top-banner\"><div><div>message</div><div><p>Free shipping on orders over $50</p></div><div></div><div></div></div><div><div>utility</div><div></div><div></div><div><p><a href=\"/\">Find a store</a> <a href=\"/\">Help</a></p></div></div></div>"
+  }
+}

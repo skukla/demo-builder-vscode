@@ -180,7 +180,7 @@ red, and so is a registry entry for something deleted.
 | per-jest-run | 74 enforcer suites in `tests/sop/` | automatic |
 | per-push | lint, both typecheckers, 2 validators | CI |
 | per-push (local) | the CSS baseline check — `.githooks/pre-push` only, never CI | the git hook |
-| periodic | 15 scripted checks + 9 guided reviews | **`npm run sweep`** |
+| periodic | 16 scripted checks + 9 guided reviews | **`npm run sweep`** |
 | overnight | 2 Stryker runs — the stale-row re-measure (`npm run test:mutation:sweep -- --stale --minutes 480`) and the pilot. Never inside the sweep | a person, when no other test run needs the machine |
 
 The sweep REPORTS and never starts Stryker: it lists stale mutation rows, and the

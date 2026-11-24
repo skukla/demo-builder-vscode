@@ -1,0 +1,8 @@
+{
+  "$schema": "./block-examples.schema.json",
+  "catalog-menu": {
+    "description": "Builds the menu from the Commerce category tree. Insert it into the nav document: one click adds the menu list and the block together. Keep the line \"Commerce: All\" (or \"Commerce: \" and a category name) in the list; a two-cell row in the block links a category's url path to a page.",
+    "html": "<h2>Catalog Menu</h2><div class=\"library-container-start\"><div><div></div></div></div><ul><li>New arrivals</li><li>Commerce: All</li><li>Support</li></ul><div class=\"catalog-menu\"><div><div></div></div></div><div class=\"library-container-end\"><div><div></div></div></div><h2>Catalog Menu, with page links</h2><div class=\"library-container-start\"><div><div></div></div></div><ul><li>Commerce: Outdoor</li><li>Support</li></ul><div class=\"catalog-menu\"><div><div>outdoor</div><div>/outdoor-gear</div></div><div><div>outdoor/tents</div><div>/tents</div></div></div><div class=\"library-container-end\"><div><div></div></div></div>",
+    "structureOnly": "it reads the category tree from a live store, writes it into the site menu, then removes itself from the page, so there is nothing to see on its own."
+  }
+}

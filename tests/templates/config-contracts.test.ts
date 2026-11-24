@@ -47,6 +47,10 @@ const NO_SIBLING_DATA = new Set([
     // pinned fresh by the same freshness suite.
     'core/state/config/project-file.schema.json',
     'core/state/config/shared-demo.schema.json',
+    // One schema for every shipped block-example file (template.json and one per block
+    // library), so it has no single sibling; shippedExampleStructure.test.ts
+    // validates each of those files against it.
+    'features/eds/config/block-examples/block-examples.schema.json',
 ]);
 
 const schemaFiles = findSchemaFiles(SRC_ROOT).filter(

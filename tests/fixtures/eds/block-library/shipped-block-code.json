@@ -1,0 +1,1875 @@
+{
+  "readAt": "2026-11-24",
+  "how": "npm run block-examples:render -- --update-fixture (scripts/block-examples/render-check.mjs)",
+  "blocks": {
+    "template/carousel": {
+      "repo": "adobe-commerce/boilerplate-b2b-template",
+      "ref": "f8eb94d5fd42d164a21e7894e4e47a502564a626",
+      "commit": "f8eb94d5fd42d164a21e7894e4e47a502564a626",
+      "rows": 2,
+      "columns": 1,
+      "variants": [],
+      "readsConfig": false,
+      "anyWidth": false
+    },
+    "template/commerce-account-header": {
+      "repo": "adobe-commerce/boilerplate-b2b-template",
+      "ref": "f8eb94d5fd42d164a21e7894e4e47a502564a626",
+      "commit": "f8eb94d5fd42d164a21e7894e4e47a502564a626",
+      "rows": 1,
+      "columns": 1,
+      "variants": [],
+      "readsConfig": true,
+      "anyWidth": false
+    },
+    "template/commerce-account-nav": {
+      "repo": "adobe-commerce/boilerplate-b2b-template",
+      "ref": "f8eb94d5fd42d164a21e7894e4e47a502564a626",
+      "commit": "f8eb94d5fd42d164a21e7894e4e47a502564a626",
+      "rows": 2,
+      "columns": 2,
+      "variants": [],
+      "readsConfig": false,
+      "anyWidth": false
+    },
+    "template/commerce-account-sidebar": {
+      "repo": "adobe-commerce/boilerplate-b2b-template",
+      "ref": "f8eb94d5fd42d164a21e7894e4e47a502564a626",
+      "commit": "f8eb94d5fd42d164a21e7894e4e47a502564a626",
+      "rows": 1,
+      "columns": 1,
+      "variants": [],
+      "readsConfig": false,
+      "anyWidth": false
+    },
+    "template/commerce-addresses": {
+      "repo": "adobe-commerce/boilerplate-b2b-template",
+      "ref": "f8eb94d5fd42d164a21e7894e4e47a502564a626",
+      "commit": "f8eb94d5fd42d164a21e7894e4e47a502564a626",
+      "rows": 1,
+      "columns": 1,
+      "variants": [],
+      "readsConfig": true,
+      "anyWidth": false
+    },
+    "template/commerce-b2b-company-hierarchy": {
+      "repo": "adobe-commerce/boilerplate-b2b-template",
+      "ref": "f8eb94d5fd42d164a21e7894e4e47a502564a626",
+      "commit": "f8eb94d5fd42d164a21e7894e4e47a502564a626",
+      "rows": 1,
+      "columns": 1,
+      "variants": [],
+      "readsConfig": false,
+      "anyWidth": false
+    },
+    "template/commerce-b2b-negotiable-quote": {
+      "repo": "adobe-commerce/boilerplate-b2b-template",
+      "ref": "f8eb94d5fd42d164a21e7894e4e47a502564a626",
+      "commit": "f8eb94d5fd42d164a21e7894e4e47a502564a626",
+      "rows": 1,
+      "columns": 1,
+      "variants": [],
+      "readsConfig": false,
+      "anyWidth": false
+    },
+    "template/commerce-b2b-negotiable-quote-template": {
+      "repo": "adobe-commerce/boilerplate-b2b-template",
+      "ref": "f8eb94d5fd42d164a21e7894e4e47a502564a626",
+      "commit": "f8eb94d5fd42d164a21e7894e4e47a502564a626",
+      "rows": 1,
+      "columns": 1,
+      "variants": [],
+      "readsConfig": false,
+      "anyWidth": false
+    },
+    "template/commerce-b2b-po-approval-flow": {
+      "repo": "adobe-commerce/boilerplate-b2b-template",
+      "ref": "f8eb94d5fd42d164a21e7894e4e47a502564a626",
+      "commit": "f8eb94d5fd42d164a21e7894e4e47a502564a626",
+      "rows": 1,
+      "columns": 1,
+      "variants": [],
+      "readsConfig": false,
+      "anyWidth": false
+    },
+    "template/commerce-b2b-po-approval-rule-details": {
+      "repo": "adobe-commerce/boilerplate-b2b-template",
+      "ref": "f8eb94d5fd42d164a21e7894e4e47a502564a626",
+      "commit": "f8eb94d5fd42d164a21e7894e4e47a502564a626",
+      "rows": 1,
+      "columns": 1,
+      "variants": [],
+      "readsConfig": false,
+      "anyWidth": false
+    },
+    "template/commerce-b2b-po-approval-rule-form": {
+      "repo": "adobe-commerce/boilerplate-b2b-template",
+      "ref": "f8eb94d5fd42d164a21e7894e4e47a502564a626",
+      "commit": "f8eb94d5fd42d164a21e7894e4e47a502564a626",
+      "rows": 1,
+      "columns": 1,
+      "variants": [],
+      "readsConfig": false,
+      "anyWidth": false
+    },
+    "template/commerce-b2b-po-approval-rules-list": {
+      "repo": "adobe-commerce/boilerplate-b2b-template",
+      "ref": "f8eb94d5fd42d164a21e7894e4e47a502564a626",
+      "commit": "f8eb94d5fd42d164a21e7894e4e47a502564a626",
+      "rows": 1,
+      "columns": 1,
+      "variants": [],
+      "readsConfig": false,
+      "anyWidth": false
+    },
+    "template/commerce-b2b-po-checkout-success": {
+      "repo": "adobe-commerce/boilerplate-b2b-template",
+      "ref": "f8eb94d5fd42d164a21e7894e4e47a502564a626",
+      "commit": "f8eb94d5fd42d164a21e7894e4e47a502564a626",
+      "rows": 1,
+      "columns": 1,
+      "variants": [],
+      "readsConfig": false,
+      "anyWidth": false
+    },
+    "template/commerce-b2b-po-comment-form": {
+      "repo": "adobe-commerce/boilerplate-b2b-template",
+      "ref": "f8eb94d5fd42d164a21e7894e4e47a502564a626",
+      "commit": "f8eb94d5fd42d164a21e7894e4e47a502564a626",
+      "rows": 1,
+      "columns": 1,
+      "variants": [],
+      "readsConfig": false,
+      "anyWidth": false
+    },
+    "template/commerce-b2b-po-comments-list": {
+      "repo": "adobe-commerce/boilerplate-b2b-template",
+      "ref": "f8eb94d5fd42d164a21e7894e4e47a502564a626",
+      "commit": "f8eb94d5fd42d164a21e7894e4e47a502564a626",
+      "rows": 1,
+      "columns": 1,
+      "variants": [],
+      "readsConfig": false,
+      "anyWidth": false
+    },
+    "template/commerce-b2b-po-company-purchase-orders": {
+      "repo": "adobe-commerce/boilerplate-b2b-template",
+      "ref": "f8eb94d5fd42d164a21e7894e4e47a502564a626",
+      "commit": "f8eb94d5fd42d164a21e7894e4e47a502564a626",
+      "rows": 1,
+      "columns": 1,
+      "variants": [],
+      "readsConfig": false,
+      "anyWidth": false
+    },
+    "template/commerce-b2b-po-customer-purchase-orders": {
+      "repo": "adobe-commerce/boilerplate-b2b-template",
+      "ref": "f8eb94d5fd42d164a21e7894e4e47a502564a626",
+      "commit": "f8eb94d5fd42d164a21e7894e4e47a502564a626",
+      "rows": 1,
+      "columns": 1,
+      "variants": [],
+      "readsConfig": false,
+      "anyWidth": false
+    },
+    "template/commerce-b2b-po-header": {
+      "repo": "adobe-commerce/boilerplate-b2b-template",
+      "ref": "f8eb94d5fd42d164a21e7894e4e47a502564a626",
+      "commit": "f8eb94d5fd42d164a21e7894e4e47a502564a626",
+      "rows": 1,
+      "columns": 1,
+      "variants": [],
+      "readsConfig": false,
+      "anyWidth": false
+    },
+    "template/commerce-b2b-po-history-log": {
+      "repo": "adobe-commerce/boilerplate-b2b-template",
+      "ref": "f8eb94d5fd42d164a21e7894e4e47a502564a626",
+      "commit": "f8eb94d5fd42d164a21e7894e4e47a502564a626",
+      "rows": 1,
+      "columns": 1,
+      "variants": [],
+      "readsConfig": false,
+      "anyWidth": false
+    },
+    "template/commerce-b2b-po-require-approval-purchase-orders": {
+      "repo": "adobe-commerce/boilerplate-b2b-template",
+      "ref": "f8eb94d5fd42d164a21e7894e4e47a502564a626",
+      "commit": "f8eb94d5fd42d164a21e7894e4e47a502564a626",
+      "rows": 1,
+      "columns": 1,
+      "variants": [],
+      "readsConfig": false,
+      "anyWidth": false
+    },
+    "template/commerce-b2b-po-status": {
+      "repo": "adobe-commerce/boilerplate-b2b-template",
+      "ref": "f8eb94d5fd42d164a21e7894e4e47a502564a626",
+      "commit": "f8eb94d5fd42d164a21e7894e4e47a502564a626",
+      "rows": 1,
+      "columns": 1,
+      "variants": [],
+      "readsConfig": false,
+      "anyWidth": false
+    },
+    "template/commerce-b2b-quick-order": {
+      "repo": "adobe-commerce/boilerplate-b2b-template",
+      "ref": "f8eb94d5fd42d164a21e7894e4e47a502564a626",
+      "commit": "f8eb94d5fd42d164a21e7894e4e47a502564a626",
+      "rows": 1,
+      "columns": 1,
+      "variants": [],
+      "readsConfig": false,
+      "anyWidth": false
+    },
+    "template/commerce-b2b-quote-checkout": {
+      "repo": "adobe-commerce/boilerplate-b2b-template",
+      "ref": "f8eb94d5fd42d164a21e7894e4e47a502564a626",
+      "commit": "f8eb94d5fd42d164a21e7894e4e47a502564a626",
+      "rows": 1,
+      "columns": 1,
+      "variants": [],
+      "readsConfig": false,
+      "anyWidth": false
+    },
+    "template/commerce-b2b-requisition-list": {
+      "repo": "adobe-commerce/boilerplate-b2b-template",
+      "ref": "f8eb94d5fd42d164a21e7894e4e47a502564a626",
+      "commit": "f8eb94d5fd42d164a21e7894e4e47a502564a626",
+      "rows": 1,
+      "columns": 1,
+      "variants": [],
+      "readsConfig": false,
+      "anyWidth": false
+    },
+    "template/commerce-b2b-requisition-list-public-share": {
+      "repo": "adobe-commerce/boilerplate-b2b-template",
+      "ref": "f8eb94d5fd42d164a21e7894e4e47a502564a626",
+      "commit": "f8eb94d5fd42d164a21e7894e4e47a502564a626",
+      "rows": 1,
+      "columns": 1,
+      "variants": [],
+      "readsConfig": false,
+      "anyWidth": false
+    },
+    "template/commerce-b2b-requisition-list-sharing": {
+      "repo": "adobe-commerce/boilerplate-b2b-template",
+      "ref": "f8eb94d5fd42d164a21e7894e4e47a502564a626",
+      "commit": "f8eb94d5fd42d164a21e7894e4e47a502564a626",
+      "rows": 1,
+      "columns": 1,
+      "variants": [],
+      "readsConfig": false,
+      "anyWidth": false
+    },
+    "template/commerce-b2b-requisition-list-view": {
+      "repo": "adobe-commerce/boilerplate-b2b-template",
+      "ref": "f8eb94d5fd42d164a21e7894e4e47a502564a626",
+      "commit": "f8eb94d5fd42d164a21e7894e4e47a502564a626",
+      "rows": 1,
+      "columns": 1,
+      "variants": [],
+      "readsConfig": false,
+      "anyWidth": false
+    },
+    "template/commerce-cart": {
+      "repo": "adobe-commerce/boilerplate-b2b-template",
+      "ref": "f8eb94d5fd42d164a21e7894e4e47a502564a626",
+      "commit": "f8eb94d5fd42d164a21e7894e4e47a502564a626",
+      "rows": 1,
+      "columns": 1,
+      "variants": [],
+      "readsConfig": true,
+      "anyWidth": false
+    },
+    "template/commerce-checkout": {
+      "repo": "adobe-commerce/boilerplate-b2b-template",
+      "ref": "f8eb94d5fd42d164a21e7894e4e47a502564a626",
+      "commit": "f8eb94d5fd42d164a21e7894e4e47a502564a626",
+      "rows": 1,
+      "columns": 1,
+      "variants": [],
+      "readsConfig": false,
+      "anyWidth": false
+    },
+    "template/commerce-checkout-success": {
+      "repo": "adobe-commerce/boilerplate-b2b-template",
+      "ref": "f8eb94d5fd42d164a21e7894e4e47a502564a626",
+      "commit": "f8eb94d5fd42d164a21e7894e4e47a502564a626",
+      "rows": 1,
+      "columns": 1,
+      "variants": [],
+      "readsConfig": false,
+      "anyWidth": false
+    },
+    "template/commerce-company-accept-invitation": {
+      "repo": "adobe-commerce/boilerplate-b2b-template",
+      "ref": "f8eb94d5fd42d164a21e7894e4e47a502564a626",
+      "commit": "f8eb94d5fd42d164a21e7894e4e47a502564a626",
+      "rows": 1,
+      "columns": 1,
+      "variants": [],
+      "readsConfig": false,
+      "anyWidth": false
+    },
+    "template/commerce-company-create": {
+      "repo": "adobe-commerce/boilerplate-b2b-template",
+      "ref": "f8eb94d5fd42d164a21e7894e4e47a502564a626",
+      "commit": "f8eb94d5fd42d164a21e7894e4e47a502564a626",
+      "rows": 1,
+      "columns": 1,
+      "variants": [],
+      "readsConfig": false,
+      "anyWidth": false
+    },
+    "template/commerce-company-credit": {
+      "repo": "adobe-commerce/boilerplate-b2b-template",
+      "ref": "f8eb94d5fd42d164a21e7894e4e47a502564a626",
+      "commit": "f8eb94d5fd42d164a21e7894e4e47a502564a626",
+      "rows": 1,
+      "columns": 1,
+      "variants": [],
+      "readsConfig": true,
+      "anyWidth": false
+    },
+    "template/commerce-company-profile": {
+      "repo": "adobe-commerce/boilerplate-b2b-template",
+      "ref": "f8eb94d5fd42d164a21e7894e4e47a502564a626",
+      "commit": "f8eb94d5fd42d164a21e7894e4e47a502564a626",
+      "rows": 1,
+      "columns": 1,
+      "variants": [],
+      "readsConfig": false,
+      "anyWidth": false
+    },
+    "template/commerce-company-roles-permissions": {
+      "repo": "adobe-commerce/boilerplate-b2b-template",
+      "ref": "f8eb94d5fd42d164a21e7894e4e47a502564a626",
+      "commit": "f8eb94d5fd42d164a21e7894e4e47a502564a626",
+      "rows": 1,
+      "columns": 1,
+      "variants": [],
+      "readsConfig": false,
+      "anyWidth": false
+    },
+    "template/commerce-company-structure": {
+      "repo": "adobe-commerce/boilerplate-b2b-template",
+      "ref": "f8eb94d5fd42d164a21e7894e4e47a502564a626",
+      "commit": "f8eb94d5fd42d164a21e7894e4e47a502564a626",
+      "rows": 1,
+      "columns": 1,
+      "variants": [],
+      "readsConfig": false,
+      "anyWidth": false
+    },
+    "template/commerce-company-users": {
+      "repo": "adobe-commerce/boilerplate-b2b-template",
+      "ref": "f8eb94d5fd42d164a21e7894e4e47a502564a626",
+      "commit": "f8eb94d5fd42d164a21e7894e4e47a502564a626",
+      "rows": 1,
+      "columns": 1,
+      "variants": [],
+      "readsConfig": false,
+      "anyWidth": false
+    },
+    "template/commerce-confirm-account": {
+      "repo": "adobe-commerce/boilerplate-b2b-template",
+      "ref": "f8eb94d5fd42d164a21e7894e4e47a502564a626",
+      "commit": "f8eb94d5fd42d164a21e7894e4e47a502564a626",
+      "rows": 1,
+      "columns": 1,
+      "variants": [],
+      "readsConfig": false,
+      "anyWidth": false
+    },
+    "template/commerce-create-account": {
+      "repo": "adobe-commerce/boilerplate-b2b-template",
+      "ref": "f8eb94d5fd42d164a21e7894e4e47a502564a626",
+      "commit": "f8eb94d5fd42d164a21e7894e4e47a502564a626",
+      "rows": 1,
+      "columns": 1,
+      "variants": [],
+      "readsConfig": false,
+      "anyWidth": false
+    },
+    "template/commerce-create-password": {
+      "repo": "adobe-commerce/boilerplate-b2b-template",
+      "ref": "f8eb94d5fd42d164a21e7894e4e47a502564a626",
+      "commit": "f8eb94d5fd42d164a21e7894e4e47a502564a626",
+      "rows": 1,
+      "columns": 1,
+      "variants": [],
+      "readsConfig": false,
+      "anyWidth": false
+    },
+    "template/commerce-create-return": {
+      "repo": "adobe-commerce/boilerplate-b2b-template",
+      "ref": "f8eb94d5fd42d164a21e7894e4e47a502564a626",
+      "commit": "f8eb94d5fd42d164a21e7894e4e47a502564a626",
+      "rows": 1,
+      "columns": 1,
+      "variants": [],
+      "readsConfig": false,
+      "anyWidth": false
+    },
+    "template/commerce-customer-company": {
+      "repo": "adobe-commerce/boilerplate-b2b-template",
+      "ref": "f8eb94d5fd42d164a21e7894e4e47a502564a626",
+      "commit": "f8eb94d5fd42d164a21e7894e4e47a502564a626",
+      "rows": 1,
+      "columns": 1,
+      "variants": [],
+      "readsConfig": false,
+      "anyWidth": false
+    },
+    "template/commerce-customer-details": {
+      "repo": "adobe-commerce/boilerplate-b2b-template",
+      "ref": "f8eb94d5fd42d164a21e7894e4e47a502564a626",
+      "commit": "f8eb94d5fd42d164a21e7894e4e47a502564a626",
+      "rows": 1,
+      "columns": 1,
+      "variants": [],
+      "readsConfig": false,
+      "anyWidth": false
+    },
+    "template/commerce-customer-information": {
+      "repo": "adobe-commerce/boilerplate-b2b-template",
+      "ref": "f8eb94d5fd42d164a21e7894e4e47a502564a626",
+      "commit": "f8eb94d5fd42d164a21e7894e4e47a502564a626",
+      "rows": 1,
+      "columns": 1,
+      "variants": [],
+      "readsConfig": false,
+      "anyWidth": false
+    },
+    "template/commerce-forgot-password": {
+      "repo": "adobe-commerce/boilerplate-b2b-template",
+      "ref": "f8eb94d5fd42d164a21e7894e4e47a502564a626",
+      "commit": "f8eb94d5fd42d164a21e7894e4e47a502564a626",
+      "rows": 1,
+      "columns": 1,
+      "variants": [],
+      "readsConfig": false,
+      "anyWidth": false
+    },
+    "template/commerce-gift-options": {
+      "repo": "adobe-commerce/boilerplate-b2b-template",
+      "ref": "f8eb94d5fd42d164a21e7894e4e47a502564a626",
+      "commit": "f8eb94d5fd42d164a21e7894e4e47a502564a626",
+      "rows": 1,
+      "columns": 1,
+      "variants": [],
+      "readsConfig": false,
+      "anyWidth": false
+    },
+    "template/commerce-login": {
+      "repo": "adobe-commerce/boilerplate-b2b-template",
+      "ref": "f8eb94d5fd42d164a21e7894e4e47a502564a626",
+      "commit": "f8eb94d5fd42d164a21e7894e4e47a502564a626",
+      "rows": 1,
+      "columns": 1,
+      "variants": [],
+      "readsConfig": false,
+      "anyWidth": false
+    },
+    "template/commerce-mini-cart": {
+      "repo": "adobe-commerce/boilerplate-b2b-template",
+      "ref": "f8eb94d5fd42d164a21e7894e4e47a502564a626",
+      "commit": "f8eb94d5fd42d164a21e7894e4e47a502564a626",
+      "rows": 1,
+      "columns": 1,
+      "variants": [],
+      "readsConfig": true,
+      "anyWidth": false
+    },
+    "template/commerce-order-comments": {
+      "repo": "adobe-commerce/boilerplate-b2b-template",
+      "ref": "f8eb94d5fd42d164a21e7894e4e47a502564a626",
+      "commit": "f8eb94d5fd42d164a21e7894e4e47a502564a626",
+      "rows": 1,
+      "columns": 1,
+      "variants": [],
+      "readsConfig": false,
+      "anyWidth": false
+    },
+    "template/commerce-order-cost-summary": {
+      "repo": "adobe-commerce/boilerplate-b2b-template",
+      "ref": "f8eb94d5fd42d164a21e7894e4e47a502564a626",
+      "commit": "f8eb94d5fd42d164a21e7894e4e47a502564a626",
+      "rows": 1,
+      "columns": 1,
+      "variants": [],
+      "readsConfig": false,
+      "anyWidth": false
+    },
+    "template/commerce-order-header": {
+      "repo": "adobe-commerce/boilerplate-b2b-template",
+      "ref": "f8eb94d5fd42d164a21e7894e4e47a502564a626",
+      "commit": "f8eb94d5fd42d164a21e7894e4e47a502564a626",
+      "rows": 1,
+      "columns": 1,
+      "variants": [],
+      "readsConfig": false,
+      "anyWidth": false
+    },
+    "template/commerce-order-product-list": {
+      "repo": "adobe-commerce/boilerplate-b2b-template",
+      "ref": "f8eb94d5fd42d164a21e7894e4e47a502564a626",
+      "commit": "f8eb94d5fd42d164a21e7894e4e47a502564a626",
+      "rows": 1,
+      "columns": 1,
+      "variants": [],
+      "readsConfig": false,
+      "anyWidth": false
+    },
+    "template/commerce-order-returns": {
+      "repo": "adobe-commerce/boilerplate-b2b-template",
+      "ref": "f8eb94d5fd42d164a21e7894e4e47a502564a626",
+      "commit": "f8eb94d5fd42d164a21e7894e4e47a502564a626",
+      "rows": 1,
+      "columns": 1,
+      "variants": [],
+      "readsConfig": false,
+      "anyWidth": false
+    },
+    "template/commerce-order-status": {
+      "repo": "adobe-commerce/boilerplate-b2b-template",
+      "ref": "f8eb94d5fd42d164a21e7894e4e47a502564a626",
+      "commit": "f8eb94d5fd42d164a21e7894e4e47a502564a626",
+      "rows": 1,
+      "columns": 1,
+      "variants": [],
+      "readsConfig": false,
+      "anyWidth": false
+    },
+    "template/commerce-orders-list": {
+      "repo": "adobe-commerce/boilerplate-b2b-template",
+      "ref": "f8eb94d5fd42d164a21e7894e4e47a502564a626",
+      "commit": "f8eb94d5fd42d164a21e7894e4e47a502564a626",
+      "rows": 1,
+      "columns": 1,
+      "variants": [],
+      "readsConfig": true,
+      "anyWidth": false
+    },
+    "template/commerce-return-header": {
+      "repo": "adobe-commerce/boilerplate-b2b-template",
+      "ref": "f8eb94d5fd42d164a21e7894e4e47a502564a626",
+      "commit": "f8eb94d5fd42d164a21e7894e4e47a502564a626",
+      "rows": 1,
+      "columns": 1,
+      "variants": [],
+      "readsConfig": false,
+      "anyWidth": false
+    },
+    "template/commerce-returns-list": {
+      "repo": "adobe-commerce/boilerplate-b2b-template",
+      "ref": "f8eb94d5fd42d164a21e7894e4e47a502564a626",
+      "commit": "f8eb94d5fd42d164a21e7894e4e47a502564a626",
+      "rows": 1,
+      "columns": 1,
+      "variants": [],
+      "readsConfig": true,
+      "anyWidth": false
+    },
+    "template/commerce-search-order": {
+      "repo": "adobe-commerce/boilerplate-b2b-template",
+      "ref": "f8eb94d5fd42d164a21e7894e4e47a502564a626",
+      "commit": "f8eb94d5fd42d164a21e7894e4e47a502564a626",
+      "rows": 1,
+      "columns": 1,
+      "variants": [],
+      "readsConfig": false,
+      "anyWidth": false
+    },
+    "template/commerce-seller-assisted-buying-activity": {
+      "repo": "adobe-commerce/boilerplate-b2b-template",
+      "ref": "f8eb94d5fd42d164a21e7894e4e47a502564a626",
+      "commit": "f8eb94d5fd42d164a21e7894e4e47a502564a626",
+      "rows": 1,
+      "columns": 1,
+      "variants": [],
+      "readsConfig": false,
+      "anyWidth": false
+    },
+    "template/commerce-seller-assisted-buying-settings": {
+      "repo": "adobe-commerce/boilerplate-b2b-template",
+      "ref": "f8eb94d5fd42d164a21e7894e4e47a502564a626",
+      "commit": "f8eb94d5fd42d164a21e7894e4e47a502564a626",
+      "rows": 1,
+      "columns": 1,
+      "variants": [],
+      "readsConfig": false,
+      "anyWidth": false
+    },
+    "template/commerce-shipping-status": {
+      "repo": "adobe-commerce/boilerplate-b2b-template",
+      "ref": "f8eb94d5fd42d164a21e7894e4e47a502564a626",
+      "commit": "f8eb94d5fd42d164a21e7894e4e47a502564a626",
+      "rows": 1,
+      "columns": 1,
+      "variants": [],
+      "readsConfig": false,
+      "anyWidth": false
+    },
+    "template/commerce-wishlist": {
+      "repo": "adobe-commerce/boilerplate-b2b-template",
+      "ref": "f8eb94d5fd42d164a21e7894e4e47a502564a626",
+      "commit": "f8eb94d5fd42d164a21e7894e4e47a502564a626",
+      "rows": 1,
+      "columns": 1,
+      "variants": [],
+      "readsConfig": true,
+      "anyWidth": false
+    },
+    "template/enrichment": {
+      "repo": "adobe-commerce/boilerplate-b2b-template",
+      "ref": "f8eb94d5fd42d164a21e7894e4e47a502564a626",
+      "commit": "f8eb94d5fd42d164a21e7894e4e47a502564a626",
+      "rows": 1,
+      "columns": 1,
+      "variants": [],
+      "readsConfig": true,
+      "anyWidth": false
+    },
+    "template/footer": {
+      "repo": "adobe-commerce/boilerplate-b2b-template",
+      "ref": "f8eb94d5fd42d164a21e7894e4e47a502564a626",
+      "commit": "f8eb94d5fd42d164a21e7894e4e47a502564a626",
+      "rows": 1,
+      "columns": 1,
+      "variants": [],
+      "readsConfig": false,
+      "anyWidth": false
+    },
+    "template/header": {
+      "repo": "adobe-commerce/boilerplate-b2b-template",
+      "ref": "f8eb94d5fd42d164a21e7894e4e47a502564a626",
+      "commit": "f8eb94d5fd42d164a21e7894e4e47a502564a626",
+      "rows": 1,
+      "columns": 1,
+      "variants": [],
+      "readsConfig": false,
+      "anyWidth": false
+    },
+    "template/modal": {
+      "repo": "adobe-commerce/boilerplate-b2b-template",
+      "ref": "f8eb94d5fd42d164a21e7894e4e47a502564a626",
+      "commit": "f8eb94d5fd42d164a21e7894e4e47a502564a626",
+      "rows": 1,
+      "columns": 1,
+      "variants": [],
+      "readsConfig": false,
+      "anyWidth": false
+    },
+    "template/product-details": {
+      "repo": "adobe-commerce/boilerplate-b2b-template",
+      "ref": "f8eb94d5fd42d164a21e7894e4e47a502564a626",
+      "commit": "f8eb94d5fd42d164a21e7894e4e47a502564a626",
+      "rows": 1,
+      "columns": 1,
+      "variants": [],
+      "readsConfig": true,
+      "anyWidth": false
+    },
+    "template/product-list-page": {
+      "repo": "adobe-commerce/boilerplate-b2b-template",
+      "ref": "f8eb94d5fd42d164a21e7894e4e47a502564a626",
+      "commit": "f8eb94d5fd42d164a21e7894e4e47a502564a626",
+      "rows": 1,
+      "columns": 1,
+      "variants": [],
+      "readsConfig": true,
+      "anyWidth": false
+    },
+    "template/product-recommendations": {
+      "repo": "adobe-commerce/boilerplate-b2b-template",
+      "ref": "f8eb94d5fd42d164a21e7894e4e47a502564a626",
+      "commit": "f8eb94d5fd42d164a21e7894e4e47a502564a626",
+      "rows": 2,
+      "columns": 1,
+      "variants": [],
+      "readsConfig": true,
+      "anyWidth": false
+    },
+    "template/targeted-block": {
+      "repo": "adobe-commerce/boilerplate-b2b-template",
+      "ref": "f8eb94d5fd42d164a21e7894e4e47a502564a626",
+      "commit": "f8eb94d5fd42d164a21e7894e4e47a502564a626",
+      "rows": 1,
+      "columns": 1,
+      "variants": [],
+      "readsConfig": true,
+      "anyWidth": false
+    },
+    "template/widget": {
+      "repo": "adobe-commerce/boilerplate-b2b-template",
+      "ref": "f8eb94d5fd42d164a21e7894e4e47a502564a626",
+      "commit": "f8eb94d5fd42d164a21e7894e4e47a502564a626",
+      "rows": 1,
+      "columns": 1,
+      "variants": [],
+      "readsConfig": false,
+      "anyWidth": false
+    },
+    "demo-team-blocks/embed": {
+      "repo": "demo-system-stores/accs-citisignal",
+      "ref": "main",
+      "commit": "31ca953f9b0158515f55be5a35e9928b3f1a9a01",
+      "rows": 1,
+      "columns": 1,
+      "variants": [
+        "embed-is-loaded",
+        "embed-twitter"
+      ],
+      "readsConfig": false,
+      "anyWidth": false
+    },
+    "demo-team-blocks/form": {
+      "repo": "demo-system-stores/accs-citisignal",
+      "ref": "main",
+      "commit": "31ca953f9b0158515f55be5a35e9928b3f1a9a01",
+      "rows": 1,
+      "columns": 1,
+      "variants": [],
+      "readsConfig": false,
+      "anyWidth": false
+    },
+    "demo-team-blocks/hero-v2": {
+      "repo": "demo-system-stores/accs-citisignal",
+      "ref": "main",
+      "commit": "31ca953f9b0158515f55be5a35e9928b3f1a9a01",
+      "rows": 2,
+      "columns": 1,
+      "variants": [],
+      "readsConfig": false,
+      "anyWidth": false
+    },
+    "demo-team-blocks/product-teaser": {
+      "repo": "demo-system-stores/accs-citisignal",
+      "ref": "main",
+      "commit": "31ca953f9b0158515f55be5a35e9928b3f1a9a01",
+      "rows": 1,
+      "columns": 1,
+      "variants": [],
+      "readsConfig": true,
+      "anyWidth": false
+    },
+    "demo-team-blocks/quote": {
+      "repo": "demo-system-stores/accs-citisignal",
+      "ref": "main",
+      "commit": "31ca953f9b0158515f55be5a35e9928b3f1a9a01",
+      "rows": 2,
+      "columns": 1,
+      "variants": [],
+      "readsConfig": false,
+      "anyWidth": false
+    },
+    "demo-team-blocks/search": {
+      "repo": "demo-system-stores/accs-citisignal",
+      "ref": "main",
+      "commit": "31ca953f9b0158515f55be5a35e9928b3f1a9a01",
+      "rows": 1,
+      "columns": 1,
+      "variants": [
+        "minimal"
+      ],
+      "readsConfig": false,
+      "anyWidth": false
+    },
+    "demo-team-blocks/table": {
+      "repo": "demo-system-stores/accs-citisignal",
+      "ref": "main",
+      "commit": "31ca953f9b0158515f55be5a35e9928b3f1a9a01",
+      "rows": 2,
+      "columns": 2,
+      "variants": [
+        "bordered",
+        "no-header",
+        "striped"
+      ],
+      "readsConfig": false,
+      "anyWidth": false
+    },
+    "demo-team-blocks/tabs": {
+      "repo": "demo-system-stores/accs-citisignal",
+      "ref": "main",
+      "commit": "31ca953f9b0158515f55be5a35e9928b3f1a9a01",
+      "rows": 2,
+      "columns": 1,
+      "variants": [],
+      "readsConfig": false,
+      "anyWidth": false
+    },
+    "demo-team-blocks/video": {
+      "repo": "demo-system-stores/accs-citisignal",
+      "ref": "main",
+      "commit": "31ca953f9b0158515f55be5a35e9928b3f1a9a01",
+      "rows": 1,
+      "columns": 1,
+      "variants": [
+        "autoplay"
+      ],
+      "readsConfig": false,
+      "anyWidth": false
+    },
+    "isle5/accordion": {
+      "repo": "stephen-garner-adobe/isle5",
+      "ref": "main",
+      "commit": "b1065cade169bb2d2c8ddb69955e122c8615ecbd",
+      "rows": 2,
+      "columns": 2,
+      "variants": [],
+      "readsConfig": false,
+      "anyWidth": false
+    },
+    "isle5/blog-post": {
+      "repo": "stephen-garner-adobe/isle5",
+      "ref": "main",
+      "commit": "b1065cade169bb2d2c8ddb69955e122c8615ecbd",
+      "rows": 2,
+      "columns": 2,
+      "variants": [],
+      "readsConfig": false,
+      "anyWidth": true
+    },
+    "isle5/blog-tiles": {
+      "repo": "stephen-garner-adobe/isle5",
+      "ref": "main",
+      "commit": "b1065cade169bb2d2c8ddb69955e122c8615ecbd",
+      "rows": 2,
+      "columns": 2,
+      "variants": [],
+      "readsConfig": false,
+      "anyWidth": true
+    },
+    "isle5/cards": {
+      "repo": "stephen-garner-adobe/isle5",
+      "ref": "main",
+      "commit": "b1065cade169bb2d2c8ddb69955e122c8615ecbd",
+      "rows": 2,
+      "columns": 2,
+      "variants": [
+        "campaign"
+      ],
+      "readsConfig": false,
+      "anyWidth": false
+    },
+    "isle5/cards-list": {
+      "repo": "stephen-garner-adobe/isle5",
+      "ref": "main",
+      "commit": "b1065cade169bb2d2c8ddb69955e122c8615ecbd",
+      "rows": 2,
+      "columns": 1,
+      "variants": [],
+      "readsConfig": false,
+      "anyWidth": false
+    },
+    "isle5/carousel": {
+      "repo": "stephen-garner-adobe/isle5",
+      "ref": "main",
+      "commit": "b1065cade169bb2d2c8ddb69955e122c8615ecbd",
+      "rows": 2,
+      "columns": 1,
+      "variants": [],
+      "readsConfig": false,
+      "anyWidth": false
+    },
+    "isle5/circle-carousel": {
+      "repo": "stephen-garner-adobe/isle5",
+      "ref": "main",
+      "commit": "b1065cade169bb2d2c8ddb69955e122c8615ecbd",
+      "rows": 2,
+      "columns": 2,
+      "variants": [],
+      "readsConfig": false,
+      "anyWidth": false
+    },
+    "isle5/columns": {
+      "repo": "stephen-garner-adobe/isle5",
+      "ref": "main",
+      "commit": "b1065cade169bb2d2c8ddb69955e122c8615ecbd",
+      "rows": 2,
+      "columns": 2,
+      "variants": [],
+      "readsConfig": false,
+      "anyWidth": false
+    },
+    "isle5/commerce-account-header": {
+      "repo": "stephen-garner-adobe/isle5",
+      "ref": "main",
+      "commit": "b1065cade169bb2d2c8ddb69955e122c8615ecbd",
+      "rows": 1,
+      "columns": 1,
+      "variants": [],
+      "readsConfig": true,
+      "anyWidth": false
+    },
+    "isle5/commerce-account-sidebar": {
+      "repo": "stephen-garner-adobe/isle5",
+      "ref": "main",
+      "commit": "b1065cade169bb2d2c8ddb69955e122c8615ecbd",
+      "rows": 1,
+      "columns": 1,
+      "variants": [],
+      "readsConfig": false,
+      "anyWidth": false
+    },
+    "isle5/commerce-addresses": {
+      "repo": "stephen-garner-adobe/isle5",
+      "ref": "main",
+      "commit": "b1065cade169bb2d2c8ddb69955e122c8615ecbd",
+      "rows": 1,
+      "columns": 1,
+      "variants": [],
+      "readsConfig": true,
+      "anyWidth": false
+    },
+    "isle5/commerce-cart": {
+      "repo": "stephen-garner-adobe/isle5",
+      "ref": "main",
+      "commit": "b1065cade169bb2d2c8ddb69955e122c8615ecbd",
+      "rows": 1,
+      "columns": 1,
+      "variants": [],
+      "readsConfig": true,
+      "anyWidth": false
+    },
+    "isle5/commerce-checkout": {
+      "repo": "stephen-garner-adobe/isle5",
+      "ref": "main",
+      "commit": "b1065cade169bb2d2c8ddb69955e122c8615ecbd",
+      "rows": 1,
+      "columns": 1,
+      "variants": [],
+      "readsConfig": false,
+      "anyWidth": false
+    },
+    "isle5/commerce-checkout-success": {
+      "repo": "stephen-garner-adobe/isle5",
+      "ref": "main",
+      "commit": "b1065cade169bb2d2c8ddb69955e122c8615ecbd",
+      "rows": 1,
+      "columns": 1,
+      "variants": [],
+      "readsConfig": false,
+      "anyWidth": false
+    },
+    "isle5/commerce-confirm-account": {
+      "repo": "stephen-garner-adobe/isle5",
+      "ref": "main",
+      "commit": "b1065cade169bb2d2c8ddb69955e122c8615ecbd",
+      "rows": 1,
+      "columns": 1,
+      "variants": [],
+      "readsConfig": false,
+      "anyWidth": false
+    },
+    "isle5/commerce-create-account": {
+      "repo": "stephen-garner-adobe/isle5",
+      "ref": "main",
+      "commit": "b1065cade169bb2d2c8ddb69955e122c8615ecbd",
+      "rows": 1,
+      "columns": 1,
+      "variants": [],
+      "readsConfig": false,
+      "anyWidth": false
+    },
+    "isle5/commerce-create-password": {
+      "repo": "stephen-garner-adobe/isle5",
+      "ref": "main",
+      "commit": "b1065cade169bb2d2c8ddb69955e122c8615ecbd",
+      "rows": 1,
+      "columns": 1,
+      "variants": [],
+      "readsConfig": false,
+      "anyWidth": false
+    },
+    "isle5/commerce-create-return": {
+      "repo": "stephen-garner-adobe/isle5",
+      "ref": "main",
+      "commit": "b1065cade169bb2d2c8ddb69955e122c8615ecbd",
+      "rows": 1,
+      "columns": 1,
+      "variants": [],
+      "readsConfig": false,
+      "anyWidth": false
+    },
+    "isle5/commerce-customer-details": {
+      "repo": "stephen-garner-adobe/isle5",
+      "ref": "main",
+      "commit": "b1065cade169bb2d2c8ddb69955e122c8615ecbd",
+      "rows": 1,
+      "columns": 1,
+      "variants": [],
+      "readsConfig": false,
+      "anyWidth": false
+    },
+    "isle5/commerce-customer-information": {
+      "repo": "stephen-garner-adobe/isle5",
+      "ref": "main",
+      "commit": "b1065cade169bb2d2c8ddb69955e122c8615ecbd",
+      "rows": 1,
+      "columns": 1,
+      "variants": [],
+      "readsConfig": false,
+      "anyWidth": false
+    },
+    "isle5/commerce-forgot-password": {
+      "repo": "stephen-garner-adobe/isle5",
+      "ref": "main",
+      "commit": "b1065cade169bb2d2c8ddb69955e122c8615ecbd",
+      "rows": 1,
+      "columns": 1,
+      "variants": [],
+      "readsConfig": false,
+      "anyWidth": false
+    },
+    "isle5/commerce-gift-options": {
+      "repo": "stephen-garner-adobe/isle5",
+      "ref": "main",
+      "commit": "b1065cade169bb2d2c8ddb69955e122c8615ecbd",
+      "rows": 1,
+      "columns": 1,
+      "variants": [],
+      "readsConfig": false,
+      "anyWidth": false
+    },
+    "isle5/commerce-login": {
+      "repo": "stephen-garner-adobe/isle5",
+      "ref": "main",
+      "commit": "b1065cade169bb2d2c8ddb69955e122c8615ecbd",
+      "rows": 1,
+      "columns": 1,
+      "variants": [],
+      "readsConfig": false,
+      "anyWidth": false
+    },
+    "isle5/commerce-mini-cart": {
+      "repo": "stephen-garner-adobe/isle5",
+      "ref": "main",
+      "commit": "b1065cade169bb2d2c8ddb69955e122c8615ecbd",
+      "rows": 1,
+      "columns": 1,
+      "variants": [],
+      "readsConfig": true,
+      "anyWidth": false
+    },
+    "isle5/commerce-order-cost-summary": {
+      "repo": "stephen-garner-adobe/isle5",
+      "ref": "main",
+      "commit": "b1065cade169bb2d2c8ddb69955e122c8615ecbd",
+      "rows": 1,
+      "columns": 1,
+      "variants": [],
+      "readsConfig": false,
+      "anyWidth": false
+    },
+    "isle5/commerce-order-header": {
+      "repo": "stephen-garner-adobe/isle5",
+      "ref": "main",
+      "commit": "b1065cade169bb2d2c8ddb69955e122c8615ecbd",
+      "rows": 1,
+      "columns": 1,
+      "variants": [],
+      "readsConfig": false,
+      "anyWidth": false
+    },
+    "isle5/commerce-order-product-list": {
+      "repo": "stephen-garner-adobe/isle5",
+      "ref": "main",
+      "commit": "b1065cade169bb2d2c8ddb69955e122c8615ecbd",
+      "rows": 1,
+      "columns": 1,
+      "variants": [],
+      "readsConfig": false,
+      "anyWidth": false
+    },
+    "isle5/commerce-order-returns": {
+      "repo": "stephen-garner-adobe/isle5",
+      "ref": "main",
+      "commit": "b1065cade169bb2d2c8ddb69955e122c8615ecbd",
+      "rows": 1,
+      "columns": 1,
+      "variants": [],
+      "readsConfig": false,
+      "anyWidth": false
+    },
+    "isle5/commerce-order-status": {
+      "repo": "stephen-garner-adobe/isle5",
+      "ref": "main",
+      "commit": "b1065cade169bb2d2c8ddb69955e122c8615ecbd",
+      "rows": 1,
+      "columns": 1,
+      "variants": [],
+      "readsConfig": false,
+      "anyWidth": false
+    },
+    "isle5/commerce-orders-list": {
+      "repo": "stephen-garner-adobe/isle5",
+      "ref": "main",
+      "commit": "b1065cade169bb2d2c8ddb69955e122c8615ecbd",
+      "rows": 1,
+      "columns": 1,
+      "variants": [],
+      "readsConfig": true,
+      "anyWidth": false
+    },
+    "isle5/commerce-return-header": {
+      "repo": "stephen-garner-adobe/isle5",
+      "ref": "main",
+      "commit": "b1065cade169bb2d2c8ddb69955e122c8615ecbd",
+      "rows": 1,
+      "columns": 1,
+      "variants": [],
+      "readsConfig": false,
+      "anyWidth": false
+    },
+    "isle5/commerce-returns-list": {
+      "repo": "stephen-garner-adobe/isle5",
+      "ref": "main",
+      "commit": "b1065cade169bb2d2c8ddb69955e122c8615ecbd",
+      "rows": 1,
+      "columns": 1,
+      "variants": [],
+      "readsConfig": true,
+      "anyWidth": false
+    },
+    "isle5/commerce-search-order": {
+      "repo": "stephen-garner-adobe/isle5",
+      "ref": "main",
+      "commit": "b1065cade169bb2d2c8ddb69955e122c8615ecbd",
+      "rows": 1,
+      "columns": 1,
+      "variants": [],
+      "readsConfig": false,
+      "anyWidth": false
+    },
+    "isle5/commerce-shipping-status": {
+      "repo": "stephen-garner-adobe/isle5",
+      "ref": "main",
+      "commit": "b1065cade169bb2d2c8ddb69955e122c8615ecbd",
+      "rows": 1,
+      "columns": 1,
+      "variants": [],
+      "readsConfig": false,
+      "anyWidth": false
+    },
+    "isle5/commerce-wishlist": {
+      "repo": "stephen-garner-adobe/isle5",
+      "ref": "main",
+      "commit": "b1065cade169bb2d2c8ddb69955e122c8615ecbd",
+      "rows": 1,
+      "columns": 1,
+      "variants": [],
+      "readsConfig": true,
+      "anyWidth": false
+    },
+    "isle5/enrichment": {
+      "repo": "stephen-garner-adobe/isle5",
+      "ref": "main",
+      "commit": "b1065cade169bb2d2c8ddb69955e122c8615ecbd",
+      "rows": 1,
+      "columns": 1,
+      "variants": [],
+      "readsConfig": true,
+      "anyWidth": false
+    },
+    "isle5/footer": {
+      "repo": "stephen-garner-adobe/isle5",
+      "ref": "main",
+      "commit": "b1065cade169bb2d2c8ddb69955e122c8615ecbd",
+      "rows": 1,
+      "columns": 1,
+      "variants": [],
+      "readsConfig": false,
+      "anyWidth": false
+    },
+    "isle5/fragment": {
+      "repo": "stephen-garner-adobe/isle5",
+      "ref": "main",
+      "commit": "b1065cade169bb2d2c8ddb69955e122c8615ecbd",
+      "rows": 1,
+      "columns": 1,
+      "variants": [],
+      "readsConfig": false,
+      "anyWidth": false
+    },
+    "isle5/header": {
+      "repo": "stephen-garner-adobe/isle5",
+      "ref": "main",
+      "commit": "b1065cade169bb2d2c8ddb69955e122c8615ecbd",
+      "rows": 1,
+      "columns": 1,
+      "variants": [],
+      "readsConfig": false,
+      "anyWidth": false
+    },
+    "isle5/hero": {
+      "repo": "stephen-garner-adobe/isle5",
+      "ref": "main",
+      "commit": "b1065cade169bb2d2c8ddb69955e122c8615ecbd",
+      "rows": 1,
+      "columns": 1,
+      "variants": [],
+      "readsConfig": false,
+      "anyWidth": false
+    },
+    "isle5/hero-cta": {
+      "repo": "stephen-garner-adobe/isle5",
+      "ref": "main",
+      "commit": "b1065cade169bb2d2c8ddb69955e122c8615ecbd",
+      "rows": 2,
+      "columns": 2,
+      "variants": [],
+      "readsConfig": false,
+      "anyWidth": false
+    },
+    "isle5/modal": {
+      "repo": "stephen-garner-adobe/isle5",
+      "ref": "main",
+      "commit": "b1065cade169bb2d2c8ddb69955e122c8615ecbd",
+      "rows": 1,
+      "columns": 1,
+      "variants": [],
+      "readsConfig": false,
+      "anyWidth": false
+    },
+    "isle5/newsletter": {
+      "repo": "stephen-garner-adobe/isle5",
+      "ref": "main",
+      "commit": "b1065cade169bb2d2c8ddb69955e122c8615ecbd",
+      "rows": 2,
+      "columns": 1,
+      "variants": [],
+      "readsConfig": false,
+      "anyWidth": false
+    },
+    "isle5/product-details": {
+      "repo": "stephen-garner-adobe/isle5",
+      "ref": "main",
+      "commit": "b1065cade169bb2d2c8ddb69955e122c8615ecbd",
+      "rows": 1,
+      "columns": 1,
+      "variants": [],
+      "readsConfig": false,
+      "anyWidth": false
+    },
+    "isle5/product-list-page": {
+      "repo": "stephen-garner-adobe/isle5",
+      "ref": "main",
+      "commit": "b1065cade169bb2d2c8ddb69955e122c8615ecbd",
+      "rows": 1,
+      "columns": 1,
+      "variants": [],
+      "readsConfig": true,
+      "anyWidth": false
+    },
+    "isle5/product-rail": {
+      "repo": "stephen-garner-adobe/isle5",
+      "ref": "main",
+      "commit": "b1065cade169bb2d2c8ddb69955e122c8615ecbd",
+      "rows": 1,
+      "columns": 1,
+      "variants": [],
+      "readsConfig": true,
+      "anyWidth": false
+    },
+    "isle5/product-recommendations": {
+      "repo": "stephen-garner-adobe/isle5",
+      "ref": "main",
+      "commit": "b1065cade169bb2d2c8ddb69955e122c8615ecbd",
+      "rows": 2,
+      "columns": 1,
+      "variants": [],
+      "readsConfig": true,
+      "anyWidth": false
+    },
+    "isle5/promotional-hero": {
+      "repo": "stephen-garner-adobe/isle5",
+      "ref": "main",
+      "commit": "b1065cade169bb2d2c8ddb69955e122c8615ecbd",
+      "rows": 2,
+      "columns": 2,
+      "variants": [],
+      "readsConfig": false,
+      "anyWidth": false
+    },
+    "isle5/search-bar": {
+      "repo": "stephen-garner-adobe/isle5",
+      "ref": "main",
+      "commit": "b1065cade169bb2d2c8ddb69955e122c8615ecbd",
+      "rows": 2,
+      "columns": 1,
+      "variants": [],
+      "readsConfig": false,
+      "anyWidth": false
+    },
+    "isle5/store-locator": {
+      "repo": "stephen-garner-adobe/isle5",
+      "ref": "main",
+      "commit": "b1065cade169bb2d2c8ddb69955e122c8615ecbd",
+      "rows": 2,
+      "columns": 2,
+      "variants": [
+        "block"
+      ],
+      "readsConfig": false,
+      "anyWidth": false
+    },
+    "isle5/targeted-block": {
+      "repo": "stephen-garner-adobe/isle5",
+      "ref": "main",
+      "commit": "b1065cade169bb2d2c8ddb69955e122c8615ecbd",
+      "rows": 1,
+      "columns": 1,
+      "variants": [],
+      "readsConfig": true,
+      "anyWidth": false
+    },
+    "isle5/top-banner": {
+      "repo": "stephen-garner-adobe/isle5",
+      "ref": "main",
+      "commit": "b1065cade169bb2d2c8ddb69955e122c8615ecbd",
+      "rows": 2,
+      "columns": 2,
+      "variants": [],
+      "readsConfig": false,
+      "anyWidth": false
+    },
+    "bodea-blocks/blog-post": {
+      "repo": "skukla/bodea-source",
+      "ref": "v1.0.0-beta.1",
+      "commit": "2fd511e60695ad59df589418a05e8dfa873d2fcc",
+      "rows": 2,
+      "columns": 2,
+      "variants": [],
+      "readsConfig": false,
+      "anyWidth": true
+    },
+    "bodea-blocks/cards-list": {
+      "repo": "skukla/bodea-source",
+      "ref": "v1.0.0-beta.1",
+      "commit": "2fd511e60695ad59df589418a05e8dfa873d2fcc",
+      "rows": 2,
+      "columns": 1,
+      "variants": [],
+      "readsConfig": false,
+      "anyWidth": false
+    },
+    "bodea-blocks/catalog-highlights": {
+      "repo": "skukla/bodea-source",
+      "ref": "v1.0.0-beta.1",
+      "commit": "2fd511e60695ad59df589418a05e8dfa873d2fcc",
+      "rows": 2,
+      "columns": 2,
+      "variants": [],
+      "readsConfig": false,
+      "anyWidth": false
+    },
+    "bodea-blocks/circle-carousel": {
+      "repo": "skukla/bodea-source",
+      "ref": "v1.0.0-beta.1",
+      "commit": "2fd511e60695ad59df589418a05e8dfa873d2fcc",
+      "rows": 2,
+      "columns": 2,
+      "variants": [],
+      "readsConfig": false,
+      "anyWidth": false
+    },
+    "bodea-blocks/commerce-account-hub": {
+      "repo": "skukla/bodea-source",
+      "ref": "v1.0.0-beta.1",
+      "commit": "2fd511e60695ad59df589418a05e8dfa873d2fcc",
+      "rows": 1,
+      "columns": 1,
+      "variants": [],
+      "readsConfig": true,
+      "anyWidth": false
+    },
+    "bodea-blocks/customer-segment-personalization-block": {
+      "repo": "skukla/bodea-source",
+      "ref": "v1.0.0-beta.1",
+      "commit": "2fd511e60695ad59df589418a05e8dfa873d2fcc",
+      "rows": 2,
+      "columns": 1,
+      "variants": [
+        "is-authoring-preview"
+      ],
+      "readsConfig": true,
+      "anyWidth": false
+    },
+    "bodea-blocks/embed": {
+      "repo": "skukla/bodea-source",
+      "ref": "v1.0.0-beta.1",
+      "commit": "2fd511e60695ad59df589418a05e8dfa873d2fcc",
+      "rows": 1,
+      "columns": 1,
+      "variants": [
+        "embed-is-loaded",
+        "embed-twitter"
+      ],
+      "readsConfig": false,
+      "anyWidth": false
+    },
+    "bodea-blocks/features-grid": {
+      "repo": "skukla/bodea-source",
+      "ref": "v1.0.0-beta.1",
+      "commit": "2fd511e60695ad59df589418a05e8dfa873d2fcc",
+      "rows": 2,
+      "columns": 1,
+      "variants": [],
+      "readsConfig": false,
+      "anyWidth": false
+    },
+    "bodea-blocks/form": {
+      "repo": "skukla/bodea-source",
+      "ref": "v1.0.0-beta.1",
+      "commit": "2fd511e60695ad59df589418a05e8dfa873d2fcc",
+      "rows": 1,
+      "columns": 1,
+      "variants": [],
+      "readsConfig": false,
+      "anyWidth": false
+    },
+    "bodea-blocks/guided-selling-luxe": {
+      "repo": "skukla/bodea-source",
+      "ref": "v1.0.0-beta.1",
+      "commit": "2fd511e60695ad59df589418a05e8dfa873d2fcc",
+      "rows": 1,
+      "columns": 1,
+      "variants": [],
+      "readsConfig": true,
+      "anyWidth": false
+    },
+    "bodea-blocks/hero-3": {
+      "repo": "skukla/bodea-source",
+      "ref": "v1.0.0-beta.1",
+      "commit": "2fd511e60695ad59df589418a05e8dfa873d2fcc",
+      "rows": 2,
+      "columns": 2,
+      "variants": [],
+      "readsConfig": false,
+      "anyWidth": false
+    },
+    "bodea-blocks/hero-5": {
+      "repo": "skukla/bodea-source",
+      "ref": "v1.0.0-beta.1",
+      "commit": "2fd511e60695ad59df589418a05e8dfa873d2fcc",
+      "rows": 1,
+      "columns": 1,
+      "variants": [],
+      "readsConfig": false,
+      "anyWidth": false
+    },
+    "bodea-blocks/hero-6": {
+      "repo": "skukla/bodea-source",
+      "ref": "v1.0.0-beta.1",
+      "commit": "2fd511e60695ad59df589418a05e8dfa873d2fcc",
+      "rows": 1,
+      "columns": 1,
+      "variants": [],
+      "readsConfig": false,
+      "anyWidth": false
+    },
+    "bodea-blocks/hero-cta": {
+      "repo": "skukla/bodea-source",
+      "ref": "v1.0.0-beta.1",
+      "commit": "2fd511e60695ad59df589418a05e8dfa873d2fcc",
+      "rows": 2,
+      "columns": 2,
+      "variants": [],
+      "readsConfig": false,
+      "anyWidth": false
+    },
+    "bodea-blocks/how-it-works-stats": {
+      "repo": "skukla/bodea-source",
+      "ref": "v1.0.0-beta.1",
+      "commit": "2fd511e60695ad59df589418a05e8dfa873d2fcc",
+      "rows": 1,
+      "columns": 1,
+      "variants": [],
+      "readsConfig": false,
+      "anyWidth": false
+    },
+    "bodea-blocks/luxury-configurator": {
+      "repo": "skukla/bodea-source",
+      "ref": "v1.0.0-beta.1",
+      "commit": "2fd511e60695ad59df589418a05e8dfa873d2fcc",
+      "rows": 1,
+      "columns": 1,
+      "variants": [],
+      "readsConfig": true,
+      "anyWidth": false
+    },
+    "bodea-blocks/newsletter": {
+      "repo": "skukla/bodea-source",
+      "ref": "v1.0.0-beta.1",
+      "commit": "2fd511e60695ad59df589418a05e8dfa873d2fcc",
+      "rows": 2,
+      "columns": 1,
+      "variants": [],
+      "readsConfig": false,
+      "anyWidth": false
+    },
+    "bodea-blocks/product-highlights": {
+      "repo": "skukla/bodea-source",
+      "ref": "v1.0.0-beta.1",
+      "commit": "2fd511e60695ad59df589418a05e8dfa873d2fcc",
+      "rows": 2,
+      "columns": 1,
+      "variants": [],
+      "readsConfig": false,
+      "anyWidth": false
+    },
+    "bodea-blocks/product-teaser": {
+      "repo": "skukla/bodea-source",
+      "ref": "v1.0.0-beta.1",
+      "commit": "2fd511e60695ad59df589418a05e8dfa873d2fcc",
+      "rows": 1,
+      "columns": 1,
+      "variants": [],
+      "readsConfig": true,
+      "anyWidth": false
+    },
+    "bodea-blocks/promotional-hero": {
+      "repo": "skukla/bodea-source",
+      "ref": "v1.0.0-beta.1",
+      "commit": "2fd511e60695ad59df589418a05e8dfa873d2fcc",
+      "rows": 2,
+      "columns": 2,
+      "variants": [],
+      "readsConfig": false,
+      "anyWidth": false
+    },
+    "bodea-blocks/quote": {
+      "repo": "skukla/bodea-source",
+      "ref": "v1.0.0-beta.1",
+      "commit": "2fd511e60695ad59df589418a05e8dfa873d2fcc",
+      "rows": 2,
+      "columns": 1,
+      "variants": [],
+      "readsConfig": false,
+      "anyWidth": false
+    },
+    "bodea-blocks/search": {
+      "repo": "skukla/bodea-source",
+      "ref": "v1.0.0-beta.1",
+      "commit": "2fd511e60695ad59df589418a05e8dfa873d2fcc",
+      "rows": 1,
+      "columns": 1,
+      "variants": [
+        "minimal"
+      ],
+      "readsConfig": false,
+      "anyWidth": false
+    },
+    "bodea-blocks/search-bar": {
+      "repo": "skukla/bodea-source",
+      "ref": "v1.0.0-beta.1",
+      "commit": "2fd511e60695ad59df589418a05e8dfa873d2fcc",
+      "rows": 2,
+      "columns": 1,
+      "variants": [],
+      "readsConfig": false,
+      "anyWidth": false
+    },
+    "bodea-blocks/table": {
+      "repo": "skukla/bodea-source",
+      "ref": "v1.0.0-beta.1",
+      "commit": "2fd511e60695ad59df589418a05e8dfa873d2fcc",
+      "rows": 2,
+      "columns": 2,
+      "variants": [
+        "bordered",
+        "no-header",
+        "striped"
+      ],
+      "readsConfig": false,
+      "anyWidth": false
+    },
+    "bodea-blocks/tabs": {
+      "repo": "skukla/bodea-source",
+      "ref": "v1.0.0-beta.1",
+      "commit": "2fd511e60695ad59df589418a05e8dfa873d2fcc",
+      "rows": 2,
+      "columns": 1,
+      "variants": [],
+      "readsConfig": false,
+      "anyWidth": false
+    },
+    "bodea-blocks/top-banner": {
+      "repo": "skukla/bodea-source",
+      "ref": "v1.0.0-beta.1",
+      "commit": "2fd511e60695ad59df589418a05e8dfa873d2fcc",
+      "rows": 2,
+      "columns": 2,
+      "variants": [],
+      "readsConfig": false,
+      "anyWidth": false
+    },
+    "bodea-blocks/triptych": {
+      "repo": "skukla/bodea-source",
+      "ref": "v1.0.0-beta.1",
+      "commit": "2fd511e60695ad59df589418a05e8dfa873d2fcc",
+      "rows": 2,
+      "columns": 1,
+      "variants": [],
+      "readsConfig": false,
+      "anyWidth": false
+    },
+    "bodea-blocks/video": {
+      "repo": "skukla/bodea-source",
+      "ref": "v1.0.0-beta.1",
+      "commit": "2fd511e60695ad59df589418a05e8dfa873d2fcc",
+      "rows": 1,
+      "columns": 1,
+      "variants": [
+        "autoplay"
+      ],
+      "readsConfig": false,
+      "anyWidth": false
+    },
+    "buildright-blocks/breadcrumbs": {
+      "repo": "skukla/buildright-eds",
+      "ref": "v1.0.0-beta.1",
+      "commit": "59a51a3937afcdead32effe25adc31c56c6fa73b",
+      "rows": 2,
+      "columns": 1,
+      "variants": [],
+      "readsConfig": false,
+      "anyWidth": false
+    },
+    "buildright-blocks/cart-summary": {
+      "repo": "skukla/buildright-eds",
+      "ref": "v1.0.0-beta.1",
+      "commit": "59a51a3937afcdead32effe25adc31c56c6fa73b",
+      "rows": 1,
+      "columns": 1,
+      "variants": [],
+      "readsConfig": false,
+      "anyWidth": false
+    },
+    "buildright-blocks/featured-products": {
+      "repo": "skukla/buildright-eds",
+      "ref": "v1.0.0-beta.1",
+      "commit": "59a51a3937afcdead32effe25adc31c56c6fa73b",
+      "rows": 1,
+      "columns": 1,
+      "variants": [],
+      "readsConfig": false,
+      "anyWidth": false
+    },
+    "buildright-blocks/filters-sidebar": {
+      "repo": "skukla/buildright-eds",
+      "ref": "v1.0.0-beta.1",
+      "commit": "59a51a3937afcdead32effe25adc31c56c6fa73b",
+      "rows": 1,
+      "columns": 1,
+      "variants": [],
+      "readsConfig": false,
+      "anyWidth": false
+    },
+    "buildright-blocks/footer": {
+      "repo": "skukla/buildright-eds",
+      "ref": "v1.0.0-beta.1",
+      "commit": "59a51a3937afcdead32effe25adc31c56c6fa73b",
+      "rows": 1,
+      "columns": 1,
+      "variants": [],
+      "readsConfig": false,
+      "anyWidth": false
+    },
+    "buildright-blocks/fragment": {
+      "repo": "skukla/buildright-eds",
+      "ref": "v1.0.0-beta.1",
+      "commit": "59a51a3937afcdead32effe25adc31c56c6fa73b",
+      "rows": 1,
+      "columns": 1,
+      "variants": [],
+      "readsConfig": false,
+      "anyWidth": false
+    },
+    "buildright-blocks/header": {
+      "repo": "skukla/buildright-eds",
+      "ref": "v1.0.0-beta.1",
+      "commit": "59a51a3937afcdead32effe25adc31c56c6fa73b",
+      "rows": 1,
+      "columns": 1,
+      "variants": [],
+      "readsConfig": false,
+      "anyWidth": false
+    },
+    "buildright-blocks/inventory-status": {
+      "repo": "skukla/buildright-eds",
+      "ref": "v1.0.0-beta.1",
+      "commit": "59a51a3937afcdead32effe25adc31c56c6fa73b",
+      "rows": 1,
+      "columns": 1,
+      "variants": [],
+      "readsConfig": false,
+      "anyWidth": false
+    },
+    "buildright-blocks/mini-cart": {
+      "repo": "skukla/buildright-eds",
+      "ref": "v1.0.0-beta.1",
+      "commit": "59a51a3937afcdead32effe25adc31c56c6fa73b",
+      "rows": 1,
+      "columns": 1,
+      "variants": [
+        "active"
+      ],
+      "readsConfig": false,
+      "anyWidth": false
+    },
+    "buildright-blocks/pricing-display": {
+      "repo": "skukla/buildright-eds",
+      "ref": "v1.0.0-beta.1",
+      "commit": "59a51a3937afcdead32effe25adc31c56c6fa73b",
+      "rows": 1,
+      "columns": 1,
+      "variants": [],
+      "readsConfig": false,
+      "anyWidth": false
+    },
+    "buildright-blocks/product-detail": {
+      "repo": "skukla/buildright-eds",
+      "ref": "v1.0.0-beta.1",
+      "commit": "59a51a3937afcdead32effe25adc31c56c6fa73b",
+      "rows": 1,
+      "columns": 1,
+      "variants": [],
+      "readsConfig": false,
+      "anyWidth": false
+    },
+    "buildright-blocks/product-gallery": {
+      "repo": "skukla/buildright-eds",
+      "ref": "v1.0.0-beta.1",
+      "commit": "59a51a3937afcdead32effe25adc31c56c6fa73b",
+      "rows": 1,
+      "columns": 1,
+      "variants": [],
+      "readsConfig": false,
+      "anyWidth": false
+    },
+    "buildright-blocks/product-grid": {
+      "repo": "skukla/buildright-eds",
+      "ref": "v1.0.0-beta.1",
+      "commit": "59a51a3937afcdead32effe25adc31c56c6fa73b",
+      "rows": 1,
+      "columns": 1,
+      "variants": [],
+      "readsConfig": false,
+      "anyWidth": false
+    },
+    "buildright-blocks/product-tile": {
+      "repo": "skukla/buildright-eds",
+      "ref": "v1.0.0-beta.1",
+      "commit": "59a51a3937afcdead32effe25adc31c56c6fa73b",
+      "rows": 1,
+      "columns": 1,
+      "variants": [
+        "selected"
+      ],
+      "readsConfig": false,
+      "anyWidth": false
+    },
+    "buildright-blocks/project-builder": {
+      "repo": "skukla/buildright-eds",
+      "ref": "v1.0.0-beta.1",
+      "commit": "59a51a3937afcdead32effe25adc31c56c6fa73b",
+      "rows": 1,
+      "columns": 1,
+      "variants": [],
+      "readsConfig": false,
+      "anyWidth": false
+    },
+    "buildright-blocks/project-bundle": {
+      "repo": "skukla/buildright-eds",
+      "ref": "v1.0.0-beta.1",
+      "commit": "59a51a3937afcdead32effe25adc31c56c6fa73b",
+      "rows": 1,
+      "columns": 1,
+      "variants": [],
+      "readsConfig": false,
+      "anyWidth": false
+    },
+    "buildright-blocks/project-filter": {
+      "repo": "skukla/buildright-eds",
+      "ref": "v1.0.0-beta.1",
+      "commit": "59a51a3937afcdead32effe25adc31c56c6fa73b",
+      "rows": 1,
+      "columns": 1,
+      "variants": [],
+      "readsConfig": false,
+      "anyWidth": false
+    },
+    "buildright-blocks/tier-badge": {
+      "repo": "skukla/buildright-eds",
+      "ref": "v1.0.0-beta.1",
+      "commit": "59a51a3937afcdead32effe25adc31c56c6fa73b",
+      "rows": 1,
+      "columns": 1,
+      "variants": [
+        "commercial-tier1",
+        "commercial-tier2",
+        "pro-specialty",
+        "residential-builder"
+      ],
+      "readsConfig": false,
+      "anyWidth": false
+    },
+    "buildright-blocks/user-menu": {
+      "repo": "skukla/buildright-eds",
+      "ref": "v1.0.0-beta.1",
+      "commit": "59a51a3937afcdead32effe25adc31c56c6fa73b",
+      "rows": 1,
+      "columns": 1,
+      "variants": [
+        "active"
+      ],
+      "readsConfig": false,
+      "anyWidth": false
+    },
+    "buildright-blocks/wizard-progress": {
+      "repo": "skukla/buildright-eds",
+      "ref": "v1.0.0-beta.1",
+      "commit": "59a51a3937afcdead32effe25adc31c56c6fa73b",
+      "rows": 1,
+      "columns": 1,
+      "variants": [],
+      "readsConfig": false,
+      "anyWidth": false
+    },
+    "buildright-blocks/wizard-sidebar": {
+      "repo": "skukla/buildright-eds",
+      "ref": "v1.0.0-beta.1",
+      "commit": "59a51a3937afcdead32effe25adc31c56c6fa73b",
+      "rows": 1,
+      "columns": 1,
+      "variants": [],
+      "readsConfig": false,
+      "anyWidth": false
+    },
+    "buildright-blocks/wizard-vertical-progress": {
+      "repo": "skukla/buildright-eds",
+      "ref": "v1.0.0-beta.1",
+      "commit": "59a51a3937afcdead32effe25adc31c56c6fa73b",
+      "rows": 1,
+      "columns": 1,
+      "variants": [],
+      "readsConfig": false,
+      "anyWidth": false
+    },
+    "demo-builder-blocks/catalog-menu": {
+      "repo": "skukla/demo-builder-block-library",
+      "ref": "v1.0.0-beta.1",
+      "commit": "be23ef6966832bc6e3c360404dd1bff6bd67b00e",
+      "rows": 1,
+      "columns": 1,
+      "variants": [],
+      "readsConfig": false,
+      "anyWidth": false
+    }
+  }
+}

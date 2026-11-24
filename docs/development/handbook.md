@@ -360,14 +360,21 @@ check says so and names the file.
 > has not run for two days, or holds verified work two days older than any release.
 
 > **Convention.** A block's example in the DA.live block list is the first that exists:
-> Adobe's example page, its block library's example page, a real use copied from a page
-> (library site first, then the storefront's content source), else a placeholder shaped by the
-> block's code. Never an invented sample, and a page someone wrote is never replaced.
+> Adobe's example page, its block library's example page, a real use on the storefront's own
+> content source pages, the example Demo Builder ships for the block
+> (`src/features/eds/config/block-examples/`, its image cells given photos from the storefront's
+> own pages), a real use on the library's site, else a placeholder shaped by the block's code. A page someone wrote is
+> never replaced.
 > *Why:* an author placing a block gets the table the block really uses, settings included.
 > The invented placeholders it replaced put the words "Commerce Checkout" in a checkout table
-> that is empty on Adobe's own page, and dropped the cart's settings rows (2026-11-23).
+> that is empty on Adobe's own page, and dropped the cart's settings rows (2026-11-23). A real
+> use from another brand's site is a poor example, and the owner would not have examples depend
+> on him collecting them (2026-11-24), so Demo Builder ships one, written to Adobe's pattern:
+> neutral sample content, one named example per way of using the block, a description.
 > Stated in `.rptc/plans/block-library-without-universal-editor/step-02.md`; enforced by
-> `tests/features/eds/services/blockLibrary/blockExampleConvention.test.ts`.
+> `tests/features/eds/services/blockLibrary/blockExampleConvention.test.ts`. Each shipped
+> example is checked for structure by `shippedExampleStructure.test.ts` and rendered with
+> the block's real code by `npm run block-examples:render`.
 
 ## 5. What survives between calls
 

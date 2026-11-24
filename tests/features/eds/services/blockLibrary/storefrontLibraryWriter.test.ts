@@ -105,6 +105,34 @@ describe('writeStorefrontBlockLibrary', () => {
             expect(placeholderFor.mock.calls).toEqual([['widget']]);
         });
 
+        it('writes a shipped example with the storefront\'s photos, and counts it as an example', async () => {
+            const banner: StorefrontBlock = {
+                id: 'banner', title: 'Banner', example: {
+                    kind: 'shipped', source: 'template',
+                    example: { description: 'A banner.', html: '<div class="banner"><div><div><img alt="A"></div></div></div>' },
+                },
+            };
+
+            const result = await run({ blocks: [banner, widget], photos: ['https://x.aem.page/media_1.jpeg'] });
+
+            expect(h.createSource.mock.calls[0][3]).toContain('<img src="https://x.aem.page/media_1.jpeg" alt="A">');
+            expect(result).toMatchObject({ needsExample: ['widget'] });
+        });
+
+        it('keeps a shipped example\'s image cells as alt text only when the storefront has no photo', async () => {
+            const banner: StorefrontBlock = {
+                id: 'banner', title: 'Banner', example: {
+                    kind: 'shipped', source: 'template',
+                    example: { description: 'A banner.', html: '<div class="banner"><div><div><img alt="A"></div></div></div>' },
+                },
+            };
+
+            const result = await run({ blocks: [banner] });
+
+            expect(h.createSource.mock.calls[0][3]).toContain('<img alt="A">');
+            expect(result).toMatchObject({ success: true, needsExample: [] });
+        });
+
         it('overwrites only the pages it was told replace an old stub', async () => {
             await run({ replacePageIds: new Set(['carousel']) });
 

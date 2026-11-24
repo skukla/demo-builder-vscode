@@ -7,7 +7,7 @@
 
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
-import { buildBlockUseIndex } from '@/features/eds/services/blockLibrary/blockUseIndex';
+import { buildBlockUseIndex, photosInUses } from '@/features/eds/services/blockLibrary/blockUseIndex';
 
 const FIXTURES = resolve(__dirname, '../../../../fixtures/eds/block-library');
 const readPage = (name: string): string => readFileSync(resolve(FIXTURES, name), 'utf8');
@@ -148,5 +148,33 @@ describe('buildBlockUseIndex', () => {
         expect(fetchText).toHaveBeenCalledTimes(20);
         expect(most).toBeGreaterThan(1);
         expect(most).toBeLessThan(20);
+    });
+});
+
+describe('photosInUses', () => {
+    const use = (path: string, html: string) => ({ path, examples: [{ variant: '', html }] });
+
+    it('takes each image in the uses as an address on the site, without the resize query', () => {
+        const index = new Map([
+            ['hero', use('/', '<div><div><picture><source srcset="./media_a.jpeg?width=2000">'
+                + '<img src="./media_a.jpeg?width=750&#x26;format=jpeg" alt="A"></picture></div></div>')],
+            ['cards', use('/shop/sale', '<div><div><img alt="B" src="./media_b.png"></div></div>')],
+        ]);
+
+        expect(photosInUses(SITE, index)).toEqual([`${BASE}/media_a.jpeg`, `${BASE}/shop/media_b.png`]);
+    });
+
+    it('keeps a photo once, and only http and https addresses', () => {
+        const index = new Map([
+            ['hero', use('/a', '<img src="./media_a.jpeg"><img src="data:image/png;base64,xx">'
+                + '<img src="javascript:alert(1)">')],
+            ['cards', use('/b', '<img src="https://cdn.example.com/x.jpg"><img src="./media_a.jpeg">')],
+        ]);
+
+        expect(photosInUses(SITE, index)).toEqual([`${BASE}/media_a.jpeg`, 'https://cdn.example.com/x.jpg']);
+    });
+
+    it('finds none in uses with no image', () => {
+        expect(photosInUses(SITE, new Map([['hero', use('/', '<div>text</div>')]]))).toStrictEqual([]);
     });
 });

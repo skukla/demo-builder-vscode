@@ -13,6 +13,11 @@ import type { LibraryEntry } from './adobeContentLibrary';
 import { displayName } from './blockDoc';
 import { isBlockName, type VariantExample } from './blockTable';
 import type { BlockUse } from './blockUseIndex';
+import {
+    findShippedExample,
+    type ShippedBlockExample,
+    type ShippedExamples,
+} from './shippedBlockExamples';
 import type { SiteRef } from './siteRef';
 
 /**
@@ -31,8 +36,14 @@ export function listableBlockIds(repoBlockIds: string[]): string[] {
     return [...new Set(repoBlockIds)].filter(isBlockName);
 }
 
-/** The example sources, in the order the convention tries them. */
-export const EXAMPLE_KINDS = ['existing', 'adobe', 'library', 'real-use', 'placeholder'] as const;
+/**
+ * The example sources, in the order the convention tries them: the page already there, Adobe's
+ * page, the library's own page, a real use on the storefront's own content source pages, the
+ * example Demo Builder ships, a real use on the library's site, the placeholder.
+ */
+export const EXAMPLE_KINDS = [
+    'existing', 'adobe', 'library', 'real-use', 'shipped', 'library-use', 'placeholder',
+] as const;
 
 /** A page on a content site to copy the example from. */
 export interface ExamplePage extends SiteRef {
@@ -43,8 +54,10 @@ export interface ExamplePage extends SiteRef {
 export type BlockExample =
     | { kind: 'existing' }
     | { kind: 'adobe'; source: ExamplePage }
-    | { kind: 'library'; source: ExamplePage }
     | { kind: 'real-use'; examples: VariantExample[]; from: string }
+    | { kind: 'shipped'; source: string; example: ShippedBlockExample }
+    | { kind: 'library'; source: ExamplePage }
+    | { kind: 'library-use'; examples: VariantExample[]; from: string }
     | { kind: 'placeholder' };
 
 /** One palette entry. */
@@ -54,8 +67,12 @@ export interface StorefrontBlock {
     example: BlockExample;
 }
 
-/** A block library installed on the storefront; `site` is its content site, when it has one. */
+/**
+ * A block library installed on the storefront: its id (absent for an added demo's site), its
+ * content site when it has one, and the storefront blocks it has.
+ */
 export interface InstalledLibrary {
+    id?: string;
     site?: SiteRef;
     blockIds: string[];
 }
@@ -79,6 +96,8 @@ export interface StorefrontBlockListInput {
     contentSourceUses: Map<string, BlockUse>;
     /** `${org}/${site}/${blockId}` of a library site with a doc page for the block, to its path. */
     librarySitePages: Map<string, string>;
+    /** The examples Demo Builder ships (`shippedBlockExamples.ts`). */
+    shipped: ShippedExamples;
 }
 
 const ADOBE_BLOCK_PAGE = '/docs/library/blocks/';
@@ -116,20 +135,20 @@ function chooseExample(id: string, isAdobe: boolean, input: StorefrontBlockListI
     if (isAdobe && input.adobeSite) {
         return { kind: 'adobe', source: { ...input.adobeSite, path: `${ADOBE_BLOCK_PAGE}${id}` } };
     }
-    const librarySites = sitesOfLibrariesWith(id, input.libraries);
+    const withBlock = input.libraries.filter((library) => library.blockIds.includes(id));
+    const librarySites = withBlock.flatMap((library) => (library.site ? [library.site] : []));
     const libraryPage = findOnSites(id, librarySites, input.librarySitePages);
     if (libraryPage) {
         return { kind: 'library', source: { ...libraryPage.site, path: libraryPage.found } };
     }
-    const use = findOnSites(id, librarySites, input.librarySiteUses)?.found
-        ?? input.contentSourceUses.get(id);
-    if (use) return { kind: 'real-use', examples: use.examples, from: use.path };
+    const ownUse = input.contentSourceUses.get(id);
+    if (ownUse) return { kind: 'real-use', examples: ownUse.examples, from: ownUse.path };
+    const libraryIds = withBlock.flatMap((library) => (library.id ? [library.id] : []));
+    const shipped = findShippedExample(id, libraryIds, input.shipped);
+    if (shipped) return { kind: 'shipped', ...shipped };
+    const use = findOnSites(id, librarySites, input.librarySiteUses)?.found;
+    if (use) return { kind: 'library-use', examples: use.examples, from: use.path };
     return { kind: 'placeholder' };
-}
-
-function sitesOfLibrariesWith(id: string, libraries: InstalledLibrary[]): SiteRef[] {
-    return libraries.flatMap((library) =>
-        library.site && library.blockIds.includes(id) ? [library.site] : []);
 }
 
 /** The first of the sites with an entry for the block in `found` (keyed `org/site/id`). */

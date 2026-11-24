@@ -39,9 +39,9 @@ import {
 import { assertBlockName, deleteBlockCode } from './blockRemoval';
 import { DEFAULT_NEEDS_EXAMPLE_LIMIT, listBlocksNeedingExamples } from './blocksNeedingExamples';
 import type { McpToolCredentials, ProjectFileHooks } from './credentials';
-import { withLibraryDescription } from './exampleDescription';
 import { assertInsideProject, resolveProjectPath, resolveStorefrontPath } from './projectSecurity';
 import { paginate, projectToolHandlers } from './projectToolHandlers';
+import { withLibraryDescription } from '@/features/eds/services/blockLibrary/exampleDescription';
 import {
     dropBlockNeedingExample,
     readBlocksNeedingExamples,

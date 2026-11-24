@@ -20,7 +20,6 @@
  * ├── mcp/blockRemoval           — deleting a block's code folder
  * ├── mcp/blockLibraryPublish    — the promote/remove publish tails
  * ├── mcp/blocksNeedingExamples  — list_blocks_needing_examples (EDS-71 step 4c)
- * ├── mcp/exampleDescription     — promote's library-metadata description
  * ├── mcp/blockToolHandlers      — the block tools
  * └── mcp/credentials            — the credential provider types
  *

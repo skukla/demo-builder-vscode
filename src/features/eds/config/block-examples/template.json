@@ -1,0 +1,347 @@
+{
+  "$schema": "./block-examples.schema.json",
+  "carousel": {
+    "description": "A full-width rotating banner. Each row is one slide: an image in the first column, then a heading, a short line and a link; make the link bold to show it as a button. With two or more rows it turns every 6 seconds; one row stays still.",
+    "html": "<h2>Carousel, three slides</h2><div class=\"carousel\"><div><div><picture><img alt=\"New season\"></picture></div><div><h3>New season, new arrivals</h3><p>Discover the latest pieces in our collection.</p><p><strong><a href=\"/\">Shop now</a></strong></p></div></div><div><div><picture><img alt=\"Free shipping\"></picture></div><div><h3>Free shipping over $50</h3><p>On every order, every day.</p><p><strong><a href=\"/\">Learn more</a></strong></p></div></div><div><div><picture><img alt=\"Our stores\"></picture></div><div><h3>Find a store near you</h3><p>Visit us and see the collection in person.</p><p><strong><a href=\"/\">Find a store</a></strong></p></div></div></div><h2>Carousel, single slide</h2><div class=\"carousel\"><div><div><picture><img alt=\"Banner\"></picture></div><div><h3>Your heading here</h3><p>A short line about what this banner is for.</p><p><strong><a href=\"/\">Call to action</a></strong></p></div></div></div>"
+  },
+  "commerce-account-header": {
+    "description": "The heading at the top of an account page. One row: Title, with the heading text (default My account).",
+    "html": "<h2>Commerce Account Header</h2><div class=\"commerce-account-header\"><div><div>Title</div><div>My account</div></div></div>"
+  },
+  "commerce-account-nav": {
+    "description": "The account menu. The first row names the columns (label, icon, permission). Each row after is one link: a link plus a description line, an icon name (such as Order, AddressBook or Business), and the permission that shows it (all for everyone).",
+    "html": "<h2>Commerce Account Nav</h2><div class=\"commerce-account-nav\"><div><div><strong>label</strong></div><div><strong>icon</strong></div><div><strong>permission</strong></div></div><div><div><p><strong><a href=\"/customer/orders\">Orders</a></strong></p><p>Track, manage, and return</p></div><div>Order</div><div>all</div></div><div><div><p><strong><a href=\"/customer/address\">Addresses</a></strong></p><p>Manage your locations</p></div><div>AddressBook</div><div>all</div></div><div><div><p><strong><a href=\"/customer/company\">Company Profile</a></strong></p><p>Manage company</p></div><div>Business</div><div>Magento_Company::view_account</div></div></div>",
+    "structureOnly": "it shows the menu entries the signed-in customer's permissions allow, so it needs a live store."
+  },
+  "commerce-account-sidebar": {
+    "description": "The account sidebar. The block itself holds nothing; its entries come from the /customer/sidebar-fragment document.",
+    "html": "<h2>Commerce Account Sidebar</h2><div class=\"commerce-account-sidebar\"><div><div></div></div></div>",
+    "structureOnly": "it loads the /customer/sidebar-fragment document and shows the signed-in customer's account links."
+  },
+  "commerce-addresses": {
+    "description": "The customer's saved addresses. One row: Minified View, true for the short summary shown on the account page, false (default) for the full list.",
+    "html": "<h2>Commerce Addresses</h2><div class=\"commerce-addresses\"><div><div>Minified View</div><div>false</div></div></div><h2>Commerce Addresses, minified</h2><div class=\"commerce-addresses\"><div><div>Minified View</div><div>true</div></div></div>",
+    "structureOnly": "it shows the signed-in customer's saved addresses from a live store."
+  },
+  "commerce-b2b-company-hierarchy": {
+    "description": "The company structure tree. Nothing to fill in.",
+    "html": "<h2>Commerce B2b Company Hierarchy</h2><div class=\"commerce-b2b-company-hierarchy\"><div><div></div></div></div>",
+    "structureOnly": "it shows the signed-in company user's company structure from a live store."
+  },
+  "commerce-b2b-negotiable-quote": {
+    "description": "The negotiable quote list and details page. Nothing to fill in; the quote comes from the page address.",
+    "html": "<h2>Commerce B2b Negotiable Quote</h2><div class=\"commerce-b2b-negotiable-quote\"><div><div></div></div></div>",
+    "structureOnly": "it shows the company's negotiable quotes from a live store."
+  },
+  "commerce-b2b-negotiable-quote-template": {
+    "description": "The quote template list and details page. Nothing to fill in; the template comes from the page address.",
+    "html": "<h2>Commerce B2b Negotiable Quote Template</h2><div class=\"commerce-b2b-negotiable-quote-template\"><div><div></div></div></div>",
+    "structureOnly": "it shows the company's quote templates from a live store."
+  },
+  "commerce-b2b-po-approval-flow": {
+    "description": "The approval steps of a purchase order. Nothing to fill in.",
+    "html": "<h2>Commerce B2b Po Approval Flow</h2><div class=\"commerce-b2b-po-approval-flow\"><div><div></div></div></div>",
+    "structureOnly": "it shows one purchase order's approval flow from a live store."
+  },
+  "commerce-b2b-po-approval-rule-details": {
+    "description": "The details of one purchase order approval rule. Nothing to fill in; the rule comes from the page address.",
+    "html": "<h2>Commerce B2b Po Approval Rule Details</h2><div class=\"commerce-b2b-po-approval-rule-details\"><div><div></div></div></div>",
+    "structureOnly": "it shows one approval rule from a live store."
+  },
+  "commerce-b2b-po-approval-rule-form": {
+    "description": "The form to create or edit a purchase order approval rule. Nothing to fill in.",
+    "html": "<h2>Commerce B2b Po Approval Rule Form</h2><div class=\"commerce-b2b-po-approval-rule-form\"><div><div></div></div></div>",
+    "structureOnly": "it saves approval rules to a live store."
+  },
+  "commerce-b2b-po-approval-rules-list": {
+    "description": "The list of purchase order approval rules. Nothing to fill in.",
+    "html": "<h2>Commerce B2b Po Approval Rules List</h2><div class=\"commerce-b2b-po-approval-rules-list\"><div><div></div></div></div>",
+    "structureOnly": "it lists the company's approval rules from a live store."
+  },
+  "commerce-b2b-po-checkout-success": {
+    "description": "The confirmation shown after a purchase order is placed. Nothing to fill in.",
+    "html": "<h2>Commerce B2b Po Checkout Success</h2><div class=\"commerce-b2b-po-checkout-success\"><div><div></div></div></div>",
+    "structureOnly": "on its own it shows only a Continue Shopping button: the rest is the purchase order just placed, read from the live store."
+  },
+  "commerce-b2b-po-comment-form": {
+    "description": "The form to add a comment to a purchase order. Nothing to fill in.",
+    "html": "<h2>Commerce B2b Po Comment Form</h2><div class=\"commerce-b2b-po-comment-form\"><div><div></div></div></div>",
+    "structureOnly": "it saves comments to a purchase order in a live store."
+  },
+  "commerce-b2b-po-comments-list": {
+    "description": "The comments on a purchase order. Nothing to fill in.",
+    "html": "<h2>Commerce B2b Po Comments List</h2><div class=\"commerce-b2b-po-comments-list\"><div><div></div></div></div>",
+    "structureOnly": "it shows one purchase order's comments from a live store."
+  },
+  "commerce-b2b-po-company-purchase-orders": {
+    "description": "The list of the company's purchase orders. Nothing to fill in.",
+    "html": "<h2>Commerce B2b Po Company Purchase Orders</h2><div class=\"commerce-b2b-po-company-purchase-orders\"><div><div></div></div></div>",
+    "structureOnly": "it lists the company's purchase orders from a live store."
+  },
+  "commerce-b2b-po-customer-purchase-orders": {
+    "description": "The list of the customer's own purchase orders. Nothing to fill in.",
+    "html": "<h2>Commerce B2b Po Customer Purchase Orders</h2><div class=\"commerce-b2b-po-customer-purchase-orders\"><div><div></div></div></div>",
+    "structureOnly": "it lists the signed-in customer's purchase orders from a live store."
+  },
+  "commerce-b2b-po-header": {
+    "description": "The heading of a purchase order page, with a link back to all purchase orders. Nothing to fill in.",
+    "html": "<h2>Commerce B2b Po Header</h2><div class=\"commerce-b2b-po-header\"><div><div></div></div></div>",
+    "structureOnly": "on its own it shows only its title: the rest is the order, return or account of a signed-in shopper, read from the live store."
+  },
+  "commerce-b2b-po-history-log": {
+    "description": "The history of changes to a purchase order. Nothing to fill in.",
+    "html": "<h2>Commerce B2b Po History Log</h2><div class=\"commerce-b2b-po-history-log\"><div><div></div></div></div>",
+    "structureOnly": "it shows one purchase order's history from a live store."
+  },
+  "commerce-b2b-po-require-approval-purchase-orders": {
+    "description": "The purchase orders waiting for the customer's approval. Nothing to fill in.",
+    "html": "<h2>Commerce B2b Po Require Approval Purchase Orders</h2><div class=\"commerce-b2b-po-require-approval-purchase-orders\"><div><div></div></div></div>",
+    "structureOnly": "it lists purchase orders needing approval from a live store."
+  },
+  "commerce-b2b-po-status": {
+    "description": "The status of a purchase order. Nothing to fill in.",
+    "html": "<h2>Commerce B2b Po Status</h2><div class=\"commerce-b2b-po-status\"><div><div></div></div></div>",
+    "structureOnly": "it shows one purchase order's status from a live store."
+  },
+  "commerce-b2b-quick-order": {
+    "description": "The quick order page: add items by product code, pasted list or file. Nothing to fill in.",
+    "html": "<h2>Commerce B2b Quick Order</h2><div class=\"commerce-b2b-quick-order\"><div><div></div></div></div>",
+    "structureOnly": "it looks up products and fills the cart in a live store."
+  },
+  "commerce-b2b-quote-checkout": {
+    "description": "Checkout for a negotiable quote. Nothing to fill in; the quote comes from the page address.",
+    "html": "<h2>Commerce B2b Quote Checkout</h2><div class=\"commerce-b2b-quote-checkout\"><div><div></div></div></div>",
+    "structureOnly": "it checks out a negotiable quote in a live store."
+  },
+  "commerce-b2b-requisition-list": {
+    "description": "The customer's requisition lists. Nothing to fill in.",
+    "html": "<h2>Commerce B2b Requisition List</h2><div class=\"commerce-b2b-requisition-list\"><div><div></div></div></div>",
+    "structureOnly": "it lists the customer's requisition lists from a live store and sends signed-out visitors to sign in."
+  },
+  "commerce-b2b-requisition-list-public-share": {
+    "description": "A shared requisition list opened from a share link. Nothing to fill in; the share link supplies the list, and a visit without it goes to the home page.",
+    "html": "<h2>Commerce B2b Requisition List Public Share</h2><div class=\"commerce-b2b-requisition-list-public-share\"><div><div></div></div></div>",
+    "structureOnly": "it loads a shared requisition list from a live store and redirects without a share link."
+  },
+  "commerce-b2b-requisition-list-sharing": {
+    "description": "The page that shares a requisition list. Nothing to fill in.",
+    "html": "<h2>Commerce B2b Requisition List Sharing</h2><div class=\"commerce-b2b-requisition-list-sharing\"><div><div></div></div></div>",
+    "structureOnly": "it shares a requisition list in a live store."
+  },
+  "commerce-b2b-requisition-list-view": {
+    "description": "One requisition list and its items. Nothing to fill in; the list comes from the page address.",
+    "html": "<h2>Commerce B2b Requisition List View</h2><div class=\"commerce-b2b-requisition-list-view\"><div><div></div></div></div>",
+    "structureOnly": "it shows one requisition list from a live store and sends signed-out visitors to sign in."
+  },
+  "commerce-cart": {
+    "description": "The shopping cart: the shopper's items, the order summary and the way to checkout. Each row is a setting and its value; the values shown are the block's defaults, with its two links pointing at the home and checkout pages.",
+    "html": "<h2>Commerce Cart</h2><div class=\"commerce-cart\"><div><div>Hide Heading</div><div>false</div></div><div><div>Max Items</div><div></div></div><div><div>Hide Attributes</div><div></div></div><div><div>Enable Item Quantity Update</div><div>false</div></div><div><div>Enable Item Remove</div><div>true</div></div><div><div>Enable Estimate Shipping</div><div>false</div></div><div><div>Start Shopping URL</div><div>/</div></div><div><div>Checkout URL</div><div>/checkout</div></div><div><div>Enable Updating Product</div><div>false</div></div><div><div>Undo Remove Item</div><div>false</div></div></div>"
+  },
+  "commerce-checkout": {
+    "description": "The checkout: contact, addresses, shipping, payment and place order. It reads no settings: add the block and leave the cell empty.",
+    "html": "<h2>Commerce Checkout</h2><div class=\"commerce-checkout\"><div><div></div></div></div>",
+    "structureOnly": "it needs a live store."
+  },
+  "commerce-checkout-success": {
+    "description": "The order confirmation shown after a purchase. It reads no settings: add the block and leave the cell empty.",
+    "html": "<h2>Commerce Checkout Success</h2><div class=\"commerce-checkout-success\"><div><div></div></div></div>",
+    "structureOnly": "on its own it shows only a loading placeholder: its content is a signed-in shopper's order, account or shipment, read from the live store."
+  },
+  "commerce-company-accept-invitation": {
+    "description": "Lets an invited person accept a company invitation. It reads no settings: add the block and leave the cell empty.",
+    "html": "<h2>Commerce Company Accept Invitation</h2><div class=\"commerce-company-accept-invitation\"><div><div></div></div></div>",
+    "structureOnly": "on its own it shows \"Invalid invitation link\": it reads the invitation from the link a company admin emails."
+  },
+  "commerce-company-create": {
+    "description": "The form for registering a new company account. It reads no settings: add the block and leave the cell empty.",
+    "html": "<h2>Commerce Company Create</h2><div class=\"commerce-company-create\"><div><div></div></div></div>",
+    "structureOnly": "it needs a live store."
+  },
+  "commerce-company-credit": {
+    "description": "The company credit balance and, optionally, its history. One row: Show History, true or false.",
+    "html": "<h2>Commerce Company Credit</h2><div class=\"commerce-company-credit\"><div><div>Show History</div><div>true</div></div></div>",
+    "structureOnly": "it needs a live store."
+  },
+  "commerce-company-profile": {
+    "description": "The company profile page. It reads no settings: add the block and leave the cell empty.",
+    "html": "<h2>Commerce Company Profile</h2><div class=\"commerce-company-profile\"><div><div></div></div></div>",
+    "structureOnly": "it needs a live store."
+  },
+  "commerce-company-roles-permissions": {
+    "description": "Manage company roles and their permissions. It reads no settings: add the block and leave the cell empty.",
+    "html": "<h2>Commerce Company Roles Permissions</h2><div class=\"commerce-company-roles-permissions\"><div><div></div></div></div>",
+    "structureOnly": "it needs a live store."
+  },
+  "commerce-company-structure": {
+    "description": "The company's teams and users as a tree. It reads no settings: add the block and leave the cell empty.",
+    "html": "<h2>Commerce Company Structure</h2><div class=\"commerce-company-structure\"><div><div></div></div></div>",
+    "structureOnly": "it needs a live store."
+  },
+  "commerce-company-users": {
+    "description": "The list of company users. It reads no settings: add the block and leave the cell empty.",
+    "html": "<h2>Commerce Company Users</h2><div class=\"commerce-company-users\"><div><div></div></div></div>",
+    "structureOnly": "it needs a live store."
+  },
+  "commerce-confirm-account": {
+    "description": "Confirms a new customer account from the emailed link. It reads no settings: add the block and leave the cell empty.",
+    "html": "<h2>Commerce Confirm Account</h2><div class=\"commerce-confirm-account\"><div><div></div></div></div>"
+  },
+  "commerce-create-account": {
+    "description": "The customer registration form. It reads no settings: add the block and leave the cell empty.",
+    "html": "<h2>Commerce Create Account</h2><div class=\"commerce-create-account\"><div><div></div></div></div>"
+  },
+  "commerce-create-password": {
+    "description": "Sets a new password from the emailed reset link. It reads no settings: add the block and leave the cell empty.",
+    "html": "<h2>Commerce Create Password</h2><div class=\"commerce-create-password\"><div><div></div></div></div>",
+    "structureOnly": "it needs a live store."
+  },
+  "commerce-create-return": {
+    "description": "The form for requesting a return on an order. It reads no settings: add the block and leave the cell empty.",
+    "html": "<h2>Commerce Create Return</h2><div class=\"commerce-create-return\"><div><div></div></div></div>",
+    "structureOnly": "on its own it shows only a title and a disabled Continue button: the items come from a signed-in shopper's order."
+  },
+  "commerce-customer-company": {
+    "description": "The signed-in customer's company details. It reads no settings: add the block and leave the cell empty.",
+    "html": "<h2>Commerce Customer Company</h2><div class=\"commerce-customer-company\"><div><div></div></div></div>",
+    "structureOnly": "it needs a live store."
+  },
+  "commerce-customer-details": {
+    "description": "The customer's details on an order page. It reads no settings: add the block and leave the cell empty.",
+    "html": "<h2>Commerce Customer Details</h2><div class=\"commerce-customer-details\"><div><div></div></div></div>",
+    "structureOnly": "on its own it shows only a loading placeholder: its content is a signed-in shopper's order, account or shipment, read from the live store."
+  },
+  "commerce-customer-information": {
+    "description": "The customer's account information page. It reads no settings: add the block and leave the cell empty.",
+    "html": "<h2>Commerce Customer Information</h2><div class=\"commerce-customer-information\"><div><div></div></div></div>",
+    "structureOnly": "it needs a live store."
+  },
+  "commerce-forgot-password": {
+    "description": "The form for requesting a password reset. It reads no settings: add the block and leave the cell empty.",
+    "html": "<h2>Commerce Forgot Password</h2><div class=\"commerce-forgot-password\"><div><div></div></div></div>"
+  },
+  "commerce-gift-options": {
+    "description": "Gift options for the cart or an order. It reads no settings: add the block and leave the cell empty.",
+    "html": "<h2>Commerce Gift Options</h2><div class=\"commerce-gift-options\"><div><div></div></div></div>",
+    "structureOnly": "it needs a live store."
+  },
+  "commerce-login": {
+    "description": "The customer sign-in form. It reads no settings: add the block and leave the cell empty.",
+    "html": "<h2>Commerce Login</h2><div class=\"commerce-login\"><div><div></div></div></div>"
+  },
+  "commerce-mini-cart": {
+    "description": "The slide-out cart. Each row is a setting; leave a URL empty to use the default.",
+    "html": "<h2>Commerce Mini Cart</h2><div class=\"commerce-mini-cart\"><div><div>Start Shopping URL</div><div></div></div><div><div>Cart URL</div><div></div></div><div><div>Checkout URL</div><div></div></div><div><div>Enable Updating Product</div><div>false</div></div><div><div>Undo Remove Item</div><div>false</div></div></div>"
+  },
+  "commerce-order-comments": {
+    "description": "Order comments on an order page. It reads no settings: add the block and leave the cell empty.",
+    "html": "<h2>Commerce Order Comments</h2><div class=\"commerce-order-comments\"><div><div></div></div></div>",
+    "structureOnly": "on its own it shows only a loading placeholder: its content is a signed-in shopper's order, account or shipment, read from the live store."
+  },
+  "commerce-order-cost-summary": {
+    "description": "The cost breakdown of an order. It reads no settings: add the block and leave the cell empty.",
+    "html": "<h2>Commerce Order Cost Summary</h2><div class=\"commerce-order-cost-summary\"><div><div></div></div></div>",
+    "structureOnly": "on its own it shows only a loading placeholder: its content is a signed-in shopper's order, account or shipment, read from the live store."
+  },
+  "commerce-order-header": {
+    "description": "The header of an order page with its number and date. It reads no settings: add the block and leave the cell empty.",
+    "html": "<h2>Commerce Order Header</h2><div class=\"commerce-order-header\"><div><div></div></div></div>",
+    "structureOnly": "on its own it shows only its title: the rest is the order, return or account of a signed-in shopper, read from the live store."
+  },
+  "commerce-order-product-list": {
+    "description": "The products on an order. It reads no settings: add the block and leave the cell empty.",
+    "html": "<h2>Commerce Order Product List</h2><div class=\"commerce-order-product-list\"><div><div></div></div></div>",
+    "structureOnly": "on its own it shows only a loading placeholder: its content is a signed-in shopper's order, account or shipment, read from the live store."
+  },
+  "commerce-order-returns": {
+    "description": "The returns made on an order. It reads no settings: add the block and leave the cell empty.",
+    "html": "<h2>Commerce Order Returns</h2><div class=\"commerce-order-returns\"><div><div></div></div></div>",
+    "structureOnly": "it needs a live store."
+  },
+  "commerce-order-status": {
+    "description": "The status of an order. It reads no settings: add the block and leave the cell empty.",
+    "html": "<h2>Commerce Order Status</h2><div class=\"commerce-order-status\"><div><div></div></div></div>",
+    "structureOnly": "on its own it shows only a loading placeholder: its content is a signed-in shopper's order, account or shipment, read from the live store."
+  },
+  "commerce-orders-list": {
+    "description": "The customer's order history. Each row is a setting: Minified View and Search, true or false.",
+    "html": "<h2>Commerce Orders List</h2><div class=\"commerce-orders-list\"><div><div>Minified View</div><div>false</div></div><div><div>Search</div><div>true</div></div></div>",
+    "structureOnly": "it needs a live store."
+  },
+  "commerce-return-header": {
+    "description": "The header of a return page. It reads no settings: add the block and leave the cell empty.",
+    "html": "<h2>Commerce Return Header</h2><div class=\"commerce-return-header\"><div><div></div></div></div>",
+    "structureOnly": "on its own it shows only its title: the rest is the order, return or account of a signed-in shopper, read from the live store."
+  },
+  "commerce-returns-list": {
+    "description": "The customer's returns. One row: Minified View, true or false.",
+    "html": "<h2>Commerce Returns List</h2><div class=\"commerce-returns-list\"><div><div>Minified View</div><div>false</div></div></div>",
+    "structureOnly": "it needs a live store."
+  },
+  "commerce-search-order": {
+    "description": "A form to look up an order by number and email. It reads no settings: add the block and leave the cell empty.",
+    "html": "<h2>Commerce Search Order</h2><div class=\"commerce-search-order\"><div><div></div></div></div>"
+  },
+  "commerce-seller-assisted-buying-activity": {
+    "description": "Activity log for seller-assisted buying. It reads no settings: add the block and leave the cell empty.",
+    "html": "<h2>Commerce Seller Assisted Buying Activity</h2><div class=\"commerce-seller-assisted-buying-activity\"><div><div></div></div></div>",
+    "structureOnly": "it needs a live store."
+  },
+  "commerce-seller-assisted-buying-settings": {
+    "description": "Settings for seller-assisted buying. It reads no settings: add the block and leave the cell empty.",
+    "html": "<h2>Commerce Seller Assisted Buying Settings</h2><div class=\"commerce-seller-assisted-buying-settings\"><div><div></div></div></div>",
+    "structureOnly": "it needs a live store."
+  },
+  "commerce-shipping-status": {
+    "description": "The shipping status of an order. It reads no settings: add the block and leave the cell empty.",
+    "html": "<h2>Commerce Shipping Status</h2><div class=\"commerce-shipping-status\"><div><div></div></div></div>",
+    "structureOnly": "on its own it shows only a loading placeholder: its content is a signed-in shopper's order, account or shipment, read from the live store."
+  },
+  "commerce-wishlist": {
+    "description": "The customer's wishlist. One row: Start Shopping URL, the page the empty wishlist links to (empty hides the link).",
+    "html": "<h2>Commerce Wishlist</h2><div class=\"commerce-wishlist\"><div><div>Start Shopping URL</div><div></div></div></div>"
+  },
+  "enrichment": {
+    "description": "Pulls in extra content written for a product or category page: set Type to product or category, and optionally Position to pick one slot; the block then shows every matching fragment from the storefront's enrichment index in its place.",
+    "html": "<h2>Enrichment, on a product page</h2><div class=\"enrichment\"><div><div>Type</div><div>product</div></div><div><div>Position</div><div>below-details</div></div></div><h2>Enrichment, on a category page</h2><div class=\"enrichment\"><div><div>Type</div><div>category</div></div><div><div>Position</div><div>above-products</div></div></div>",
+    "structureOnly": "it removes itself and shows only the fragments the storefront's enrichment index lists for the product in the page address or the category of the page's product list, so it has nothing to show outside a real storefront."
+  },
+  "footer": {
+    "description": "The site footer. It takes no content of its own: it shows the footer document (/footer, or the page named by the page's footer metadata), so edit that document to change the links and text.",
+    "html": "<h2>Footer</h2><div class=\"footer\"><div><div></div></div></div>",
+    "structureOnly": "it ignores its own table and loads the storefront's footer document, which exists only on a real site."
+  },
+  "header": {
+    "description": "The site header: logo, navigation, search, account and cart. It takes no content of its own: it shows the nav document (/nav, or the page named by the page's nav metadata), so edit that document to change the menu.",
+    "html": "<h2>Header</h2><div class=\"header\"><div><div></div></div></div>",
+    "structureOnly": "it ignores its own table and loads the storefront's nav document, and its search, account and cart buttons need a live store."
+  },
+  "modal": {
+    "description": "A pop-up window that other blocks open (for example the store switcher and quick view); it is not inserted on a page by hand, and the cell holds the content the window would show.",
+    "html": "<h2>Modal</h2><div class=\"modal\"><div><div><h3>Sign up for updates</h3><p>Be the first to hear about new arrivals and offers.</p></div></div></div>",
+    "structureOnly": "its code is a helper that other blocks call with the content to show; loaded as a block on a page, it has no content list to open and shows nothing."
+  },
+  "product-details": {
+    "description": "The product page: gallery, name, price, options, quantity and add to cart, for the product in the page address. Its one setting, Grid Ordering Enabled, set to true shows configurable products as an order grid of every variant.",
+    "html": "<h2>Product Details</h2><div class=\"product-details\"><div><div>Grid Ordering Enabled</div><div>false</div></div></div><h2>Product Details, with grid ordering</h2><div class=\"product-details\"><div><div>Grid Ordering Enabled</div><div>true</div></div></div>",
+    "structureOnly": "it needs a live store, because it shows the product the storefront loaded for the SKU in the page address."
+  },
+  "product-list-page": {
+    "description": "A product grid with filters, sorting and pages. On a category page set urlpath to the category's URL path; leave it out for the search results page. pagesize is the number of products per page (default 9). Write both keys as one word.",
+    "html": "<h2>Product List Page, for a category</h2><div class=\"product-list-page\"><div><div>urlpath</div><div>women/tops</div></div><div><div>pagesize</div><div>12</div></div></div><h2>Product List Page, for search results</h2><div class=\"product-list-page\"><div><div>pagesize</div><div>9</div></div></div>"
+  },
+  "product-recommendations": {
+    "description": "A row of recommended products. recid names the recommendation unit to show; currentsku pins the product it recommends for (left empty, it uses the product on the page) and currentprice gives that product's price when the store needs it. Write the keys as one word.",
+    "html": "<h2>Product Recommendations, for the page's product</h2><div class=\"product-recommendations\"><div><div>recid</div><div>your-recommendation-unit-id</div></div></div><h2>Product Recommendations, for a chosen product</h2><div class=\"product-recommendations\"><div><div>recid</div><div>your-recommendation-unit-id</div></div><div><div>currentsku</div><div>ABC-123</div></div><div><div>currentprice</div><div>49.00</div></div></div>",
+    "structureOnly": "it needs a live store, because the recommendations come from the store's recommendation service for a unit set up there."
+  },
+  "targeted-block": {
+    "description": "Content shown only to the shoppers it names. Each row is a setting and its value (Customer Groups, Customer Segments or Cart Rules, as Commerce ids separated by commas), and the last row holds the content; a Fragment row shows that fragment instead.",
+    "html": "<h2>Targeted Block, for a customer group</h2><div class=\"targeted-block\"><div><div>Customer Groups</div><div>1</div></div><div><div><h3>Welcome back</h3><p>Members get free shipping on every order.</p><p><strong><a href=\"/\">Shop now</a></strong></p></div></div></div><h2>Targeted Block, for a customer segment</h2><div class=\"targeted-block\"><div><div>Customer Segments</div><div>1</div></div><div><div><h3>Picked for you</h3><p>New arrivals in the styles you shop most.</p><p><strong><a href=\"/\">See what is new</a></strong></p></div></div></div><h2>Targeted Block, for a cart rule</h2><div class=\"targeted-block\"><div><div>Cart Rules</div><div>1</div></div><div><div><h3>You unlocked a discount</h3><p>Your savings are applied at checkout.</p><p><strong><a href=\"/\">Keep shopping</a></strong></p></div></div></div><h2>Targeted Block, from a fragment</h2><div class=\"targeted-block\"><div><div>Customer Groups</div><div>1</div></div><div><div>Fragment</div><div>/fragments/member-offer</div></div></div>",
+    "structureOnly": "it loads the storefront header and footer through scripts.js, which needs the storefront's Commerce settings, and it shows its content only to the shoppers a live store names."
+  },
+  "widget": {
+    "description": "Loads a custom widget from the storefront code: the cell holds a link to the widget's file under /widgets/ (for example /widgets/store-hours.html), and anything after a ? in the link is passed to the widget as its settings.",
+    "html": "<h2>Widget</h2><div class=\"widget\"><div><div><p><a href=\"/widgets/store-hours.html\">/widgets/store-hours.html</a></p></div></div></div><h2>Widget, with settings</h2><div class=\"widget\"><div><div><p><a href=\"/widgets/store-hours.html?city=london\">/widgets/store-hours.html?city=london</a></p></div></div></div>",
+    "structureOnly": "it loads the widget's HTML, CSS and script from the storefront code's /widgets/ folder, and the template ships no widgets, so there is nothing to load until a storefront adds one."
+  }
+}

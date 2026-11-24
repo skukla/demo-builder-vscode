@@ -44,6 +44,41 @@ function plainHtmlPath(path: string): string {
     return path.endsWith('/') ? `${path}index.plain.html` : `${path}.plain.html`;
 }
 
+const IMAGE_SRC = /<img\b[^>]*?\ssrc="([^"]+)"/g;
+const WEB_ADDRESS = /^https?:\/\/[^\s"'<>]+$/;
+
+/**
+ * The photos in the uses, each as an http(s) address (a page's `./media_…` resolved against the
+ * page it is on, its resize query dropped), once each in the order first seen. These are the
+ * site's own images, for a shipped example's image cells (`shippedBlockExamples.ts`).
+ */
+export function photosInUses(site: SiteRef, index: ReadonlyMap<string, BlockUse>): string[] {
+    const origin = previewOrigin(site);
+    const photos = new Set<string>();
+    for (const { path, examples } of index.values()) {
+        const page = `${origin}${plainHtmlPath(path)}`;
+        for (const { html } of examples) {
+            for (const [, src] of html.matchAll(IMAGE_SRC)) {
+                const address = photoAddress(src, page);
+                if (address) photos.add(address);
+            }
+        }
+    }
+    return [...photos];
+}
+
+function photoAddress(src: string, page: string): string | undefined {
+    try {
+        const url = new URL(src, page);
+        url.search = '';
+        url.hash = '';
+        const address = url.toString();
+        return WEB_ADDRESS.test(address) ? address : undefined;
+    } catch {
+        return undefined;
+    }
+}
+
 async function readPage(
     fetchText: (url: string) => Promise<string | undefined>,
     url: string,

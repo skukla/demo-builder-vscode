@@ -41,7 +41,12 @@ export function blockDoc(
         const content = example?.html ?? placeholderRows(analysis ?? undefined);
         return `<div><div class="${cls}">${content}</div></div>`;
     });
-    return `<body><header></header><main>${sections.join('')}</main><footer></footer></body>`;
+    return pageEnvelope(sections.join(''));
+}
+
+/** A DA.live page around its sections, as `blockDoc` writes it. */
+export function pageEnvelope(sections: string): string {
+    return `<body><header></header><main>${sections}</main><footer></footer></body>`;
 }
 
 // Mirrors adobe/da-live blocks/config/blocks-import/blocks.js `displayName` (Import Blocks):

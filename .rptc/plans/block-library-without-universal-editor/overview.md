@@ -120,7 +120,17 @@ The detail of each step:
    every block without an Adobe example: neutral sample text and images, one named example per way of
    using the block, and a one-line description. A real use from another brand's site is a poor
    example; the shaped "Column N content" placeholder is the last fallback only.
-4b. **Our own libraries get real examples once**: draft examples to that target (step 4c's tool),
+   **Replaced 2026-11-24 (owner: "There's no way this should depend upon me collecting examples"):**
+   the AI drafts an example for every block Demo Builder ships (the template's blocks Adobe does not
+   cover, and every block in Demo Builder Blocks, Demo Team, Bodea, Isle5 and BuildRight) to the target
+   above, and Demo Builder ships them as data. The build uses them after Adobe's page and a real use on
+   the storefront's own pages, before the placeholder; image cells take a photo from the storefront's
+   own pages. No writes to any library site. Tested two ways (owner: "ensure through testing that they
+   show as they should as previews"): a structural suite on every checks run, and a render check that
+   opens each example with the block's real code in a headless browser (block finishes loading, no
+   script errors, visibly non-empty) and gathers screenshots into a contact sheet; Commerce blocks get
+   the structure check only, stated as such. Pilot of a handful first, then the rest in batches.
+4b. **Our own libraries get real examples once** (superseded by the paragraph above; kept as history): draft examples to that target (step 4c's tool),
    check them with the owner, and save them into each library's own DA site (Demo Team, Bodea, Isle5;
    BuildRight once it has a site), where every storefront using the library picks them up. Bodea's
    site lacking `config.json` only stops its pages rendering on its own site; copied tables render
@@ -142,6 +152,22 @@ The detail of each step:
    Storefront zone's Draft Examples tile. No draft marker exists in DA.live, so the skill shows the SC
    each page before writing it, and the prompt ends "show me each page before you save it" instead
    of "mark each page as a draft for me to check".
+4d. **Only blocks an author places are in the palette (owner, 2026-11-24; not built).** Of the 183
+   shipped examples, 118 cannot preview, and most are not blocks an author inserts: 74 are the parts
+   of the Commerce account, checkout, order, returns, company and purchase-order pages (several make
+   one page, and the starter site ships every one of those pages with them in place: its
+   `full-index.json`, read 2026-11-24); 7 are site plumbing loaded by code (header, footer, modal,
+   widget); 21 are BuildRight's (left as they are: noted in `skukla/buildright-eds` issue 1). The owner
+   agreed to three changes:
+   1. Take the Commerce page parts and the plumbing blocks out of the block palette.
+   2. Offer each Commerce page whole in DA.live's Templates list instead ("Order Details page"
+      inserts that page's blocks in order), copied from the starter site's own page.
+   3. Keep the authorable blocks that need a live store (Product Teaser, Recommendations, Targeted
+      Block, Fragment, Catalog Menu, Form, Blog Tiles and the like), each with a short "How to use"
+      note on its example page, or with the block library's own example page where it has one.
+   This supersedes step 5's "one rule, no hide list" (2026-11-23) for these blocks: their code stays
+   and the palette leaves them out, so the design must say where the list of left-out blocks lives
+   and how removing or promoting a block keeps it in step.
 5. **Agent tools.** `promote_block_to_library`, `remove_block_from_library` and
    `get_block_authoring_shape` work on the DA.live library (row and page) instead of
    `component-definition.json`; the generated skills that describe that file change with them (an AI

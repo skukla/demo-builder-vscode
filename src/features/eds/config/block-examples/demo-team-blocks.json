@@ -1,0 +1,41 @@
+{
+  "$schema": "./block-examples.schema.json",
+  "embed": {
+    "description": "Shows a video or social post from another site: the cell holds its link (YouTube, Vimeo, X or any page that can be framed). Add an image above the link to show a cover with a play button until it is clicked.",
+    "html": "<h2>Embed, a video</h2><div class=\"embed\"><div><div><p><a href=\"https://www.youtube.com/watch?v=YE7VzlLtp-4\">https://www.youtube.com/watch?v=YE7VzlLtp-4</a></p></div></div></div><h2>Embed, with a cover image</h2><div class=\"embed\"><div><div><p><picture><img alt=\"Cover image for the video\"></picture></p><p><a href=\"https://www.youtube.com/watch?v=YE7VzlLtp-4\">https://www.youtube.com/watch?v=YE7VzlLtp-4</a></p></div></div></div>"
+  },
+  "form": {
+    "description": "A form built from a spreadsheet: the first link is the form's sheet published as .json on this site (one row per field: Name, Type, Label, Placeholder, Mandatory and so on), the second is the address that receives the answers.",
+    "html": "<h2>Form</h2><div class=\"form\"><div><div><p><a href=\"/forms/contact-us.json\">/forms/contact-us.json</a></p></div></div><div><div><p><a href=\"/forms/contact-us\">/forms/contact-us</a></p></div></div></div>",
+    "structureOnly": "it builds its fields from the form spreadsheet published on the storefront (the .json link), which exists only on a real site."
+  },
+  "hero-v2": {
+    "description": "A large banner image with a text panel on the right. In the one cell: the image, then a heading, a subheading, a short line and a link; make the link bold to show it as a button.",
+    "html": "<h2>Hero V2</h2><div class=\"hero-v2\"><div><div><p><picture><img alt=\"New season collection\"></picture></p><h2>New season, new arrivals</h2><h3>Fresh styles for every day</h3><p>Discover the latest pieces in our collection, in store and online.</p><p><strong><a href=\"/\">Shop now</a></strong></p></div></div></div>"
+  },
+  "product-teaser": {
+    "description": "One product as a card: image, name, price and buttons, for the SKU you give. Each row is a setting and its value: SKU, then Details Button and Cart Button set to true to show each button.",
+    "html": "<h2>Product Teaser</h2><div class=\"product-teaser\"><div><div>SKU</div><div>ABC-123</div></div><div><div>Details Button</div><div>true</div></div><div><div>Cart Button</div><div>true</div></div></div><h2>Product Teaser, without buttons</h2><div class=\"product-teaser\"><div><div>SKU</div><div>ABC-123</div></div><div><div>Details Button</div><div>false</div></div><div><div>Cart Button</div><div>false</div></div></div>",
+    "structureOnly": "it shows a product from the storefront's own catalog by SKU; on its own the image and details are empty."
+  },
+  "quote": {
+    "description": "A quotation set apart from the page. The first row is the quote; the optional second row is who said it, with any part in italics shown as the source.",
+    "html": "<h2>Quote</h2><div class=\"quote\"><div><div><p>The fit is perfect, and after a year of wear it still looks new.</p></div></div><div><div><p>Sam, <em>verified buyer</em></p></div></div></div><h2>Quote, a longer review without attribution</h2><div class=\"quote\"><div><div><p>I ordered on a Monday and it arrived on Wednesday, packed with care. The quality is better than I expected for the price, and I have already ordered a second one in another colour.</p></div></div></div>"
+  },
+  "search": {
+    "description": "A search box that finds pages on this site as the shopper types. An optional link names the index to search (default /query-index.json); add the minimal style to list the results as plain text without images.",
+    "html": "<h2>Search</h2><div class=\"search\"><div><div><p><a href=\"/query-index.json\">/query-index.json</a></p></div></div></div>"
+  },
+  "table": {
+    "description": "A table of rows and columns. The first row is the header, unless the style is no header; the striped style shades every other row and the bordered style draws a line around each cell.",
+    "html": "<h2>Table</h2><div class=\"table\"><div><div>Item</div><div>Colour</div><div>Price</div></div><div><div>Classic tee</div><div>Navy</div><div>$24.00</div></div><div><div>Canvas tote</div><div>Natural</div><div>$18.00</div></div><div><div>Wool scarf</div><div>Grey</div><div>$32.00</div></div></div><h2>Table, striped</h2><div class=\"table striped\"><div><div>Item</div><div>Colour</div><div>Price</div></div><div><div>Classic tee</div><div>Navy</div><div>$24.00</div></div><div><div>Canvas tote</div><div>Natural</div><div>$18.00</div></div><div><div>Wool scarf</div><div>Grey</div><div>$32.00</div></div></div><h2>Table, bordered</h2><div class=\"table bordered\"><div><div>Item</div><div>Colour</div><div>Price</div></div><div><div>Classic tee</div><div>Navy</div><div>$24.00</div></div><div><div>Canvas tote</div><div>Natural</div><div>$18.00</div></div><div><div>Wool scarf</div><div>Grey</div><div>$32.00</div></div></div><h2>Table, no header</h2><div class=\"table no-header\"><div><div>Delivery</div><div>2 to 4 working days</div><div>Free over $50</div></div><div><div>Returns</div><div>Within 30 days</div><div>Free</div></div><div><div>Gift wrap</div><div>On request</div><div>$4.00</div></div></div>"
+  },
+  "tabs": {
+    "description": "Content in tabs, one shown at a time. Each row is one tab: its label in the first column, its content in the second.",
+    "html": "<h2>Tabs</h2><div class=\"tabs\"><div><div>Description</div><div><p>A soft cotton tee with a relaxed fit, made to be worn every day.</p></div></div><div><div>Size and fit</div><div><p>True to size. The model is 1.80 m tall and wears a medium.</p></div></div><div><div>Delivery</div><div><p>Free delivery on orders over $50. Returns are free within 30 days.</p></div></div></div>"
+  },
+  "video": {
+    "description": "Plays a video: the cell holds a link to a YouTube or Vimeo page or to a video file (.mp4). Add an image to show a poster with a play button; the autoplay style shows the image until the video starts, then plays it silently on a loop, like a moving background.",
+    "html": "<h2>Video</h2><div class=\"video\"><div><div><p><a href=\"https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4\">https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4</a></p></div></div></div><h2>Video, with a poster image</h2><div class=\"video\"><div><div><p><a href=\"https://www.youtube.com/watch?v=YE7VzlLtp-4\">https://www.youtube.com/watch?v=YE7VzlLtp-4</a></p><p><picture><img alt=\"Poster image for the video\"></picture></p></div></div></div><h2>Video, autoplay</h2><div class=\"video autoplay\"><div><div><p><a href=\"https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4\">https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4</a></p><p><picture><img alt=\"Still from the video\"></picture></p></div></div></div>"
+  }
+}

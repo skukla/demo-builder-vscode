@@ -1,7 +1,8 @@
 /**
  * The storefront's block list and where each block's example comes from (step-02 convention):
- * an existing page, then Adobe's page, then the library's page, then a real use, then a
- * placeholder the caller builds from the block's code.
+ * an existing page, then Adobe's page, then a real use on the storefront's own pages, then the
+ * example Demo Builder ships, then the library's page, then a real use on the library's site,
+ * then a placeholder the caller builds from the block's code.
  */
 
 import {
@@ -10,9 +11,15 @@ import {
     type StorefrontBlockListInput,
 } from '@/features/eds/services/blockLibrary/storefrontBlockList';
 import type { BlockUse } from '@/features/eds/services/blockLibrary/blockUseIndex';
+import {
+    TEMPLATE_SOURCE,
+    type ShippedBlockExample,
+} from '@/features/eds/services/blockLibrary/shippedBlockExamples';
 
 const ADOBE_SITE = { org: 'adobe-commerce', site: 'boilerplate-b2b' };
 const LIB_SITE = { org: 'skukla', site: 'isle5-library' };
+const SHIPPED: ShippedBlockExample = { description: 'Template.', html: '<div class="tabs"></div>' };
+const LIBRARY_SHIPPED: ShippedBlockExample = { description: 'Ours.', html: '<div class="tabs"></div>' };
 
 function input(overrides: Partial<StorefrontBlockListInput> = {}): StorefrontBlockListInput {
     return {
@@ -23,6 +30,7 @@ function input(overrides: Partial<StorefrontBlockListInput> = {}): StorefrontBlo
         librarySiteUses: new Map<string, BlockUse>(),
         contentSourceUses: new Map<string, BlockUse>(),
         librarySitePages: new Map<string, string>(),
+        shipped: new Map(),
         ...overrides,
     };
 }
@@ -111,7 +119,54 @@ describe('buildStorefrontBlockList: the list', () => {
 
 describe('buildStorefrontBlockList: where each example comes from', () => {
     it('pins the convention order, placeholder last', () => {
-        expect(EXAMPLE_KINDS).toEqual(['existing', 'adobe', 'library', 'real-use', 'placeholder']);
+        expect(EXAMPLE_KINDS).toEqual([
+            'existing', 'adobe', 'library', 'real-use', 'shipped', 'library-use', 'placeholder',
+        ]);
+    });
+
+    it('keeps the library\'s own page over the shipped example', () => {
+        const list = buildStorefrontBlockList(input({
+            repoBlockIds: ['tabs'],
+            libraries: [{ id: 'isle5', site: LIB_SITE, blockIds: ['tabs'] }],
+            librarySitePages: new Map([['skukla/isle5-library/tabs', '/.da/library/blocks/tabs']]),
+            shipped: new Map([['isle5', new Map([['tabs', LIBRARY_SHIPPED]])]]),
+        }));
+
+        expect(exampleOf(list, 'tabs')).toMatchObject({ kind: 'library' });
+    });
+
+    it('uses the shipped example after a use on the storefront\'s own pages', () => {
+        const sources = {
+            repoBlockIds: ['tabs'],
+            libraries: [{ id: 'isle5', site: LIB_SITE, blockIds: ['tabs'] }],
+            shipped: new Map([[TEMPLATE_SOURCE, new Map([['tabs', SHIPPED]])]]),
+        };
+
+        const withOwnUse = buildStorefrontBlockList(input({
+            ...sources, contentSourceUses: new Map([['tabs', use('/cs', 'C')]]),
+        }));
+        const withoutOwnUse = buildStorefrontBlockList(input(sources));
+
+        expect(exampleOf(withOwnUse, 'tabs')).toMatchObject({ kind: 'real-use', from: '/cs' });
+        expect(exampleOf(withoutOwnUse, 'tabs')).toEqual({
+            kind: 'shipped', source: TEMPLATE_SOURCE, example: SHIPPED,
+        });
+    });
+
+    it('takes the shipped example of a library that has the block over the template\'s', () => {
+        const shipped = new Map([
+            [TEMPLATE_SOURCE, new Map([['tabs', SHIPPED]])],
+            ['isle5', new Map([['tabs', LIBRARY_SHIPPED]])],
+            ['bodea-blocks', new Map([['tabs', SHIPPED]])],
+        ]);
+
+        const list = buildStorefrontBlockList(input({
+            repoBlockIds: ['tabs', 'cards'],
+            libraries: [{ id: 'bodea-blocks', blockIds: ['cards'] }, { id: 'isle5', blockIds: ['tabs'] }],
+            shipped,
+        }));
+
+        expect(exampleOf(list, 'tabs')).toEqual({ kind: 'shipped', source: 'isle5', example: LIBRARY_SHIPPED });
     });
 
     it('keeps the storefront\'s existing page over Adobe\'s', () => {
@@ -162,20 +217,27 @@ describe('buildStorefrontBlockList: where each example comes from', () => {
         });
     });
 
-    it('prefers a real use on the library site over one on the content source', () => {
+    it('prefers a real use on the storefront\'s own pages over one on the library site', () => {
         const libraryUse: BlockUse = {
             path: '/lib',
             examples: [{ variant: '', html: 'L' }, { variant: 'wide', html: 'W' }],
         };
-        const list = buildStorefrontBlockList(input({
+        const sources = {
             repoBlockIds: ['tabs'],
             libraries: [{ site: LIB_SITE, blockIds: ['tabs'] }],
             librarySiteUses: new Map([['skukla/isle5-library/tabs', libraryUse]]),
-            contentSourceUses: new Map([['tabs', use('/cs', 'C')]]),
-        }));
+        };
 
-        expect(exampleOf(list, 'tabs')).toEqual({
-            kind: 'real-use', examples: libraryUse.examples, from: '/lib',
+        const withOwnUse = buildStorefrontBlockList(input({
+            ...sources, contentSourceUses: new Map([['tabs', use('/cs', 'C')]]),
+        }));
+        const withoutOwnUse = buildStorefrontBlockList(input(sources));
+
+        expect(exampleOf(withOwnUse, 'tabs')).toEqual({
+            kind: 'real-use', examples: [{ variant: '', html: 'C' }], from: '/cs',
+        });
+        expect(exampleOf(withoutOwnUse, 'tabs')).toEqual({
+            kind: 'library-use', examples: libraryUse.examples, from: '/lib',
         });
     });
 
@@ -187,7 +249,6 @@ describe('buildStorefrontBlockList: where each example comes from', () => {
                 { site: LIB_SITE, blockIds: ['tabs'] },
                 { site: OTHER_SITE, blockIds: ['gallery'] },
             ],
-            contentSourceUses: new Map([['tabs', use('/cs', 'C')]]),
         };
 
         const otherUsesTabs = buildStorefrontBlockList(input({
@@ -202,8 +263,8 @@ describe('buildStorefrontBlockList: where each example comes from', () => {
             ]),
         }));
 
-        expect(exampleOf(otherUsesTabs, 'tabs')).toMatchObject({ kind: 'real-use', from: '/cs' });
-        expect(exampleOf(ownUsesTabs, 'tabs')).toMatchObject({ kind: 'real-use', from: '/own' });
+        expect(exampleOf(otherUsesTabs, 'tabs')).toEqual({ kind: 'placeholder' });
+        expect(exampleOf(ownUsesTabs, 'tabs')).toMatchObject({ kind: 'library-use', from: '/own' });
     });
 
     it('ignores library-site uses for a block in no library', () => {

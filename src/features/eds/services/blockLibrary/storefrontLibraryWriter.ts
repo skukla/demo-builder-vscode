@@ -23,6 +23,7 @@ import {
 } from './libraryRegistration';
 import { TEMPLATES_SHEET, writeAdobeTemplates, type AdobeTemplates } from './libraryTemplates';
 import { samePage } from './oldStubPages';
+import { shippedExamplePage } from './shippedBlockExamples';
 import type { StorefrontBlock } from './storefrontBlockList';
 import type { DaLiveApiClient } from '@/features/eds/services/daLive/daLiveApiClient';
 import type { DaLiveBlockLibrarySheet } from '@/features/eds/services/daLive/daLiveBlockLibrarySheet';
@@ -55,6 +56,8 @@ export interface StorefrontLibraryInput {
     replacedPages?: ReadonlyMap<string, string>;
     /** The block's code analysis, for a placeholder shaped like its table. */
     placeholderFor: (blockId: string) => Promise<BlockCodeAnalysis>;
+    /** Photos from the storefront's own content pages, for a shipped example's image cells. */
+    photos?: readonly string[];
 }
 
 /** What a library build did: whether it took, how many blocks, the paths to publish. */
@@ -89,8 +92,13 @@ export async function writeStorefrontBlockLibrary(
     const dest = { org, site, token: await deps.apiClient.getImsToken() };
     const pages = await writeBlockPages(deps, dest, input);
     const listed = pages.map(({ block }) => block);
-    const needsExample = pages.filter(({ page }) => page === 'placeholder')
+    const idsOf = (kind: BlockPage): string[] => pages.filter(({ page }) => page === kind)
         .map(({ block }) => block.id);
+    const needsExample = idsOf('placeholder');
+    const withoutPhotos = idsOf('example-without-photos');
+    if (withoutPhotos.length > 0) {
+        deps.logger.info(`[DA.live] No storefront photo for the image cells of: ${withoutPhotos.join(', ')}`);
+    }
     if (listed.length === 0) {
         deps.logger.info(`[DA.live] No block pages to list in ${org}/${site}`);
         const asked = input.blocks.length;
@@ -134,8 +142,11 @@ async function readExistingRows(
     }
 }
 
-/** What a block's page is once written: an example, or the placeholder shaped by its code. */
-type BlockPage = 'example' | 'placeholder';
+/**
+ * What a block's page is once written: an example, a shipped example whose image cells got no
+ * photo, or the placeholder shaped by its code.
+ */
+type BlockPage = 'example' | 'example-without-photos' | 'placeholder';
 
 /** The blocks that got a page, each with what the page is. */
 async function writeBlockPages(
@@ -156,35 +167,30 @@ async function writeBlockPages(
 }
 
 /**
- * What the block's page is (kept, copied or a real use: an example; else the placeholder),
- * or undefined when it got none. Throws only an
- * expired DA.live sign-in. The only page bodies written are a copied page and `blockDoc`'s
- * (pinned in `blockExampleConvention.test.ts`). DA.live writes over any page at the path
- * whatever `overwrite` says (`createSource`), so what keeps a page someone wrote is that a
- * block with one arrives as `existing` and is not written at all; only a page Demo Builder
- * generated (`replacePageIds`, `oldStubPages.ts`) is written over.
+ * What the block's page is (kept, copied, a real use or shipped: an example; else the
+ * placeholder), or undefined when it got none. Throws only an
+ * expired DA.live sign-in. The only page bodies written are a copied page, `blockDoc`'s and
+ * `shippedExamplePage`'s (pinned in `blockExampleConvention.test.ts`). DA.live writes over any
+ * page at the path whatever `overwrite` says (`createSource`), so what keeps a page someone
+ * wrote is that a block with one arrives as `existing` and is not written at all; only a page
+ * Demo Builder generated (`replacePageIds`, `oldStubPages.ts`) is written over.
  */
 async function writeBlockPage(
     deps: StorefrontLibraryDeps,
     dest: Destination,
     block: StorefrontBlock,
-    { placeholderFor, replacePageIds, replacedPages }: StorefrontLibraryInput,
+    input: StorefrontLibraryInput,
 ): Promise<BlockPage | undefined> {
     const { example } = block;
+    const { replacePageIds, replacedPages } = input;
     try {
         if (example.kind === 'existing') return 'example';
         if (example.kind === 'adobe' || example.kind === 'library') {
             const page = `/${BLOCK_PAGES}/${block.id}`;
             if (await copyPreviewPage(deps.copyOps, dest, example.source, page)) return 'example';
         }
-        // A real use is an example; a placeholder, or a copy that failed, gets the code's shape.
-        const isRealUse = example.kind === 'real-use';
-        const kind: BlockPage = isRealUse ? 'example' : 'placeholder';
-        const sources = isRealUse
-            ? { examples: example.examples }
-            : { analysis: await placeholderFor(block.id) };
+        const { html, kind } = await pageBody(block, input);
         const docPath = `${BLOCK_PAGES}/${block.id}.html`;
-        const html = blockDoc(block.id, sources);
         // Same body as the generated page already there: DA.live would only add a version.
         const current = replacedPages?.get(block.id);
         if (current !== undefined && samePage(current, html)) return kind;
@@ -197,6 +203,26 @@ async function writeBlockPage(
         deps.logger.warn(`[DA.live] No page for block ${block.id}: ${(error as Error).message}`);
         return undefined;
     }
+}
+
+/**
+ * The page Demo Builder writes for a block it does not copy: a shipped example as shipped, a
+ * real use through `blockDoc`; a placeholder, or a copy that failed, gets the code's shape.
+ */
+async function pageBody(
+    block: StorefrontBlock,
+    { placeholderFor, photos = [] }: StorefrontLibraryInput,
+): Promise<{ html: string; kind: BlockPage }> {
+    const { example } = block;
+    if (example.kind === 'shipped') {
+        const { page, photosMissing } = shippedExamplePage(example.example, photos);
+        return { html: page, kind: photosMissing ? 'example-without-photos' : 'example' };
+    }
+    if (example.kind === 'real-use' || example.kind === 'library-use') {
+        return { html: blockDoc(block.id, { examples: example.examples }), kind: 'example' };
+    }
+    const analysis = await placeholderFor(block.id);
+    return { html: blockDoc(block.id, { analysis }), kind: 'placeholder' };
 }
 
 async function writeBlocksSheet(

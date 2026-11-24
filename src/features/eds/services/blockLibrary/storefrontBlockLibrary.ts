@@ -5,9 +5,11 @@
  *
  * It gathers what the list is computed from (the storefront's `blocks/<id>/` folders, Adobe's
  * library from whichever of the package's content sources publishes it, the installed libraries'
- * sites and pages, the real uses of blocks, the pages the storefront already has, where a page
- * Demo Builder generated counts as none and is replaced (`oldStubPages.ts`)), builds the list
- * with `buildStorefrontBlockList`, and writes it with `writeStorefrontBlockLibrary`.
+ * sites and pages, the real uses of blocks and the photos on the storefront's own pages, the
+ * examples Demo Builder ships (`shippedBlockExamples.ts`), the pages the storefront already has,
+ * where a page Demo Builder generated counts as none and is replaced (`oldStubPages.ts`)),
+ * builds the list with `buildStorefrontBlockList`, and writes it with
+ * `writeStorefrontBlockLibrary`.
  * Design: `.rptc/plans/block-library-without-universal-editor/step-02.md`.
  */
 
@@ -23,6 +25,7 @@ import {
     readUseIndex,
 } from './exampleSources';
 import { findReplaceablePages } from './oldStubPages';
+import { loadShippedBlockExamples, type ShippedExamples } from './shippedBlockExamples';
 import { siteReader, type SiteReader } from './siteReads';
 import type { SiteRef } from './siteRef';
 import { buildStorefrontBlockList, type InstalledLibrary } from './storefrontBlockList';
@@ -46,6 +49,8 @@ export interface StorefrontBlockLibraryDeps {
     /** Reads published sites (Adobe's library, library pages, content indexes, pages). */
     fetchImpl: typeof fetch;
     logger: Logger;
+    /** The examples Demo Builder ships; the bundled ones when absent. */
+    shippedExamples?: ShippedExamples;
 }
 
 /** The storefront the library is built for, and the sites its examples may come from. */
@@ -85,12 +90,13 @@ export async function buildStorefrontBlockLibrary(
         await readExistingPages(deps, org, site, allIds);
     const wanted = new Set(repoBlockIds.filter((id) =>
         !existingPageIds.has(id) && !adobeIds.includes(id)));
-    const sources = await readExampleSources(deps, params, repoBlockIds, wanted, read);
+    const { photos, ...sources } = await readExampleSources(deps, params, repoBlockIds, wanted, read);
     const blocks = buildStorefrontBlockList({
         adobeBlocks: adobe?.library.blocks ?? [],
         adobeSite: adobe?.site,
         repoBlockIds,
         existingPageIds,
+        shipped: deps.shippedExamples ?? loadShippedBlockExamples(),
         ...sources,
     });
     const templates = adobe && adobe.library.templates.length > 0
@@ -102,6 +108,7 @@ export async function buildStorefrontBlockLibrary(
         replacePageIds,
         replacedPages,
         placeholderFor: (blockId) => readBlockCode(deps, params.repo, blockId),
+        photos,
     });
 }
 
@@ -187,6 +194,8 @@ interface ExampleSources {
     librarySitePages: Map<string, string>;
     librarySiteUses: Map<string, BlockUse>;
     contentSourceUses: Map<string, BlockUse>;
+    /** Photos on the storefront's content source pages, for shipped examples' image cells. */
+    photos: string[];
 }
 
 /** The library and real-use sources, read only when some block still needs an example. */
@@ -200,7 +209,7 @@ async function readExampleSources(
     if (wanted.size === 0) {
         return {
             libraries: [], librarySitePages: new Map(),
-            librarySiteUses: new Map(), contentSourceUses: new Map(),
+            librarySiteUses: new Map(), contentSourceUses: new Map(), photos: [],
         };
     }
     const libraries = await readInstalledLibraries(
@@ -209,11 +218,11 @@ async function readExampleSources(
     const librarySites = libraries.flatMap((library) => (library.site ? [library.site] : []));
     const contentSites = [params.contentSource, params.accountContentSource]
         .flatMap((source) => (source ? [source] : []));
+    const librarySitePages = await probeLibraryPages(libraries, wanted, read);
+    const librarySiteUses = await readLibrarySiteUses(librarySites, deps.fetchImpl, deps.logger);
+    const own = await readUseIndex(contentSites, deps.fetchImpl, deps.logger);
     return {
-        libraries,
-        librarySitePages: await probeLibraryPages(libraries, wanted, read),
-        librarySiteUses: await readLibrarySiteUses(librarySites, deps.fetchImpl, deps.logger),
-        contentSourceUses: await readUseIndex(contentSites, deps.fetchImpl, deps.logger),
+        libraries, librarySitePages, librarySiteUses, contentSourceUses: own.uses, photos: own.photos,
     };
 }
 

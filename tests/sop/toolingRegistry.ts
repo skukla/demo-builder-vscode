@@ -157,6 +157,14 @@ const PERIODIC: readonly Instrument[] = [
         runs: 'npm run components:ci',
     },
     {
+        id: 'block-examples:render',
+        kind: 'npm-script',
+        cadence: 'periodic',
+        resultKind: 'gate',
+        what: "every shipped block example opened headless with its block's real code: loads, no errors, visibly there; screenshots go to a contact sheet",
+        runs: 'npm run block-examples:render',
+    },
+    {
         id: 'health',
         kind: 'npm-script',
         cadence: 'periodic',

@@ -206,6 +206,9 @@ describe('demo-packages.json — bodea package details (thin-layer B2B shape)', 
             expect(brandAssets!.files).toEqual([
                 { from: 'styles/bodea-theme.css', to: 'styles/bodea-theme.css' },
                 { from: 'scripts/bodea-customer-group.js', to: 'scripts/bodea-customer-group.js' },
+                // The library's form block imports it, and a library install copies only
+                // block folders (EDS-78).
+                { from: 'scripts/submit-json.js', to: 'scripts/submit-json.js' },
                 {
                     from: 'data/guided-selling/bodea-rack-finder.json',
                     to: 'data/guided-selling/bodea-rack-finder.json',

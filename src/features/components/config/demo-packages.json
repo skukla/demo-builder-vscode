@@ -463,6 +463,10 @@
                 "to": "scripts/bodea-customer-group.js"
               },
               {
+                "from": "scripts/submit-json.js",
+                "to": "scripts/submit-json.js"
+              },
+              {
                 "from": "data/guided-selling/bodea-rack-finder.json",
                 "to": "data/guided-selling/bodea-rack-finder.json"
               }
@@ -527,6 +531,10 @@
               {
                 "from": "scripts/bodea-customer-group.js",
                 "to": "scripts/bodea-customer-group.js"
+              },
+              {
+                "from": "scripts/submit-json.js",
+                "to": "scripts/submit-json.js"
               },
               {
                 "from": "data/guided-selling/bodea-rack-finder.json",

@@ -45,24 +45,50 @@ the storefront already has:
 4. Child components (`accordion-item`, `columns-cell` and the like) were Universal Editor entries,
    not blocks, and leave the palette.
 
-**Where a block's example comes from (the convention).** The first of these that exists, never an
-invented sample:
+**Where a block's example comes from (the convention).** The first of these that exists
+(`EXAMPLE_KINDS`; order changed 2026-11-24, see "Shipped examples" below):
 
 1. Adobe's example page for it (`/docs/library/blocks/<id>` on the Adobe source site).
-2. Its block library's example page (the library's content site, `/docs/library/blocks/<id>`, then
-   `/.da/library/blocks/<id>`).
-3. **Its real use**: the block's table copied from a page that uses it, settings rows included,
-   looked for first on the block's library site (for a library block), then on the storefront's
-   content source. This covers custom blocks: a library block is used on its library's site, not on
-   Adobe's (owner, 2026-11-23: the convention covers custom blocks). BuildRight and Demo Builder
-   Blocks have no site, so their blocks skip rule 2 and the first half of rule 3.
-4. A placeholder shaped like the block's code expects (rows and columns of "Column N content"), as
+2. Its block library's own example page (`library`: the library's content site,
+   `/docs/library/blocks/<id>`, then `/.da/library/blocks/<id>`). A page the library's authors
+   wrote stays ahead of ours (review 2026-11-24: the owner never asked to demote it). Today only
+   Demo Team publishes such pages, for Hero V2, Product Teaser, Tabs and Video.
+3. **A real use on the storefront's own content source pages** (`real-use`): the block's table
+   copied from a page of the package's content source or account content source that uses it,
+   settings rows included.
+4. **The example Demo Builder ships** (`shipped`): `src/features/eds/config/block-examples/`, one
+   file per source (`template.json`, one per block library id). An installed library that has the
+   block is looked in first, in install order, then the template's file. Its image cells are
+   given photos from the storefront's own content source pages (the images in the real uses rule
+   3 read); with none, an image cell stays alt text only and the build's log names the block.
+5. A real use on the library's site (`library-use`). BuildRight and Demo Builder Blocks have no
+   site, so their blocks skip rules 2 and 5.
+6. A placeholder shaped like the block's code expects (rows and columns of "Column N content"), as
    DA.live's own Import Blocks builds it (`adobe/da-live` `blocks/config/blocks-import/blocks.js`
    `blockDoc`, added 2026-11-23, Apache-2.0). Owner, 2026-11-23: Adobe's placeholder over the
    "No example yet" page. Examples are kept per style variant, as Import Blocks does, and the page,
    names and list rows match its output so an SC can re-run Import Blocks over ours.
 
-A storefront's existing example page is kept over all four (an agent or the SC may have written it).
+**Shipped examples** (owner, 2026-11-24: "There's no way this should depend upon me collecting
+examples"). A real use from another brand's site is a poor example, so Demo Builder ships one for
+every block it ships, written to the target in `overview.md` step 4 (neutral sample content, one
+named example per way of using the block, a description written as a `library-metadata` table
+after each example, `exampleDescription.ts`). A library's file holds only the blocks it adds over
+the template (the install takes a name the template has from the template), unless the library
+is itself a package's template (Isle5, BuildRight). Checked two ways: the structural suite
+(`shippedExampleStructure.test.ts`, every test run: schema, named tables classed by the
+block id, variants in the block's CSS, columns the code reads, description, safe links, no image
+address, no brand name) against a code-shape fixture the render check records; and the render
+check (`npm run block-examples:render`, periodic: each example opened headless with the block's
+real code at the ref installed, after the template's own icon and button decoration; PASS when
+it loads, throws nothing and is visibly there; an example that names `structureOnly` with its
+reason, such as a block that needs a live store, is reported structure only, by name and never
+by a prefix rule, owner 2026-11-24), which writes `reports/block-examples/contact-sheet.html`.
+A shipped page once written is the storefront's page and is kept like any other; a later change
+to a shipped example reaches only blocks without a page.
+
+A storefront's existing example page is kept over all of these (an agent or the SC may have
+written it).
 DA.live will not do this for us: its source POST ignores any `overwrite` field and always writes,
 keeping the old content as a version (adobe/da-admin `src/storage/object/put.js`, read 2026-11-23).
 So the build's own existence check is the only protection, and it fails safe: only a definite 404
@@ -93,7 +119,7 @@ grouped at the end; then the real-use example, after the checkout case below.
 - **Real uses cover most blocks.** Of the 76 block folders in the template at f8eb94d, 67 are used on
   a page of `adobe-commerce/boilerplate-b2b` (92 pages, from its `full-index.json`; pages whose path
   ends in `/` are read at `<path>index.plain.html`). The 9 with no use: `carousel`, `targeted-block`
-  (content blocks nobody placed there; they fall to rule 4 or another site), `header`, `footer`,
+  (content blocks nobody placed there; they fall to rule 4, the shipped example), `header`, `footer`,
   `modal`, `widget` (loaded by code), `commerce-checkout-success`, `commerce-b2b-po-checkout-success`,
   `commerce-company-accept-invitation` (shown by other blocks' code, not authored on a page).
 - **Adobe's per-block definition files are gone too.** At f8eb94d several blocks carried
@@ -109,9 +135,11 @@ grouped at the end; then the real-use example, after the checkout case below.
   `description`. Not used in this step; noted for step 4.
 
 Where it lives (as built): `src/features/eds/services/blockLibrary/`. `storefrontBlockList.ts` is a
-pure function returning each block with one chosen example (`existing | adobe | library | real-use |
-placeholder`); `storefrontBlockLibrary.ts` gathers its inputs; `storefrontLibraryWriter.ts` writes the
-pages, the sheet and the site setting. The old `createBlockLibrary` is deleted.
+pure function returning each block with one chosen example (`existing | adobe | real-use | shipped |
+library | library-use | placeholder`); `storefrontBlockLibrary.ts` gathers its inputs;
+`shippedBlockExamples.ts` loads the shipped examples and builds their pages;
+`storefrontLibraryWriter.ts` writes the pages, the sheet and the site setting. The old
+`createBlockLibrary` is deleted.
 
 Files stay where they are: the sheet at `/.da/library/blocks.json`, pages at `/.da/library/blocks/<id>`.
 No storefront has to move anything, and the remove, append and publish code that matches these paths

@@ -109,6 +109,13 @@ title (`promote_block_to_library`), and the `remove-custom-block` skill removes 
 taking out its page and row, then deleting its code (`remove_block_from_library`). Restoring the code
 and running Refresh Blocks undoes a removal.
 
+Demo Builder ships an example for the blocks it ships (`src/features/eds/config/block-examples/`,
+one file per block library id plus `template.json`). The build uses it when the storefront's own
+content pages have no use of the block, before the library's site, giving its image cells photos
+from those pages (the order is the handbook's block-example convention). A library adding blocks
+writes its examples into its own file there; `npm run block-examples:render` shows each one with
+the block's real code.
+
 A block whose page is still the placeholder shaped by its code has no example yet. Each build
 records those blocks on the project (`metadata.blocksNeedingExamples`); the dashboard's **Draft
 Examples** tile wears an amber dot while there are any and opens the SC's AI, which follows the
