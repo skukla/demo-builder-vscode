@@ -1,6 +1,6 @@
 ---
 name: sync-changes
-description: Chooses the correct sync operation after editing a Demo Builder project. Use when files have changed and you need to pick between `republish` (the whole site: settings, code and pages), `sync_storefront` (block code), `deploy_mesh` (mesh config), `configure_project` (config values), or `promote_block_to_library` (a block into this site's Insert Block list).
+description: Chooses the correct sync operation after editing a Demo Builder project. Use when files have changed and you need to pick between `republish` (the whole site: settings, code and pages), `sync_storefront` (block code), `deploy_mesh` (mesh config), `configure_project` (config values), `refresh_block_library` (this site's Insert Block list after blocks change), or `promote_block_to_library` (a block's example in that list).
 ---
 
 # Sync Changes
@@ -16,8 +16,9 @@ Use this skill to decide which sync operation to run after making changes.
 | `mesh.json` or API Mesh config | `deploy_mesh` — redeploys via `aio` CLI |
 | A component setting | `configure_project`, then restart demo |
 | A credential (secret) | the user enters it in Configure — `configure_project` refuses secrets |
-| A block in `blocks/` that authors should be able to insert on this site | `promote_block_to_library`: adds it to this site's own DA.live block library. It does not save the block for other projects, and a reset removes it with the rest of the code |
-| Remove a block from the library | `remove_block_from_library` |
+| A block added to or deleted from `blocks/` (after it is pushed) | `refresh_block_library` — rebuilds this site's own DA.live block library from the code: every block folder is listed |
+| A block in `blocks/` whose example or title authors see should be real | `promote_block_to_library`: writes its example page and title in this site's own DA.live block library. It does not save the block for other projects, and a reset removes it with the rest of the code |
+| Remove a block | `remove_block_from_library` — deletes its code and takes it out of the block library |
 
 ## EDS projects
 

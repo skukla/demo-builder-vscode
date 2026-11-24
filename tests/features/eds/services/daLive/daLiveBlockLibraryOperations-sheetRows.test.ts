@@ -189,6 +189,23 @@ describe('DaLiveBlockLibraryOperations sheet rows', () => {
             expect(result.status).toBe('skipped-duplicate');
         });
 
+        // Every block in the code already has a row (Refresh Blocks lists them all, titled by
+        // folder name), so a promote's title must land on that row, not add a second one.
+        it("renames the block's own row in place when the title differs, keeping the others", async () => {
+            h.fetchWithRetry.mockImplementation(sheetProbe([heroRow, cardsRow]));
+
+            const result = await h.ops.appendBlockToLibrary(org, site, {
+                blockId: 'hero',
+                title: 'Hero Banner',
+            });
+
+            expect(await rewrittenRows()).toStrictEqual([
+                { ...heroRow, name: 'Hero Banner' },
+                cardsRow,
+            ]);
+            expect(result.status).toBe('renamed');
+        });
+
         it('still re-registers the config on a duplicate, to repair config drift', async () => {
             h.fetchWithRetry.mockImplementation(sheetProbe([heroRow]));
 

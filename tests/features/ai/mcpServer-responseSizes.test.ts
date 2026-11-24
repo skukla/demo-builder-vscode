@@ -21,6 +21,7 @@ import {
     path,
 } from './mcpServer.testUtils';
 import { expectWithinCeiling, RESPONSE_CEILINGS } from './server/responseCeilings';
+import { blockAuthoringDetail, MAX_EXAMPLES } from '../../../src/mcp/blockAuthoringShape';
 
 /** A manifest fat enough to expose a collapse that stops working. */
 function bigManifest() {
@@ -100,34 +101,47 @@ describe('file-based tool responses stay within their ceilings', () => {
         expectWithinCeiling('list_blocks', await toolHandlers.listBlocks(PROJECTS_DIR, PROJECT_NAME));
     });
 
-    it('get_block_authoring_shape — index of a 300-component registry', async () => {
-        const components = Array.from({ length: 300 }, (_, i) => ({
-            id: `component-${i}`,
-            title: `Component number ${i}`,
-            plugins: { da: { rows: 1, columns: 2 } },
-        }));
-        (fsProm.readFile as jest.Mock).mockImplementation((p: string) => {
-            const f = String(p);
-            if (f.endsWith('.demo-builder.json')) {
-                return Promise.resolve(
-                    JSON.stringify({
-                        name: PROJECT_NAME,
-                        componentInstances: { 'eds-storefront': { path: STOREFRONT_PATH } },
-                    }),
-                );
-            }
-            if (f.endsWith('component-definition.json')) {
-                return Promise.resolve(JSON.stringify({ groups: [{ components }] }));
-            }
-            return Promise.reject(new Error('ENOENT'));
-        });
+    it('get_block_authoring_shape — index of a 300-block storefront', async () => {
+        (fsProm.readFile as jest.Mock).mockResolvedValue(
+            JSON.stringify({
+                name: PROJECT_NAME,
+                componentInstances: { 'eds-storefront': { path: STOREFRONT_PATH } },
+            }),
+        );
+        (fsProm.readdir as jest.Mock).mockResolvedValue(
+            Array.from({ length: 300 }, (_, i) => ({
+                name: `block-name-number-${i}`,
+                isDirectory: () => true,
+            })),
+        );
 
         const out = await toolHandlers.getBlockAuthoringShape(PROJECTS_DIR, PROJECT_NAME);
 
         expectWithinCeiling('get_block_authoring_shape', out);
-        // The index must stay an index: no markup, no selectors, no field lists.
-        expect(out).not.toContain('unsafeHTML');
-        expect(out).not.toContain('selector');
+        // The index must stay an index: ids and titles, no tables or markup.
+        expect(out).not.toContain('<div');
+        expect(out).not.toContain('columns');
+        expect(JSON.parse(out).more).toMatch(/^200 more/);
+    });
+
+    // The detail half: an example page with eight variants of 5,000-character
+    // tables and a 20,000-character README. Every clip has to hold for this to fit.
+    it('get_block_authoring_shape — one block with every clip reached', async () => {
+        (fsProm.readFile as jest.Mock).mockResolvedValue('r'.repeat(20_000));
+        const table = `<div><div><p>${'x'.repeat(5_000)}</p></div></div>`;
+        const sections = Array.from(
+            { length: 8 },
+            (_, i) => `<div><div class="big v${i}">${table}</div></div>`,
+        ).join('');
+        const page = `<body><header></header><main>${sections}</main><footer></footer></body>`;
+
+        const out = JSON.stringify(
+            await blockAuthoringDetail(STOREFRONT_PATH, 'big', { read: async () => page }),
+        );
+
+        expectWithinCeiling('get_block_authoring_shape', out);
+        expect(JSON.parse(out).examples).toHaveLength(MAX_EXAMPLES);
+        expect(out).toContain('[truncated]');
     });
 
     it('get_component_config — a large .env is returned verbatim', async () => {

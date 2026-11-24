@@ -56,8 +56,7 @@ are the SC's too, so the merge follows two rules:
   starts recording.
 - **The file keeps its layout.** Each file is written back in the indentation it
   already had (four spaces, tabs, or two when there is none to detect), with its
-  final newline if it had one. `promote_block_to_library` and
-  `remove_block_from_library` follow the same rule for `component-definition.json`.
+  final newline if it had one.
 
 The merge only considers blocks whose folder is not already in the storefront, so an
 entry deleted while its block folder stays was never put back. When the folder is
@@ -113,12 +112,17 @@ A library updated through Check for Updates after it was installed has a newer
 `commitSha` than the block files it copied, because an update only adds. If the
 library changed those blocks upstream, they no longer match and are left in place.
 
-## Registering a block for authoring
+## A block in DA.live's authoring picker
 
-A block existing in the repository does not make it available in DA.live's authoring
-picker. That is a separate registration, and the
-[`register-custom-block`](../../.claude/skills/) skill in a generated project is what
-performs it.
+The picker follows the storefront's code: every `blocks/<id>/` folder in the repository
+whose name is a block name (lowercase words joined by hyphens) is listed after the next
+Refresh Blocks, and one of Adobe's blocks only when its folder is there (`metadata` and
+`section-metadata`, which EDS handles with no folder, excepted). There is no separate registration and no way to
+hide a block whose code stays (owner, 2026-11-23). In a generated project, the
+[`register-custom-block`](../../.claude/skills/) skill gives a block its example page and
+title (`promote_block_to_library`), and the `remove-custom-block` skill removes a block by
+taking out its page and row, then deleting its code (`remove_block_from_library`). Restoring the code
+and running Refresh Blocks undoes a removal.
 
 ## Conventions that bind this
 

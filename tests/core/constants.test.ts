@@ -162,8 +162,9 @@ describe('AI_CONTEXT_VERSION', () => {
     // 64: datapacks gains update_datapack and restore_datapack's points (step-07 U1).
     // 65: datapacks gives Keep Both, the exact undo of a load, and check.leftOutDeleted (step-07 F1, F2).
     // 66: six datapack tools and the guide take the Datapacks screen's words (step-07 A3, Q5).
-    it('is 66 (datapack tools and the guide take the screen\'s words, step-07 A3)', () => {
-        expect(AI_CONTEXT_VERSION).toBe(66);
+    // 67: the block skills follow the code: register gives an example, remove deletes code (EDS-71 step 5).
+    it('is 67 (the block skills follow the storefront code, EDS-71 step 5)', () => {
+        expect(AI_CONTEXT_VERSION).toBe(67);
     });
 });
 

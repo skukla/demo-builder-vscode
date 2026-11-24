@@ -14,6 +14,7 @@
 
 import type { PromoteBlockContext } from './blockAuthoring';
 import type { TokenProvider } from '@/features/eds/services/daLive/daLiveApiClient';
+import { DaLiveContentOperations } from '@/features/eds/services/daLive/daLiveContentOperations';
 import { previewAndPublishPage, unpublishPage } from '@/features/eds/services/helix/helixApiClient';
 import { syncAndPublish } from '@/features/eds/services/storefront/storefrontSyncService';
 
@@ -26,10 +27,24 @@ export function staticTokenProvider(token: string): TokenProvider {
     return { getAccessToken: async () => token };
 }
 
+// The DA.live operations log to stderr in the real flow; the MCP tools suppress that noise.
+const noopLogger = {
+    trace: () => undefined,
+    debug: () => undefined,
+    info: () => undefined,
+    warn: () => undefined,
+    error: () => undefined,
+};
+
+/** The DA.live operations, signed in with the one token the block tool was handed. */
+export function daLiveOpsFor(daLiveToken: string): DaLiveContentOperations {
+    return new DaLiveContentOperations(staticTokenProvider(daLiveToken), noopLogger);
+}
+
 /**
  * Storefront commit/push/publish step. Failures are swallowed and reported via
  * the returned status — a publish failure must NOT throw because the doc page +
- * sheet + comp-def writes may have already succeeded.
+ * sheet writes may have already succeeded.
  */
 export async function publishStorefrontAndDaLive(
     ctx: PromoteBlockContext,
@@ -70,9 +85,10 @@ export async function publishStorefrontAndDaLive(
 
 /**
  * Reverse of {@link publishStorefrontAndDaLive}: commit/push the storefront
- * removal, then unpublish the block's library doc page from Helix. Failures are
- * swallowed and reported via the returned status — never thrown, because the
- * comp-def + doc-page + sheet teardown may have already succeeded.
+ * removal (the deleted `blocks/<blockId>/` folder), then unpublish the block's
+ * library doc page from Helix. Failures are swallowed and reported via the
+ * returned status — never thrown, because the code + doc-page + sheet teardown
+ * may have already succeeded.
  *
  *   - `'success'` — storefront push + unpublish both succeeded (or nothing to
  *     unpublish because no GitHub repo/token is configured).
@@ -89,7 +105,7 @@ export async function unpublishStorefrontAndDaLive(
     try {
         await syncAndPublish({
             storefrontPath: ctx.storefrontPath,
-            commitMessage: `AI: remove block ${blockId} from library`,
+            commitMessage: `AI: remove block ${blockId}`,
             githubRepo: ctx.githubRepo,
             githubToken,
             daLiveToken,

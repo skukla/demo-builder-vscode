@@ -1,14 +1,23 @@
 /**
  * MCP Server Tests — get_block_authoring_shape
  *
- * Returns a block's DA.live authoring shape from the three storefront registry
- * files. FIXTURES ARE COPIED FROM REAL DATA (bodea-template-test, 78 components)
- * — an earlier draft assumed every entry carried `plugins.da.unsafeHTML`, which
- * only 4 of 78 do; the other 74 describe themselves with rows/columns or
- * name/type/fields. Keep these shapes faithful or the suite agrees with a
- * fiction.
+ * Returns how an author fills a block in, from sources every storefront has
+ * (EDS-71 step 5). `component-definition.json` is not one of them: Adobe deleted
+ * it from its templates, and the block list follows the code.
+ *
+ * - Index: the storefront's `blocks/<id>/` folders.
+ * - One block: the tables on its example page in the storefront's DA.live block
+ *   list (`.da/library/blocks/<id>`), per style variant; else, when there is no
+ *   real example, the rows, columns and variants its code reads (as DA.live's
+ *   Import Blocks reads them), plus its README.
+ *
+ * The example pages are written in the shape `blockDoc` writes them, which mirrors
+ * DA.live's Import Blocks (adobe/da-live `blocks/config/blocks-import/blocks.js`):
+ * `<body><header></header><main>` + one `<div><div class="<id> <variant>">…</div></div>`
+ * section per variant + `</main><footer></footer></body>`.
  */
 
+import { DaLiveContentOperations } from '@/features/eds/services/daLive/daLiveContentOperations';
 import {
     fsProm,
     path,
@@ -20,130 +29,88 @@ import {
     mockManifestWithoutStorefront,
 } from './mcpServer.testUtils';
 
-const COMP_DEF_PATH = path.join(STOREFRONT_PATH, 'component-definition.json');
+const mockReadBlockDocPage = jest.fn();
+jest.mock('@/features/eds/services/daLive/daLiveContentOperations', () => ({
+    DaLiveContentOperations: jest.fn().mockImplementation(() => ({
+        blockLibOps: { readBlockDocPage: mockReadBlockDocPage },
+    })),
+}));
+jest.mock('@/features/eds/services/daLive/daLiveTokenProviders', () => ({
+    createDaLiveServiceTokenProvider: jest.fn(),
+    createDaLiveTokenProvider: jest.fn(),
+}));
 
-/**
- * Real registry excerpt. Three authoring conventions appear across the real
- * file and all three are represented here:
- *   - `cards`   → rows/columns (positional table) + a filter naming its children
- *   - `image`   → name/type/fields (key-value with CSS selectors)
- *   - `section` → unsafeHTML (literal markup; only 4 real entries use this)
- */
-const DEFINITION = {
-    groups: [
-        {
-            title: 'Default Content',
-            components: [
-                {
-                    title: 'Image',
-                    id: 'image',
-                    model: 'image',
-                    plugins: {
-                        da: {
-                            name: 'image',
-                            type: 'image',
-                            fields: [
-                                { name: 'imageAlt', selector: 'img[alt]' },
-                                { name: 'image', selector: 'img[src]' },
-                            ],
-                        },
-                    },
-                },
-            ],
-        },
-        {
-            title: 'Sections',
-            components: [
-                {
-                    title: 'Section',
-                    id: 'section',
-                    filter: 'section',
-                    model: 'section',
-                    plugins: { da: { unsafeHTML: '<div></div>' } },
-                },
-            ],
-        },
-        {
-            title: 'Blocks',
-            components: [
-                {
-                    title: 'Cards',
-                    id: 'cards',
-                    model: 'cards', // deliberately unresolvable — 38 of 78 real entries are
-                    filter: 'cards',
-                    plugins: { da: { rows: 1, columns: 2 } },
-                },
-                {
-                    title: 'Card',
-                    id: 'card',
-                    model: 'card',
-                    plugins: { da: { rows: 1, columns: 1 } },
-                },
-                // Real file has entries with no plugins block at all.
-                { title: 'Bare', id: 'bare' },
-            ],
-        },
-    ],
+const TOKENS: { daLiveToken: string | null; githubToken: null } = {
+    daLiveToken: 'da-live-token',
+    githubToken: null,
 };
 
-const MODELS = [
-    {
-        id: 'card',
-        fields: [
-            { component: 'reference', valueType: 'string', name: 'image', label: 'Image', multi: false },
-            { component: 'text', valueType: 'string', name: 'imageAlt', label: 'Image Alt', multi: false },
-            { component: 'richtext', name: 'text', value: '', label: 'Text', valueType: 'string' },
-        ],
-    },
-    { id: 'image', fields: [{ component: 'reference', name: 'image', label: 'Image' }] },
-];
+const CARDS_JS = `export default function decorate(block) {
+  [...block.children].forEach((row) => {
+    const image = row.children[0];
+    const body = row.children[1];
+  });
+}`;
+const CARDS_CSS = '.cards { display: grid; }\n.cards.horizontal { grid-auto-flow: column; }\n';
+const CARDS_README = '# Cards\n\nEach row is one card: an image cell, then a text cell.';
 
-const FILTERS = [
-    { id: 'cards', components: ['card'] },
-    { id: 'section', components: ['text', 'image'] },
-];
+const ROW = '<div><div><picture><img src="./media_1.png" alt=""></picture></div><div><p>Card body</p></div></div>';
+/** The same row as the example comes back: cleaned as Import Blocks does, an image tag self-closed. */
+const ROW_OUT = ROW.replace('alt="">', 'alt="" />');
+const CARDS_PAGE =
+    '<body><header></header><main>' +
+    `<div><div class="cards">${ROW}${ROW}</div></div>` +
+    `<div><div class="cards horizontal">${ROW}</div></div>` +
+    '</main><footer></footer></body>';
+/** What the library build writes when it has no example (`blockDoc` with no examples). */
+const CARDS_PLACEHOLDER =
+    '<body><header></header><main>' +
+    '<div><div class="cards"><div><div><p>Column 1 content</p></div><div><p>Column 2 content</p></div></div></div></div>' +
+    '</main><footer></footer></body>';
 
-/** Serve all three registry files (and the manifest) from one readFile mock. */
-function mockRegistry(
-    overrides: { definition?: unknown; models?: unknown; filters?: unknown } = {},
-    storefrontPath = STOREFRONT_PATH,
+/** The manifest, the block folders, and the files of `cards`. */
+function mockStorefront(
+    opts: { folders?: string[]; readme?: boolean; daLive?: boolean } = {},
 ): void {
+    const { folders = ['cards', 'hero', 'commerce-cart'], readme = true, daLive = true } = opts;
     const manifest = {
         name: PROJECT_NAME,
         status: 'ready',
-        componentInstances: { 'eds-storefront': { path: storefrontPath } },
+        componentInstances: {
+            'eds-storefront': {
+                path: STOREFRONT_PATH,
+                metadata: daLive ? { daLiveOrg: 'user-org', githubRepo: 'user-org/user-site' } : {},
+            },
+        },
     };
-    const serve = (value: unknown): Promise<string> =>
-        typeof value === 'string' ? Promise.resolve(value) : Promise.resolve(JSON.stringify(value));
-
+    const files: Record<string, string> = {
+        'blocks/cards/cards.js': CARDS_JS,
+        'blocks/cards/cards.css': CARDS_CSS,
+        ...(readme ? { 'blocks/cards/README.md': CARDS_README } : {}),
+    };
     (fsProm.readFile as jest.Mock).mockImplementation((p: string) => {
         const file = String(p);
         if (file.endsWith('.demo-builder.json')) return Promise.resolve(JSON.stringify(manifest));
-        if (file.endsWith('component-definition.json')) {
-            return serve('definition' in overrides ? overrides.definition : DEFINITION);
-        }
-        if (file.endsWith('component-models.json')) {
-            if ('models' in overrides && overrides.models === undefined) {
-                return Promise.reject(new Error('ENOENT'));
-            }
-            return serve('models' in overrides ? overrides.models : MODELS);
-        }
-        if (file.endsWith('component-filters.json')) {
-            if ('filters' in overrides && overrides.filters === undefined) {
-                return Promise.reject(new Error('ENOENT'));
-            }
-            return serve('filters' in overrides ? overrides.filters : FILTERS);
-        }
-        return Promise.reject(new Error(`Unexpected readFile: ${file}`));
+        const rel = path.relative(STOREFRONT_PATH, file);
+        return rel in files ? Promise.resolve(files[rel]) : Promise.reject(new Error(`ENOENT ${rel}`));
+    });
+    (fsProm.readdir as jest.Mock).mockResolvedValue([
+        ...folders.map((name) => ({ name, isDirectory: () => true })),
+        { name: 'README.md', isDirectory: () => false },
+    ]);
+    (fsProm.stat as jest.Mock).mockImplementation((p: string) => {
+        const id = path.basename(String(p));
+        return folders.includes(id) ? Promise.resolve({}) : Promise.reject(new Error('ENOENT'));
     });
 }
 
-const shape = (blockName?: string) =>
-    toolHandlers.getBlockAuthoringShape(PROJECTS_DIR, PROJECT_NAME, blockName);
+const shape = (blockName?: string, tokens: typeof TOKENS = TOKENS, search?: string) =>
+    toolHandlers.getBlockAuthoringShape(PROJECTS_DIR, PROJECT_NAME, blockName, search, tokens);
 
 describe('toolHandlers.getBlockAuthoringShape', () => {
     beforeEach(() => {
         jest.clearAllMocks();
+        mockReadBlockDocPage.mockResolvedValue(undefined);
     });
 
     // ─── guards ──────────────────────────────────────────────────────────────
@@ -158,151 +125,158 @@ describe('toolHandlers.getBlockAuthoringShape', () => {
         await expect(shape('cards')).rejects.toThrow(/escapes allowed directory/i);
     });
 
-    it('throws naming component-definition.json when it cannot be read', async () => {
-        mockRegistry({ definition: undefined });
-        // `definition: undefined` serves the literal string "undefined" → parse error
-        // naming the file; the missing-file path is covered by the next test.
-        await expect(shape('cards')).rejects.toThrow(/component-definition\.json/i);
-    });
+    it('never reads component-definition.json', async () => {
+        mockStorefront();
 
-    it('throws naming component-definition.json when it is not valid JSON', async () => {
-        mockRegistry({ definition: '{ not json' });
-        await expect(shape('cards')).rejects.toThrow(/component-definition\.json/i);
-    });
-
-    it('reads component-definition.json from the storefront root', async () => {
-        mockRegistry();
+        await shape();
         await shape('cards');
-        const readPaths = (fsProm.readFile as jest.Mock).mock.calls.map((c) => String(c[0]));
-        expect(readPaths).toContain(COMP_DEF_PATH);
-    });
 
-    // ─── detail: the three authoring conventions ─────────────────────────────
-
-    // The dominant real convention (51 of 78): a positional table.
-    it('returns rows/columns for a positional block, plus the children its filter allows', async () => {
-        mockRegistry();
-
-        const parsed = JSON.parse(await shape('cards'));
-
-        expect(parsed).toEqual({
-            id: 'cards',
-            title: 'Cards',
-            authoring: { rows: 1, columns: 2 },
-            // Without this an agent sees "2 columns" and authors flat cells — the
-            // real content of `cards` is `card` children.
-            childComponents: ['card'],
-        });
-    });
-
-    it('returns name/type/fields for a key-value block', async () => {
-        mockRegistry();
-
-        const parsed = JSON.parse(await shape('image'));
-
-        expect(parsed.authoring).toEqual({
-            name: 'image',
-            type: 'image',
-            fields: [
-                { name: 'imageAlt', selector: 'img[alt]' },
-                { name: 'image', selector: 'img[src]' },
-            ],
-        });
-    });
-
-    it('returns unsafeHTML for a literal-markup block', async () => {
-        mockRegistry();
-
-        const parsed = JSON.parse(await shape('section'));
-
-        expect(parsed.authoring).toEqual({ unsafeHTML: '<div></div>' });
-        expect(parsed.childComponents).toEqual(['text', 'image']);
-    });
-
-    // ─── model resolution ────────────────────────────────────────────────────
-
-    it('resolves the model fields, projected to name/label/component', async () => {
-        mockRegistry();
-
-        const parsed = JSON.parse(await shape('card'));
-
-        expect(parsed.fields).toEqual([
-            { name: 'image', label: 'Image', component: 'reference' },
-            { name: 'imageAlt', label: 'Image Alt', component: 'text' },
-            { name: 'text', label: 'Text', component: 'richtext' },
-        ]);
-    });
-
-    // 38 of 78 real components name a model that has no entry — that is normal,
-    // not an error.
-    it('omits fields when the named model has no entry', async () => {
-        mockRegistry();
-
-        const parsed = JSON.parse(await shape('cards'));
-
-        expect(parsed).not.toHaveProperty('fields');
-    });
-
-    it('still answers when component-models.json and component-filters.json are absent', async () => {
-        mockRegistry({ models: undefined, filters: undefined });
-
-        const parsed = JSON.parse(await shape('cards'));
-
-        expect(parsed).toEqual({ id: 'cards', title: 'Cards', authoring: { rows: 1, columns: 2 } });
-    });
-
-    // ─── missing / bare entries ──────────────────────────────────────────────
-
-    it('errors for an unregistered block and points at the checkout', async () => {
-        mockRegistry();
-        // A block can exist on disk and never have been registered — a different
-        // problem from a typo, so the message names the next step.
-        await expect(shape('carousel')).rejects.toThrow(/storefront checkout/);
-    });
-
-    it('reports a registered block that declares no authoring shape', async () => {
-        mockRegistry();
-        await expect(shape('bare')).rejects.toThrow(/bare/);
+        const reads = (fsProm.readFile as jest.Mock).mock.calls.map(([p]) => String(p));
+        expect(reads.filter((p) => p.includes('component-'))).toStrictEqual([]);
     });
 
     // ─── index mode ──────────────────────────────────────────────────────────
 
-    it('lists every registered block across ALL groups with its authoring convention', async () => {
-        mockRegistry();
+    it("lists the storefront's block folders A to Z, with their titles", async () => {
+        mockStorefront();
 
-        const parsed = JSON.parse(await shape());
-
-        expect(parsed.blocks).toEqual([
-            { id: 'image', title: 'Image', authoring: 'fields' },
-            { id: 'section', title: 'Section', authoring: 'html' },
-            { id: 'cards', title: 'Cards', authoring: 'table' },
-            { id: 'card', title: 'Card', authoring: 'table' },
-            { id: 'bare', title: 'Bare', authoring: 'none' },
-        ]);
+        expect(JSON.parse(await shape())).toEqual({
+            blocks: [
+                { id: 'cards', title: 'Cards' },
+                { id: 'commerce-cart', title: 'Commerce Cart' },
+                { id: 'hero', title: 'Hero' },
+            ],
+            count: 3,
+            total: 3,
+        });
     });
 
-    // The index is the cheap half; carrying markup or field lists would defeat it.
-    it('omits markup and field detail from the index', async () => {
-        mockRegistry();
+    it('filters the index by id or title', async () => {
+        mockStorefront();
 
-        const raw = await shape();
+        const parsed = JSON.parse(await shape(undefined, TOKENS, 'Commerce'));
 
-        expect(raw).not.toContain('<div>');
-        expect(raw).not.toContain('img[src]');
-        expect(raw).not.toContain('columns');
+        expect(parsed.blocks).toEqual([{ id: 'commerce-cart', title: 'Commerce Cart' }]);
+        expect(parsed.totalUnfiltered).toBe(3);
     });
 
-    it('returns an empty list for a definition with no groups', async () => {
-        mockRegistry({ definition: {} });
+    // The same rule the DA.live block list uses (`listableBlockIds`), so the index lists
+    // exactly the code blocks the palette lists.
+    it('leaves out a folder whose name is not a block name', async () => {
+        mockStorefront({ folders: ['cards', 'Old_Cards', 'hero.bak'] });
+
+        expect(JSON.parse(await shape()).blocks).toEqual([{ id: 'cards', title: 'Cards' }]);
+    });
+
+    it('lists no blocks for a storefront without a blocks folder', async () => {
+        mockStorefront();
+        (fsProm.readdir as jest.Mock).mockRejectedValue(new Error('ENOENT'));
 
         expect(JSON.parse(await shape())).toEqual({ blocks: [], count: 0, total: 0 });
     });
 
-    it('tolerates a group with no components array', async () => {
-        mockRegistry({ definition: { groups: [{ title: 'Empty' }, DEFINITION.groups[1]] } });
+    it('reads nothing from DA.live for the index', async () => {
+        mockStorefront();
 
-        const parsed = JSON.parse(await shape());
+        await shape();
 
-        expect(parsed.blocks).toEqual([{ id: 'section', title: 'Section', authoring: 'html' }]);
+        expect(DaLiveContentOperations).not.toHaveBeenCalled();
+    });
+
+    // ─── detail: the example page ────────────────────────────────────────────
+
+    it("returns the example page's tables, one per style variant, with rows and columns", async () => {
+        mockStorefront();
+        mockReadBlockDocPage.mockResolvedValue(CARDS_PAGE);
+
+        const parsed = JSON.parse(await shape('cards'));
+
+        expect(mockReadBlockDocPage).toHaveBeenCalledWith('user-org', 'user-site', 'cards');
+        expect(parsed).toEqual({
+            id: 'cards',
+            title: 'Cards',
+            source: 'example-page',
+            examples: [
+                { variant: '', rows: 2, columns: 2, html: `${ROW_OUT}${ROW_OUT}` },
+                { variant: 'horizontal', rows: 1, columns: 2, html: ROW_OUT },
+            ],
+            readme: CARDS_README,
+        });
+    });
+
+    it('clips a long example table and says so', async () => {
+        mockStorefront();
+        const long = `<div><div><p>${'x'.repeat(5_000)}</p></div></div>`;
+        mockReadBlockDocPage.mockResolvedValue(
+            `<body><header></header><main><div><div class="cards">${long}</div></div></main><footer></footer></body>`,
+        );
+
+        const [example] = JSON.parse(await shape('cards')).examples;
+
+        expect(example.truncated).toBe(true);
+        expect(example.html.length).toBeLessThan(long.length);
+        expect(example.rows).toBe(1);
+    });
+
+    // ─── detail: the code answers when there is no real example ──────────────
+
+    it("answers from the block's code when it has no example page", async () => {
+        mockStorefront();
+
+        expect(JSON.parse(await shape('cards'))).toEqual({
+            id: 'cards',
+            title: 'Cards',
+            source: 'code',
+            examplePage: 'none',
+            rows: 2,
+            columns: 2,
+            variants: ['horizontal'],
+            readme: CARDS_README,
+        });
+    });
+
+    it('takes a page Demo Builder generated (an untouched placeholder) as no example', async () => {
+        mockStorefront();
+        mockReadBlockDocPage.mockResolvedValue(CARDS_PLACEHOLDER);
+
+        const parsed = JSON.parse(await shape('cards'));
+
+        expect(parsed.source).toBe('code');
+        expect(parsed.examplePage).toBe('generated');
+    });
+
+    it('answers from the code, and says why, when DA.live is not signed in', async () => {
+        mockStorefront();
+
+        const parsed = JSON.parse(await shape('cards', { daLiveToken: null, githubToken: null }));
+
+        expect(parsed.source).toBe('code');
+        expect(parsed.examplePage).toBe('not-signed-in');
+        expect(DaLiveContentOperations).not.toHaveBeenCalled();
+    });
+
+    it('answers from the code when the storefront has no DA.live site', async () => {
+        mockStorefront({ daLive: false });
+
+        expect(JSON.parse(await shape('cards')).examplePage).toBe('no-da-live-site');
+    });
+
+    it('answers from the code when the example page cannot be read', async () => {
+        mockStorefront();
+        mockReadBlockDocPage.mockRejectedValue(new Error('Doc page for cards not read: 500'));
+
+        expect(JSON.parse(await shape('cards')).examplePage).toBe('unreadable');
+    });
+
+    it('leaves the readme out when the block has none', async () => {
+        mockStorefront({ readme: false });
+
+        expect(JSON.parse(await shape('cards'))).not.toHaveProperty('readme');
+    });
+
+    it('errors for a block with no folder, and names the index call', async () => {
+        mockStorefront();
+
+        await expect(shape('carousel')).rejects.toThrow(/no folder under blocks\/.*no blockName/);
     });
 });

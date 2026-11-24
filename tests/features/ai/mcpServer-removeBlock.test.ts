@@ -1,11 +1,13 @@
 /**
  * MCP Server Tests — remove_block_from_library
  *
- * toolHandlers.removeBlockFromLibrary is the inverse of promoteBlockToLibrary:
- * it removes the block's component-definition.json entry, deletes the DA.live
+ * toolHandlers.removeBlockFromLibrary removes a block from the storefront. The
+ * DA.live block list follows the storefront's code (EDS-71 step 5, owner
+ * 2026-11-23: one rule, no hide list), so removing a block is deleting its code:
+ * it deletes `blocks/<blockId>/` in the storefront checkout, deletes the DA.live
  * doc page + sheet row (via DaLiveContentOperations.blockLibOps.removeBlockFromLibrary),
- * then commits/pushes the removal via syncAndPublish and unpublishes the doc
- * page via helixApiClient.unpublishPage.
+ * then commits/pushes the deletion via syncAndPublish and unpublishes the doc
+ * page via helixApiClient.unpublishPage. Restoring the code undoes it.
  *
  * Shared fs/child_process mocks live in mcpServer.testUtils.ts. DA.live and
  * Helix calls are mocked at the module boundary so the test does not exercise
@@ -15,6 +17,7 @@
 import { DaLiveContentOperations } from '@/features/eds/services/daLive/daLiveContentOperations';
 import {
     fsProm,
+    path,
     toolHandlers,
     registerProjectTools,
     PROJECTS_DIR,
@@ -55,8 +58,7 @@ jest.mock('@/features/eds/services/helix/helixApiClient', () => ({
 // ─── Fixtures ────────────────────────────────────────────────────────────────
 
 const BLOCK_ID = 'promo-banner';
-const BLOCK_TITLE = 'Promo Banner';
-const BLOCK_HTML = '<div class="promo-banner">Save 20% today</div>';
+const BLOCK_DIR = path.join(STOREFRONT_PATH, 'blocks', BLOCK_ID);
 const DA_LIVE_ORG = 'user-org';
 const DA_LIVE_SITE = 'user-site';
 const GITHUB_OWNER = 'user-org';
@@ -64,134 +66,102 @@ const GITHUB_SITE = 'user-site';
 
 function manifestWith(opts: { includeStorefront?: boolean; includeDaLive?: boolean } = {}) {
     const { includeStorefront = true, includeDaLive = true } = opts;
-    const compDef = {
-        groups: [
-            {
-                id: 'blocks',
-                title: 'Blocks',
-                components: [
-                    { id: BLOCK_ID, title: BLOCK_TITLE, plugins: { da: { unsafeHTML: BLOCK_HTML } } },
-                ],
-            },
-        ],
-    };
     return {
-        manifest: {
-            name: 'my-project',
-            status: 'ready',
-            componentInstances: includeStorefront
-                ? {
-                    'eds-storefront': {
-                        path: STOREFRONT_PATH,
-                        metadata: includeDaLive
-                            ? {
-                                daLiveOrg: DA_LIVE_ORG,
-                                daLiveSite: DA_LIVE_SITE,
-                                githubRepo: `${GITHUB_OWNER}/${GITHUB_SITE}`,
-                            }
-                            : {},
-                    },
-                }
-                : {},
-        },
-        componentDefinition: compDef,
+        name: 'my-project',
+        status: 'ready',
+        componentInstances: includeStorefront
+            ? {
+                'eds-storefront': {
+                    path: STOREFRONT_PATH,
+                    metadata: includeDaLive
+                        ? {
+                            daLiveOrg: DA_LIVE_ORG,
+                            daLiveSite: DA_LIVE_SITE,
+                            githubRepo: `${GITHUB_OWNER}/${GITHUB_SITE}`,
+                        }
+                        : {},
+                },
+            }
+            : {},
     };
 }
 
+const ENOENT = (): Error => Object.assign(new Error('ENOENT'), { code: 'ENOENT' });
+
 /**
- * Set up the standard fs mocks: manifest read + component-definition.json read
- * + write. Pass `componentDef` to control the comp-def the handler reads.
+ * The standard fs mocks: the manifest read, and the block's code folder present
+ * (`codeFolder: false` makes it already gone). Any other read rejects, as a
+ * storefront on Adobe's current template has no component-definition.json.
  */
 function mockFilesystem(opts: {
-    componentDef?: Array<{ id: string; title: string; plugins?: { da?: { unsafeHTML?: string } } }>;
     includeStorefront?: boolean;
     includeDaLive?: boolean;
+    codeFolder?: boolean;
 } = {}) {
-    const { manifest, componentDefinition } = manifestWith(opts);
-    const compDef = opts.componentDef
-        ? { groups: [{ id: 'blocks', title: 'Blocks', components: opts.componentDef }] }
-        : componentDefinition;
-
+    const manifest = manifestWith(opts);
     (fsProm.readFile as jest.Mock).mockImplementation((p: string) => {
-        const sp = String(p);
-        if (sp.endsWith('.demo-builder.json')) {
+        if (String(p).endsWith('.demo-builder.json')) {
             return Promise.resolve(JSON.stringify(manifest));
         }
-        if (sp.endsWith('component-definition.json')) {
-            return Promise.resolve(JSON.stringify(compDef));
-        }
-        return Promise.reject(new Error(`Unexpected readFile: ${p}`));
+        return Promise.reject(ENOENT());
     });
-
+    (fsProm.lstat as jest.Mock).mockImplementation(() =>
+        opts.codeFolder === false
+            ? Promise.reject(ENOENT())
+            : Promise.resolve({ isDirectory: () => true }),
+    );
+    (fsProm.rm as jest.Mock).mockResolvedValue(undefined);
     (fsProm.stat as jest.Mock).mockResolvedValue({ size: 0 });
-    (fsProm.writeFile as jest.Mock).mockResolvedValue(undefined);
-    (fsProm.mkdir as jest.Mock).mockResolvedValue(undefined);
+}
+
+const TOKENS = { daLiveToken: 'da-live-token', githubToken: 'github-token' };
+const remove = (projectName: string, blockId: string): Promise<string> =>
+    toolHandlers.removeBlockFromLibrary(PROJECTS_DIR, projectName, blockId, TOKENS);
+
+function resetMocks(): void {
+    jest.clearAllMocks();
+    mockRemoveBlockFromLibrary.mockResolvedValue({ docPage: 'deleted', sheet: 'removed' });
+    mockSyncAndPublish.mockResolvedValue({
+        committed: true, pushed: true, helixPublished: true, summary: 'ok',
+    });
+    mockUnpublishPage.mockResolvedValue(true);
 }
 
 // ─── Tests ───────────────────────────────────────────────────────────────────
 
-const TOKENS = { daLiveToken: 'da-live-token', githubToken: 'github-token' };
-const remove = (
-    projectsDir: string, projectName: string, blockId: string,
-): Promise<string> =>
-    toolHandlers.removeBlockFromLibrary(projectsDir, projectName, blockId, TOKENS);
-
 describe('toolHandlers.removeBlockFromLibrary', () => {
-    beforeEach(() => {
-        jest.clearAllMocks();
-
-        mockRemoveBlockFromLibrary.mockResolvedValue({ docPage: 'deleted', sheet: 'removed' });
-        mockSyncAndPublish.mockResolvedValue({
-            committed: true, pushed: true, helixPublished: true, summary: 'ok',
-        });
-        mockUnpublishPage.mockResolvedValue(true);
-    });
+    beforeEach(resetMocks);
 
     it('throws when projectName does not resolve (invalid name)', async () => {
-        await expect(remove(PROJECTS_DIR, '../escape', BLOCK_ID)).rejects.toThrow(/invalid project name/i);
+        await expect(remove('../escape', BLOCK_ID)).rejects.toThrow(/invalid project name/i);
     });
 
     it('throws when no EDS storefront is configured', async () => {
         mockFilesystem({ includeStorefront: false });
 
-        await expect(remove(PROJECTS_DIR, PROJECT_NAME, BLOCK_ID)).rejects.toThrow(/no eds storefront configured/i);
+        await expect(remove(PROJECT_NAME, BLOCK_ID)).rejects.toThrow(/no eds storefront configured/i);
     });
 
-    it('happy path — comp-def removed, doc page deleted, sheet removed, unpublish success', async () => {
+    it('happy path — removes the page and row, then deletes the code folder, pushes, unpublishes', async () => {
         mockFilesystem();
 
-        const raw = await remove(PROJECTS_DIR, PROJECT_NAME, BLOCK_ID);
-        const result = JSON.parse(raw);
+        const result = JSON.parse(await remove(PROJECT_NAME, BLOCK_ID));
 
-        // 1. comp-def rewritten WITHOUT the entry
-        expect(fsProm.writeFile as jest.Mock).toHaveBeenCalledWith(
-            expect.stringContaining('component-definition.json'),
-            expect.any(String),
-            'utf-8',
-        );
-        const writeCall = (fsProm.writeFile as jest.Mock).mock.calls.find(
-            ([p]: [string]) => String(p).endsWith('component-definition.json'),
-        );
-        const writtenJson = JSON.parse(writeCall[1] as string);
-        const entry = writtenJson.groups[0].components.find((c: { id: string }) => c.id === BLOCK_ID);
-        expect(entry).toBeUndefined();
-        expect(result.componentDefinition).toBe('removed');
-
+        // 1. The block's code folder, and only that folder, deleted
+        expect(fsProm.rm).toHaveBeenCalledTimes(1);
+        expect(fsProm.rm).toHaveBeenCalledWith(BLOCK_DIR, { recursive: true });
         // 2. DA.live teardown
         expect(mockRemoveBlockFromLibrary).toHaveBeenCalledWith(
             DA_LIVE_ORG, DA_LIVE_SITE, { blockId: BLOCK_ID },
         );
-        expect(result.docPage).toBe('deleted');
-        expect(result.sheet).toBe('removed');
-
-        // 3. Storefront removal commit/push
+        // 3. The deletion committed and pushed
         expect(mockSyncAndPublish).toHaveBeenCalledWith(
             expect.objectContaining({
                 storefrontPath: STOREFRONT_PATH,
                 commitMessage: expect.stringContaining(BLOCK_ID),
             }),
         );
-        // 4. Unpublish the doc page
+        // 4. The doc page unpublished
         expect(mockUnpublishPage).toHaveBeenCalledWith(
             GITHUB_OWNER,
             GITHUB_SITE,
@@ -199,34 +169,120 @@ describe('toolHandlers.removeBlockFromLibrary', () => {
             'main',
             { githubToken: 'github-token', daLiveToken: 'da-live-token' },
         );
-        expect(result.unpublish).toBe('success');
+        expect(result).toEqual({
+            codeFolder: 'deleted',
+            docPage: 'deleted',
+            sheet: 'removed',
+            unpublish: 'success',
+            details: expect.stringContaining(BLOCK_ID),
+        });
     });
 
-    it('idempotent — block already absent → componentDefinition/docPage/sheet absent, no throw', async () => {
-        mockFilesystem({ componentDef: [] }); // comp-def has no matching entry
+    // The code is gone before the push runs, so the commit carries the deletion.
+    it('deletes the code folder before committing and pushing', async () => {
+        mockFilesystem();
+
+        await remove(PROJECT_NAME, BLOCK_ID);
+
+        const rmOrder = (fsProm.rm as jest.Mock).mock.invocationCallOrder[0];
+        const pushOrder = mockSyncAndPublish.mock.invocationCallOrder[0];
+        expect(rmOrder).toBeLessThan(pushOrder);
+    });
+
+    it('never touches component-definition.json', async () => {
+        mockFilesystem();
+
+        await remove(PROJECT_NAME, BLOCK_ID);
+
+        const touched = [
+            ...(fsProm.readFile as jest.Mock).mock.calls,
+            ...(fsProm.writeFile as jest.Mock).mock.calls,
+        ].map(([p]) => String(p));
+        expect(touched.filter((p) => p.includes('component-definition'))).toStrictEqual([]);
+    });
+
+    it('idempotent — a block already gone everywhere is absent, not a failure', async () => {
+        mockFilesystem({ codeFolder: false });
         mockRemoveBlockFromLibrary.mockResolvedValue({ docPage: 'absent', sheet: 'absent' });
 
-        const raw = await remove(PROJECTS_DIR, PROJECT_NAME, BLOCK_ID);
-        const result = JSON.parse(raw);
+        const result = JSON.parse(await remove(PROJECT_NAME, BLOCK_ID));
 
-        expect(result.componentDefinition).toBe('absent');
+        expect(result.codeFolder).toBe('absent');
         expect(result.docPage).toBe('absent');
         expect(result.sheet).toBe('absent');
-        // comp-def write skipped because nothing changed
-        const writeCall = (fsProm.writeFile as jest.Mock).mock.calls.find(
-            ([p]: [string]) => String(p).endsWith('component-definition.json'),
+        expect(fsProm.rm).not.toHaveBeenCalled();
+    });
+
+    it.each([
+        ['a parent path', '..'],
+        ['a nested path', 'promo/../../x'],
+        ['an absolute path', '/etc'],
+        ['a backslash path', 'promo\\..'],
+        ['upper case', 'Promo-Banner'],
+        ['an empty name', ''],
+    ])('refuses %s as the block id, before changing anything', async (_label, blockId) => {
+        mockFilesystem();
+
+        await expect(remove(PROJECT_NAME, blockId)).rejects.toThrow(/not a block name/);
+
+        expect(fsProm.rm).not.toHaveBeenCalled();
+        expect(mockRemoveBlockFromLibrary).not.toHaveBeenCalled();
+        expect(mockSyncAndPublish).not.toHaveBeenCalled();
+    });
+
+    // DA.live goes first: its failures (an expired sign-in, a sheet that cannot be read or
+    // rewritten) throw before the code is touched, so the code is never left deleted and
+    // unpushed with the block still in the list.
+    it('removes the page and row before deleting the code', async () => {
+        mockFilesystem();
+
+        await remove(PROJECT_NAME, BLOCK_ID);
+
+        const daLiveOrder = mockRemoveBlockFromLibrary.mock.invocationCallOrder[0];
+        const rmOrder = (fsProm.rm as jest.Mock).mock.invocationCallOrder[0];
+        expect(daLiveOrder).toBeLessThan(rmOrder);
+    });
+
+    it.each([
+        ['an expired sign-in', new Error('Authentication expired. Please log in again.')],
+        ['a sheet that cannot be rewritten', new Error('Failed to rewrite block library sheet: 500')],
+    ])('throws on %s from DA.live, with the code untouched', async (_label, error) => {
+        mockFilesystem();
+        mockRemoveBlockFromLibrary.mockRejectedValue(error);
+
+        await expect(remove(PROJECT_NAME, BLOCK_ID)).rejects.toThrow(error.message);
+
+        expect(fsProm.rm).not.toHaveBeenCalled();
+        expect(mockSyncAndPublish).not.toHaveBeenCalled();
+    });
+
+    // Once DA.live has changed, a failure is reported, not thrown away. The code staying is
+    // self-healing: the next Refresh Blocks lists the block again from it.
+    it('reports a code folder that cannot be deleted, after DA.live changed, without throwing', async () => {
+        mockFilesystem();
+        (fsProm.rm as jest.Mock).mockRejectedValue(
+            Object.assign(new Error('EACCES: permission denied'), { code: 'EACCES' }),
         );
-        expect(writeCall).toBeUndefined();
+
+        const result = JSON.parse(await remove(PROJECT_NAME, BLOCK_ID));
+
+        expect(result).toMatchObject({
+            codeFolder: 'failed',
+            docPage: 'deleted',
+            sheet: 'removed',
+            unpublish: 'success',
+        });
+        expect(result.note).toMatch(/EACCES/);
+        expect(result.note).toMatch(/Refresh Blocks lists it again/);
     });
 
     it('partial — unpublish throws → unpublish reported partial, teardown statuses real, no throw', async () => {
         mockFilesystem();
         mockUnpublishPage.mockRejectedValue(new Error('Helix admin 503'));
 
-        const raw = await remove(PROJECTS_DIR, PROJECT_NAME, BLOCK_ID);
-        const result = JSON.parse(raw);
+        const result = JSON.parse(await remove(PROJECT_NAME, BLOCK_ID));
 
-        expect(result.componentDefinition).toBe('removed');
+        expect(result.codeFolder).toBe('deleted');
         expect(result.docPage).toBe('deleted');
         expect(result.sheet).toBe('removed');
         expect(result.unpublish).toBe('partial');
@@ -236,8 +292,7 @@ describe('toolHandlers.removeBlockFromLibrary', () => {
         mockFilesystem();
         mockSyncAndPublish.mockRejectedValue(new Error('push rejected'));
 
-        const raw = await remove(PROJECTS_DIR, PROJECT_NAME, BLOCK_ID);
-        const result = JSON.parse(raw);
+        const result = JSON.parse(await remove(PROJECT_NAME, BLOCK_ID));
 
         expect(result.unpublish).toBe('failed');
         // Unpublish never attempted when the push failed.
@@ -248,12 +303,7 @@ describe('toolHandlers.removeBlockFromLibrary', () => {
 // ─── Credential source ───────────────────────────────────────────────────────
 
 describe('remove_block_from_library — credential source', () => {
-    beforeEach(() => {
-        jest.clearAllMocks();
-        mockRemoveBlockFromLibrary.mockResolvedValue({ docPage: 'deleted', sheet: 'removed' });
-        mockSyncAndPublish.mockResolvedValue({ committed: true, pushed: true, helixPublished: true, summary: 'ok' });
-        mockUnpublishPage.mockResolvedValue(true);
-    });
+    beforeEach(resetMocks);
 
     it('uses the injected DA.live + GitHub tokens', async () => {
         mockFilesystem();
@@ -270,11 +320,12 @@ describe('remove_block_from_library — credential source', () => {
         );
     });
 
-    it('answers with a sign-in marker when DA.live is not signed in', async () => {
+    it('answers with a sign-in marker when DA.live is not signed in, and deletes nothing', async () => {
         // Was a throw until 2026-09-01. A missing credential is the caller's
         // normal state, not an exception — and an MCP error is not something an
         // agent can branch on. `needsAuth` says which sign-in to offer, in a
-        // field rather than a sentence.
+        // field rather than a sentence. The code must survive the refusal: a
+        // block whose code went with no DA.live teardown would leave its page.
         mockFilesystem();
 
         const raw = await toolHandlers.removeBlockFromLibrary(
@@ -286,18 +337,14 @@ describe('remove_block_from_library — credential source', () => {
             error: expect.stringContaining('sign_in(provider:"dalive"'),
             needsAuth: 'dalive',
         });
+        expect(fsProm.rm).not.toHaveBeenCalled();
     });
 });
 
 // ─── Confirm gate ──────────────────────────────────────────────────────────
 
 describe('remove_block_from_library — confirm gate (registerProjectTools)', () => {
-    beforeEach(() => {
-        jest.clearAllMocks();
-        mockRemoveBlockFromLibrary.mockResolvedValue({ docPage: 'deleted', sheet: 'removed' });
-        mockSyncAndPublish.mockResolvedValue({ committed: true, pushed: true, helixPublished: true, summary: 'ok' });
-        mockUnpublishPage.mockResolvedValue(true);
-    });
+    beforeEach(resetMocks);
 
     function registerAndGetHandler(): {
         handler: (args: unknown) => Promise<{ content: Array<{ text: string }> }>;
@@ -325,7 +372,9 @@ describe('remove_block_from_library — confirm gate (registerProjectTools)', ()
 
         expect(parsed.destructive).toBe(true);
         expect(parsed.error).toMatch(/confirm:true/i);
+        expect(parsed.error).toMatch(/deletes the block's code/);
         // No side effects — handler not invoked, no credentials resolved.
+        expect(fsProm.rm).not.toHaveBeenCalled();
         expect(mockRemoveBlockFromLibrary).not.toHaveBeenCalled();
         expect(mockSyncAndPublish).not.toHaveBeenCalled();
         expect(credentials.getDaLiveToken).not.toHaveBeenCalled();
@@ -338,7 +387,7 @@ describe('remove_block_from_library — confirm gate (registerProjectTools)', ()
         const res = await handler({ projectName: PROJECT_NAME, blockId: BLOCK_ID, confirm: true });
         const parsed = JSON.parse(res.content[0].text);
 
-        expect(parsed.componentDefinition).toBe('removed');
+        expect(parsed.codeFolder).toBe('deleted');
         expect(credentials.getDaLiveToken).toHaveBeenCalled();
         expect(credentials.getGitHubToken).toHaveBeenCalled();
         const tokenProvider = (DaLiveContentOperations as unknown as jest.Mock).mock.calls[0][0];

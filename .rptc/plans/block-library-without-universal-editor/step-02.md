@@ -29,8 +29,14 @@ the storefront already has:
    (the content source or account content source that is `adobe-commerce/boilerplate-b2b`). A row's
    block id is the last segment of its path; its title is the row's `name`. The example page is read
    from that same source site at `/docs/library/blocks/<id>`, never from the path the row names.
+   A row is listed only when the storefront has its `blocks/<id>/` folder, so a block whose code
+   was removed does not come back (EDS-71 step 5: the list follows the code). The one exception is
+   `metadata` and `section-metadata` (`CORE_CONTENT_BLOCKS`), content structures EDS handles in its
+   core script with no folder (checked 2026-11-23: the template at f8eb94d has 76 block folders,
+   `fragment` among them, and neither of these).
 2. **Every other block the storefront has**: every `blocks/<id>/` folder in the storefront's
-   repository, none left out. This covers the template's blocks Adobe does not list (Carousel,
+   repository whose name is a block name (lowercase words joined by hyphens, as EDS block class
+   names are; any other folder is not a block the palette can place). This covers the template's blocks Adobe does not list (Carousel,
    Product Recommendations, the Commerce page blocks), block library blocks, de-duplicated ones, and
    blocks an agent made, in one rule, because it reads what code the storefront actually has. Title:
    the folder name in title case.

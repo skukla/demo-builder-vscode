@@ -9,9 +9,10 @@
  *   plan) wrote exactly `<body><header></header><main><div><div class="<id>"><div><div><p><title>
  *   </p></div></div></div></div></main><footer></footer></body>`, and the same title as the block's
  *   row `name` in the blocks sheet. A page of that shape counts only when its one cell's text is
- *   exactly one of the block's titles: its sheet row's name, or `displayName(id)`. A promoted page
- *   with one plain-text cell has the same envelope (`upsertBlockDocPage`), so the shape alone is
- *   no proof.
+ *   exactly one of the block's titles: its sheet row's name, or `displayName(id)`. An edited page
+ *   with one plain-text cell has the same envelope, so the shape alone is no proof. A page an
+ *   agent promoted (`upsertBlockDocPage`) opens with a comment before `<header>`, so it never
+ *   matches either kind, whatever its example holds.
  * - An untouched placeholder: a page that is exactly what `blockDoc` writes with no example (every
  *   section the block's table, every cell `<p>Column N content</p>` in column order), as DA.live's
  *   Import Blocks also writes it. Any edited cell makes it authored.

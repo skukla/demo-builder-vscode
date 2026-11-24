@@ -86,7 +86,7 @@ tools fail.
 | 4 | Examples, best first (with step 2: the convention in `step-02.md`) | done |
 | 4b | Our own libraries get real examples once | not started |
 | 4c | Draft Examples tile, prompt and agent tool | not started |
-| 5 | Agent tools work on the DA.live library | not started |
+| 5 | Agent tools work on the DA.live library | done |
 | 5b | Universal Editor stops being offered | not started |
 | 6 | Block library install, update, removal | not started |
 | 7 | The template update takes Adobe's deletion | not started |
@@ -116,7 +116,11 @@ The detail of each step:
 5. **Agent tools.** `promote_block_to_library`, `remove_block_from_library` and
    `get_block_authoring_shape` work on the DA.live library (row and page) instead of
    `component-definition.json`; the generated skills that describe that file change with them (an AI
-   bundle change: `AI_CONTEXT_VERSION`).
+   bundle change: `AI_CONTEXT_VERSION`). **One rule, no hide list** (owner, 2026-11-23): the palette
+   shows the blocks the storefront's code has. Promote gives a block its example and title; removing a
+   block (after the same confirmation) takes out its page and row, then deletes its code
+   (`blocks/<id>/`) and pushes, so the palette follows. Undo is putting the code back. Hiding a block whose code stays is dropped, so
+   nothing else has to be kept in step.
 5b. **Universal Editor stops being offered.** The `da-live-classic` authoring choice writes a Universal
    Editor URL into the site config (`daLiveSiteConfig.ts:33-54`, the `IMSOrgId` setting described as
    "Used to open the Universal Editor"); on a template without the UE files it opens an editor that

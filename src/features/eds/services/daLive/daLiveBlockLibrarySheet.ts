@@ -22,6 +22,36 @@ import { DA_LIVE_BASE_URL, normalizePath } from './daLiveConstants';
 import { buildSheetDocument } from './daLiveSpreadsheetUtils';
 import type { Logger } from '@/types/logger';
 
+/** What appending one block did to the sheet. */
+export type AppendBlockStatus = 'created' | 'appended' | 'renamed' | 'skipped-duplicate';
+
+type SheetRows = Array<Record<string, string>>;
+
+/** True when `row` is the block's own row: its path names the block's page. */
+const isRowFor = (row: Record<string, string>, blockId: string): boolean =>
+    typeof row.path === 'string' && row.path.endsWith(`/.da/library/blocks/${blockId}`);
+
+/**
+ * The sheet's rows with the block under `title`: its own row renamed in place, else a new row
+ * appended. Undefined when nothing would change (its own row already has the title, or it has no
+ * row and another row already has the title).
+ */
+function mergeBlockRow(
+    rows: SheetRows,
+    siteUrl: string,
+    block: { blockId: string; title: string },
+): { rows: SheetRows; renamed: boolean } | undefined {
+    const own = rows.findIndex((row) => isRowFor(row, block.blockId));
+    if (own === -1) {
+        if (rows.some((row) => row.name === block.title)) return undefined;
+        const path = `${siteUrl}/.da/library/blocks/${block.blockId}`;
+        return { rows: [...rows, { name: block.title, path }], renamed: false };
+    }
+    if (rows[own].name === block.title) return undefined;
+    const renamed = rows.map((row, index) => (index === own ? { ...row, name: block.title } : row));
+    return { rows: renamed, renamed: true };
+}
+
 /** The block-library sheet of one DA.live site. */
 export class DaLiveBlockLibrarySheet {
     constructor(
@@ -102,10 +132,12 @@ export class DaLiveBlockLibrarySheet {
      *
      * Flow:
      *   1. GET `.da/library/blocks.json` (404 → start with empty rows).
-     *   2. If a row with `name === title` already exists, return
+     *   2. The block's own row (its path ends `/.da/library/blocks/<blockId>`) already
+     *      named `title`, or no own row but a row named `title`: return
      *      `{ status: 'skipped-duplicate' }` without writing.
-     *   3. Otherwise append `{ name: title, path: content.da.live/<org>/<site>/.da/library/blocks/<blockId> }`
-     *      and rewrite via `createJsonSpreadsheet` with `overwrite: true`.
+     *   3. Its own row under another name is renamed in place (`'renamed'`); otherwise
+     *      `{ name: title, path: content.da.live/<org>/<site>/.da/library/blocks/<blockId> }`
+     *      is appended. Rewritten via `createJsonSpreadsheet` with `overwrite: true`.
      *   4. Re-invoke `updateSiteConfig` with the `"Blocks"` section so the library
      *      registration is present. The section title MUST be exactly "Blocks" —
      *      DA.live's library UI only renders block lists for that exact name.
@@ -122,7 +154,7 @@ export class DaLiveBlockLibrarySheet {
         site: string,
         block: { blockId: string; title: string },
     ): Promise<{
-        status: 'created' | 'appended' | 'skipped-duplicate';
+        status: AppendBlockStatus;
         siteConfigRegistered: boolean;
     }> {
         const token = await this.apiClient.getImsToken();
@@ -135,21 +167,17 @@ export class DaLiveBlockLibrarySheet {
         const rows = existingRows ?? [];
 
         // Step 2: idempotency check.
-        if (rows.some((r) => r.name === block.title)) {
+        const merged = mergeBlockRow(rows, `https://content.da.live/${org}/${site}`, block);
+        if (!merged) {
             // Still re-register the site config — caller may be repairing a config
             // drift even when the row already exists.
             const configRegistered = await this.registerBlocksLibrarySection(org, site);
             return { status: 'skipped-duplicate', siteConfigRegistered: configRegistered };
         }
 
-        // Step 3: append and rewrite. `createJsonSpreadsheet` writes with
-        // `overwrite: true`, so the read-merge-rewrite cycle preserves all
-        // pre-existing rows.
-        const newRow = {
-            name: block.title,
-            path: `https://content.da.live/${org}/${site}/.da/library/blocks/${block.blockId}`,
-        };
-        const mergedRows = [...rows, newRow];
+        // Step 3: rewrite. `createJsonSpreadsheet` writes with `overwrite: true`,
+        // so the read-merge-rewrite cycle preserves all pre-existing rows.
+        const mergedRows = merged.rows;
         const writeResult = await this.createJsonSpreadsheet(
             org,
             site,
@@ -167,8 +195,9 @@ export class DaLiveBlockLibrarySheet {
         // Step 4: register the "Blocks" section (idempotent on DA.live's side).
         const configRegistered = await this.registerBlocksLibrarySection(org, site);
 
+        const appended = sheetExisted ? 'appended' : 'created';
         return {
-            status: sheetExisted ? 'appended' : 'created',
+            status: merged.renamed ? 'renamed' : appended,
             siteConfigRegistered: configRegistered,
         };
     }
@@ -192,10 +221,7 @@ export class DaLiveBlockLibrarySheet {
             return 'absent'; // sheet not present (404)
         }
 
-        const suffix = `/.da/library/blocks/${blockId}`;
-        const remaining = existingRows.filter(
-            (r) => !(typeof r.path === 'string' && r.path.endsWith(suffix)),
-        );
+        const remaining = existingRows.filter((r) => !isRowFor(r, blockId));
         if (remaining.length === existingRows.length) {
             return 'absent'; // no matching row — nothing to rewrite
         }

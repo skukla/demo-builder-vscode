@@ -1,8 +1,9 @@
 /**
  * The storefront's block list, and where each block's example page comes from.
  *
- * Pure: every source arrives already read. The list is Adobe's blocks in Adobe's order, then every
- * other block folder the storefront has, A to Z, with the `commerce-*` blocks last. Each example
+ * Pure: every source arrives already read. The list is Adobe's blocks the storefront has a folder
+ * for (plus {@link CORE_CONTENT_BLOCKS}) in Adobe's order, then every other block folder the
+ * storefront has, A to Z, with the `commerce-*` blocks last. Each example
  * is the first of {@link EXAMPLE_KINDS} that exists; the last, `placeholder`, is built by the
  * caller from the block's code, as DA.live's Import Blocks does.
  * Design: `.rptc/plans/block-library-without-universal-editor/step-02.md`.
@@ -10,9 +11,25 @@
 
 import type { LibraryEntry } from './adobeContentLibrary';
 import { displayName } from './blockDoc';
-import type { VariantExample } from './blockTable';
+import { isBlockName, type VariantExample } from './blockTable';
 import type { BlockUse } from './blockUseIndex';
 import type { SiteRef } from './siteRef';
+
+/**
+ * Content structures EDS handles in its core script, with no `blocks/<id>/` folder, so Adobe's
+ * entry for one is listed though the storefront has no code for it. Checked 2026-11-23:
+ * `gh api 'repos/adobe-commerce/boilerplate-b2b-template/contents/blocks?ref=f8eb94d'` lists 76
+ * folders, `fragment`, `hero` and `columns` among them, and no `metadata` or `section-metadata`.
+ */
+export const CORE_CONTENT_BLOCKS: ReadonlySet<string> = new Set(['metadata', 'section-metadata']);
+
+/**
+ * The storefront's block folders the list takes: names following the block-name rule (EDS
+ * block class names do), once each. Any other folder is not a block the palette can place.
+ */
+export function listableBlockIds(repoBlockIds: string[]): string[] {
+    return [...new Set(repoBlockIds)].filter(isBlockName);
+}
 
 /** The example sources, in the order the convention tries them. */
 export const EXAMPLE_KINDS = ['existing', 'adobe', 'library', 'real-use', 'placeholder'] as const;
@@ -68,9 +85,15 @@ const ADOBE_BLOCK_PAGE = '/docs/library/blocks/';
 
 /** Builds the palette: list order, titles and each block's example source. */
 export function buildStorefrontBlockList(input: StorefrontBlockListInput): StorefrontBlock[] {
-    const adobeIds = new Set(input.adobeBlocks.map((entry) => entry.id));
-    const adobe = input.adobeBlocks.map((entry) => ({ ...entry, isAdobe: true }));
-    const rest = sortOthers([...new Set(input.repoBlockIds)].filter((id) => !adobeIds.has(id)))
+    const repoIds = listableBlockIds(input.repoBlockIds);
+    const inRepo = new Set(repoIds);
+    // An Adobe entry follows the code too: listed only when its folder is there (or it is a
+    // core content structure), so a block whose code was removed does not come back.
+    const adobe = input.adobeBlocks
+        .filter((entry) => inRepo.has(entry.id) || CORE_CONTENT_BLOCKS.has(entry.id))
+        .map((entry) => ({ ...entry, isAdobe: true }));
+    const adobeIds = new Set(adobe.map((entry) => entry.id));
+    const rest = sortOthers(repoIds.filter((id) => !adobeIds.has(id)))
         .map((id) => ({ id, title: displayName(id), isAdobe: false }));
     return [...adobe, ...rest].map(({ id, title, isAdobe }) => ({
         id,

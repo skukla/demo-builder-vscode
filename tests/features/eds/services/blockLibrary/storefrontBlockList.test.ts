@@ -67,13 +67,39 @@ describe('buildStorefrontBlockList: the list', () => {
         ]);
     });
 
-    it('lists Adobe blocks the repository has no folder for', () => {
+    // The list follows the code (EDS-71 step 5): a block whose folder was removed must not
+    // come back from Adobe's library on the next Refresh Blocks.
+    it('leaves out an Adobe block the repository has no folder for', () => {
         const list = buildStorefrontBlockList(input({
-            adobeBlocks: [{ id: 'metadata', title: 'Metadata' }],
+            adobeBlocks: [{ id: 'hero', title: 'Hero' }, { id: 'cards', title: 'Cards' }],
             repoBlockIds: ['cards'],
         }));
 
-        expect(list.map((block) => block.id)).toEqual(['metadata', 'cards']);
+        expect(list.map((block) => block.id)).toEqual(['cards']);
+    });
+
+    // EDS handles these in its core script; no template has a folder for them.
+    it('keeps metadata and section-metadata, which have no folder', () => {
+        const list = buildStorefrontBlockList(input({
+            adobeBlocks: [
+                { id: 'metadata', title: 'Metadata' },
+                { id: 'section-metadata', title: 'Section Metadata' },
+                { id: 'fragment', title: 'Fragment' },
+            ],
+            repoBlockIds: ['cards'],
+        }));
+
+        expect(list.map((block) => block.id)).toEqual(['metadata', 'section-metadata', 'cards']);
+    });
+
+    // EDS block class names follow the block-name rule, so another folder name is not a block
+    // the palette can place.
+    it('leaves out a folder whose name is not a block name', () => {
+        const list = buildStorefrontBlockList(input({
+            repoBlockIds: ['cards', 'Old_Cards', 'hero.bak', 'tabs-'],
+        }));
+
+        expect(list.map((block) => block.id)).toEqual(['cards']);
     });
 
     it('lists a repository block once even if named twice', () => {
@@ -91,6 +117,7 @@ describe('buildStorefrontBlockList: where each example comes from', () => {
     it('keeps the storefront\'s existing page over Adobe\'s', () => {
         const list = buildStorefrontBlockList(input({
             adobeBlocks: [{ id: 'hero', title: 'Hero' }],
+            repoBlockIds: ['hero'],
             adobeSite: ADOBE_SITE,
             existingPageIds: new Set(['hero']),
         }));
@@ -101,6 +128,7 @@ describe('buildStorefrontBlockList: where each example comes from', () => {
     it('uses Adobe\'s page on Adobe\'s source site for an Adobe block', () => {
         const list = buildStorefrontBlockList(input({
             adobeBlocks: [{ id: 'hero', title: 'Hero' }],
+            repoBlockIds: ['hero'],
             adobeSite: ADOBE_SITE,
             contentSourceUses: new Map([['hero', use('/', '<div>h</div>')]]),
         }));
@@ -114,6 +142,7 @@ describe('buildStorefrontBlockList: where each example comes from', () => {
     it('does not use Adobe\'s page when there is no Adobe source site', () => {
         const list = buildStorefrontBlockList(input({
             adobeBlocks: [{ id: 'hero', title: 'Hero' }],
+            repoBlockIds: ['hero'],
         }));
 
         expect(exampleOf(list, 'hero')).toEqual({ kind: 'placeholder' });

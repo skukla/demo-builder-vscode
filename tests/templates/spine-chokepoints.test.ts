@@ -260,15 +260,14 @@ describe('spine choke-points', () => {
         //
         // 2026-08-23: the MCP door moved with the mcp-server.ts decomposition —
         // the update_project_config handler now lives in mcp/projectToolHandlers.
-        // mcp/blockAuthoring trips the mention+write heuristic without being a
-        // manifest door: it READS the manifest (installed libraries, promote
-        // context) and its writeFile targets component-definition.json only.
+        // mcp/blockAuthoring tripped the mention+write heuristic without being a
+        // manifest door (it reads the manifest; its writeFile targeted
+        // component-definition.json) until EDS-71 step 5 deleted that write.
         const namesManifest = /\.demo-builder\.json/;
         const writes = /writeFileAtomic\(|writeFile\(/;
         const spine = [
             'core/state/projectConfigWriter.ts',
             'mcp/projectToolHandlers.ts',
-            'mcp/blockAuthoring.ts',
         ];
 
         const hits = filesTouchingBoth(namesManifest, writes);

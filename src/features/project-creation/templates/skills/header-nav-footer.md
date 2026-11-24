@@ -39,7 +39,7 @@ Site chrome appears on every page. The Mod Agent processes pages individually, s
 
    There is no breadcrumb block in the boilerplate; if the reference has one, it is a new block.
 
-   Don't recreate them from scratch. Extend their CSS and markup to match the scraped reference. If the reference forces you to introduce a brand-new chrome block (rare — most cases extend existing ones), call the `register-custom-block` skill (or directly invoke `promote_block_to_library`) after writing the source files so the block appears in DA.live's authoring picker.
+   Don't recreate them from scratch. Extend their CSS and markup to match the scraped reference. If the reference forces you to introduce a brand-new chrome block (rare — most cases extend existing ones), push its source files and run `refresh_block_library` to list it in DA.live's authoring picker, then call the `register-custom-block` skill (or `promote_block_to_library`) to give it a real example there.
 
 3. **Map scraped design tokens to the chrome blocks.**
    - Header background, height, sticky behavior

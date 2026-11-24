@@ -384,7 +384,13 @@ export const LAST_UPDATE_CHECK = 'lastUpdateCheck';
 // `demoBuilder`). The guide is now `datapacks`; writeSkillFiles removes the old guide's copy by its
 // recorded hash (an edited copy is left and reported). Existing projects would keep naming tools that
 // no longer exist. (The notes above were renamed with the tools; docs/CHANGELOG.md keeps the old names.)
-export const AI_CONTEXT_VERSION = 66;
+// v67 (2026-11-23, EDS-71 step 5, owner: one rule, no hide list): the DA.live block list follows the
+// storefront's code. register-custom-block gives a block its example and title (no
+// component-definition.json, no `description` input), remove-custom-block deletes the block's code
+// and undo is restoring it, and sync-changes, header-nav-footer and commerce-block-mapper send a new
+// block through refresh_block_library. Existing projects would keep telling the agent a block can be
+// unregistered while its code stays, and to edit a file Adobe's template no longer has.
+export const AI_CONTEXT_VERSION = 67;
 
 /**
  * Component IDs for standardized component instance access

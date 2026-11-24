@@ -19,7 +19,7 @@
 import { type DaLiveSourceResult } from '../types';
 import { DaLiveApiClient } from './daLiveApiClient';
 import { DaLiveBlockDocPages } from './daLiveBlockDocPages';
-import { DaLiveBlockLibrarySheet } from './daLiveBlockLibrarySheet';
+import { DaLiveBlockLibrarySheet, type AppendBlockStatus } from './daLiveBlockLibrarySheet';
 import { DaLiveConfigOperations } from './daLiveConfigOperations';
 import { DaLiveContentCopy } from './daLiveContentCopy';
 import { DaLiveSourceOperations } from './daLiveSourceOperations';
@@ -64,9 +64,8 @@ export class DaLiveBlockLibraryOperations {
      *      If no matching row, or the sheet is missing (404), the sheet is left
      *      untouched → `'absent'`.
      *
-     * Does NOT delete the block's source files in `blocks/<blockId>/` — that is
-     * the agent's responsibility (driven by the remove-custom-block skill). It
-     * also does not touch `component-definition.json` (the MCP handler does).
+     * Does NOT delete the block's source files in `blocks/<blockId>/`: the
+     * `remove_block_from_library` handler deletes them first (`mcp/blockRemoval.ts`).
      *
      * @param org   - DA.live organization
      * @param site  - DA.live site
@@ -115,13 +114,13 @@ export class DaLiveBlockLibraryOperations {
         return this.sheet.createJsonSpreadsheet(org, site, destPath, headers, rows, options);
     }
 
-    /** Append one block to the library sheet (`DaLiveBlockLibrarySheet.appendBlockToLibrary`). */
+    /** Add or rename one block's sheet row (`DaLiveBlockLibrarySheet.appendBlockToLibrary`). */
     appendBlockToLibrary(
         org: string,
         site: string,
         block: { blockId: string; title: string },
     ): Promise<{
-        status: 'created' | 'appended' | 'skipped-duplicate';
+        status: AppendBlockStatus;
         siteConfigRegistered: boolean;
     }> {
         return this.sheet.appendBlockToLibrary(org, site, block);

@@ -1423,20 +1423,27 @@ The agent surface is powerful, so it's deliberately constrained:
   written — defense-in-depth against injecting executable content.
 - **Bounded responses.** `read_page` caps its reads at 30 KB, since
   the output is paid for as context tokens. `get_block_authoring_shape` splits
-  index from detail for the same reason: the index carries ids, titles and which
-  authoring convention each block uses, but never the markup, selectors or field
-  lists. Measured on a real 78-block storefront: whole index 5,577 bytes, one
-  block's detail 92–432 bytes. It exists because deriving those shapes from block
-  JS instead measured ~121,000 tokens for eight blocks.
+  index from detail for the same reason: the index carries the storefront's block
+  folders the DA.live block list takes (block names only, `listableBlockIds`) and
+  their titles (100 at most), never tables or markup. It exists because
+  deriving block shapes from block JS by hand measured ~121,000 tokens for eight
+  blocks.
 
-  Three authoring conventions coexist in `plugins.da` and the tool reports which
-  one applies: positional (`rows`/`columns`, 36 of 78), key-value
-  (`name`/`type`/`fields`, 35), and literal `unsafeHTML` (4 — what
-  `promote_block_to_library` writes, and the rarest form in a real storefront).
-  `component-filters.json` supplies nested children, without which `cards` reads
-  as two flat columns rather than a list of `card`s; `component-models.json`
-  supplies field labels. Both are best-effort — 38 of 78 components resolve no
-  model fields (27 name a model id with no entry, 11 name none at all).
+  One block's detail comes from sources every storefront has (EDS-71 step 5; it
+  read `component-definition.json` until Adobe deleted that file from its
+  templates): the tables on the block's example page in the site's DA.live block
+  list, one per style variant (4 at most, each clipped at 1,500 characters), with
+  rows and columns counted; else, when the page is missing, unreadable, or one
+  Demo Builder generated, the rows, columns and variants the block's code reads
+  (`analyzeBlockCode`, as DA.live's Import Blocks reads them), with `examplePage`
+  saying why. The block's `README.md` is added, clipped at 1,200 characters.
+
+  The block list follows the storefront's code. `promote_block_to_library` gives a
+  block its example page and title; `remove_block_from_library` removes its page
+  and row (a DA.live failure throws here, before anything has changed), then deletes
+  the block's code (`blocks/<id>/`) and pushes the deletion; a failure from then on
+  is reported per step, never thrown. Restoring the code and running Refresh Blocks
+  undoes a removal.
 - **No secret leakage to child processes.** Where the extension spawns other MCP
   servers to introspect them, it uses an env allowlist.
 

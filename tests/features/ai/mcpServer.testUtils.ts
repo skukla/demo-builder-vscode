@@ -35,6 +35,10 @@ jest.mock('fs/promises', () => ({
     readdir: jest.fn(),
     mkdir: jest.fn(),
     stat: jest.fn().mockResolvedValue({ size: 0 }), // default: .git exists, size 0 (below MAX_FILE_BYTES)
+    // lstat + rm back remove_block_from_library's code-folder deletion. lstat
+    // resolves (the folder is there) unless a test says otherwise.
+    lstat: jest.fn().mockResolvedValue({ isDirectory: () => true }),
+    rm: jest.fn().mockResolvedValue(undefined),
     // realpath: identity by default — all test paths are treated as their own real path
     realpath: jest.fn().mockImplementation((p: string) => Promise.resolve(p)),
 }));

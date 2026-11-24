@@ -21,6 +21,14 @@ import { DaLiveSourceOperations } from './daLiveSourceOperations';
 import { sourcePresent } from './daLiveSourceProbe';
 import type { Logger } from '@/types/logger';
 
+/**
+ * Opens every page `upsertBlockDocPage` writes. The library build replaces a page only when it
+ * starts exactly as Demo Builder's generated pages do (`blockLibrary/oldStubPages.ts`), and an
+ * agent's example may otherwise have the old stub's shape (one cell holding the block's title),
+ * so this keeps the agent's page from ever being taken for one Demo Builder generated.
+ */
+const PROMOTED_PAGE_MARK = '<!-- promote_block_to_library: an authored example, never replaced -->';
+
 /** The block doc pages of one DA.live site's authoring library. */
 export class DaLiveBlockDocPages {
     constructor(
@@ -60,7 +68,8 @@ export class DaLiveBlockDocPages {
      * Wraps `exampleHtml` in the DA.live-expected document structure
      * (`<body><header/><main><div>{html}</div></main><footer/></body>` — the
      * inner `<div>` matters: DA.live treats direct children of `<main>` as
-     * sections, not blocks).
+     * sections, not blocks), opened by {@link PROMOTED_PAGE_MARK} so the library
+     * build keeps the page.
      *
      * @param org - DA.live organization
      * @param site - DA.live site
@@ -75,7 +84,8 @@ export class DaLiveBlockDocPages {
         block: { id: string; exampleHtml: string },
     ): Promise<'written' | 'failed'> {
         try {
-            const docHtml = `<body><header></header><main><div>${block.exampleHtml}</div></main><footer></footer></body>`;
+            const docHtml = `<body>${PROMOTED_PAGE_MARK}<header></header><main>`
+                + `<div>${block.exampleHtml}</div></main><footer></footer></body>`;
             const result = await this.sourceOps.createSource(
                 org,
                 site,

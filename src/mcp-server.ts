@@ -15,7 +15,9 @@
  * │                                config-path allowlist, storefront lookup
  * ├── mcp/projectToolHandlers    — list/get project, config read/write
  * ├── mcp/storefrontSyncHandler  — sync_storefront (+ rebase-and-retry)
- * ├── mcp/blockAuthoring         — registry/definition helpers + HTML sanitizer
+ * ├── mcp/blockAuthoring         — manifest reads + HTML sanitizer
+ * ├── mcp/blockAuthoringShape    — get_block_authoring_shape's index and detail
+ * ├── mcp/blockRemoval           — deleting a block's code folder
  * ├── mcp/blockLibraryPublish    — the promote/remove publish tails
  * ├── mcp/blockToolHandlers      — the five block tools
  * └── mcp/credentials            — the credential provider types
@@ -42,6 +44,7 @@ import { projectToolHandlers } from './mcp/projectToolHandlers';
 import { storefrontSyncHandler } from './mcp/storefrontSyncHandler';
 import { asRawText, asText } from '@/features/ai/server/mcpToolResult';
 import type { McpToolServer } from '@/features/ai/server/mcpToolServer';
+import { BLOCK_NAME_PATTERN as BLOCK_NAME } from '@/features/eds/services/blockLibrary/blockTable';
 
 // Re-exported so the public identity of this module is unchanged by the split.
 export type { McpCredentialProvider, McpToolCredentials } from './mcp/credentials';
@@ -259,16 +262,14 @@ export function registerProjectTools(
             annotations: { readOnlyHint: true, destructiveHint: false },
             title: 'Get Block Authoring Shape',
             description:
-                "Get the DA.live authoring markup for a block — the table structure an author fills in. Omit blockName to list the blocks registered in the authoring library. Use this instead of reading a block's JS to infer its shape.",
+                "Get how an author fills in a block in DA.live — the table's rows, columns and style variants. With blockName: the tables on the block's example page in this site's DA.live block list, or, when it has no real example, the shape its code reads, plus its README. Omit blockName to list the storefront's code blocks, as the block list takes them (block folders named in lowercase words joined by hyphens); metadata and section-metadata are in the block list with no code, so they are not listed. Use this instead of reading a block's JS to infer its shape.",
             inputSchema: {
                 projectName: projectNameSchema,
                 blockName: z
                     .string()
-                    .regex(/^[a-zA-Z0-9_-]+$/)
+                    .regex(BLOCK_NAME)
                     .optional()
-                    .describe(
-                        'Block id as registered in component-definition.json; omit to list registered blocks',
-                    ),
+                    .describe("The block's folder name under blocks/; omit to list the blocks"),
                 search: z
                     .string()
                     .optional()
@@ -282,6 +283,8 @@ export function registerProjectTools(
                     args.projectName,
                     args.blockName as string | undefined,
                     args.search as string | undefined,
+                    // The example page is read only for one block; the index is local.
+                    args.blockName ? await resolveCredentials() : undefined,
                 ),
             ),
     );
@@ -297,13 +300,15 @@ export function registerProjectTools(
             // source library" until 2026-10-13, which read as saving the block for
             // reuse across demos; it never did.
             description:
-                "Add a block from blocks/ to this site's own DA.live block library (the Insert Block list authors use) — updates component-definition.json, writes the doc page, appends the sheet row, and commits/pushes/publishes the storefront. It does not save the block for other projects, and a reset removes it with the rest of the code. Requires confirm:true.",
+                "Give a block in blocks/ its example and title in this site's own DA.live block library (the Insert Block list authors use): writes the block's example page, adds or renames its row, and commits/pushes/publishes the storefront. Every block in the code is listed after Refresh Blocks; this sets what authors see for it. It does not save the block for other projects, and a reset removes it with the rest of the code. Requires confirm:true.",
             inputSchema: {
                 projectName: projectNameSchema,
                 blockId: z
                     .string()
-                    .regex(/^[a-zA-Z0-9_-]+$/)
-                    .describe('Block directory name inside storefront blocks/'),
+                    .regex(BLOCK_NAME)
+                    .describe(
+                        "The block's folder name under blocks/: lowercase words joined by hyphens",
+                    ),
                 title: z
                     .string()
                     .min(1)
@@ -312,12 +317,7 @@ export function registerProjectTools(
                 unsafeHTML: z
                     .string()
                     .max(100_000)
-                    .describe('Example HTML for the block, embedded as plugins.da.unsafeHTML'),
-                description: z
-                    .string()
-                    .max(1_000)
-                    .optional()
-                    .describe('Optional human-readable description'),
+                    .describe("Example HTML for the block, written as the block's example page"),
                 confirm: z
                     .boolean()
                     .optional()
@@ -344,7 +344,6 @@ export function registerProjectTools(
                     args.blockId as string,
                     args.title as string,
                     args.unsafeHTML as string,
-                    args.description as string | undefined,
                     await resolveCredentials(),
                 ),
             );
@@ -356,27 +355,29 @@ export function registerProjectTools(
         {
             needsAuth: ['dalive'],
             annotations: { readOnlyHint: false, destructiveHint: true },
-            title: 'Remove Block from Library',
+            title: 'Remove Block',
             description:
-                'Remove (delete) a block from the DA.live authoring library — the inverse of promote_block_to_library. Removes the component-definition.json entry, deletes the doc page, drops the sheet row, commits/pushes the removal, and unpublishes the doc page. Does NOT delete the block source files in blocks/. Destructive: requires confirm:true.',
+                "Remove a block from the storefront: deletes its code (blocks/<blockId>/) and takes it out of this site's DA.live block library (its example page and row), then commits/pushes the deletion and unpublishes the page. The block list follows the code, so this is how a block leaves it. Undo by restoring the block's code and running Refresh Blocks. Destructive: requires confirm:true.",
             inputSchema: {
                 projectName: projectNameSchema,
                 blockId: z
                     .string()
-                    .regex(/^[a-zA-Z0-9_-]+$/)
-                    .describe('Block directory name inside storefront blocks/'),
+                    .regex(BLOCK_NAME)
+                    .describe(
+                        "The block's folder name under blocks/: lowercase words joined by hyphens",
+                    ),
                 confirm: z
                     .boolean()
                     .optional()
                     .describe(
-                        'Must be true — this unpublishes the live doc page and pushes a removal commit',
+                        "Must be true — this deletes the block's code, pushes the deletion and unpublishes its page",
                     ),
             },
         },
         async (args: any) => {
             if (args?.confirm !== true) {
                 return asText({
-                    error: 'remove_block_from_library unpublishes the live doc page and pushes a removal commit. Call again with confirm:true.',
+                    error: "remove_block_from_library deletes the block's code from the storefront, pushes the deletion and unpublishes its live page. Call again with confirm:true.",
                     destructive: true,
                 });
             }

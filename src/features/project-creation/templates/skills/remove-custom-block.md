@@ -1,61 +1,59 @@
 ---
 name: remove-custom-block
-description: Removes (unregisters) a custom EDS block from the DA.live authoring library so authors can no longer drag it into pages. Use when you need to delete, remove, or retire a block from the library. Unregisters from DA.live only — it does NOT delete the block's source files in `components/eds-storefront/blocks/<blockId>/`.
+description: Removes a custom EDS block from the storefront — deletes its code in `components/eds-storefront/blocks/<blockId>/` and takes it out of DA.live's authoring picker. Use when you need to delete, remove, or retire a block, or take it out of the block list.
 ---
 
-# Remove a custom block from the DA.live library
+# Remove a block from the storefront
 
-Use this skill to take a block out of DA.live's drag-and-drop authoring picker — the inverse of registering one. This reverses the library registration only. It does **not** delete the block's source code; see "What this does NOT do" below.
+DA.live's block list follows the storefront's code: every folder under `blocks/` is listed. So the only way to take a block out of the list is to remove its code, and this skill does both in one step. There is no way to hide a block whose code stays.
 
 ## What it does
 
-Calls the `remove_block_from_library` MCP tool with `{ projectName, blockId, confirm: true }`. The tool reverses exactly what registration did:
+Calls the `remove_block_from_library` MCP tool with `{ projectName, blockId, confirm: true }`. The tool:
 
-- **Doc page** — deletes the block's library doc page from DA.live.
-- **Sheet row** — drops the block's row from the library sheet.
-- **`component-definition.json`** — removes the block's entry so it stops appearing in the authoring picker.
-- **Unpublish** — commits/pushes the removal in the storefront, then unpublishes the doc page from the live and preview CDN.
+- **Example page** — deletes the block's example page from the DA.live block list.
+- **Row** — drops the block's row from the block list. If either DA.live step cannot run (an expired sign-in, a list it cannot read or rewrite), the tool stops with an error before anything has changed.
+- **Code** — deletes the block's code folder `blocks/<blockId>/` in the storefront checkout.
+- **Push and unpublish** — commits and pushes the deletion, then unpublishes the example page from the live and preview CDN.
 
-The tool is idempotent: if the block is already gone from any of these places, that sub-step is reported as "absent" and nothing fails.
+It is idempotent: anything already gone is reported as "absent" and nothing fails.
+
+## Before you call it
+
+- **Check nothing uses the block.** Pages that still contain it will render an empty table once its code is gone. Search the site's pages for the block's name first and tell the user which pages use it.
+- **A block from a block library or Adobe's template may come back.** Updating that library or the storefront template can bring its code back, and Refresh Blocks then lists it again. Say so when the block is not one you or the user made.
 
 ## Confirm gate
 
-This tool is destructive — it unpublishes the live doc page and pushes a removal commit. You must pass `confirm: true`. Calling it without `confirm` returns a `destructive` notice and takes **no action**, so the user can be asked first. Only pass `confirm: true` once the user has agreed to remove the block.
+This tool is destructive — it deletes the block's code, pushes the deletion and unpublishes its live page. You must pass `confirm: true`. Calling it without `confirm` returns a `destructive` notice and takes **no action**, so the user can be asked first. Only pass `confirm: true` once the user has agreed to remove the block.
 
 ## Inputs you must supply
 
 - **`projectName`** — the Demo Builder project name. Get it from `list_projects` if you don't already have it.
-- **`blockId`** — the directory name under `blocks/` (e.g., `hero-cta`, `product-grid`). Use the exact slug, not the human title — the tool matches the library row by `blockId`.
+- **`blockId`** — the block's folder name under `blocks/` (e.g., `hero-cta`, `product-grid`): lowercase words joined by hyphens. Use the exact slug, not the human title; anything else is refused.
 - **`confirm`** — must be `true` to actually perform the removal.
 
 ## What you get back
 
 A structured result with per-sub-step status:
 
-- `componentDefinition` — `removed` (entry deleted) or `absent` (was not registered).
+- `codeFolder` — `deleted`, `absent` (the code was already gone), or `failed` (the page and row are gone but the code stays; `note` says why. The next Refresh Blocks lists the block again from that code, so the list heals itself; delete the folder and push to finish).
 - `docPage` — `deleted`, `absent` (already gone), or `failed`.
 - `sheet` — `removed` or `absent`.
-- `unpublish` — `success`, `partial` (push succeeded but the unpublish hit an auth/transient error), or `failed` (the push itself failed).
+- `unpublish` — `success`, `partial` (the push succeeded but the unpublish hit an auth/transient error), or `failed` (committing or pushing the deletion failed, so the page was not unpublished).
 
-Any sub-step can succeed or fail independently; the push/unpublish steps never abort the local teardown, so check the result to confirm each one landed.
+Once the DA.live steps have run, nothing aborts: check each field to confirm it landed. When `unpublish` is `failed`, the deletion may not be committed (the sync can stop before its commit) or may be committed but not pushed. Check `git status` and `git log @{u}..HEAD` in the storefront checkout: an uncommitted deletion is committed and pushed by `sync_storefront`; a commit not yet pushed needs `git push`, because `sync_storefront` skips the push when there is nothing new to commit.
 
-## What this does NOT do
+## Undo
 
-**This tool does not delete the block's source files.** The directory `blocks/<blockId>/` (the `.js`, `.css`, and any assets) stays on disk and in the repo. Unregistering only stops the block from showing up in DA.live's authoring picker.
-
-To fully delete a block:
-
-1. Delete the source directory `components/eds-storefront/blocks/<blockId>/` and push that change: the storefront PostToolUse hook commits and pushes only after a Write or Edit in the storefront, and deleting a folder is neither, so call `sync_storefront` after deleting it.
-2. Then call `remove_block_from_library { projectName, blockId, confirm: true }` to unregister it from the library.
-
-Either order works, but the block isn't truly removed until both the source files are gone AND it's unregistered.
+Restoring the block's code undoes the removal: bring `blocks/<blockId>/` back from the storefront's git history, push it (`sync_storefront`), and run `refresh_block_library` to list it again. Its example page comes back as a placeholder; `promote_block_to_library` gives it a real example again.
 
 ## Handoff
 
 After `remove_block_from_library` returns, report to the user in plain language — don't relay the raw sub-step JSON:
 
-- **Status (one line):** the block is unregistered from the DA.live library and unpublished — or name the sub-step that failed (e.g. "removed locally but the unpublish needs DA.live re-auth").
-- **Source files are separate:** remind the user that the block's source files were **not** deleted; removing the library registration is not the same as deleting the block. Note that fully deleting it also means removing `blocks/<blockId>/` and pushing.
-- **The one gap + next step:** offer the single next action — typically deleting the source directory if they want the block gone entirely, or re-running with re-auth if a step failed.
+- **Status (one line):** the block's code is deleted and it is gone from the DA.live block list — or name the sub-step that failed (e.g. "deleted locally but the unpublish needs DA.live re-auth").
+- **Pages that used it:** name any you found; they need the block taken out by hand.
+- **How to undo:** one line — restoring the block's code brings it back.
 
-Keep the internal field names (`componentDefinition`, `docPage`, `sheet`, `unpublish`) out of the user-facing message — "unregistered and unpublished" is what they need to hear.
+Keep the internal field names (`codeFolder`, `docPage`, `sheet`, `unpublish`) out of the user-facing message.

@@ -1,10 +1,12 @@
 /**
  * MCP Server Tests — promote_block_to_library
  *
- * toolHandlers.promoteBlockToLibrary writes a block to the DA.live authoring
- * library: edits the local component-definition.json, writes the DA.live doc
- * page + sheet row, then commits/pushes/publishes via syncAndPublish and
- * previewAndPublishPage.
+ * toolHandlers.promoteBlockToLibrary gives a block in the storefront's code its
+ * example and title in the DA.live block list: writes the DA.live doc page,
+ * adds or renames the block's sheet row, then commits/pushes/publishes via
+ * syncAndPublish and previewAndPublishPage. It does not read or write the
+ * storefront's `component-definition.json`: the block list follows the code
+ * (EDS-71 step 5), and Adobe's current template has no such file.
  *
  * Shared fs/child_process mocks live in mcpServer.testUtils.ts. DA.live and
  * Helix calls are mocked at the module boundary so the test does not exercise
@@ -66,84 +68,49 @@ const DA_LIVE_SITE = 'user-site';
 const GITHUB_OWNER = 'user-org';
 const GITHUB_SITE = 'user-site';
 
-function manifestWith(
-    opts: {
-        componentDef?: Array<{
-            id: string;
-            title: string;
-            plugins?: { da?: { unsafeHTML?: string } };
-        }>;
-        includeStorefront?: boolean;
-        includeDaLive?: boolean;
-    } = {}
-) {
-    const { componentDef, includeStorefront = true, includeDaLive = true } = opts;
-    const compDef = {
-        groups: [
-            {
-                id: 'blocks',
-                title: 'Blocks',
-                components: componentDef ?? [],
-            },
-        ],
-    };
+function manifestWith(opts: { includeStorefront?: boolean; includeDaLive?: boolean } = {}) {
+    const { includeStorefront = true, includeDaLive = true } = opts;
     return {
-        manifest: {
-            name: 'my-project',
-            status: 'ready',
-            componentInstances: includeStorefront
-                ? {
-                      'eds-storefront': {
-                          path: STOREFRONT_PATH,
-                          metadata: includeDaLive
-                              ? {
-                                    daLiveOrg: DA_LIVE_ORG,
-                                    daLiveSite: DA_LIVE_SITE,
-                                    githubRepo: `${GITHUB_OWNER}/${GITHUB_SITE}`,
-                                }
-                              : {},
-                      },
-                  }
-                : {},
-        },
-        componentDefinition: compDef,
+        name: 'my-project',
+        status: 'ready',
+        componentInstances: includeStorefront
+            ? {
+                  'eds-storefront': {
+                      path: STOREFRONT_PATH,
+                      metadata: includeDaLive
+                          ? {
+                                daLiveOrg: DA_LIVE_ORG,
+                                daLiveSite: DA_LIVE_SITE,
+                                githubRepo: `${GITHUB_OWNER}/${GITHUB_SITE}`,
+                            }
+                          : {},
+                  },
+              }
+            : {},
     };
 }
 
 /**
  * Set up the standard fs mocks for a successful happy-path run:
- *   - manifest read (.demo-builder.json)
- *   - component-definition.json read + write
+ *   - manifest read (.demo-builder.json); any other read rejects, as a storefront
+ *     on Adobe's current template has no component-definition.json
  *   - stat() on blocks/<blockId>/ resolves (block source exists)
  *   - stat() on .git resolves
  *
- * Pass `componentDefinition` to control the comp-def the handler reads;
- * pass `blockDirExists: false` to make the block source stat() reject.
+ * Pass `blockDirExists: false` to make the block source stat() reject.
  */
 function mockHappyPathFilesystem(
-    opts: {
-        componentDef?: Array<{
-            id: string;
-            title: string;
-            plugins?: { da?: { unsafeHTML?: string } };
-        }>;
-        blockDirExists?: boolean;
-        includeStorefront?: boolean;
-        includeDaLive?: boolean;
-    } = {}
+    opts: { blockDirExists?: boolean; includeStorefront?: boolean; includeDaLive?: boolean } = {}
 ) {
     const { blockDirExists = true } = opts;
-    const { manifest, componentDefinition } = manifestWith(opts);
+    const manifest = manifestWith(opts);
 
     (fsProm.readFile as jest.Mock).mockImplementation((p: string) => {
         const sp = String(p);
         if (sp.endsWith('.demo-builder.json')) {
             return Promise.resolve(JSON.stringify(manifest));
         }
-        if (sp.endsWith('component-definition.json')) {
-            return Promise.resolve(JSON.stringify(componentDefinition));
-        }
-        return Promise.reject(new Error(`Unexpected readFile: ${p}`));
+        return Promise.reject(Object.assign(new Error(`ENOENT: ${p}`), { code: 'ENOENT' }));
     });
 
     (fsProm.stat as jest.Mock).mockImplementation((p: string) => {
@@ -171,18 +138,9 @@ const promote = (
     projectName: string,
     blockId: string,
     title: string,
-    unsafeHTML: string,
-    description?: string
+    unsafeHTML: string
 ): Promise<string> =>
-    toolHandlers.promoteBlockToLibrary(
-        projectsDir,
-        projectName,
-        blockId,
-        title,
-        unsafeHTML,
-        description,
-        TOKENS
-    );
+    toolHandlers.promoteBlockToLibrary(projectsDir, projectName, blockId, title, unsafeHTML, TOKENS);
 
 describe('toolHandlers.promoteBlockToLibrary', () => {
     beforeEach(() => {
@@ -224,47 +182,40 @@ describe('toolHandlers.promoteBlockToLibrary', () => {
         ).rejects.toThrow(/block source not found/i);
     });
 
-    it('happy path — block exists, comp-def lacks entry → appends to comp-def, writes doc page, appends sheet row, publishes', async () => {
-        mockHappyPathFilesystem({ componentDef: [] });
+    // The one block-name rule the list builder, remove and the index use: a folder named any
+    // other way is never listed, so promoting it would give an example nobody can place.
+    it.each(['Promo_Banner', 'promo-', '../promo'])(
+        'refuses %s as the block id, before writing anything',
+        async (blockId) => {
+            mockHappyPathFilesystem();
+
+            await expect(
+                promote(PROJECTS_DIR, PROJECT_NAME, blockId, BLOCK_TITLE, BLOCK_HTML)
+            ).rejects.toThrow(/not a block name/);
+            expect(mockUpsertBlockDocPage).not.toHaveBeenCalled();
+        }
+    );
+
+    it('happy path — writes the doc page, adds the sheet row, publishes', async () => {
+        mockHappyPathFilesystem();
 
         const raw = await promote(PROJECTS_DIR, PROJECT_NAME, BLOCK_ID, BLOCK_TITLE, BLOCK_HTML);
         const result = JSON.parse(raw);
 
-        // 1. comp-def written with the new entry appended
-        expect(fsProm.writeFile as jest.Mock).toHaveBeenCalledWith(
-            expect.stringContaining('component-definition.json'),
-            expect.stringContaining(BLOCK_ID),
-            'utf-8'
-        );
-        const writeCall = (fsProm.writeFile as jest.Mock).mock.calls.find(([p]: [string]) =>
-            String(p).endsWith('component-definition.json')
-        );
-        const writtenJson = JSON.parse(writeCall[1] as string);
-        const components = writtenJson.groups[0].components;
-        const newEntry = components.find((c: { id: string }) => c.id === BLOCK_ID);
-        expect(newEntry).toEqual({
-            id: BLOCK_ID,
-            title: BLOCK_TITLE,
-            plugins: { da: { unsafeHTML: BLOCK_HTML } },
-        });
-        expect(result.componentDefinition).toBe('added');
-
-        // 2. DA.live doc page written via upsertBlockDocPage (overwrite-always
+        // 1. DA.live doc page written via upsertBlockDocPage (overwrite-always
         // semantics — supports AI iteration on variant HTML)
         expect(mockUpsertBlockDocPage).toHaveBeenCalledWith(DA_LIVE_ORG, DA_LIVE_SITE, {
             id: BLOCK_ID,
             exampleHtml: BLOCK_HTML,
         });
-        expect(result.docPage).toBe('written');
 
-        // 3. Sheet row appended
+        // 2. Sheet row added under the agent's title
         expect(mockAppendBlockToLibrary).toHaveBeenCalledWith(DA_LIVE_ORG, DA_LIVE_SITE, {
             blockId: BLOCK_ID,
             title: BLOCK_TITLE,
         });
-        expect(result.sheet).toBe('created');
 
-        // 4. Storefront sync + Helix publish
+        // 3. Storefront sync + Helix publish
         expect(mockSyncAndPublish).toHaveBeenCalledWith(
             expect.objectContaining({
                 storefrontPath: STOREFRONT_PATH,
@@ -272,33 +223,42 @@ describe('toolHandlers.promoteBlockToLibrary', () => {
             })
         );
         expect(mockPreviewAndPublishPage).toHaveBeenCalled();
-        expect(result.publish).toBe('success');
+
+        expect(result).toEqual({
+            docPage: 'written',
+            sheet: 'created',
+            publish: 'success',
+            details: `Block "${BLOCK_TITLE}" (${BLOCK_ID}) promoted to ${DA_LIVE_ORG}/${DA_LIVE_SITE}`,
+        });
     });
 
-    it('happy path — comp-def already has entry → componentDefinition: "unchanged", other steps still run', async () => {
-        mockHappyPathFilesystem({
-            componentDef: [
-                { id: BLOCK_ID, title: BLOCK_TITLE, plugins: { da: { unsafeHTML: BLOCK_HTML } } },
-            ],
-        });
+    // Adobe deleted component-definition.json from its templates. The block list
+    // follows the code now, so promote neither needs the file nor writes one.
+    it('never reads or writes component-definition.json', async () => {
+        mockHappyPathFilesystem();
 
-        const raw = await promote(PROJECTS_DIR, PROJECT_NAME, BLOCK_ID, BLOCK_TITLE, BLOCK_HTML);
-        const result = JSON.parse(raw);
+        await promote(PROJECTS_DIR, PROJECT_NAME, BLOCK_ID, BLOCK_TITLE, BLOCK_HTML);
 
-        expect(result.componentDefinition).toBe('unchanged');
-        // upsertBlockDocPage and appendBlockToLibrary still get called
-        expect(mockUpsertBlockDocPage).toHaveBeenCalled();
-        expect(mockAppendBlockToLibrary).toHaveBeenCalled();
-        // syncAndPublish still gets called (empty-commit no-op is fine)
-        expect(mockSyncAndPublish).toHaveBeenCalled();
+        const touched = [
+            ...(fsProm.readFile as jest.Mock).mock.calls,
+            ...(fsProm.writeFile as jest.Mock).mock.calls,
+        ].map(([p]) => String(p));
+        expect(touched.filter((p) => p.includes('component-definition'))).toStrictEqual([]);
     });
 
-    it('idempotent re-call — doc page overwrites, sheet returns skipped-duplicate, comp-def unchanged', async () => {
-        mockHappyPathFilesystem({
-            componentDef: [
-                { id: BLOCK_ID, title: BLOCK_TITLE, plugins: { da: { unsafeHTML: BLOCK_HTML } } },
-            ],
-        });
+    it('reports a renamed row when the block was already listed under another title', async () => {
+        mockHappyPathFilesystem();
+        mockAppendBlockToLibrary.mockResolvedValue({ status: 'renamed', siteConfigRegistered: true });
+
+        const result = JSON.parse(
+            await promote(PROJECTS_DIR, PROJECT_NAME, BLOCK_ID, BLOCK_TITLE, BLOCK_HTML)
+        );
+
+        expect(result.sheet).toBe('renamed');
+    });
+
+    it('idempotent re-call — doc page overwrites, sheet returns skipped-duplicate', async () => {
+        mockHappyPathFilesystem();
         mockAppendBlockToLibrary.mockResolvedValue({
             status: 'skipped-duplicate',
             siteConfigRegistered: true,
@@ -307,53 +267,38 @@ describe('toolHandlers.promoteBlockToLibrary', () => {
         const raw = await promote(PROJECTS_DIR, PROJECT_NAME, BLOCK_ID, BLOCK_TITLE, BLOCK_HTML);
         const result = JSON.parse(raw);
 
-        expect(result.componentDefinition).toBe('unchanged');
         expect(result.sheet).toBe('skipped-duplicate');
         // Doc page still gets re-written (overwriting silently is the idempotency contract)
         expect(mockUpsertBlockDocPage).toHaveBeenCalled();
     });
 
-    it('partial success — publish fails → publish: "failed" but doc + sheet + comp-def statuses are real', async () => {
-        mockHappyPathFilesystem({ componentDef: [] });
+    it('partial success — publish fails → publish: "failed" but doc + sheet statuses are real', async () => {
+        mockHappyPathFilesystem();
         mockSyncAndPublish.mockRejectedValue(new Error('Helix admin 503'));
 
         const raw = await promote(PROJECTS_DIR, PROJECT_NAME, BLOCK_ID, BLOCK_TITLE, BLOCK_HTML);
         const result = JSON.parse(raw);
 
-        // Doc + sheet + comp-def succeeded
-        expect(result.componentDefinition).toBe('added');
         expect(result.docPage).toBe('written');
         expect(result.sheet).toBe('created');
         // Publish failed, but did NOT throw
         expect(result.publish).toBe('failed');
     });
 
-    it('sanitizer strips <script> tags before writing comp-def + doc page', async () => {
-        mockHappyPathFilesystem({ componentDef: [] });
+    it('sanitizer strips <script> tags before writing the doc page', async () => {
+        mockHappyPathFilesystem();
 
         const malicious = '<div class="x">hi</div><script>alert("xss")</script>';
 
         await promote(PROJECTS_DIR, PROJECT_NAME, BLOCK_ID, BLOCK_TITLE, malicious);
 
-        // Doc page write — sanitized html only
         const docCall = mockUpsertBlockDocPage.mock.calls[0];
         expect(docCall[2].exampleHtml).not.toContain('<script>');
         expect(docCall[2].exampleHtml).not.toContain('alert');
-
-        // comp-def write — sanitized html only
-        const writeCall = (fsProm.writeFile as jest.Mock).mock.calls.find(([p]: [string]) =>
-            String(p).endsWith('component-definition.json')
-        );
-        const writtenJson = JSON.parse(writeCall[1] as string);
-        const entry = writtenJson.groups[0].components.find(
-            (c: { id: string }) => c.id === BLOCK_ID
-        );
-        expect(entry.plugins.da.unsafeHTML).not.toContain('<script>');
-        expect(entry.plugins.da.unsafeHTML).not.toContain('alert');
     });
 
     it('sanitizer strips event handlers and javascript: URLs', async () => {
-        mockHappyPathFilesystem({ componentDef: [] });
+        mockHappyPathFilesystem();
 
         const malicious =
             '<a href="javascript:alert(1)" onclick="alert(2)">click</a>' +
@@ -369,7 +314,7 @@ describe('toolHandlers.promoteBlockToLibrary', () => {
     });
 
     it('sanitizer strips <iframe> and other framing tags', async () => {
-        mockHappyPathFilesystem({ componentDef: [] });
+        mockHappyPathFilesystem();
 
         const malicious =
             '<iframe src="https://evil.example"></iframe>' +
@@ -385,7 +330,7 @@ describe('toolHandlers.promoteBlockToLibrary', () => {
     });
 
     it('sanitizer strips data:, vbscript:, and protocol-relative URL schemes', async () => {
-        mockHappyPathFilesystem({ componentDef: [] });
+        mockHappyPathFilesystem();
 
         const malicious =
             '<img src="data:image/svg+xml;base64,PHN2Zz48c2NyaXB0PmFsZXJ0KDEpPC9zY3JpcHQ+PC9zdmc+">' +
@@ -402,7 +347,7 @@ describe('toolHandlers.promoteBlockToLibrary', () => {
     });
 
     it('sanitizer strips <style> tags', async () => {
-        mockHappyPathFilesystem({ componentDef: [] });
+        mockHappyPathFilesystem();
 
         const malicious =
             '<div>hi</div><style>body { background: url(javascript:alert(1)); }</style>';
@@ -415,7 +360,7 @@ describe('toolHandlers.promoteBlockToLibrary', () => {
     });
 
     it('sanitizer does not rewrite the title argument (only unsafeHTML is sanitized)', async () => {
-        mockHappyPathFilesystem({ componentDef: [] });
+        mockHappyPathFilesystem();
 
         // Title contains markup-like content; this must reach appendBlockToLibrary verbatim.
         const ornateTitle = 'Promo <Banner>';
@@ -433,47 +378,8 @@ describe('toolHandlers.promoteBlockToLibrary', () => {
         });
     });
 
-    it('persists optional `description` to component-definition.json entry', async () => {
-        mockHappyPathFilesystem({ componentDef: [] });
-
-        const desc = 'A promo banner for sitewide sales.';
-
-        await promote(PROJECTS_DIR, PROJECT_NAME, BLOCK_ID, BLOCK_TITLE, BLOCK_HTML, desc);
-
-        const writeCall = (fsProm.writeFile as jest.Mock).mock.calls.find(([p]: [string]) =>
-            String(p).endsWith('component-definition.json')
-        );
-        const writtenJson = JSON.parse(writeCall[1] as string);
-        const entry = writtenJson.groups[0].components.find(
-            (c: { id: string }) => c.id === BLOCK_ID
-        );
-        expect(entry.description).toBe(desc);
-    });
-
-    it('omits description from entry when not supplied', async () => {
-        mockHappyPathFilesystem({ componentDef: [] });
-
-        await promote(
-            PROJECTS_DIR,
-            PROJECT_NAME,
-            BLOCK_ID,
-            BLOCK_TITLE,
-            BLOCK_HTML
-            // description omitted
-        );
-
-        const writeCall = (fsProm.writeFile as jest.Mock).mock.calls.find(([p]: [string]) =>
-            String(p).endsWith('component-definition.json')
-        );
-        const writtenJson = JSON.parse(writeCall[1] as string);
-        const entry = writtenJson.groups[0].components.find(
-            (c: { id: string }) => c.id === BLOCK_ID
-        );
-        expect(entry).not.toHaveProperty('description');
-    });
-
     it('sanitizer preserves legitimate EDS block HTML (div + class + img)', async () => {
-        mockHappyPathFilesystem({ componentDef: [] });
+        mockHappyPathFilesystem();
 
         const legitimate =
             '<div class="hero-cta">' +
@@ -541,7 +447,7 @@ describe('promote_block_to_library — credential source', () => {
     });
 
     it('uses the injected DA.live + GitHub tokens', async () => {
-        mockHappyPathFilesystem({ componentDef: [] });
+        mockHappyPathFilesystem();
 
         await toolHandlers.promoteBlockToLibrary(
             PROJECTS_DIR,
@@ -549,7 +455,6 @@ describe('promote_block_to_library — credential source', () => {
             BLOCK_ID,
             BLOCK_TITLE,
             BLOCK_HTML,
-            undefined,
             { daLiveToken: 'injected-da', githubToken: 'injected-gh' }
         );
 
@@ -567,16 +472,15 @@ describe('promote_block_to_library — credential source', () => {
          * Two behaviours, one cause, both changed on 2026-09-01.
          *
          * It used to THROW — an MCP error the caller cannot branch on, for the
-         * most ordinary state an agent is in. And the check ran AFTER
-         * applyComponentDefinitionEntry, so a signed-out caller got the error
-         * with component-definition.json already rewritten on disk: a half-done
-         * promotion nobody asked for and nothing would finish.
+         * most ordinary state an agent is in. And the check ran AFTER the first
+         * write, so a signed-out caller got the error with the storefront
+         * already changed on disk: a half-done promotion nobody asked for and
+         * nothing would finish.
          *
-         * The writeFile assertion is the load-bearing one. The old test could
-         * not have caught the stray write — a rejected promise says nothing
-         * about what happened before it.
+         * The write assertions are the load-bearing ones. A rejected promise
+         * says nothing about what happened before it.
          */
-        mockHappyPathFilesystem({ componentDef: [] });
+        mockHappyPathFilesystem();
 
         const raw = await toolHandlers.promoteBlockToLibrary(
             PROJECTS_DIR,
@@ -584,7 +488,6 @@ describe('promote_block_to_library — credential source', () => {
             BLOCK_ID,
             BLOCK_TITLE,
             BLOCK_HTML,
-            undefined,
             { daLiveToken: null, githubToken: null }
         );
 
@@ -593,11 +496,13 @@ describe('promote_block_to_library — credential source', () => {
             needsAuth: 'dalive',
         });
         expect(fsProm.writeFile as jest.Mock).not.toHaveBeenCalled();
+        expect(mockUpsertBlockDocPage).not.toHaveBeenCalled();
+        expect(mockSyncAndPublish).not.toHaveBeenCalled();
     });
 
     /** Register the real tools against a stub server and hand back the promote tool. */
     function registerPromoteTool() {
-        mockHappyPathFilesystem({ componentDef: [] });
+        mockHappyPathFilesystem();
         const credentials = {
             getDaLiveToken: jest.fn().mockResolvedValue('live-da'),
             getGitHubToken: jest.fn().mockResolvedValue('live-gh'),
@@ -650,35 +555,5 @@ describe('promote_block_to_library — credential source', () => {
         expect(mockSyncAndPublish).not.toHaveBeenCalled();
         expect(mockUpsertBlockDocPage).not.toHaveBeenCalled();
         expect(mockAppendBlockToLibrary).not.toHaveBeenCalled();
-    });
-});
-
-// ─── Zod schema validation ───────────────────────────────────────────────────
-//
-// The Zod schema for promote_block_to_library lives at the bottom of
-// mcp-server.ts and is only instantiated when the standalone server runs
-// (NODE_ENV !== 'test'). We assert the schema's required fields are wired
-// correctly by validating the schema shape directly.
-
-describe('promote_block_to_library Zod schema', () => {
-    it('Zod rejects input missing required fields (no unsafeHTML)', () => {
-        const { z } = require('zod');
-        // Mirror of the inputSchema registered in mcp-server.ts. The test
-        // ensures the production registration also rejects missing unsafeHTML.
-        const schema = z.object({
-            projectName: z.string(),
-            blockId: z.string(),
-            title: z.string(),
-            unsafeHTML: z.string(),
-            description: z.string().optional(),
-            confirm: z.boolean().optional(),
-        });
-        const parsed = schema.safeParse({
-            projectName: 'p',
-            blockId: 'b',
-            title: 't',
-            // unsafeHTML omitted
-        });
-        expect(parsed.success).toBe(false);
     });
 });

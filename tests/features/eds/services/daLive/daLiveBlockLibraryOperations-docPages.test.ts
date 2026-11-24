@@ -10,6 +10,7 @@
  * makes the block render as a block.
  */
 
+import { findReplaceablePages } from '@/features/eds/services/blockLibrary/oldStubPages';
 import {
     createBlockLibraryHarness,
     docPageProbe,
@@ -38,10 +39,31 @@ describe('DaLiveBlockLibraryOperations doc pages', () => {
                 org,
                 site,
                 '.da/library/blocks/hero.html',
-                '<body><header></header><main><div><div class="hero">Example</div></div></main><footer></footer></body>',
+                '<body><!-- promote_block_to_library: an authored example, never replaced -->'
+                    + '<header></header><main><div><div class="hero">Example</div></div></main>'
+                    + '<footer></footer></body>',
                 { overwrite: true }
             );
             expect(status).toBe('written');
+        });
+
+        // The old-stub rule takes a one-cell page holding the block's title as Demo Builder's
+        // own and replaces it on the next Refresh Blocks. An agent may promote exactly that
+        // shape (its title as the example's one cell); the page is still the agent's.
+        it('writes a page the library build never takes as one it generated', async () => {
+            await h.ops.upsertBlockDocPage(org, site, {
+                id: 'hero',
+                exampleHtml: '<div class="hero"><div><div><p>Hero</p></div></div></div>',
+            });
+            const written = String(h.createSource.mock.calls[0][3]);
+
+            const replaceable = await findReplaceablePages(
+                ['hero'],
+                async () => written,
+                () => ['Hero'],
+            );
+
+            expect(replaceable.size).toBe(0);
         });
 
         it('reports failure rather than throwing when DA.live rejects the write', async () => {

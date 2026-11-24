@@ -471,9 +471,9 @@ export const AGENT_ALERT_COPY: Record<string, AgentAlertCopy> = {
         sessionGrant: false,
     },
     remove_block_from_library: {
-        action: 'Remove a block from the library',
+        action: 'Remove a block from the storefront',
         consequence:
-            'Deletes the block from the shared DA.live authoring library. Anyone authoring with it loses it.',
+            "Deletes the block's code from the storefront and pushes it, and takes the block out of the DA.live block list, so authors can no longer add it.",
         // `blockId`, not blockName — and the project too, since the library
         // belongs to one storefront.
         target: ['projectName', 'blockId'],

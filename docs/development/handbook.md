@@ -1527,12 +1527,12 @@ promising an agent that every response parses.
 > rule asks tools not to do, and an MCP error is not a result a caller can branch on.
 > Both now answer with `needsAuth: 'dalive'`.
 >
-> Promote carried a second defect the throw hid: the token check ran AFTER
-> `applyComponentDefinitionEntry` had rewritten `component-definition.json`, so a
-> signed-out caller got the error with a half-done promotion left on disk. The check
-> runs first now. Its test asserts `writeFile` was never called — the old test could not
-> have caught this, because a rejected promise says nothing about what happened before
-> it. Restoring the old order fails that assertion, and only that one.
+> Promote carried a second defect the throw hid: the token check ran AFTER promote had
+> rewritten `component-definition.json` (a write EDS-71 later removed with the file),
+> so a signed-out caller got the error with a half-done promotion left on disk. The
+> check runs first now. Its test asserts nothing was written before it — the old test
+> could not have caught this, because a rejected promise says nothing about what
+> happened before it.
 >
 > **All 114 tools now satisfy this rule.** It went from a scan finding to a fact about
 > the surface in one day; what made that possible was reading every tool rather than

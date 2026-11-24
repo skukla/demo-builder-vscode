@@ -198,7 +198,8 @@ reproduces the 2026-08-04 regression where a deployed mesh displayed "Not Deploy
 (2026-08-16) a fixture was composed from what the WRITING side produces, code was written to
 match it, and every check passed:
 
-- `plugins.da.unsafeHTML` is what `promote_block_to_library` writes — and is present on **4 of
+- `plugins.da.unsafeHTML` was what `promote_block_to_library` wrote (until EDS-71 step 5) — and
+  was present on **4 of
   78** real components. The other 74 use `rows`/`columns` or `name`/`type`/`fields`. A tool
   built on the fixture would have failed on 95% of blocks.
 - DA.live listings prefix entry paths with **`/{org}/{site}`**, not `/{site}`. The fixture used

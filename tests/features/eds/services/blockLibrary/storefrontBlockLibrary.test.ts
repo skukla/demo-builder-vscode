@@ -28,7 +28,9 @@ import { buildStorefrontBlockLibrary } from '@/features/eds/services/blockLibrar
 describe('buildStorefrontBlockLibrary', () => {
     afterEach(() => restoreFetch());
 
-    it('hands the writer Adobe\'s blocks, then every other folder, each with its example', async () => {
+    // Adobe's accordion, columns and fragment are left out: this storefront has no folder for
+    // them (EDS-71 step 5). metadata and section-metadata have no folder anywhere and stay.
+    it('hands the writer Adobe\'s blocks it has code for, then every other folder', async () => {
         const h = harness();
 
         const result = await buildStorefrontBlockLibrary(h.deps, PARAMS);
@@ -38,7 +40,7 @@ describe('buildStorefrontBlockLibrary', () => {
             'user-org', 'user-site', expect.anything(),
         );
         expect(h.written().blocks.map((block) => block.id)).toEqual([
-            'hero', 'accordion', 'cards', 'columns', 'fragment', 'metadata', 'section-metadata',
+            'hero', 'cards', 'metadata', 'section-metadata',
             'carousel', 'tabs', 'widget', 'commerce-cart',
         ]);
         expect(h.exampleOf('hero')).toEqual({

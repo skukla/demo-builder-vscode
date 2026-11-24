@@ -391,12 +391,12 @@ server IS — transport, lifecycle, scoping, security — is in
 
 | Tool | | What it does |
 |---|---|---|
-| `get_block_authoring_shape` |  | Get the DA.live authoring markup for a block — the table structure an author fills in. Omit blockName to list the blocks registered in the authoring library. Use this instead of reading a block's JS t |
+| `get_block_authoring_shape` |  | Get how an author fills in a block in DA.live — the table's rows, columns and style variants. With blockName: the tables on the block's example page in this site's DA.live block list, or, when it has |
 | `get_component_config` |  | Read .demo-builder.json or a .env file within the project directory. Secret values are masked — prefer this over reading .env directly so credentials never enter the transcript. |
 | `get_project` |  | Read Demo Builder project state. Returns a summary by default (large arrays collapsed); pass full=true for the complete .demo-builder.json |
 | `list_blocks` |  | List all block directories in the storefront blocks/ directory |
 | `list_projects` |  | List all Demo Builder projects: name, path, and pinned when set. To learn which project |
-| `promote_block_to_library` | **confirm** | Add a block from blocks/ to this site's own DA.live block library (the Insert Block list authors use) — updates component-definition.json, writes the doc page, appends the sheet row, and commits/pushe |
-| `remove_block_from_library` | **confirm** | Remove (delete) a block from the DA.live authoring library — the inverse of promote_block_to_library. Removes the component-definition.json entry, deletes the doc page, drops the sheet row, commits/pu |
+| `promote_block_to_library` | **confirm** | Give a block in blocks/ its example and title in this site's own DA.live block library (the Insert Block list authors use): writes the block's example page, adds or renames its row, and commits/pushes |
+| `remove_block_from_library` | **confirm** | Remove a block from the storefront: deletes its code (blocks/<blockId>/) and takes it out of this site's DA.live block library (its example page and row), then commits/pushes the deletion and unpublis |
 | `sync_storefront` |  | Git add, commit, and push changes in the storefront directory |
 | `update_project_config` |  | Low-level whole-file write to .demo-builder.json or a .env file inside the project directory (path must not escape the project root). To SET a config value, use configure_project instead — it validate |

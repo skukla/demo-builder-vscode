@@ -1,11 +1,13 @@
 /**
  * Block-tool MCP handlers — the storefront's block surface.
  *
- * `list_blocks`, `get_block_authoring_shape` (registry index/detail), and the
- * DA.live
- * library door: `promote_block_to_library` / `remove_block_from_library`.
- * The registry/sanitizer machinery lives in `blockAuthoring`; the
- * commit-push-publish tail in `blockLibraryPublish`.
+ * `list_blocks`, `get_block_authoring_shape` (index/detail, `blockAuthoringShape`),
+ * and the DA.live block list door: `promote_block_to_library` (a block's example
+ * and title) / `remove_block_from_library` (the block's code, then its page and
+ * row). The block list follows the storefront's code (EDS-71 step 5, owner
+ * 2026-11-23: one rule, no hide list); `component-definition.json` is not read
+ * or written. The sanitizer and manifest reads live in `blockAuthoring`, the code
+ * deletion in `blockRemoval`, the commit-push-publish tail in `blockLibraryPublish`.
  *
  * Split from `mcp-server.ts` (god-file decomposition, 2026-08-23); the
  * combined `toolHandlers` object there spreads this map back in.
@@ -16,30 +18,28 @@
 import * as fsPromises from 'fs/promises';
 import * as path from 'path';
 import {
-    applyComponentDefinitionEntry,
-    authoringConvention,
     DEFAULT_LIST_LIMIT,
-    MAX_AUTHORING_INDEX_ROWS,
-    readComponentDefinition,
     readInstalledBlockLibraries,
     readPromoteBlockContext,
-    removeComponentDefinitionEntry,
-    resolveFilterChildren,
-    resolveModelFields,
     sanitizeBlockHtml,
     verifyBlockSourceExists,
+    type PromoteBlockContext,
 } from './blockAuthoring';
 import {
+    blockAuthoringDetail,
+    blockAuthoringIndex,
+    type ExamplePageSource,
+} from './blockAuthoringShape';
+import {
+    daLiveOpsFor,
     publishStorefrontAndDaLive,
-    staticTokenProvider,
     unpublishStorefrontAndDaLive,
 } from './blockLibraryPublish';
+import { assertBlockName, deleteBlockCode } from './blockRemoval';
 import type { McpToolCredentials } from './credentials';
 import { assertInsideProject, resolveProjectPath, resolveStorefrontPath } from './projectSecurity';
 import { paginate } from './projectToolHandlers';
-import { DaLiveContentOperations } from '@/features/eds/services/daLive/daLiveContentOperations';
 
-/** The block tool handlers (spread into `toolHandlers` in mcp-server). */
 /**
  * The answer a block tool gives when DA.live is not signed in.
  *
@@ -60,6 +60,57 @@ function missingDaLiveToken(toolName: string): string {
             'sign_in(provider:"dalive", confirm:true) once the user agrees.',
         needsAuth: 'dalive',
     });
+}
+
+/** The project's storefront context, its checkout checked to be inside the project. */
+async function storefrontContext(
+    projectsDir: string,
+    projectName: string,
+): Promise<PromoteBlockContext> {
+    const projectPath = resolveProjectPath(projectsDir, projectName);
+    const ctx = await readPromoteBlockContext(projectPath);
+    if (!path.isAbsolute(ctx.storefrontPath)) {
+        throw new Error(`storefrontPath must be an absolute path: ${ctx.storefrontPath}`);
+    }
+    await assertInsideProject(projectPath, ctx.storefrontPath);
+    return ctx;
+}
+
+/** Where the block's example page is read from: the storefront's DA.live site. */
+async function examplePageSource(
+    projectPath: string,
+    daLiveToken: string | null | undefined,
+): Promise<ExamplePageSource> {
+    if (!daLiveToken) return { unavailable: 'not-signed-in' };
+    let ctx: PromoteBlockContext;
+    try {
+        ctx = await readPromoteBlockContext(projectPath);
+    } catch {
+        return { unavailable: 'no-da-live-site' };
+    }
+    const ops = daLiveOpsFor(daLiveToken).blockLibOps;
+    return { read: (blockId) => ops.readBlockDocPage(ctx.daLiveOrg, ctx.daLiveSite, blockId) };
+}
+
+/**
+ * Deletes the block's code after DA.live has already changed, so a failure is reported, not
+ * thrown: the code staying is self-healing, as the next Refresh Blocks lists the block again.
+ */
+async function deleteCodeReported(
+    storefrontPath: string,
+    blockId: string,
+): Promise<{ status: 'deleted' | 'absent' | 'failed'; note?: string }> {
+    try {
+        return { status: await deleteBlockCode(storefrontPath, blockId) };
+    } catch (error) {
+        const reason = error instanceof Error ? error.message : String(error);
+        return {
+            status: 'failed',
+            note: `The block's page and row were removed, but its code folder could not be `
+                + `deleted (${reason}). The code is still there, so the next Refresh Blocks `
+                + 'lists it again; delete blocks/' + blockId + '/ and push to finish.',
+        };
+    }
 }
 
 export const blockToolHandlers = {
@@ -103,122 +154,49 @@ export const blockToolHandlers = {
 
     /**
      * Read a block's AUTHORING shape — how a DA.live author fills the block in,
-     * as opposed to how its JS consumes what they filled in.
+     * as opposed to how its JS consumes what they filled in. Deriving it by
+     * reading a block's JS measured ~121,000 tokens for eight blocks during the
+     * Bodea build; this answers for one block in a few hundred.
      *
-     * The answer already sits in the storefront's three registry files and is
-     * read back by nothing. Deriving it instead — reading a block's JS and
-     * inferring the table it expects — measured ~121,000 tokens for eight blocks
-     * during the Bodea build. This answers for one block in roughly two hundred.
-     *
-     * Three conventions coexist, and which one a block uses is itself the
-     * answer. Counts are what {@link authoringConvention} REPORTS across 78 real
-     * components, not raw key presence — 51 entries carry `rows`/`columns`, but
-     * 15 of those also carry `fields` and are classified by it:
-     *   - `rows`/`columns`         — a positional table (36 of 78)
-     *   - `name`/`type`/`fields`   — key-value cells with CSS selectors (35)
-     *   - `unsafeHTML`             — literal markup (4; what promotion writes)
-     *   - nothing at all           — (3)
-     *
-     * `plugins.da` alone is not enough for nested blocks: `cards` reports two
-     * columns, but its real content is `card` children, which only
-     * `component-filters.json` knows. `component-models.json` names the fields.
-     * Both are best-effort — 38 of 78 real components resolve no model fields
-     * (27 name a model id that has no entry, 11 name none at all), and a
-     * storefront may ship neither file.
-     *
-     * Omit `blockName` for the registry index (ids, titles, which convention);
-     * pass it for the full shape (index/detail split).
+     * Omit `blockName` for the index (the storefront's block folders); pass it
+     * for one block's shape (`blockAuthoringShape`). The example page is read
+     * with the DA.live token when there is one; without it the block's code
+     * answers, and `examplePage` says why.
      */
     async getBlockAuthoringShape(
         projectsDir: string,
         projectName: string,
         blockName?: string,
         search?: string,
+        tokens?: McpToolCredentials,
     ): Promise<string> {
         const projectPath = resolveProjectPath(projectsDir, projectName);
         const storefrontPath = await resolveStorefrontPath(projectPath);
         await assertInsideProject(projectPath, storefrontPath);
-        const { parsed } = await readComponentDefinition(storefrontPath);
-
-        // The registry is groups[]-nested: a flat components[] scan sees only the
-        // first group. Measured on a real storefront, 76 of 78 components live
-        // outside group 0, so that mistake would hide almost everything.
-        const entries = (parsed.groups ?? []).flatMap((g) => g.components ?? []);
-
         if (!blockName) {
-            // Index: which blocks exist and which convention each uses. Deliberately
-            // carries no markup, selectors or field lists — that is the whole point
-            // of splitting it from the detail call.
-            //
-            // `search` and a page size because the index alone was still
-            // unbounded: 78 blocks is 5,577 bytes, but a 300-component registry
-            // measured 21,992. Splitting index from detail bounds the DETAIL
-            // call; it does nothing for a catalog that keeps growing.
-            const all = entries.map((e) => ({
-                id: e.id,
-                title: e.title,
-                authoring: authoringConvention(e),
-            }));
-            const term = search?.trim().toLowerCase();
-            const matched = term
-                ? all.filter(
-                      (b) =>
-                          b.id.toLowerCase().includes(term) ||
-                          (b.title ?? '').toLowerCase().includes(term),
-                  )
-                : all;
-            const page = matched.slice(0, MAX_AUTHORING_INDEX_ROWS);
-            return JSON.stringify({
-                blocks: page,
-                count: page.length,
-                total: matched.length,
-                ...(term ? { search: term, totalUnfiltered: all.length } : {}),
-                ...(matched.length > page.length
-                    ? { more: `${matched.length - page.length} more — narrow with search` }
-                    : {}),
-            });
+            return JSON.stringify(await blockAuthoringIndex(storefrontPath, search));
         }
-
-        const entry = entries.find((e) => e.id === blockName);
-        if (!entry) {
-            // A block can exist under blocks/ and never have been registered. That
-            // is a different problem from a typo, so name the tool that tells the
-            // two apart rather than reporting a flat "not found".
+        assertBlockName(blockName);
+        try {
+            await verifyBlockSourceExists(storefrontPath, blockName);
+        } catch {
             throw new Error(
-                `Block "${blockName}" is not registered in the authoring library. ` +
-                    `Call get_block_authoring_shape with no blockName for the registered ids, ` +
-                    `or check the block's directory in the storefront checkout unregistered.`,
+                `Block "${blockName}" has no folder under blocks/ in the storefront checkout. ` +
+                    'Call get_block_authoring_shape with no blockName for the blocks it has.',
             );
         }
-        const authoring = entry.plugins?.da;
-        if (!authoring || Object.keys(authoring).length === 0) {
-            throw new Error(
-                `Block "${blockName}" is registered but declares no authoring shape ` +
-                    `(no plugins.da). Read its files from the storefront checkout instead.`,
-            );
-        }
-
-        const [fields, childComponents] = await Promise.all([
-            resolveModelFields(storefrontPath, entry.model),
-            resolveFilterChildren(storefrontPath, entry.filter),
-        ]);
-
-        return JSON.stringify({
-            id: entry.id,
-            title: entry.title,
-            ...(entry.description ? { description: entry.description } : {}),
-            authoring,
-            ...(childComponents ? { childComponents } : {}),
-            ...(fields ? { fields } : {}),
-        });
+        const pageSource = await examplePageSource(projectPath, tokens?.daLiveToken);
+        return JSON.stringify(await blockAuthoringDetail(storefrontPath, blockName, pageSource));
     },
 
     /**
-     * Promote a local block to the DA.live authoring library.
+     * Give a block in the storefront's code its example and title in the
+     * storefront's DA.live block list.
      *
-     * Adds the block to `component-definition.json`, writes the doc page in
-     * `.da/library/blocks/<blockId>`, appends a row to `.da/library/blocks.json`,
-     * commits/pushes the storefront, and previews/publishes the doc page.
+     * Writes the doc page in `.da/library/blocks/<blockId>` (always, so iterating
+     * refreshes the preview), adds or renames the block's row in
+     * `.da/library/blocks.json`, commits/pushes the storefront, and
+     * previews/publishes the doc page.
      *
      * Partial-success: a publish failure does NOT throw — the returned status
      * fields surface the real state of each step. Validation and "block source
@@ -230,96 +208,60 @@ export const blockToolHandlers = {
         blockId: string,
         title: string,
         unsafeHTML: string,
-        description?: string,
         tokens?: McpToolCredentials,
     ): Promise<string> {
-        const projectPath = resolveProjectPath(projectsDir, projectName);
-        const ctx = await readPromoteBlockContext(projectPath);
-
-        // Validate the storefront path is absolute and lives inside the project.
-        if (!path.isAbsolute(ctx.storefrontPath)) {
-            throw new Error(`storefrontPath must be an absolute path: ${ctx.storefrontPath}`);
-        }
-        await assertInsideProject(projectPath, ctx.storefrontPath);
-
+        assertBlockName(blockId);
+        const ctx = await storefrontContext(projectsDir, projectName);
         await verifyBlockSourceExists(ctx.storefrontPath, blockId);
 
-        // Credentials come from the live extension session (DaLiveAuthService /
-        // GitHubTokenService), injected by registerProjectTools.
-        //
-        // This check sat BELOW applyComponentDefinitionEntry until 2026-09-01 and
-        // threw. Both were wrong: the write had already happened, so a signed-out
-        // agent got an error AND a modified component-definition.json it never
-        // asked for and could not complete. Checked first now, and answered
-        // rather than thrown — see missingDaLiveToken().
+        // Checked before any write, and answered rather than thrown — see
+        // missingDaLiveToken(). Until 2026-09-01 it sat below a local write.
         const daLiveToken = tokens?.daLiveToken;
         if (!daLiveToken) {
             return missingDaLiveToken('promote_block_to_library');
         }
         const githubToken = tokens?.githubToken ?? undefined;
 
-        // Defense-in-depth: sanitize AI-supplied HTML before it lands in two
-        // persistent stores (component-definition.json + published doc page).
-        // See sanitizeBlockHtml() for the allowlist rationale.
+        // Defense-in-depth: sanitize AI-supplied HTML before it lands on the
+        // published doc page. See sanitizeBlockHtml() for the allowlist rationale.
         const safeHtml = sanitizeBlockHtml(unsafeHTML);
+        const ops = daLiveOpsFor(daLiveToken).blockLibOps;
+        const { daLiveOrg, daLiveSite } = ctx;
 
-        const componentDefinition = await applyComponentDefinitionEntry(
-            ctx.storefrontPath,
-            blockId,
-            title,
-            safeHtml,
-            description,
-        );
-
-        // Logger is unused for the MCP stdio flow — supply a no-op shim. The
-        // DA.live operations log to stderr in the real flow; the MCP wrapper
-        // intentionally suppresses noise.
-        const noopLogger = {
-            trace: () => undefined,
-            debug: () => undefined,
-            info: () => undefined,
-            warn: () => undefined,
-            error: () => undefined,
-        };
-        const daLiveOps = new DaLiveContentOperations(staticTokenProvider(daLiveToken), noopLogger);
-
-        // Doc page: upsertBlockDocPage always writes so AI iteration on
-        // unsafeHTML refreshes the rendered preview. (The library build keeps a
-        // page the storefront already has — the wrong contract for this flow.)
-        const docPage = await daLiveOps.blockLibOps.upsertBlockDocPage(ctx.daLiveOrg, ctx.daLiveSite, {
+        // Always writes, so AI iteration on unsafeHTML refreshes the preview. (The
+        // library build keeps a page the storefront already has, and never takes
+        // this one for a page it generated.)
+        const docPage = await ops.upsertBlockDocPage(daLiveOrg, daLiveSite, {
             id: blockId,
             exampleHtml: safeHtml,
         });
-
-        const sheetResult = await daLiveOps.blockLibOps.appendBlockToLibrary(ctx.daLiveOrg, ctx.daLiveSite, {
-            blockId,
-            title,
-        });
-
+        const sheet = await ops.appendBlockToLibrary(daLiveOrg, daLiveSite, { blockId, title });
         const publish = await publishStorefrontAndDaLive(ctx, blockId, githubToken, daLiveToken);
 
         return JSON.stringify({
             docPage,
-            sheet: sheetResult.status,
-            componentDefinition,
+            sheet: sheet.status,
             publish,
-            details: `Block "${title}" (${blockId}) promoted to ${ctx.daLiveOrg}/${ctx.daLiveSite}`,
+            details: `Block "${title}" (${blockId}) promoted to ${daLiveOrg}/${daLiveSite}`,
         });
     },
 
     /**
-     * Remove a block from the DA.live authoring library — inverse of
-     * {@link promoteBlockToLibrary}.
+     * Remove a block from the storefront: its place in the DA.live block list,
+     * then its code. The block list follows the code, so this is the one way to
+     * take a block out of it; restoring the code (and Refresh Blocks) undoes it.
      *
-     * Reverses the library registration: removes the entry from
-     * `component-definition.json`, deletes the DA.live doc page, drops the
-     * sheet row, commits/pushes the storefront removal, and unpublishes the
-     * doc page. Does NOT delete the block's source files in `blocks/<blockId>/`
-     * — that is the agent's job (see the remove-custom-block skill).
+     * Deletes the DA.live doc page and sheet row first, so a DA.live failure (an
+     * expired sign-in, a sheet that cannot be read or rewritten) throws before
+     * the code is touched; the example page may already be gone by then, and
+     * the next Refresh Blocks writes it again from the code. Then deletes `blocks/<blockId>/` in the storefront
+     * checkout (`'absent'` when already gone), commits/pushes the deletion, and
+     * unpublishes the doc page.
      *
-     * Partial-success: the storefront push / unpublish failures do NOT throw —
-     * the returned status fields surface the real state of each step. Validation
-     * and missing-DA.live-token failures DO throw (per the MCP error envelope).
+     * Partial-success: once DA.live has changed, nothing throws — a code folder
+     * that cannot be deleted (`codeFolder: 'failed'`, with a `note`) and push /
+     * unpublish failures are reported in the returned status fields. An invalid
+     * block name throws before anything is changed.
      */
     async removeBlockFromLibrary(
         projectsDir: string,
@@ -327,13 +269,8 @@ export const blockToolHandlers = {
         blockId: string,
         tokens?: McpToolCredentials,
     ): Promise<string> {
-        const projectPath = resolveProjectPath(projectsDir, projectName);
-        const ctx = await readPromoteBlockContext(projectPath);
-
-        if (!path.isAbsolute(ctx.storefrontPath)) {
-            throw new Error(`storefrontPath must be an absolute path: ${ctx.storefrontPath}`);
-        }
-        await assertInsideProject(projectPath, ctx.storefrontPath);
+        assertBlockName(blockId);
+        const ctx = await storefrontContext(projectsDir, projectName);
 
         const daLiveToken = tokens?.daLiveToken;
         if (!daLiveToken) {
@@ -341,25 +278,10 @@ export const blockToolHandlers = {
         }
         const githubToken = tokens?.githubToken ?? undefined;
 
-        const componentDefinition = await removeComponentDefinitionEntry(
-            ctx.storefrontPath,
-            blockId,
-        );
-
-        const noopLogger = {
-            trace: () => undefined,
-            debug: () => undefined,
-            info: () => undefined,
-            warn: () => undefined,
-            error: () => undefined,
-        };
-        const daLiveOps = new DaLiveContentOperations(staticTokenProvider(daLiveToken), noopLogger);
-        const { docPage, sheet } = await daLiveOps.blockLibOps.removeBlockFromLibrary(
-            ctx.daLiveOrg,
-            ctx.daLiveSite,
-            { blockId },
-        );
-
+        const { daLiveOrg, daLiveSite } = ctx;
+        const ops = daLiveOpsFor(daLiveToken).blockLibOps;
+        const removed = await ops.removeBlockFromLibrary(daLiveOrg, daLiveSite, { blockId });
+        const code = await deleteCodeReported(ctx.storefrontPath, blockId);
         const unpublish = await unpublishStorefrontAndDaLive(
             ctx,
             blockId,
@@ -368,11 +290,13 @@ export const blockToolHandlers = {
         );
 
         return JSON.stringify({
-            componentDefinition,
-            docPage,
-            sheet,
+            codeFolder: code.status,
+            docPage: removed.docPage,
+            sheet: removed.sheet,
             unpublish,
-            details: `Block "${blockId}" removed from ${ctx.daLiveOrg}/${ctx.daLiveSite} library`,
+            ...(code.note ? { note: code.note } : {}),
+            details: `Block "${blockId}" removed from the storefront and `
+                + `${daLiveOrg}/${daLiveSite}`,
         });
     },
 };

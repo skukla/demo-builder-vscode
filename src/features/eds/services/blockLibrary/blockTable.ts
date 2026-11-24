@@ -25,8 +25,11 @@ export interface PageBlock extends VariantExample {
     name: string;
 }
 
+/** A block name: lowercase words joined by hyphens (the agent tools' schemas use it too). */
+export const BLOCK_NAME_PATTERN = /^[a-z0-9]+(-[a-z0-9]+)*$/;
+
 // Mirrors adobe/da-live blocks/config/blocks-import/blocks.js `isBlockName` (Import Blocks).
-export const isBlockName = (name: string): boolean => /^[a-z0-9]+(-[a-z0-9]+)*$/.test(name);
+export const isBlockName = (name: string): boolean => BLOCK_NAME_PATTERN.test(name);
 
 // Mirrors adobe/da-live blocks/config/blocks-import/blocks.js `DROP` (Import Blocks' preClean).
 const DROP = new Set([

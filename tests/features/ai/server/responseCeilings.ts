@@ -147,7 +147,7 @@ export const RESPONSE_CEILINGS: Record<string, Ceiling> = {
     },
     get_block_authoring_shape: {
         bytes: 10_000,
-        why: 'index bounded by MAX_AUTHORING_INDEX_ROWS (100); a 78-block catalog is 5,577 and one block is 92 — a 300-component registry was 21,992 before the cap',
+        why: 'index bounded by MAX_AUTHORING_INDEX_ROWS (100 block folders); one block bounded by MAX_EXAMPLES (4) tables of MAX_EXAMPLE_HTML_CHARS (1,500) plus a MAX_README_CHARS (1,200) README — a 300-entry index was 21,992 before the cap',
     },
     promote_block_to_library: { bytes: 2_000, why: 'per-step status of one promotion' },
     remove_block_from_library: { bytes: 2_000, why: 'per-step status of one removal' },
