@@ -3,8 +3,11 @@
  *
  * The per-project authoring experience is a setup-time preference saved from the
  * Configure webview. On save, the handler persists it into the EDS component
- * metadata and, ONLY when it changed, re-applies the site-scoped DA editor.path
- * via applyDaLiveOrgConfigSettings (non-fatal).
+ * metadata and re-applies the site-scoped DA editor.path via
+ * applyDaLiveOrgConfigSettings on every save (non-fatal), so an old Universal
+ * Editor row goes on any save (EDS-71 step 5b). The rest of the switch (Quick
+ * Edit, config.json, the dashboard push, the progress toast) runs ONLY when the
+ * experience changed.
  */
 
 import { ConfigureProjectWebviewCommand } from './configure.testUtils';
@@ -52,10 +55,16 @@ jest.mock('@/features/eds/services/storefront/storefrontRepublishService', () =>
 
 // EDS helpers — applyDaLiveOrgConfigSettings is the re-apply we assert on.
 const mockApplyDaLiveOrgConfigSettings = jest.fn().mockResolvedValue(undefined);
+/** The project's stored experience, as the real resolver would read it from metadata. */
+const mockResolveProjectAuthoringExperience = jest.fn(
+    (project: Project) =>
+        project.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT]?.metadata?.authoringExperience ??
+        'da-live-classic',
+);
 jest.mock('@/features/eds/handlers/edsHelpers', () => ({
     applyDaLiveOrgConfigSettings: (...args: unknown[]) => mockApplyDaLiveOrgConfigSettings(...args),
     getDaLiveAuthService: jest.fn(() => ({})),
-    resolveProjectAuthoringExperience: jest.fn(() => 'da-live-classic'),
+    resolveProjectAuthoringExperience: (project: Project) => mockResolveProjectAuthoringExperience(project),
     // The live-update push threads the EW canvas branch into getEdsDaLiveUrl.
     // Default is '' (param-less production canvas).
     getEwCanvasBranch: jest.fn(() => ''),
@@ -269,7 +278,9 @@ describe('ConfigureProjectWebviewCommand - save-configuration authoring experien
         );
     });
 
-    it('does NOT re-apply editor.path when the experience is unchanged', async () => {
+    it('re-applies editor.path with the stored experience on a save that leaves it unchanged', async () => {
+        // Any Configure save brings the site's editor row in line (EDS-71 step 5b),
+        // but only a change runs the rest of the switch.
         mockStateManager.getCurrentProject.mockResolvedValue(
             makeEdsProject('experience-workspace')
         );
@@ -277,7 +288,47 @@ describe('ConfigureProjectWebviewCommand - save-configuration authoring experien
 
         await save({ componentConfigs: {}, authoringExperience: 'experience-workspace' });
 
-        expect(mockApplyDaLiveOrgConfigSettings).not.toHaveBeenCalled();
+        expect(mockApplyDaLiveOrgConfigSettings).toHaveBeenCalledTimes(1);
+        expect(mockApplyDaLiveOrgConfigSettings).toHaveBeenCalledWith(
+            expect.anything(),
+            'my-org',
+            'my-site',
+            expect.anything(),
+            'experience-workspace',
+        );
+        expect(mockInstallQuickEdit).not.toHaveBeenCalled();
+        expect(mockRepublishStorefrontConfig).not.toHaveBeenCalled();
+        expect(vscode.window.withProgress).not.toHaveBeenCalled();
+    });
+
+    it('clears an unchanged Classic project\'s old Universal Editor row on any save', async () => {
+        // The real site-config write, against a site config that still holds the
+        // row DA.live Classic wrote before EDS-71.
+        const ueRow = '/my-org/my-site=https://experience.adobe.com/#/@demosystem' +
+            '/aem/editor/canvas/main--my-site--my-org.ue.da.live';
+        const sheet = new Map<string, string>([['editor.path', ueRow]]);
+        const applySiteConfig = jest.fn(
+            async (_o: string, _s: string, updates: Record<string, string>, removeKeys: string[]) => {
+                Object.entries(updates).forEach(([key, value]) => sheet.set(key, value));
+                removeKeys.forEach((key) => sheet.delete(key));
+                return { success: true };
+            },
+        );
+        const { DaLiveContentOperations } = jest.requireMock(
+            '@/features/eds/services/daLive/daLiveContentOperations',
+        );
+        (DaLiveContentOperations as jest.Mock).mockImplementationOnce(() => ({
+            configOps: { applySiteConfig },
+        }));
+        const realSiteConfig = jest.requireActual('@/features/eds/handlers/daLive/daLiveSiteConfig');
+        mockApplyDaLiveOrgConfigSettings.mockImplementationOnce(realSiteConfig.applyDaLiveOrgConfigSettings);
+        mockStateManager.getCurrentProject.mockResolvedValue(makeEdsProject('da-live-classic'));
+        const save = captureSaveHandler(command);
+
+        await save({ componentConfigs: {}, authoringExperience: 'da-live-classic' });
+
+        expect(applySiteConfig).toHaveBeenCalledTimes(1);
+        expect(sheet.has('editor.path')).toBe(false);
     });
 
     // ── Live dashboard push ──────────────────────────────────────────────────

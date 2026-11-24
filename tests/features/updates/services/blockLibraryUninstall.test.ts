@@ -249,6 +249,23 @@ describe('applyBlockLibraryUninstall', () => {
         });
     });
 
+    it('takes the blocks it deleted off DA.live when the install recorded no authoring entries', async () => {
+        // Installs since EDS-71 step 6 add nothing to component-definition.json,
+        // so the record has no entries. The block list follows the code: the
+        // folder that went is the block whose row goes.
+        repos({ 'me/demo-storefront': { 'blocks/hero/hero.js': HERO_JS } });
+        const record = installed();
+        const project = edsProject({ installedBlockLibraries: [record] });
+
+        await applyBlockLibraryUninstall({ project, library: record }, makeDeps());
+
+        expect(daLive.removeBlockFromLibrary).toHaveBeenCalledTimes(1);
+        expect(daLive.removeBlockFromLibrary).toHaveBeenCalledWith('me-org', 'demo-storefront', {
+            blockId: 'hero',
+        });
+        expect(fileOps.getFileContent).not.toHaveBeenCalled();
+    });
+
     it('drops the record after a partial removal: an edited block is the SC\'s own from then on', async () => {
         repos({
             'me/demo-storefront': {

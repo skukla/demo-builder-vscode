@@ -5,7 +5,7 @@
  * component-instance metadata (daLiveOrg/daLiveSite). It branches on the
  * resolved authoring experience, passed in as a parameter (vscode stays OUT of
  * typeGuards.ts), plus an optional ewCanvasBranch param (default '' — param-less):
- *   - Universal Editor (default): https://da.live/#/<org>/<site>
+ *   - DA.live Classic (the parameter's default): https://da.live/#/<org>/<site>
  *   - Experience Workspace (default — empty branch, param-less production canvas):
  *       https://da.live/canvas#/<org>/<site>/index
  *     The param-less production canvas now hosts the live EW alpha; the doc path
@@ -41,7 +41,7 @@ const edsProject = createMockProject({
 });
 
 describe('getEdsDaLiveUrl - experience branch', () => {
-    it('returns the Universal Editor URL for a valid EDS project', () => {
+    it('returns the DA.live Classic URL for a valid EDS project', () => {
         expect(getEdsDaLiveUrl(edsProject, 'da-live-classic')).toBe(
             'https://da.live/#/avery/avery-b2b-demo',
         );
@@ -82,7 +82,7 @@ describe('getEdsDaLiveUrl - experience branch', () => {
         expect(url).not.toContain('index.html');
     });
 
-    it('defaults to the Universal Editor form when no experience arg is passed (back-compat)', () => {
+    it('defaults to the DA.live Classic form when no experience arg is passed (back-compat)', () => {
         expect(getEdsDaLiveUrl(edsProject)).toBe(
             'https://da.live/#/avery/avery-b2b-demo',
         );

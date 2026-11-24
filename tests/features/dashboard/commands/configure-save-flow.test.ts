@@ -72,8 +72,11 @@ jest.mock('@/features/eds/handlers/edsServiceCache', () => ({
 // The shared flip is exercised by its own suite; here it is the thing the command
 // must CALL CORRECTLY, so the fake records the deps it was handed.
 const mockApplyAuthoringExperienceFlip = jest.fn().mockResolvedValue(undefined);
+// An unchanged save re-applies the editor row alone (EDS-71 step 5b).
+const mockReapplyEditorPath = jest.fn().mockResolvedValue('ok');
 jest.mock('@/features/eds/services/authoringExperienceFlip', () => ({
     applyAuthoringExperienceFlip: (...args: unknown[]) => mockApplyAuthoringExperienceFlip(...args),
+    reapplyEditorPath: (...args: unknown[]) => mockReapplyEditorPath(...args),
 }));
 
 const mockSendAuthoringExperienceUpdate = jest.fn().mockResolvedValue(undefined);

@@ -193,10 +193,11 @@ ticked in the Updates modal, or `apply_updates` with `confirm:true` — makes
 one commit to the storefront repository through the same installer updates and
 creation use, and writes the same record creation writes.
 
-The installer only adds: a block folder the storefront already has is left as it
-is, and a block folder, authoring entry or HTML example it added before that the
-SC has since deleted is not put back (`installedBlockLibraries[].blockIds` and
-`.addedEntries`; see
+The installer only adds block folders: one the storefront already has is left as
+it is, and one it copied before that the SC has since deleted is not put back
+(`installedBlockLibraries[].blockIds`). It adds nothing to the storefront's
+Universal Editor files (EDS-71); the entries an older install added there stay
+recorded in `.addedEntries` for removal. See
 [custom block libraries](../../../docs/systems/custom-block-libraries.md)). It does not rebuild the DA.live authoring library — run "Refresh Block
 Library" (`refresh_block_library`) for that.
 

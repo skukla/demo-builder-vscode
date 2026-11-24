@@ -233,9 +233,10 @@ export async function applyBlockLibraryUninstall(
         deps.fileOps,
         deps.logger,
     );
-    const daLiveError = await removeFromDaLive(
-        project, destRepo, result.clearedEntries.definition, deps,
-    );
+    // The block list follows the storefront's code: a folder this run deleted is
+    // a row (and page) that goes. Read from the folders, not from recorded
+    // entries, which installs since EDS-71 no longer write.
+    const daLiveError = await removeFromDaLive(project, destRepo, result.removedBlockIds, deps);
 
     const previous = project.installedBlockLibraries;
     const remaining = remainingRecord(library, result);

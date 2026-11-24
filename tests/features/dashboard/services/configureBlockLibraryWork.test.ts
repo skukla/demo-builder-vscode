@@ -121,6 +121,9 @@ function installed(...records: InstalledBlockLibrary[]): InstalledBlockLibrary[]
     return [demoBuilder, ...records];
 }
 
+/** The DA.live block list a signed-in Configure save hands the remover. */
+const daLive = { removeBlockFromLibrary: jest.fn() };
+
 function makeDeps(): BlockLibraryWorkDeps {
     const stateManager = createMockStateManager();
     const logger = createMockLogger();
@@ -132,7 +135,7 @@ function makeDeps(): BlockLibraryWorkDeps {
             commandManager: createMockCommandExecutor(),
             logger,
         },
-        uninstall: { fileOps, stateManager, logger },
+        uninstall: { fileOps, daLive, stateManager, logger },
     };
 }
 
@@ -160,6 +163,7 @@ beforeEach(() => {
         new Map([['blocks/hero/hero.js', { data: Buffer.from(HERO_JS, 'utf-8'), mode: '100644' }]]),
     );
     mockGetLatestBranchCommit.mockResolvedValue('src-commit-head');
+    daLive.removeBlockFromLibrary.mockResolvedValue({ docPage: 'deleted', sheet: 'removed' });
 });
 
 describe('findPendingBlockLibraryWork', () => {
@@ -257,6 +261,9 @@ describe('applyPendingBlockLibraryWork', () => {
             `chore: remove ${DEMO_TEAM.name} (1 block)`,
         );
         expect(project.installedBlockLibraries).toStrictEqual(installed());
+        expect(daLive.removeBlockFromLibrary).toHaveBeenCalledWith('me-org', 'demo-storefront', {
+            blockId: 'hero',
+        });
         expect(lines).toEqual([
             { level: 'info', text: `Removed ${DEMO_TEAM.name} (1 block).` },
         ]);

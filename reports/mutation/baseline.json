@@ -10414,21 +10414,6 @@
             "equivalent": 5,
             "openGaps": 0
         },
-        "src/features/eds/services/blockLibraryComponentMerge.ts": {
-            "score": 97.72,
-            "killed": 214,
-            "survived": 5,
-            "noCoverage": 0,
-            "timeout": 0,
-            "survivorCategories": {
-                "other": 3,
-                "branch": 2
-            },
-            "uncoveredCategories": {},
-            "highValueSurvivors": 2,
-            "equivalent": 5,
-            "openGaps": 0
-        },
         "src/features/eds/services/storefront/storefrontContentRepublishService.ts": {
             "score": 72.41,
             "killed": 42,

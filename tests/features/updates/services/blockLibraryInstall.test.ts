@@ -322,16 +322,6 @@ describe('applyBlockLibraryInstall', () => {
             expect(project.installedBlockLibraries?.[0].version).toBe('0.2.0');
         });
 
-        it('reads its authoring files at that release too, so entries match the blocks', async () => {
-            repos([], ['blocks/commerce-nav/commerce-nav.js']);
-
-            await applyBlockLibraryInstall({ project: edsProject(), library: LIBRARY }, makeCtx());
-
-            expect(fileOps.getFileContent).toHaveBeenCalledWith(
-                SRC.owner, SRC.repo, 'component-definition.json', 'v0.2.0',
-            );
-        });
-
         it('records the release, not the branch, when it had no block to add', async () => {
             repos(['blocks/commerce-nav/commerce-nav.js'], ['blocks/commerce-nav/commerce-nav.js']);
             const ctx = makeCtx();

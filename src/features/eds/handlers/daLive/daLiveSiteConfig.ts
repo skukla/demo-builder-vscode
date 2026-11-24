@@ -25,45 +25,33 @@ import type { Logger } from '@/types/logger';
  * - Experience Workspace: the da.live-native canvas, pinned to the supplied
  *   ewCanvasBranch (the `?nx=` override); the row is always written when the
  *   project is set to EW. An empty branch drops the override.
- * - Universal Editor: punches out to experience.adobe.com and embeds the IMS org
- *   id, so it is only written when `demoBuilder.daLive.IMSOrgId` is configured.
+ * - DA.live Classic: no row. da.live opens its own document editor when the
+ *   site config names none.
  *
- * Returns undefined when there is no row to write (UE with no IMS org id).
+ * Returns undefined when there is no row to write (DA.live Classic).
  */
 function buildEditorPathValue(
     experience: AuthoringExperience,
-    imsOrgId: string | undefined,
-    daLiveOrg: string,
-    daLiveSite: string,
     ewCanvasBranch: string,
 ): string | undefined {
-    if (experience === 'experience-workspace') {
-        // `?nx=<branch>` pins the canvas to a pre-release da-nx branch while EW is
-        // in early access; an empty branch drops to `https://da.live/canvas#`
-        // (the documented production form). Mirrors getEdsDaLiveUrl's EW form.
-        const nxParam = ewCanvasBranch ? `?nx=${ewCanvasBranch}` : '';
-        return `https://da.live/canvas${nxParam}#`;
-    }
-    if (imsOrgId) {
-        return (
-            `https://experience.adobe.com/#/@${imsOrgId}` +
-            `/aem/editor/canvas/main--${daLiveSite}--${daLiveOrg}.ue.da.live`
-        );
-    }
-    return undefined;
+    if (experience !== 'experience-workspace') return undefined;
+    // `?nx=<branch>` pins the canvas to a pre-release da-nx branch while EW is
+    // in early access; an empty branch drops to `https://da.live/canvas#`
+    // (the documented production form). Mirrors getEdsDaLiveUrl's EW form.
+    const nxParam = ewCanvasBranch ? `?nx=${ewCanvasBranch}` : '';
+    return `https://da.live/canvas${nxParam}#`;
 }
 
 /**
- * Apply DA.live org config settings from extension settings.
+ * Apply DA.live site config settings from extension settings.
  *
- * Reads the AEM Author URL and IMS Org ID from VS Code settings
- * (demoBuilder.daLive.aemAuthorUrl and demoBuilder.daLive.IMSOrgId)
- * and applies them to the DA.live site config sheet.
+ * Reads the AEM Author URL (demoBuilder.daLive.aemAuthorUrl) and the project's
+ * authoring experience, and applies them to the DA.live site config sheet.
  *
- * Also clears a stale `editor.path` row symmetrically: flipping to Universal
- * Editor with no IMS org id has no row to write, so the prior Experience
- * Workspace canvas value is removed (via applySiteConfig's `removeKeys`) rather
- * than left behind.
+ * Clears a stale `editor.path` row symmetrically: DA.live Classic has no row to
+ * write, so a prior Experience Workspace canvas row, or the Universal Editor
+ * row older Classic projects carry, is removed (via applySiteConfig's
+ * `removeKeys`) rather than left behind.
  *
  * This should be called from all EDS flows: creation, reset, edit, import, copy.
  * Non-fatal: logs warnings on failure but does not throw.
@@ -78,7 +66,6 @@ export async function applyDaLiveOrgConfigSettings(
     try {
         const edsSettings = vscode.workspace.getConfiguration('demoBuilder.daLive');
         const aemAuthorUrl = edsSettings.get<string>('aemAuthorUrl');
-        const imsOrgId = edsSettings.get<string>('IMSOrgId');
 
         // Both keys land in the SAME per-site config (/config/<org>/<site>), so
         // collect them and write once — one GET-merge-POST round-trip, no window
@@ -98,20 +85,15 @@ export async function applyDaLiveOrgConfigSettings(
             removeKeys.push('aem.repositoryId');
         }
         const ewCanvasBranch = getEwCanvasBranch();
-        const editorValue = buildEditorPathValue(
-            experience,
-            imsOrgId,
-            daLiveOrg,
-            daLiveSite,
-            ewCanvasBranch,
-        );
+        const editorValue = buildEditorPathValue(experience, ewCanvasBranch);
         if (editorValue) {
             updates['editor.path'] = `/${daLiveOrg}/${daLiveSite}=${editorValue}`;
         } else {
-            // UE with no IMS org id → there is no row to write, but da.live may
-            // hold a stale Experience Workspace canvas row from a prior flip. The
-            // correct state is NO editor.path row, so clear it. (applySiteConfig's
-            // no-op optimization absorbs the case where no stale row exists.)
+            // DA.live Classic → there is no row to write, but da.live may hold a
+            // stale Experience Workspace canvas row from a prior flip, or the
+            // Universal Editor row Classic wrote before EDS-71. The correct state
+            // is NO editor.path row, so clear it. (applySiteConfig's no-op
+            // optimization absorbs the case where no stale row exists.)
             removeKeys.push('editor.path');
         }
 
@@ -171,7 +153,7 @@ export async function applyDaLiveOrgConfigSettings(
  * Configure DA.live site permissions for the user.
  *
  * Grants the user CONFIG and content write permissions via DA.live Config API.
- * This enables Universal Editor access and site management capabilities.
+ * This enables document editing and site management in DA.live.
  *
  * This should be called from all EDS flows: creation, reset, republish.
  * Non-fatal: logs warnings on failure but does not throw, except for an expired DA.live

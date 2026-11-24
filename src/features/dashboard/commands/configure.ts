@@ -35,6 +35,7 @@ import { getEwCanvasBranch, resolveProjectAuthoringExperience } from '@/features
 import { getGitHubServices } from '@/features/eds/handlers/edsServiceCache';
 import {
     applyAuthoringExperienceFlip,
+    reapplyEditorPath,
     type AuthoringExperienceFlipDeps,
 } from '@/features/eds/services/authoringExperienceFlip';
 import { markMeshUpdateDeclined } from '@/features/mesh/services/meshUpdateDecline';
@@ -314,7 +315,7 @@ export class ConfigureProjectWebviewCommand extends BundledPanelCommand<Configur
             }
 
             // Persist the EDS authoring-experience preference (setup-time choice).
-            // Capture whether it changed so we can re-apply the DA editor.path after save.
+            // A change gates the rest of the switch; the editor.path row is re-applied every save.
             const authoringChanged = this.applyAuthoringExperienceMetadata(
                 project,
                 data.authoringExperience,
@@ -367,6 +368,14 @@ export class ConfigureProjectWebviewCommand extends BundledPanelCommand<Configur
                 setImmediate(() => {
                     void this.applyAuthoringSideEffects(flippedProject, experience);
                 });
+            } else if (isEdsProject(project)) {
+                // Unchanged: still bring the site's editor row in line, so an old
+                // Universal Editor row on a DA.live Classic site goes on any save
+                // (EDS-71 step 5b). Read-merge-write, non-fatal, nothing else runs.
+                const experience = resolveProjectAuthoringExperience(project);
+                setImmediate(() => {
+                    void reapplyEditorPath(project, experience, { context: this.context, logger: this.logger });
+                });
             }
 
             // Show success notification after returning (non-blocking). When the
@@ -399,7 +408,7 @@ export class ConfigureProjectWebviewCommand extends BundledPanelCommand<Configur
      * Persist the EDS authoring-experience preference onto the project's EDS
      * component-instance metadata. No-op for non-EDS projects or unrecognized
      * values. Returns whether the stored value actually changed (so the caller
-     * can decide whether to re-apply the DA editor.path).
+     * runs the rest of the switch only on a real change).
      */
     private applyAuthoringExperienceMetadata(
         project: Project,

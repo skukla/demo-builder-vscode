@@ -29,7 +29,7 @@ export interface CategoryResult {
     /** One plain line per block library installed: what was added to the storefront. */
     installed?: string[];
     /**
-     * One plain line per block library update that left authoring entries out
+     * One plain line per block library update that left block folders out
      * because the SC had removed them by hand (EDS-36).
      */
     leftOut?: string[];

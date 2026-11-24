@@ -26,42 +26,25 @@ as the edge is concerned.
 The consequence is that updating a library later does not update projects already
 created from it. They have their own copy, and that copy is now theirs to change.
 
-Installing also merges the library's entries into the storefront's three authoring
-files — `component-definition.json`, `component-filters.json` and
-`component-models.json` (Universal Editor's block registry; the DA.live block list
-is built from the storefront's block folders and pages instead, see
-`.rptc/plans/block-library-without-universal-editor/step-02.md`). Those files
-are the SC's too, so the merge follows two rules:
+Installing copies block folders and nothing else. The DA.live block list is built
+from the storefront's block folders and pages
+(`.rptc/plans/block-library-without-universal-editor/step-02.md`), so an install or
+update no longer adds entries to the storefront's Universal Editor files
+(`component-definition.json`, `component-filters.json`, `component-models.json`).
+Adobe deleted those files from its Commerce templates, and nothing reads them (EDS-71).
 
-- **A hand deletion stays deleted.** The project records, per library, which entries
-  the extension added (`installedBlockLibraries[].addedEntries`). On a later install
-  or update, an entry it added before that is now missing was removed by hand: it is
-  left out, and the update says so (a note in the Updates modal's report, and
-  `categories.addon.leftOut` in `apply_updates`). An entry it never added is added
-  and recorded. A project installed before 2026-10-09 has no record, so its next run
-  adds what is missing, as it always did, and starts recording. A reset passes no
-  record: it starts from the template, so every entry comes back.
 - **A deleted block folder stays deleted.** `installedBlockLibraries[].blockIds` lists
-  the block folders the library copied (at install, and from now on the new ones an
-  update copies). A block in that list whose folder is gone was removed by hand: an
-  update does not copy its files back, does not put back any of its entries, and names
-  it on the same "Left out" line ("hero-cta (block folder blocks/hero-cta)"). Every
-  installed project already has this list, so the rule applies from its next update.
-- **A stripped HTML example stays stripped.** An update also fills the HTML example
-  (`plugins.da.unsafeHTML`) into an entry the storefront has without one.
-  `addedEntries.htmlExamples` records each entry it filled, and each entry it added
-  whole with an example. One in that list that has no example now was stripped by
-  hand: it is left out and named ("hero (HTML example in component-definition.json)").
-  Records written before this have no such list, so the next run fills as before and
-  starts recording.
-- **The file keeps its layout.** Each file is written back in the indentation it
-  already had (four spaces, tabs, or two when there is none to detect), with its
-  final newline if it had one.
-
-The merge only considers blocks whose folder is not already in the storefront, so an
-entry deleted while its block folder stays was never put back. When the folder is
-gone too and the library copied it, the folder rule decides first, so the entry
-record is the backstop for a block that is missing from `blockIds`.
+  the block folders the library copied (at install, and the new ones an update
+  copies). A block in that list whose folder is gone was removed by hand: an update
+  does not copy its files back, and says so (a "Left out" note in the Updates modal's
+  report, and `categories.addon.leftOut` in `apply_updates`: "hero-cta (block folder
+  blocks/hero-cta)"). A reset passes no record: it starts from the template, so every
+  block comes back.
+- **What an older install added is still recorded.** Installs before EDS-71 merged
+  entries into the three files and recorded them per library
+  (`installedBlockLibraries[].addedEntries`). An update keeps that record unchanged,
+  so removing the library still takes those entries out of a storefront that has the
+  files (below).
 
 **Which project gets the record.** Storefront setup installs the libraries but saves
 no project: in the wizard it runs before the project exists. It hands the records
@@ -86,14 +69,16 @@ still as the library added it:
   changed, added or deleted file stays, and the result names it ("hero (changed since
   it was added)"). So does a block whose library cannot be read at that commit.
 - **A block another selected library provides stays.** It is named with that library.
-- **An authoring entry goes only when it is unchanged.** Each entry in `addedEntries`
-  is compared with the library's own entry at that commit. One the SC changed stays
-  and is named. An entry belonging to a block left in place is not touched. An HTML
-  example the install filled into an entry the storefront already had stays.
-- **One commit.** The deleted files and the three authoring files change in a single
-  commit on `main` ("chore: remove <library> (N blocks)").
-- **DA.live.** Each removed `component-definition.json` entry is taken off the DA.live
-  block list (its doc page and its sheet row). Then, whenever the action added or
+- **An authoring entry goes only when it is unchanged.** For a library an older
+  install recorded entries for, each entry in `addedEntries` is compared with the
+  library's own entry at that commit. One the SC changed stays and is named. An entry
+  belonging to a block left in place is not touched, and an entry nothing recorded is
+  never touched. An HTML example the install filled into an entry the storefront
+  already had stays.
+- **One commit.** The deleted files, and any of the three Universal Editor files that
+  lost an entry, change in a single commit on `main` ("chore: remove <library> (N blocks)").
+- **DA.live.** Each block folder the removal deleted is taken off the DA.live block
+  list (its doc page and its sheet row). Then, whenever the action added or
   removed at least one block, it runs Refresh Blocks: the block list is rebuilt from
   the storefront's code and pages (one entry per `blocks/<id>/` folder, each with an
   example page; `.rptc/plans/block-library-without-universal-editor/step-02.md`) and

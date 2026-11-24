@@ -11,7 +11,7 @@
  *    (gated by skipContent; EDS-40). Failing, the copy uses the fixed lists
  * 1. Copy DA.live content from source (gated by skipContent)
  * 2. Build the block library from the storefront's code and the package's content
- * 3. Apply EDS settings (AEM Assets, Universal Editor config)
+ * 3. Apply EDS settings (AEM Assets binding, editor row)
  * 4. Purge CDN cache (conditional)
  * 5. Publish content to CDN
  * 5.5. Publish the sheets step 1 copied, by path (step 5 publishes pages only)

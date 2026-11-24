@@ -185,7 +185,7 @@ export async function executePhaseHelixConfig(
 
     // Wire Quick Edit (Experience Workspace WYSIWYG dependency) into the
     // storefront's scripts/scripts.js + tools/quick-edit/quick-edit.js.
-    // Brand-agnostic, idempotent, non-fatal — inert under Universal Editor,
+    // Brand-agnostic, idempotent, non-fatal — inert under DA.live Classic,
     // active under Experience Workspace. See installQuickEdit.
     await installQuickEdit(githubFileOps, repoInfo.repoOwner, repoInfo.repoName, logger);
 

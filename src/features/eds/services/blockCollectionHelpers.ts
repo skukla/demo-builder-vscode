@@ -2,28 +2,22 @@
  * Block Collection Helpers
  *
  * Copies custom EDS block directories from a configurable source repository
- * into the user's GitHub repository and merges their component definitions
- * (component-definition.json), authoring filters (component-filters.json),
- * and field models (component-models.json) into the destination — all in a
- * single atomic commit using the Git Tree API.
+ * into the user's GitHub repository, in a single atomic commit using the Git
+ * Tree API.
  *
  * The source repository is configured in block-libraries.json
  * (e.g., libraries[].source with owner/repo/branch).
  *
- * The merge of those three JSON files is in blockLibraryComponentMerge.ts;
- * this file owns discovery, the cross-library dedup and the commit.
- *
  * Block discovery is fully dynamic: the extension scans the source repo's
- * blocks/ directory and installs whatever it finds. Authoring metadata
- * (title, preview HTML) comes from the source repo's component-definition.json.
- * Blocks without metadata entries still get their files installed — they just
- * won't appear in the DA.live authoring library until the source repo adds them.
+ * blocks/ directory and installs whatever it finds. The DA.live block list is
+ * built from the storefront's code and pages (`blockLibrary/`), so the install
+ * copies block folders and nothing else. It no longer adds entries to the
+ * storefront's Universal Editor files (`component-definition.json`,
+ * `component-filters.json`, `component-models.json`; EDS-71): Adobe deleted
+ * them from its templates and nothing reads them.
  *
- * The three authoring files are the SC's as much as ours: an entry the extension
- * added before and the SC has since deleted is left out, not put back (the
- * record and its reasoning: addedEntriesRecord.ts), and each file is written in
- * the indentation it already had. The same goes for a block folder it copied
- * before and an HTML example it filled before.
+ * A block folder the library copied before and the SC has since deleted is left
+ * out, not put back (the record and its reasoning: addedEntriesRecord.ts).
  *
  * @module features/eds/services/blockCollectionHelpers
  */
@@ -31,22 +25,14 @@
 import {
     claimMissingBlockFolder,
     createEntryTracker,
-    mergeAddedEntries,
     type EntryOrigin,
     type EntryTracker,
     type RemovedByHandEntry,
 } from './addedEntriesRecord';
-import {
-    buildMergedComponentDefinitionMultiSource,
-    buildMergedComponentFiltersMultiSource,
-    buildMergedComponentModelsMultiSource,
-    type LibraryBlockData,
-    type MergeContext,
-} from './blockLibraryComponentMerge';
 import type { GitHubFileOperations } from './github/githubFileOperations';
 import type { GitHubTreeInput } from './types';
 import { refOfSource } from '@/core/releases/componentRelease';
-import type { AddedComponentEntries, LibraryVersionInfo } from '@/types/blockLibraries';
+import type { LibraryVersionInfo } from '@/types/blockLibraries';
 import type { AddonSource } from '@/types/demoPackages';
 import type { Logger } from '@/types/logger';
 
@@ -57,7 +43,7 @@ export interface InstallBlockCollectionResult {
     error?: string;
     /** Per-library tracking data (source commit SHA + block IDs) for version tracking */
     libraryVersions?: LibraryVersionInfo[];
-    /** Authoring entries left out because the SC had deleted them (EDS-36). */
+    /** Block folders left out because the SC had deleted them (EDS-36). */
     removedByHand?: RemovedByHandEntry[];
 }
 
@@ -66,17 +52,17 @@ export interface BlockLibraryEntry {
     source: AddonSource;
     name: string;
     /**
-     * What this library added to the storefront's authoring files on earlier
-     * runs (`installedBlockLibraries[].addedEntries`). An entry in here that is
-     * missing from its file now was removed by hand and is not put back.
-     */
-    addedEntries?: AddedComponentEntries;
-    /**
      * The block folders this library copied on earlier runs
      * (`installedBlockLibraries[].blockIds`). One in here whose folder is gone
-     * now was removed by hand: its files and entries are not put back.
+     * now was removed by hand: its files are not put back.
      */
     blockIds?: string[];
+}
+
+/** One library's blocks this run copies: its source and the files. */
+interface LibraryBlockData {
+    source: AddonSource;
+    files: Array<{ path: string; sha: string }>;
 }
 
 /** Result of discovering + cross-library-deduplicating one library's blocks */
@@ -91,7 +77,6 @@ interface LibraryDiscoveryResult {
     sourceCommitSha: string;
     /** The release it was read at, for a repository that ships by release. */
     version?: string;
-    ref?: string;
 }
 
 /** What discovery carries from one library to the next within a run. */
@@ -155,16 +140,15 @@ async function discoverAndDeduplicateLibraryBlocks(
         uniqueBlockIds,
         files: blockFiles.map(f => ({ path: f.path, sha: f.sha })),
         sourceCommitSha,
-        ...(version ? { version, ref } : {}),
+        ...(version ? { version } : {}),
     };
 }
 
 /**
  * Install blocks from multiple libraries into the user's repo in a single atomic commit.
  *
- * Deduplicates blocks across all libraries (first source wins for overlapping block IDs),
- * merges component-definition.json, component-filters.json, and component-models.json
- * entries from all sources, and creates one commit.
+ * Deduplicates blocks across all libraries (first source wins for overlapping block IDs)
+ * and creates one commit holding their block folders.
  *
  * @param libraries - Array of library entries (source + name), processed in order
  * @param additionalTreeEntries - Extra tree entries to include in the same atomic commit
@@ -220,13 +204,7 @@ export async function installBlockCollections(
             totalDiscovered += discovered.discoveredCount;
 
             if (discovered.uniqueBlockIds.length > 0) {
-                libraryBlockFiles.push({
-                    source: lib.source,
-                    ...(discovered.ref ? { ref: discovered.ref } : {}),
-                    blockIds: discovered.uniqueBlockIds,
-                    files: discovered.files,
-                    origin: toOrigin(lib),
-                });
+                libraryBlockFiles.push({ source: lib.source, files: discovered.files });
 
                 // Track version info for this library
                 libraryVersions.push({
@@ -279,52 +257,12 @@ export async function installBlockCollections(
             }
         }
 
-        // 3. Build merged component-definition.json from all sources
-        const merge: MergeContext = { githubFileOps, destOwner, destRepo, tracker };
-        const mergedCompDef = await buildMergedComponentDefinitionMultiSource(
-            merge, libraryBlockFiles,
-        );
-        if (mergedCompDef) {
-            treeEntries.push({
-                path: 'component-definition.json',
-                mode: '100644',
-                type: 'blob',
-                content: mergedCompDef,
-            });
-        }
-
-        // 3b. Build merged component-filters.json from all sources
-        const mergedFilters = await buildMergedComponentFiltersMultiSource(
-            merge, libraryBlockFiles,
-        );
-        if (mergedFilters) {
-            treeEntries.push({
-                path: 'component-filters.json',
-                mode: '100644',
-                type: 'blob',
-                content: mergedFilters,
-            });
-        }
-
-        // 3c. Build merged component-models.json from all sources
-        const mergedModels = await buildMergedComponentModelsMultiSource(
-            merge, libraryBlockFiles,
-        );
-        if (mergedModels) {
-            treeEntries.push({
-                path: 'component-models.json',
-                mode: '100644',
-                type: 'blob',
-                content: mergedModels,
-            });
-        }
-
-        // 4. Append any additional tree entries (e.g. inspector tagging files)
+        // 3. Append any additional tree entries (e.g. inspector tagging files)
         if (additionalTreeEntries && additionalTreeEntries.length > 0) {
             treeEntries.push(...additionalTreeEntries);
         }
 
-        // 5. Create a single atomic commit.
+        // 4. Create a single atomic commit.
         //
         // Through `commitTreeToBranch`, which re-bases if `main` moves while this
         // runs. This is ADDITIVE — it must never move the branch to a commit that
@@ -346,7 +284,7 @@ export async function installBlockCollections(
             success: true,
             blocksCount: sortedBlockIds.length,
             blockIds: sortedBlockIds,
-            libraryVersions: withAddedEntries(libraryVersions, libraries, merge.tracker),
+            libraryVersions,
             removedByHand,
         };
     } catch (error) {
@@ -359,29 +297,13 @@ export async function installBlockCollections(
     }
 }
 
-/** The library as the merge sees it: its name and what it added on earlier runs. */
+/** The library as discovery sees it: its name and the folders it copied on earlier runs. */
 function toOrigin(lib: BlockLibraryEntry): EntryOrigin {
-    return { name: lib.name, addedEntries: lib.addedEntries, blockIds: lib.blockIds };
+    return { name: lib.name, blockIds: lib.blockIds };
 }
 
 /** One log line naming what the run left out, when it left anything out. */
 function logRemovedByHand(logger: Logger, removedByHand: RemovedByHandEntry[]): void {
     if (removedByHand.length === 0) return;
     logger.info(`[Block Collection] Left out ${removedByHand.length} removed by hand: ${removedByHand.map((e) => `${e.id} (${e.file})`).join(', ')}`);
-}
-
-/**
- * Each library's version record with its added entries: the earlier record plus
- * what this run added. A library that added nothing keeps its record unchanged.
- */
-function withAddedEntries(
-    versions: LibraryVersionInfo[],
-    libraries: BlockLibraryEntry[],
-    tracker: EntryTracker,
-): LibraryVersionInfo[] {
-    return versions.map((version) => {
-        const previous = libraries.find((lib) => lib.name === version.name)?.addedEntries;
-        const addedEntries = mergeAddedEntries(previous, tracker.added.get(version.name));
-        return addedEntries ? { ...version, addedEntries } : version;
-    });
 }

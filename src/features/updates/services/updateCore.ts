@@ -11,10 +11,7 @@ import { COMPONENT_IDS } from '@/core/constants';
 import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import type { RunnerResult } from '@/features/app-builder/services/appBuilderComponentRunner';
 import { getGitHubServices } from '@/features/eds/handlers/edsServiceCache';
-import {
-    mergeAddedEntries,
-    type RemovedByHandEntry,
-} from '@/features/eds/services/addedEntriesRecord';
+import type { RemovedByHandEntry } from '@/features/eds/services/addedEntriesRecord';
 import {
     installBlockCollections,
     type BlockLibraryEntry,
@@ -122,7 +119,7 @@ export function findInstalledLibrary(
  * headless `updateApplyService` (which resolves 'ask' to the safe 'disabled'
  * default). Keeps the snapshot/marker logic in one place.
  *
- * Returns the authoring entries the update left out because the SC had removed
+ * Returns the block folders the update left out because the SC had removed
  * them by hand (EDS-36) — empty when it left none out or did not install.
  */
 export async function applyBlockLibraryUpdateResolved(
@@ -143,11 +140,11 @@ export async function applyBlockLibraryUpdateResolved(
 
     // effectiveBehavior === 'enabled'
     const result = await installBlockLibraryFiles(item, ctx);
-    // Saved by the commit-sha save just below. Set first: the entries and block
-    // folders are in the repository now, whether or not that save succeeds.
+    // Saved by the commit-sha save just below. Set first: the block folders are
+    // in the repository now, whether or not that save succeeds. The entries an
+    // older install recorded (`addedEntries`) stay as they are: an update adds
+    // nothing to the Universal Editor files (EDS-71), and removal still needs them.
     const version = result.libraryVersions?.[0];
-    const addedEntries = mergeAddedEntries(lib.addedEntries, version?.addedEntries);
-    if (addedEntries) lib.addedEntries = addedEntries;
     // A block this update copied is the library's from now on, so deleting its
     // folder later stays deleted too.
     lib.blockIds = [...new Set([...lib.blockIds, ...(version?.blockIds ?? [])])];
@@ -220,9 +217,8 @@ export async function installBlockLibraryFiles(
     const { tokenService } = getGitHubServices(ctx.secrets);
     const fileOps = new GitHubFileOperations(tokenService, ctx.logger);
 
-    // What this library added before — entries and block folders — so one the
-    // SC has since deleted is left out rather than put back (EDS-36). None for a
-    // first install.
+    // The block folders this library copied before, so one the SC has since
+    // deleted is left out rather than put back (EDS-36). None for a first install.
     const recorded = item.project.installedBlockLibraries?.find(
         (l) => l.name === item.library.name,
     );
@@ -233,7 +229,6 @@ export async function installBlockLibraryFiles(
         [{
             source: item.library.source,
             name: item.library.name,
-            ...(recorded?.addedEntries ? { addedEntries: recorded.addedEntries } : {}),
             ...(recorded ? { blockIds: recorded.blockIds } : {}),
         }],
         ctx.logger,

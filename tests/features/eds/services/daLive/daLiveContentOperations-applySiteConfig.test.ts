@@ -197,7 +197,7 @@ describe('DaLiveContentOperations.configOps.applySiteConfig — site-scoped conf
     });
 
     // ── removeKeys: symmetric clear of a stale row ───────────────────────────
-    // Flipping a project back to Universal Editor without an IMS org id leaves
+    // Flipping a project to DA.live Classic leaves
     // no editor.path to write — the stale Experience Workspace canvas row must
     // be DELETED, not merged. writeMergedDataConfig can only merge keys, so
     // applySiteConfig grew a 4th `removeKeys` param that deletes named keys from

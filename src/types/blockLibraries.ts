@@ -56,18 +56,14 @@ export interface LibraryVersionInfo {
      * folder is gone was removed by hand, so an update does not copy it back.
      */
     blockIds: string[];
-    /**
-     * The authoring entries the extension itself added to the storefront's three
-     * authoring files from this library. Absent when it added none, and on
-     * records written before 2026-10-09.
-     */
-    addedEntries?: AddedComponentEntries;
 }
 
 /**
- * Entry ids the extension added to a storefront's authoring files, one list per
- * kind of entry. An id in here that is no longer in its file was removed by
- * hand, so an install or update leaves it out instead of putting it back.
+ * Entry ids an older install added to a storefront's Universal Editor files
+ * (`component-definition.json`, `component-filters.json`,
+ * `component-models.json`), one list per kind of entry. Installs stopped adding
+ * to those files with EDS-71; the record stays so removing the library still
+ * takes out exactly what was added, and nothing else.
  */
 export interface AddedComponentEntries {
     /** `component-definition.json`: ids of `groups[].components[]` entries. */
@@ -90,6 +86,12 @@ export interface AddedComponentEntries {
 export interface InstalledBlockLibrary extends LibraryVersionInfo {
     /** ISO date string when blocks were installed */
     installedAt: string;
+    /**
+     * The entries an install before EDS-71 added to the storefront's Universal
+     * Editor files from this library. Absent when it added none, on records
+     * written before 2026-10-09, and on every install since EDS-71.
+     */
+    addedEntries?: AddedComponentEntries;
     /**
      * Set when `demoBuilder.blockLibraries.syncBehavior` is `disabled` (or `ask`
      * + user chose Skip) and update detection found newer upstream commits.

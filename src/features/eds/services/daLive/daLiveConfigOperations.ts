@@ -155,8 +155,7 @@ export class DaLiveConfigOperations {
      *
      * `removeKeys` deletes named keys from the data sheet (a merge cannot remove
      * a key) — used to clear a stale row, e.g. reverting editor.path to the
-     * da.live default when a project flips back to Universal Editor with no IMS
-     * org id. When updates is empty and no removeKey is present, no POST is made.
+     * da.live default when a project flips to DA.live Classic. When updates is empty and no removeKey is present, no POST is made.
      *
      * @param org - DA.live organization name
      * @param site - DA.live site name

@@ -328,7 +328,7 @@ export async function ensureEdsContent(
         if (!libResult.success && libResult.error) logger.warn(`[EDS Content] ${libResult.error}`);
     });
 
-    // EDS settings — AEM Assets / Universal Editor (non-fatal)
+    // EDS settings — AEM Assets binding / editor row (non-fatal)
     onProgress?.(S.settingUpAuthoring.label, STOREFRONT_JOBS.applyingDaLiveSettings);
     await nonFatal('EDS settings', logger, () =>
         applyDaLiveOrgConfigSettings(daLiveContentOps, config.daLiveOrg, config.daLiveSite, logger),

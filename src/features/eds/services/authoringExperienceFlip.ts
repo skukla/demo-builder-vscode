@@ -107,11 +107,15 @@ export async function applyAuthoringExperienceFlip(
  * Re-apply the site-scoped DA.live editor.path so the punch-out matches the
  * active authoring experience. Non-fatal: logs a warning on failure and never
  * throws (the metadata write already stands). A missing DA org/site is a no-op.
+ *
+ * Exported because Configure also runs it on a save that leaves the experience
+ * unchanged: the read-merge-write is what takes an old Universal Editor row off a
+ * DA.live Classic site (EDS-71 step 5b), and nothing else about a switch applies.
  */
-async function reapplyEditorPath(
+export async function reapplyEditorPath(
     project: Project,
     experience: AuthoringExperience,
-    { context, logger }: AuthoringExperienceFlipDeps,
+    { context, logger }: Pick<AuthoringExperienceFlipDeps, 'context' | 'logger'>,
 ): Promise<'ok' | 'warn'> {
     const edsInstance = project.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT];
     // Both halves fall back to the repo: the DA.live org IS the GitHub namespace

@@ -1,0 +1,12 @@
+# Resolution of review eds-71-steps-5b-6-recheck
+
+Date: 2026-11-23
+Reviewer: rptc:code-review-agent
+Model: opus
+Scope: package.json, reports/mutation/baseline.json, scripts/mutation-equivalents.ledger.json, src/core/state/config/manifest.schema.json, src/features/ai/server/applyUpdatesTool.ts, src/features/dashboard/commands/configure.ts, src/features/eds/handlers/daLive/daLiveSiteConfig.ts, src/features/eds/handlers/storefrontSetup/storefrontSetupPhase2.ts, src/features/eds/services/addedEntriesRecord.ts, src/features/eds/services/authoringExperienceFlip.ts, src/features/eds/services/blockCollectionHelpers.ts, src/features/eds/services/blockLibraryRemoval.ts, src/features/eds/services/blockLibraryRemovalEntries.ts, src/features/eds/services/daLive/daLiveConfigOperations.ts, src/features/eds/services/edsPipeline.ts, src/features/eds/services/installedBlockLibraryRecord.ts, src/features/project-creation/services/edsContentSetup.ts, src/features/updates/README.md, src/features/updates/services/blockLibraryUninstall.ts, src/features/updates/services/updateApplyResult.ts, src/features/updates/services/updateCore.ts, src/types/blockLibraries.ts, tests/features/dashboard/commands/configure-authoring-experience.test.ts, tests/features/dashboard/commands/configure-save-flow.test.ts, tests/features/dashboard/services/configureBlockLibraryWork.test.ts, tests/features/eds/handlers/daLive/daLiveSiteConfig.test.ts, tests/features/eds/services/addedEntriesRecord.test.ts, tests/features/eds/services/blockCollectionHelpers-handDeletions.test.ts, tests/features/eds/services/blockCollectionHelpers-multiLibrary-merging.test.ts, tests/features/eds/services/blockCollectionHelpers.test.ts, tests/features/eds/services/blockCollectionHelpers.testUtils.ts, tests/features/eds/services/configGenerator.test.ts, tests/features/eds/services/daLive/daLiveContentOperations-applySiteConfig.test.ts, tests/features/updates/services/blockLibraryInstall.test.ts, tests/features/updates/services/blockLibraryUninstall.test.ts, tests/features/updates/services/blockLibraryUpdate-handDeletions.test.ts, tests/sop/progress-surface.ledger.json, tests/sop/user-facing-errors.ledger.json, tests/types/typeGuards-eds-dalive-url.test.ts
+
+1 findings.
+
+| Finding | Severity | Claim | Verdict | Note |
+|---|---|---|---|---|
+| N1 | low | Fit: two comments still said the editor row is re-applied only on a change. | PROPOSE FIX | Fixed: both comments say a change gates the rest of the switch and the editor row is re-applied every save. |

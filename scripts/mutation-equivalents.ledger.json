@@ -4948,7 +4948,7 @@
             "anchors": [
                 "if (result.success) {"
             ],
-            "line": 269,
+            "line": 268,
             "mutants": 3,
             "category": "branch",
             "reason": "The merged-data twin of the guard above, and the same shape: its body is a single logger.info naming the keys applied, and the return on the next line is built from result regardless. The removed-key reporting that DOES depend on success is a separate expression and is tested on both sides.",
@@ -4961,7 +4961,7 @@
             "anchors": [
                 "removeKeys: string[] = [],"
             ],
-            "line": 171,
+            "line": 170,
             "mutants": 1,
             "category": "other",
             "reason": "The mutant replaces the empty default with a one-element array holding a junk string. A caller that omits removeKeys therefore asks to remove a key no config has ever held: the filter that computes 'removed' finds nothing, so removedAnything stays false, the map delete is a no-op, and both the POSTed document and the returned result are identical. Only a config containing a key of that exact literal name could tell them apart.",
@@ -4974,7 +4974,7 @@
             "anchors": [
                 "removeKeys: string[] = [],"
             ],
-            "line": 204,
+            "line": 203,
             "mutants": 1,
             "category": "other",
             "reason": "The private twin of the default above, reached only when applySiteConfig itself omits the argument, and unkillable for the same reason: a removal request for a key no config holds changes neither the document written nor the removed list reported.",
@@ -4987,7 +4987,7 @@
             "anchors": [
                 "const existingRows = dataSheet?.data || [];"
             ],
-            "line": 216,
+            "line": 215,
             "mutants": 1,
             "category": "other",
             "reason": "The mutant seeds the fallback with a junk STRING rather than an empty list, for the case where the site config has no data sheet. The loop that follows reads row.key off each entry and skips anything falsy, and a string has no key property \u2014 so the junk entry contributes nothing to the map and the written sheet is identical. The fallback's real job (not iterating undefined) is unchanged.",
@@ -5000,7 +5000,7 @@
             "anchors": [
                 "const errorText = await response.text().catch(() => '');"
             ],
-            "line": 378,
+            "line": 377,
             "mutants": 1,
             "category": "other",
             "reason": "The mutant makes the catch answer undefined instead of an empty string. The only reader is the ternary on the next line, which appends the body to the error message when it is TRUTHY \u2014 and both an empty string and undefined are falsy, so the message is byte-identical either way. A response whose text() rejects and one that returns an empty body already produce the same message, which is tested.",
@@ -5264,42 +5264,6 @@
             "category": "branch",
             "reason": "Two mutants rewrite the `additionalTreeEntries.length > 0` comparison alone \u2014 to `>= 0` and to the constant `true` \u2014 leaving the `additionalTreeEntries &&` guard in front of it. An undefined list still short-circuits, so the only case they change is an EMPTY array, where the guarded body is `treeEntries.push(...[])` and adds nothing. The other three mutants on this line ARE killed, by the undefined-list, empty-list and populated-list tests.",
             "decision": "Equivalent: the extra branch they open pushes nothing.",
-            "recorded": "2026-09-05",
-            "source": "mutationLedger add"
-        },
-        {
-            "module": "src/features/eds/services/blockLibraryComponentMerge.ts",
-            "anchors": [
-                "destDef.groups.flatMap((g) => g.components?.map((c: { id: string }) => c.id) ?? []),"
-            ],
-            "mutants": 1,
-            "category": "other",
-            "reason": "The `?? []` fallback builds the set of ids already anywhere in the destination file. Substituting ['Stryker was here'] adds an id no component can have, so the filter that reads the set keeps exactly the same entries. Re-anchored 2026-10-09 (EDS-36), when the set widened from one group to every group.",
-            "decision": "Equivalent: the substituted id matches no component.",
-            "recorded": "2026-09-05",
-            "source": "mutationLedger add"
-        },
-        {
-            "module": "src/features/eds/services/blockLibraryComponentMerge.ts",
-            "anchors": [
-                "addedCount += newEntries.length;"
-            ],
-            "mutants": 1,
-            "category": "other",
-            "reason": "addedCount has one reader: the `addedCount === 0 && enrichedCount === 0` early return. It starts at 0 and every increment is a positive length, so the `-=` mutant makes it negative in exactly the cases the real one makes it positive \u2014 and both are non-zero. The count is never returned, logged or compared to anything else.",
-            "decision": "Equivalent: only its zero-ness is read, and that is unchanged.",
-            "recorded": "2026-09-05",
-            "source": "mutationLedger add"
-        },
-        {
-            "module": "src/features/eds/services/blockLibraryComponentMerge.ts",
-            "anchors": [
-                "enrichedCount++;"
-            ],
-            "mutants": 1,
-            "category": "other",
-            "reason": "Same shape as addedCount: enrichedCount is read only by the `addedCount === 0 && enrichedCount === 0` early return, and decrementing instead of incrementing keeps it non-zero in precisely the cases incrementing does. Nothing reads the magnitude or the sign.",
-            "decision": "Equivalent: only its zero-ness is read, and that is unchanged.",
             "recorded": "2026-09-05",
             "source": "mutationLedger add"
         },
@@ -6687,7 +6651,7 @@
             "anchors": [
                 "const panel = BaseWebviewCommand.getActivePanel('demoBuilder.configureProject');"
             ],
-            "line": 105,
+            "line": 106,
             "mutants": 1,
             "category": "branch",
             "reason": "Stryker forces the following 'if (panel)' true. With no panel open the body then calls panel.dispose() on undefined, and the TypeError lands in the try/catch that already exists for the already-disposed case \u2014 so the mutant takes the same path to the same no-op. The false variant IS killed (a test asserts the open panel is disposed); only the always-true one is unobservable.",

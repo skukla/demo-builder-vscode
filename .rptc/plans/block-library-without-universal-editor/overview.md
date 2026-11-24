@@ -87,8 +87,8 @@ tools fail.
 | 4b | Our own libraries get real examples once | not started |
 | 4c | Draft Examples tile, prompt and agent tool | not started |
 | 5 | Agent tools work on the DA.live library | done |
-| 5b | Universal Editor stops being offered | not started |
-| 6 | Block library install, update, removal | not started |
+| 5b | Universal Editor stops being offered | done |
+| 6 | Block library install, update, removal | done |
 | 7 | The template update takes Adobe's deletion | not started |
 | 8 | Lift the hold | not started |
 | 9 | Live cycle, with the owner's go | not started |
@@ -125,7 +125,11 @@ The detail of each step:
    Editor URL into the site config (`daLiveSiteConfig.ts:33-54`, the `IMSOrgId` setting described as
    "Used to open the Universal Editor"); on a template without the UE files it opens an editor that
    cannot work. Remove what only served UE, in the same change (no soft deprecation), keeping DA.live's
-   own document editing and Experience Workspace.
+   own document editing and Experience Workspace. **Owner, 2026-11-23:** keep the Classic choice; drop
+   only the Universal Editor `editor.path` row, so Classic opens DA.live's document editor as its
+   description says. Existing Classic projects keep their choice; the next settings apply (create,
+   reset, Configure) clears the old row, so no migration. `IMSOrgId` stays (AEM Assets uses it); its
+   description stops naming the Universal Editor.
 6. **Block library install, update, removal.** Stop merging into the storefront's three UE files; the
    `addedEntries` record keeps working for storefronts that still have them until their next update.
 7. **The template update takes Adobe's deletion.** Nothing reads the storefront's

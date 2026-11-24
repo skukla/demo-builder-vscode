@@ -1,6 +1,10 @@
 /**
  * Take a block library's entries back out of a storefront's three authoring
- * files (EDS-39) — the reverse of `blockLibraryComponentMerge.ts`.
+ * files (EDS-39): the entries an install before EDS-71 merged into
+ * `component-definition.json`, `component-filters.json` and
+ * `component-models.json` and recorded in `addedEntries`. Installs no longer
+ * add to those files; this stays so removing a library from a storefront that
+ * still has them takes out exactly what was added.
  *
  * The files are the SC's as much as ours, so an entry leaves its file only with
  * proof it is still what the library added: it is deep-equal to the library's

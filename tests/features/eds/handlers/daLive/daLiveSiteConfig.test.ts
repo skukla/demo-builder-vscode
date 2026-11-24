@@ -5,14 +5,16 @@
  * config scope on DA.live. Both are now SITE-scoped (applySiteConfig):
  *   - aem.repositoryId (from demoBuilder.daLive.aemAuthorUrl) → SITE config —
  *     da.live's Library reads the AEM Assets binding from the per-site config.
- *   - editor.path (built from demoBuilder.daLive.IMSOrgId) → SITE config. This
+ *   - editor.path (the authoring experience's editor) → SITE config. This
  *     is the LOAD-BEARING per-project isolation change: flipping one project's
  *     authoring experience must never clobber sibling sites sharing the same DA
  *     org, so editor.path is keyed on the per-site `/<org>/<site>` row and
  *     written via applySiteConfig — NOT applyOrgConfig.
  *
  * editor.path also branches on the resolved authoring experience:
- *   - Universal Editor: row value punches out to experience.adobe.com.
+ *   - DA.live Classic: NO row. da.live's own document editor is its default, so
+ *     the row is cleared (EDS-71 step 5b: the Universal Editor punch-out it used
+ *     to write opens an editor Adobe retired).
  *   - Experience Workspace: row value is the da.live-native canvas. The branch
  *     comes from the demoBuilder.daLive.ewCanvasBranch setting (default '' →
  *     the param-less production canvas `https://da.live/canvas#`). The
@@ -110,9 +112,8 @@ describe('applyDaLiveOrgConfigSettings — config scope routing', () => {
             mockContentOps, DA_LIVE_ORG, DA_LIVE_SITE, mockLogger, 'da-live-classic',
         );
 
-        // 4th arg is removeKeys. This case is UE (default experience) with no
-        // IMSOrgId, so there is no editor.path row to write → the stale row is
-        // cleared in the SAME call that writes aem.repositoryId. The no-op
+        // 4th arg is removeKeys. Classic has no editor.path row to write → a
+        // stale row is cleared in the SAME call that writes aem.repositoryId. The no-op
         // optimization absorbs the case where no stale row actually exists.
         expect(mockApplySiteConfig).toHaveBeenCalledWith(DA_LIVE_ORG, DA_LIVE_SITE, {
             'aem.repositoryId': AEM_AUTHOR_URL,
@@ -120,7 +121,9 @@ describe('applyDaLiveOrgConfigSettings — config scope routing', () => {
         expect(mockApplyOrgConfig).not.toHaveBeenCalled();
     });
 
-    it('routes Universal Editor editor.path to applySiteConfig with a site-scoped row', async () => {
+    it('writes no editor.path row for DA.live Classic, even with an IMS org id set', async () => {
+        // Classic opens da.live's own document editor, which is what da.live does
+        // with no row. The org id used to build a Universal Editor punch-out here.
         mockImsOrgId = IMS_ORG_ID;
 
         await applyDaLiveOrgConfigSettings(
@@ -131,18 +134,40 @@ describe('applyDaLiveOrgConfigSettings — config scope routing', () => {
         const [org, site, updates, removeKeys] = mockApplySiteConfig.mock.calls[0];
         expect(org).toBe(DA_LIVE_ORG);
         expect(site).toBe(DA_LIVE_SITE);
-        const editorRow = updates['editor.path'];
-        expect(editorRow).toBe(
-            `${SITE_ROW_KEY}=https://experience.adobe.com/#/@${IMS_ORG_ID}/aem/editor/canvas/main--${DA_LIVE_SITE}--${DA_LIVE_ORG}.ue.da.live`,
-        );
-        // Writing a row → nothing to clear.
-        // aemAuthorUrl is unset in this case, so the binding is cleared for the
-        // same reason a valueless editor.path is — the two keys are symmetric now.
-        expect(removeKeys).toEqual(['aem.repositoryId']);
-
-        // LOAD-BEARING: editor.path must NOT go through the org-scoped write —
-        // that is what isolates sibling sites in a shared DA org.
+        expect(updates).toStrictEqual({});
+        expect([...removeKeys].sort()).toEqual(['aem.repositoryId', 'editor.path']);
         expect(mockApplyOrgConfig).not.toHaveBeenCalled();
+    });
+
+    it('takes the old Universal Editor row off an existing Classic project in one apply', async () => {
+        // A Classic project made before EDS-71 still has the punch-out row in its
+        // site config. One call of this function, against a fake sheet that
+        // applies updates and removals as applySiteConfig does, leaves no
+        // editor.path and keeps every other row. That a Configure save reaches
+        // this call is proven in configure-authoring-experience.test.ts.
+        const ueRow = `${SITE_ROW_KEY}=https://experience.adobe.com/#/@${IMS_ORG_ID}` +
+            `/aem/editor/canvas/main--${DA_LIVE_SITE}--${DA_LIVE_ORG}.ue.da.live`;
+        const sheet = new Map<string, string>([
+            ['editor.path', ueRow],
+            ['aem.repositoryId', AEM_AUTHOR_URL],
+        ]);
+        mockApplySiteConfig.mockImplementation(
+            async (_o: string, _s: string, updates: Record<string, string>, removeKeys: string[]) => {
+                const removed = removeKeys.filter((key) => sheet.has(key));
+                Object.entries(updates).forEach(([key, value]) => sheet.set(key, value));
+                removeKeys.forEach((key) => sheet.delete(key));
+                return { success: true, removed };
+            },
+        );
+        mockAemAuthorUrl = AEM_AUTHOR_URL;
+        mockImsOrgId = IMS_ORG_ID;
+
+        await applyDaLiveOrgConfigSettings(
+            mockContentOps, DA_LIVE_ORG, DA_LIVE_SITE, mockLogger, 'da-live-classic',
+        );
+
+        expect(sheet.has('editor.path')).toBe(false);
+        expect(sheet.get('aem.repositoryId')).toBe(AEM_AUTHOR_URL);
     });
 
     it('writes the default experience when the caller names none: a new storefront', async () => {
@@ -187,7 +212,7 @@ describe('applyDaLiveOrgConfigSettings — config scope routing', () => {
         mockImsOrgId = IMS_ORG_ID;
 
         await applyDaLiveOrgConfigSettings(
-            mockContentOps, DA_LIVE_ORG, DA_LIVE_SITE, mockLogger, 'da-live-classic',
+            mockContentOps, DA_LIVE_ORG, DA_LIVE_SITE, mockLogger, 'experience-workspace',
         );
 
         // One round-trip carrying both keys — not two separate writes to the
@@ -197,9 +222,7 @@ describe('applyDaLiveOrgConfigSettings — config scope routing', () => {
         expect(org).toBe(DA_LIVE_ORG);
         expect(site).toBe(DA_LIVE_SITE);
         expect(updates['aem.repositoryId']).toBe(AEM_AUTHOR_URL);
-        expect(updates['editor.path']).toBe(
-            `${SITE_ROW_KEY}=https://experience.adobe.com/#/@${IMS_ORG_ID}/aem/editor/canvas/main--${DA_LIVE_SITE}--${DA_LIVE_ORG}.ue.da.live`,
-        );
+        expect(updates['editor.path']).toBe(`${SITE_ROW_KEY}=https://da.live/canvas#`);
         expect(mockApplyOrgConfig).not.toHaveBeenCalled();
     });
 
@@ -349,7 +372,7 @@ describe('applyDaLiveOrgConfigSettings — config scope routing', () => {
 
     it('writes the EW editor.path even when no DA.live settings are configured', async () => {
         // EW's editor.path value (the da.live canvas) is a constant that needs
-        // neither aemAuthorUrl nor IMSOrgId, so flipping to EW must take effect on
+        // no setting, so flipping to EW must take effect on
         // DA even in a minimally-configured environment.
         await applyDaLiveOrgConfigSettings(
             mockContentOps, DA_LIVE_ORG, DA_LIVE_SITE, mockLogger, 'experience-workspace',
@@ -415,14 +438,12 @@ describe('applyDaLiveOrgConfigSettings — config scope routing', () => {
         });
     });
 
-    it('clears a stale editor.path for Universal Editor when no IMSOrgId is configured', async () => {
-        // UE's editor.path embeds the IMS org id, so with no IMSOrgId there is
-        // nothing to WRITE — but da.live may still hold a stale Experience
-        // Workspace canvas row from a prior flip. The correct UE-without-IMSOrgId
-        // state is NO editor.path row, so applySiteConfig must be CALLED with
-        // empty updates and removeKeys: ['editor.path'] to clear it. (The
-        // applySiteConfig no-op optimization absorbs the case where no stale row
-        // exists, so this is cheap on a fresh UE project.)
+    it('clears a stale editor.path when a project flips to DA.live Classic', async () => {
+        // Classic writes no row, but da.live may still hold an Experience
+        // Workspace canvas row from a prior flip. The correct Classic state is NO
+        // editor.path row, so applySiteConfig must be CALLED with empty updates
+        // and removeKeys: ['editor.path'] to clear it. (The applySiteConfig no-op
+        // optimization absorbs the case where no stale row exists.)
         await applyDaLiveOrgConfigSettings(
             mockContentOps, DA_LIVE_ORG, DA_LIVE_SITE, mockLogger, 'da-live-classic',
         );

@@ -272,7 +272,7 @@ describe('configGenerator', () => {
             // files half is the quickEditPublisher vendoring step
             // (text in quickEditSnippet); this
             // plugin lets the EW Layout view invoke Quick Edit. Inert under
-            // Universal Editor, active under Experience Workspace.
+            // DA.live Classic, active under Experience Workspace.
             const result = generateConfigJson(baseParams, mockLogger);
 
             expect(result.success).toBe(true);

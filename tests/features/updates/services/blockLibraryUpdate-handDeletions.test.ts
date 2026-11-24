@@ -1,6 +1,7 @@
 /**
- * A block library UPDATE leaves out an authoring entry the SC deleted, says so,
- * and keeps the record of what the extension added (EDS-36).
+ * A block library UPDATE leaves out a block folder the SC deleted, says so, adds
+ * nothing to the storefront's Universal Editor files (EDS-71 step 6), and keeps
+ * the record of what an older install added there (EDS-36).
  *
  * `installBlockCollections` is REAL here, as in blockLibraryInstall.test.ts:
  * the GitHub file-operations class is the fake, so what is asserted is the
@@ -111,19 +112,17 @@ beforeEach(() => {
 });
 
 describe('applyBlockLibraryUpdateResolved — hand deletions (EDS-36)', () => {
-    it('commits the new entry, not the deleted one, in the file\'s own indentation', async () => {
+    it('commits the new block folder and leaves the storefront\'s component-definition.json alone', async () => {
+        // EDS-71 step 6: the DA.live block list no longer reads the file, and
+        // Adobe deleted it from its templates, so an update adds nothing to it.
         const lib = record();
         const project = edsProject(lib);
 
         await applyBlockLibraryUpdateResolved({ project, library: lib, latestCommit: 'new' }, 'enabled', makeCtx());
 
-        const expected = JSON.parse(STOREFRONT_DEF);
-        expected.groups[0].components.push({ title: 'Quote', id: 'quote' });
         const tree = fileOps.commitTreeToBranch.mock.calls[0][3] as GitHubTreeInput[];
         expect(fileOps.commitTreeToBranch.mock.calls[0].slice(0, 3)).toEqual(['me', 'demo-storefront', 'main']);
-        expect(tree.find((e) => e.path === 'component-definition.json')?.content).toBe(
-            JSON.stringify(expected, null, 4),
-        );
+        expect(tree.map((e) => e.path)).toEqual(['blocks/quote/quote.js']);
     });
 
     it('returns what it left out, so both surfaces can say so', async () => {
@@ -162,7 +161,9 @@ describe('applyBlockLibraryUpdateResolved — hand deletions (EDS-36)', () => {
         expect(project.installedBlockLibraries?.[0].blockIds).toEqual(['promo', 'quote']);
     });
 
-    it('records the new entry beside the old one and saves the project', async () => {
+    it('keeps the entries an older install recorded, unchanged, and saves the project', async () => {
+        // A later uninstall still takes those entries out of a storefront that
+        // has the file; nothing new is added to the record.
         const lib = record();
         const project = edsProject(lib);
         const ctx = makeCtx();
@@ -170,7 +171,7 @@ describe('applyBlockLibraryUpdateResolved — hand deletions (EDS-36)', () => {
         await applyBlockLibraryUpdateResolved({ project, library: lib, latestCommit: 'new' }, 'enabled', ctx);
 
         expect(project.installedBlockLibraries?.[0].addedEntries).toEqual({
-            definition: ['promo', 'quote'], sectionFilter: [], filters: [], models: [],
+            definition: ['promo'], sectionFilter: [], filters: [], models: [],
         });
         expect(ctx.stateManager.saveProject).toHaveBeenCalledWith(project);
     });

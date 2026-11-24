@@ -13,9 +13,9 @@
  *   - left — edited, shared with another selected library, or impossible to
  *     check. It stays exactly as it is and the result names it with the reason.
  *
- * The library's entries in the three authoring files leave in the same commit,
- * by the same rule (`blockLibraryRemovalEntries.ts`). An entry that belongs to
- * a block left in place is not touched.
+ * The entries an older install recorded in the three authoring files leave in
+ * the same commit, by the same rule (`blockLibraryRemovalEntries.ts`). An entry
+ * that belongs to a block left in place, or that nothing recorded, is not touched.
  *
  * This file only talks to GitHub. The DA.live block list and the project's
  * record are the caller's (`blockLibraryUninstall.ts`).

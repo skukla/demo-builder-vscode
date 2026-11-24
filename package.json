@@ -329,7 +329,7 @@
                     "demoBuilder.daLive.IMSOrgId": {
                         "type": "string",
                         "default": "demosystem",
-                        "description": "Your Adobe organization's short name, as it appears in experience.adobe.com links (for example demosystem). Used to open the Universal Editor and AEM Assets in the right organization.",
+                        "description": "Your Adobe organization's short name, as it appears in experience.adobe.com links (for example demosystem). Used to open AEM Assets and the Commerce Admin in the right organization.",
                         "order": 3
                     },
                     "demoBuilder.daLive.ewCanvasBranch": {
